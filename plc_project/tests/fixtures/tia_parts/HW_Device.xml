@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <HW.Devices.Device Name="PLC_1" TypeIdentifier="OrderNumber:6ES7 515-2AM02-0AB0/V2.9">
+    <Slot>0</Slot>
+    <Address>192.168.0.1</Address>
+    <Comment><Text>CPU 1515F</Text></Comment>
+  </HW.Devices.Device>
+</Document>

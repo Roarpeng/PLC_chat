@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Hmi.VBScript Name="VB_Init">
+    <Source>Sub Start() End Sub</Source>
+  </Hmi.VBScript>
+</Document>

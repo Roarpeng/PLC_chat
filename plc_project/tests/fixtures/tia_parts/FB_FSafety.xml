@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Blocks.ObjectSW ID="0" CompositionName="Blocks">
+    <AttributeList>
+      <Name>F-FB_EStop</Name>
+      <Number>123</Number>
+      <ProgrammingLanguage>F-LAD</ProgrammingLanguage>
+      <IsFailsafe>true</IsFailsafe>
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text>failsafe emergency stop</Text>
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <SW.Blocks.InterfaceSection ID="3" CompositionName="Interface">
+        <Sections>
+          <Section Name="Input">
+            <Member Name="EStopOk" Datatype="Bool" />
+          </Section>
+          <Section Name="Output">
+            <Member Name="SafeOut" Datatype="Bool" />
+          </Section>
+          <Section Name="InOut" />
+          <Section Name="Temp" />
+          <Section Name="Constant" />
+        </Sections>
+      </SW.Blocks.InterfaceSection>
+      <SW.Blocks.CompileUnit ID="10" CompositionName="Networks">
+        <AttributeList>
+          <ProgrammingLanguage>F-LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="10t" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="10ti" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>failsafe coil</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <FlgNet ID="13">
+            <Parts>
+              <Access Scope="LocalVariable" UId="21">
+                <Symbol><Component Name="EStopOk" /></Symbol>
+              </Access>
+              <Access Scope="LocalVariable" UId="22">
+                <Symbol><Component Name="SafeOut" /></Symbol>
+              </Access>
+              <Part Name="Contact" UId="31" />
+              <Part Name="Coil" UId="32" />
+            </Parts>
+            <Wires>
+              <Wire UId="41">
+                <Powerrail /><NameCon UId="31" Name="in" />
+              </Wire>
+              <Wire UId="42">
+                <IdentCon UId="21" /><NameCon UId="31" Name="operand" />
+              </Wire>
+              <Wire UId="43">
+                <NameCon UId="31" Name="out" /><NameCon UId="32" Name="in" />
+              </Wire>
+              <Wire UId="44">
+                <IdentCon UId="22" /><NameCon UId="32" Name="operand" />
+              </Wire>
+            </Wires>
+          </FlgNet>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </SW.Blocks.ObjectSW>
+  <DocumentType>Simatic.ML.FB</DocumentType>
+</Document>

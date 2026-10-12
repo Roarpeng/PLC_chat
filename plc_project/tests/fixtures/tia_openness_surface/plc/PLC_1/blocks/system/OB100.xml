@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Blocks.ObjectSW ID="0" CompositionName="Blocks">
+    <AttributeList>
+      <Name>CompleteRestart</Name>
+      <Number>100</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <SW.Blocks.CompileUnit ID="10" CompositionName="Networks">
+        <AttributeList>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </SW.Blocks.ObjectSW>
+  <DocumentType>Simatic.ML.OB</DocumentType>
+</Document>

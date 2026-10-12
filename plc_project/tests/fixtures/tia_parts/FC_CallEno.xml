@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Blocks.ObjectSW ID="0" CompositionName="Blocks">
+    <AttributeList>
+      <Name>FC_CallEno</Name>
+      <Number>17</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <SW.Blocks.InterfaceSection ID="3" CompositionName="Interface">
+        <Sections>
+          <Section Name="Input" />
+          <Section Name="Output">
+            <Member Name="EnoFlag" Datatype="Bool" />
+          </Section>
+          <Section Name="Static">
+            <Member Name="MotorInst" Datatype="FB_Motor" />
+          </Section>
+          <Section Name="InOut" />
+          <Section Name="Temp" />
+          <Section Name="Constant" />
+        </Sections>
+      </SW.Blocks.InterfaceSection>
+      <SW.Blocks.CompileUnit ID="10" CompositionName="Networks">
+        <AttributeList>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="10t" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="10ti" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>call with eno</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <FlgNet ID="13">
+            <Parts>
+              <Access Scope="LocalVariable" UId="23">
+                <Symbol><Component Name="EnoFlag" /></Symbol>
+              </Access>
+              <Part Name="Call" UId="21">
+                <Access Scope="LocalVariable" UId="22" Name="instance">
+                  <Symbol><Component Name="MotorInst" /></Symbol>
+                </Access>
+                <TemplateValue Name="Call" Type="String">FB_Motor</TemplateValue>
+              </Part>
+            </Parts>
+            <Wires>
+              <Wire UId="31">
+                <Powerrail /><NameCon UId="21" Name="in" />
+              </Wire>
+              <Wire UId="32">
+                <NameCon UId="21" Name="ENO" /><IdentCon UId="23" />
+              </Wire>
+            </Wires>
+          </FlgNet>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </SW.Blocks.ObjectSW>
+  <DocumentType>Simatic.ML.FC</DocumentType>
+</Document>

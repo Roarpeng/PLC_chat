@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <SW.Cfc.Chart Name="Chart_Locked" PasswordProtected="true">
+    <Comment>password-protected chart listed, not decrypted</Comment>
+  </SW.Cfc.Chart>
+</Document>

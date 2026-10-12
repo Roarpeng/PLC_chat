@@ -1,0 +1,369 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <DocumentInfo>
+    <Created>2026-08-09T01:52:25.7899977Z</Created>
+    <ExportSetting>WithDefaults</ExportSetting>
+    <InstalledProducts>
+      <Product>
+        <DisplayName>Totally Integrated Automation Portal</DisplayName>
+        <DisplayVersion>V19</DisplayVersion>
+      </Product>
+      <OptionPackage>
+        <DisplayName>TIA Portal Openness</DisplayName>
+        <DisplayVersion>V19</DisplayVersion>
+      </OptionPackage>
+      <OptionPackage>
+        <DisplayName>TIA Portal Version Control Interface</DisplayName>
+        <DisplayVersion>V19</DisplayVersion>
+      </OptionPackage>
+      <Product>
+        <DisplayName>STEP 7 Professional</DisplayName>
+        <DisplayVersion>V19</DisplayVersion>
+      </Product>
+      <OptionPackage>
+        <DisplayName>STEP 7 Safety</DisplayName>
+        <DisplayVersion>V19</DisplayVersion>
+      </OptionPackage>
+      <Product>
+        <DisplayName>WinCC Basic/Comfort/Advanced</DisplayName>
+        <DisplayVersion>V19</DisplayVersion>
+      </Product>
+      <Product>
+        <DisplayName>WinCC Unified</DisplayName>
+        <DisplayVersion>V19</DisplayVersion>
+      </Product>
+    </InstalledProducts>
+  </DocumentInfo>
+  <SW.Blocks.FB ID="0">
+    <AttributeList>
+      <AutoNumber>true</AutoNumber>
+      <HeaderAuthor />
+      <HeaderFamily />
+      <HeaderName />
+      <HeaderVersion>0.1</HeaderVersion>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="Input">
+    <Member Name="timePt" Datatype="Time" Remanence="NonRetain" Accessibility="Public">
+      <AttributeList>
+        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">true</BooleanAttribute>
+        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">true</BooleanAttribute>
+        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+    </Member>
+  </Section>
+  <Section Name="Output">
+    <Member Name="timeQ" Datatype="Bool" Remanence="NonRetain" Accessibility="Public">
+      <AttributeList>
+        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">true</BooleanAttribute>
+        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">true</BooleanAttribute>
+        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+    </Member>
+  </Section>
+  <Section Name="InOut" />
+  <Section Name="Static">
+    <Member Name="timeP" Datatype="Bool" Remanence="NonRetain" Accessibility="Public">
+      <AttributeList>
+        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">true</BooleanAttribute>
+        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">true</BooleanAttribute>
+        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">true</BooleanAttribute>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">false</BooleanAttribute>
+      </AttributeList>
+    </Member>
+    <Member Name="timeS" Datatype="Bool" Remanence="NonRetain" Accessibility="Public">
+      <AttributeList>
+        <BooleanAttribute Name="ExternalAccessible" SystemDefined="true">true</BooleanAttribute>
+        <BooleanAttribute Name="ExternalVisible" SystemDefined="true">true</BooleanAttribute>
+        <BooleanAttribute Name="ExternalWritable" SystemDefined="true">true</BooleanAttribute>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">false</BooleanAttribute>
+      </AttributeList>
+    </Member>
+  </Section>
+  <Section Name="Temp" />
+  <Section Name="Constant" />
+</Sections></Interface>
+      <IsIECCheckEnabled>false</IsIECCheckEnabled>
+      <IsRetainMemResEnabled>false</IsRetainMemResEnabled>
+      <MemoryLayout>Optimized</MemoryLayout>
+      <MemoryReserve>100</MemoryReserve>
+      <Name>dc</Name>
+      <Namespace />
+      <Number>1</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+      <SetENOAutomatically>false</SetENOAutomatically>
+      <UDABlockProperties />
+      <UDAEnableTagReadback>false</UDAEnableTagReadback>
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>zh-CN</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <SW.Blocks.CompileUnit ID="3" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+  <Parts>
+    <Access Scope="GlobalVariable" UId="21">
+      <Symbol>
+        <Component Name="Tag_2" />
+      </Symbol>
+    </Access>
+    <Access Scope="GlobalVariable" UId="22">
+      <Symbol>
+        <Component Name="Tag_3" />
+      </Symbol>
+    </Access>
+    <Part Name="Contact" UId="23" />
+    <Part Name="Coil" UId="24" />
+  </Parts>
+  <Wires>
+    <Wire UId="25">
+      <Powerrail />
+      <NameCon UId="23" Name="in" />
+    </Wire>
+    <Wire UId="26">
+      <IdentCon UId="21" />
+      <NameCon UId="23" Name="operand" />
+    </Wire>
+    <Wire UId="27">
+      <NameCon UId="23" Name="out" />
+      <NameCon UId="24" Name="in" />
+    </Wire>
+    <Wire UId="28">
+      <IdentCon UId="22" />
+      <NameCon UId="24" Name="operand" />
+    </Wire>
+  </Wires>
+</FlgNet></NetworkSource>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="4" CompositionName="Comment">
+            <ObjectList>
+              <MultilingualTextItem ID="5" CompositionName="Items">
+                <AttributeList>
+                  <Culture>zh-CN</Culture>
+                  <Text />
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <MultilingualText ID="6" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="7" CompositionName="Items">
+                <AttributeList>
+                  <Culture>zh-CN</Culture>
+                  <Text />
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+      <SW.Blocks.CompileUnit ID="8" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource />
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="9" CompositionName="Comment">
+            <ObjectList>
+              <MultilingualTextItem ID="A" CompositionName="Items">
+                <AttributeList>
+                  <Culture>zh-CN</Culture>
+                  <Text />
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <MultilingualText ID="B" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="C" CompositionName="Items">
+                <AttributeList>
+                  <Culture>zh-CN</Culture>
+                  <Text />
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+      <SW.Blocks.CompileUnit ID="D" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource><StructuredText xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/StructuredText/v4">
+  <Access Scope="GlobalVariable" UId="21">
+    <Symbol UId="22">
+      <Component Name="IEC_Timer_0_DB" UId="23">
+        <BooleanAttribute Name="HasQuotes" UId="24">true</BooleanAttribute>
+      </Component>
+    </Symbol>
+  </Access>
+  <Token Text="." UId="25" />
+  <Access Scope="Call" UId="26">
+    <Instruction Name="TON" UId="27">
+      <Token Text="(" UId="28" />
+      <Parameter Name="IN" UId="29">
+        <Token Text=":=" UId="30" />
+        <Access Scope="LocalVariable" UId="31">
+          <Symbol UId="32">
+            <Component Name="timeS" UId="33" />
+          </Symbol>
+        </Access>
+      </Parameter>
+      <Token Text="," UId="34" />
+      <NewLine Num="1" UId="35" />
+      <Blank Num="21" UId="36" />
+      <Parameter Name="PT" UId="37">
+        <Token Text=":=" UId="38" />
+        <Access Scope="LocalVariable" UId="39">
+          <Symbol UId="40">
+            <Component Name="timePt" UId="41" />
+          </Symbol>
+        </Access>
+      </Parameter>
+      <Token Text="," UId="42" />
+      <NewLine Num="1" UId="43" />
+      <Blank Num="21" UId="44" />
+      <Parameter Name="Q" UId="45">
+        <Token Text="=&gt;" UId="46" />
+        <Access Scope="LocalVariable" UId="47">
+          <Symbol UId="48">
+            <Component Name="timeQ" UId="49" />
+          </Symbol>
+        </Access>
+      </Parameter>
+      <Token Text=")" UId="50" />
+    </Instruction>
+  </Access>
+  <Token Text=";" UId="51" />
+  <NewLine Num="2" UId="52" />
+  <Token Text="IF" UId="53" />
+  <Blank Num="1" UId="54" />
+  <Access Scope="GlobalVariable" UId="55">
+    <Symbol UId="56">
+      <Component Name="Tag_4" UId="57">
+        <BooleanAttribute Name="HasQuotes" UId="58">true</BooleanAttribute>
+      </Component>
+    </Symbol>
+  </Access>
+  <Blank Num="1" UId="59" />
+  <Token Text="THEN" UId="60" />
+  <NewLine Num="1" UId="61" />
+  <Blank Num="4" UId="62" />
+  <Access Scope="GlobalVariable" UId="63">
+    <Symbol UId="64">
+      <Component Name="Tag_5" UId="65">
+        <BooleanAttribute Name="HasQuotes" UId="66">true</BooleanAttribute>
+      </Component>
+    </Symbol>
+  </Access>
+  <Blank Num="1" UId="67" />
+  <Token Text=":=" UId="68" />
+  <Blank Num="1" UId="69" />
+  <Access Scope="LiteralConstant" UId="70">
+    <Constant UId="71">
+      <ConstantValue UId="73">TRUE</ConstantValue>
+    </Constant>
+  </Access>
+  <Token Text=";" UId="74" />
+  <NewLine Num="1" UId="75" />
+  <Blank Num="4" UId="76" />
+  <Access Scope="LocalVariable" UId="77">
+    <Symbol UId="78">
+      <Component Name="timeS" UId="79" />
+    </Symbol>
+  </Access>
+  <Blank Num="1" UId="80" />
+  <Token Text=":=" UId="81" />
+  <Blank Num="1" UId="82" />
+  <Access Scope="LiteralConstant" UId="83">
+    <Constant UId="84">
+      <ConstantValue UId="86">FALSE</ConstantValue>
+    </Constant>
+  </Access>
+  <Token Text=";" UId="87" />
+  <NewLine Num="1" UId="88" />
+  <Token Text="ELSE" UId="89" />
+  <NewLine Num="1" UId="90" />
+  <Blank Num="4" UId="91" />
+  <Access Scope="GlobalVariable" UId="92">
+    <Symbol UId="93">
+      <Component Name="Tag_5" UId="94">
+        <BooleanAttribute Name="HasQuotes" UId="95">true</BooleanAttribute>
+      </Component>
+    </Symbol>
+  </Access>
+  <Blank Num="1" UId="96" />
+  <Token Text=":=" UId="97" />
+  <Blank Num="1" UId="98" />
+  <Access Scope="LiteralConstant" UId="99">
+    <Constant UId="100">
+      <ConstantValue UId="102">FALSE</ConstantValue>
+    </Constant>
+  </Access>
+  <Token Text=";" UId="103" />
+  <NewLine Num="1" UId="104" />
+  <Blank Num="4" UId="105" />
+  <Access Scope="LocalVariable" UId="106">
+    <Symbol UId="107">
+      <Component Name="timeS" UId="108" />
+    </Symbol>
+  </Access>
+  <Blank Num="1" UId="109" />
+  <Token Text=":=" UId="110" />
+  <Blank Num="1" UId="111" />
+  <Access Scope="LiteralConstant" UId="112">
+    <Constant UId="113">
+      <ConstantValue UId="115">TRUE</ConstantValue>
+    </Constant>
+  </Access>
+  <Token Text=";" UId="116" />
+  <NewLine Num="1" UId="117" />
+  <Token Text="END_IF" UId="118" />
+  <Token Text=";" UId="119" />
+</StructuredText></NetworkSource>
+          <ProgrammingLanguage>SCL</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="E" CompositionName="Comment">
+            <ObjectList>
+              <MultilingualTextItem ID="F" CompositionName="Items">
+                <AttributeList>
+                  <Culture>zh-CN</Culture>
+                  <Text />
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <MultilingualText ID="10" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="11" CompositionName="Items">
+                <AttributeList>
+                  <Culture>zh-CN</Culture>
+                  <Text />
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+      <MultilingualText ID="12" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="13" CompositionName="Items">
+            <AttributeList>
+              <Culture>zh-CN</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Blocks.FB>
+</Document>

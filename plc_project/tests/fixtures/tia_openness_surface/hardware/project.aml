@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CAEXFile SchemaVersion="3.0">
+  <InstanceHierarchy Name="Project">
+    <InternalElement Name="Rack_0" ID="r0">
+      <InternalElement Name="CPU_1515F" ID="cpu">
+        <Attribute Name="TypeIdentifier">OrderNumber:6ES7 515-2AM02-0AB0</Attribute>
+        <Attribute Name="Failsafe">true</Attribute>
+      </InternalElement>
+    </InternalElement>
+  </InstanceHierarchy>
+</CAEXFile>

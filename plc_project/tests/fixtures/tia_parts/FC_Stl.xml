@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Blocks.ObjectSW ID="0" CompositionName="Blocks">
+    <AttributeList>
+      <Name>FC_Stl</Name>
+      <Number>19</Number>
+      <ProgrammingLanguage>STL</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <SW.Blocks.InterfaceSection ID="3" CompositionName="Interface">
+        <Sections>
+          <Section Name="Input">
+            <Member Name="Start" Datatype="Bool" />
+            <Member Name="Stop" Datatype="Bool" />
+          </Section>
+          <Section Name="Output">
+            <Member Name="Run" Datatype="Bool" />
+            <Member Name="Latched" Datatype="Bool" />
+          </Section>
+          <Section Name="InOut" />
+          <Section Name="Temp" />
+          <Section Name="Constant" />
+        </Sections>
+      </SW.Blocks.InterfaceSection>
+      <SW.Blocks.CompileUnit ID="10" CompositionName="Networks">
+        <AttributeList>
+          <ProgrammingLanguage>STL</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="10t" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="10ti" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>stl rlo</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+                    <StatementList>
+            <StlStatement UId="1">
+              <StlToken Text="A" />
+              <Access Scope="LocalVariable"><Symbol><Component Name="Start" /></Symbol></Access>
+            </StlStatement>
+            <StlStatement UId="2">
+              <StlToken Text="AN" />
+              <Access Scope="LocalVariable"><Symbol><Component Name="Stop" /></Symbol></Access>
+            </StlStatement>
+            <StlStatement UId="3">
+              <StlToken Text="=" />
+              <Access Scope="LocalVariable"><Symbol><Component Name="Run" /></Symbol></Access>
+            </StlStatement>
+            <StlStatement UId="4">
+              <StlToken Text="S" />
+              <Access Scope="LocalVariable"><Symbol><Component Name="Latched" /></Symbol></Access>
+            </StlStatement>
+          </StatementList>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </SW.Blocks.ObjectSW>
+  <DocumentType>Simatic.ML.FC</DocumentType>
+</Document>

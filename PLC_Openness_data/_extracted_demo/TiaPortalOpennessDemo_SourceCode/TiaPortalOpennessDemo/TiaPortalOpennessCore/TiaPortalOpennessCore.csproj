@@ -1,0 +1,202 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{E53B1649-D520-40F9-9223-5672C2393A43}</ProjectGuid>
+    <OutputType>library</OutputType>
+    <RootNamespace>TiaPortalOpennessCore</RootNamespace>
+    <AssemblyName>TiaPortalOpennessCore</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <WarningLevel>4</WarningLevel>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Xaml.Behaviors, Version=1.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Xaml.Behaviors.Wpf.1.1.31\lib\net45\Microsoft.Xaml.Behaviors.dll</HintPath>
+    </Reference>
+    <Reference Include="Prism, Version=8.1.97.5141, Culture=neutral, PublicKeyToken=40ee6c3a2184dc59, processorArchitecture=MSIL">
+      <HintPath>..\packages\Prism.Core.8.1.97\lib\net47\Prism.dll</HintPath>
+    </Reference>
+    <Reference Include="Prism.Wpf, Version=8.1.97.5141, Culture=neutral, PublicKeyToken=40ee6c3a2184dc59, processorArchitecture=MSIL">
+      <HintPath>..\packages\Prism.Wpf.8.1.97\lib\net47\Prism.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xaml">
+      <RequiredTargetFramework>4.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="WindowsBase" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Commands\RelayCommand.cs" />
+    <Compile Include="Contracts\ICloseWindow.cs" />
+    <Compile Include="DesignTimeViewModels\AboutInfoDesignTimeViewModel.cs" />
+    <Compile Include="Events\Content\ResetContentEvent.cs" />
+    <Compile Include="Events\Content\UpdateViewNavigationEvent.cs" />
+    <Compile Include="Events\Global\EditSettingsEvent.cs" />
+    <Compile Include="Events\Global\ExitEvent.cs" />
+    <Compile Include="Events\Global\InitEnvironmentEvent.cs" />
+    <Compile Include="Events\Global\NavigationRequestEvent.cs" />
+    <Compile Include="Events\Global\RefreshEvent.cs" />
+    <Compile Include="Events\Global\ServiceProviderInitializeEvent.cs" />
+    <Compile Include="Events\Global\SetNavigationPathEvent.cs" />
+    <Compile Include="Events\Libraries\ResetCopySourceEvent.cs" />
+    <Compile Include="Events\Libraries\RefreshLibraryEvent.cs" />
+    <Compile Include="Events\Libraries\SelectedCopySourceChangedEvent.cs" />
+    <Compile Include="Events\Libraries\SelectedSystemLibraryChangedEvent.cs" />
+    <Compile Include="Events\Project\AddExternalSourceEvent.cs" />
+    <Compile Include="Events\Project\CaxExportEvent.cs" />
+    <Compile Include="Events\Project\CaxImportEvent.cs" />
+    <Compile Include="Events\Project\CloseProjectEvent.cs" />
+    <Compile Include="Events\Project\CompileEvent.cs" />
+    <Compile Include="Events\Project\ConnectProjectEvent.cs" />
+    <Compile Include="Events\Project\CreateNewProjectEvent.cs" />
+    <Compile Include="Events\Project\GenerateBlockFromSourceEvent.cs" />
+    <Compile Include="Events\Project\GenerateSourceFromBlockEvent.cs" />
+    <Compile Include="Events\Project\ImportElementEvent.cs" />
+    <Compile Include="Events\Project\ImportStructureEvent.cs" />
+    <Compile Include="Events\Project\LoadProjectEvent.cs" />
+    <Compile Include="Events\Project\OpenEditorEvent.cs" />
+    <Compile Include="Events\Project\OpenNetworkEditorEvent.cs" />
+    <Compile Include="Events\Project\OpenTopologyEditorEvent.cs" />
+    <Compile Include="Events\Project\ProjectClosedEvent.cs" />
+    <Compile Include="Events\Project\ProjectCreateNewGroupEvent.cs" />
+    <Compile Include="Events\Project\ProjectOpenedEvent.cs" />
+    <Compile Include="Events\Project\RefreshProjectEvent.cs" />
+    <Compile Include="Events\Project\SaveProjectEvent.cs" />
+    <Compile Include="Events\Project\SelectedProjectItemChangedEvent.cs" />
+    <Compile Include="Events\Session\CloseLocalSessionEvent.cs" />
+    <Compile Include="Events\Session\CloseMultiuserProjectEvent.cs" />
+    <Compile Include="Events\Session\LoadMultiuserProjectEvent.cs" />
+    <Compile Include="Events\Session\LocalSessionClosedEvent.cs" />
+    <Compile Include="Events\Session\LocalSessionOpenedEvent.cs" />
+    <Compile Include="Events\Session\LocalSessionSavedEvent.cs" />
+    <Compile Include="Events\Session\OpenLocalSessionEvent.cs" />
+    <Compile Include="Events\Session\SaveLocalSessionEvent.cs" />
+    <Compile Include="Events\Shell\BusyEvent.cs" />
+    <Compile Include="Events\Shell\DoneEvent.cs" />
+    <Compile Include="Events\TiaPortal\CloseTiaPortalEvent.cs" />
+    <Compile Include="Events\Project\ExportStructureEvent.cs" />
+    <Compile Include="Events\Project\LoadContentEvent.cs" />
+    <Compile Include="Events\Project\OpenProjectEvent.cs" />
+    <Compile Include="Events\TiaPortal\ConnectTiaPortalEvent.cs" />
+    <Compile Include="Events\TiaPortal\DisconnectTiaPortalEvent.cs" />
+    <Compile Include="Events\TiaPortal\OpenTiaPortalEvent.cs" />
+    <Compile Include="Events\TiaPortal\SelectedProcessIdChangedEvent.cs" />
+    <Compile Include="Events\TiaPortal\TiaPortalClosedEvent.cs" />
+    <Compile Include="Events\TiaPortal\TiaPortalConnectedEvent.cs" />
+    <Compile Include="Events\TiaPortal\TiaPortalDisconnectedEvent.cs" />
+    <Compile Include="Events\TiaPortal\TiaPortalStateEvent.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Include="TiaPortalOpennessCoreModule.cs" />
+    <Compile Include="Utils\BoolToVisibilityConverter.cs" />
+    <Compile Include="Utils\InverseBooleanConverter.cs" />
+    <Compile Include="Utils\ListViewColumns.cs" />
+    <Compile Include="Utils\TreeViewHandler.cs" />
+    <Compile Include="Utils\TreeViewHelper.cs" />
+    <Compile Include="Utils\WindowCloser.cs" />
+    <Compile Include="ViewModels\AboutInfoViewModel.cs" />
+    <Compile Include="ViewModels\MenuViewModel.cs" />
+    <Compile Include="ViewModels\ToolBarViewModel.cs" />
+    <Compile Include="Views\AboutInfoView.xaml.cs">
+      <DependentUpon>AboutInfoView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\MenuView.xaml.cs">
+      <DependentUpon>MenuView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ToolBarView.xaml.cs">
+      <DependentUpon>ToolBarView.xaml</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="Views\AboutInfoView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\MenuView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ToolBarView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SharedResourceDictionary\SharedResourceDictionary.csproj">
+      <Project>{b7b553b0-fead-478d-8730-85af5194c46f}</Project>
+      <Name>SharedResourceDictionary</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TiaPortalOpennessAdapterBase\TiaPortalOpennessAdapterBase.csproj">
+      <Project>{04BFC5B3-F277-4B44-9049-820A75EB7D12}</Project>
+      <Name>TiaPortalOpennessAdapterBase</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TiaPortalOpennessAdapterContracts\TiaPortalOpennessAdapterContracts.csproj">
+      <Project>{C04ED9AC-4C77-46BF-931A-D51E6AF6AA6A}</Project>
+      <Name>TiaPortalOpennessAdapterContracts</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TiaPortalOpennessAdapter\TiaPortalOpennessAdapter.csproj">
+      <Project>{9d4dd413-5b46-4212-8e2c-107d45b3cdbe}</Project>
+      <Name>TiaPortalOpennessAdapter</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TiaPortalOpennessDemoStyling\TiaPortalOpennessDemoStyling.csproj">
+      <Project>{830c3d01-4ffb-4ebf-aa17-ca39f5fb6822}</Project>
+      <Name>TiaPortalOpennessDemoStyling</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TiaPortalOpennessInfrastructure\TiaPortalOpennessInfrastructure.csproj">
+      <Project>{9d1ecee3-7418-486b-8b5e-50f07bc8255c}</Project>
+      <Name>TiaPortalOpennessInfrastructure</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>xcopy "$(TargetDir)$(TargetName)*$(TargetExt)" "$(SolutionDir)$(SolutionName)\$(OutDir)Modules\" /Y /S</PostBuildEvent>
+  </PropertyGroup>
+</Project>

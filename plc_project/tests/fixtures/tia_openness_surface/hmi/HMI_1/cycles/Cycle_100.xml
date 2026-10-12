@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Hmi.Cycle Name="Cycle_100" Period="100">
+    <Tag Name="StartCmd" />
+  </Hmi.Cycle>
+</Document>

@@ -1,0 +1,161 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A7362630-E971-43AC-ABD9-C0F34964FA76}</ProjectGuid>
+    <OutputType>library</OutputType>
+    <RootNamespace>ProjectModule</RootNamespace>
+    <AssemblyName>ProjectModule</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <WarningLevel>4</WarningLevel>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Xaml.Behaviors, Version=1.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Xaml.Behaviors.Wpf.1.1.31\lib\net45\Microsoft.Xaml.Behaviors.dll</HintPath>
+    </Reference>
+    <Reference Include="Prism, Version=8.1.97.5141, Culture=neutral, PublicKeyToken=40ee6c3a2184dc59, processorArchitecture=MSIL">
+      <HintPath>..\packages\Prism.Core.8.1.97\lib\net47\Prism.dll</HintPath>
+    </Reference>
+    <Reference Include="Prism.Wpf, Version=8.1.97.5141, Culture=neutral, PublicKeyToken=40ee6c3a2184dc59, processorArchitecture=MSIL">
+      <HintPath>..\packages\Prism.Wpf.8.1.97\lib\net47\Prism.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xaml">
+      <RequiredTargetFramework>4.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="WindowsBase" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Base\BaseProjectViewModel.cs" />
+    <Compile Include="DesignTimeViewModels\CaxImportDesignTimeViewModel.cs" />
+    <Compile Include="DesignTimeViewModels\CreateNewTiaPortalProjectDesignTimeViewModel.cs" />
+    <Compile Include="ProjectModuleModule.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Include="ViewModels\CaxImportViewModel.cs" />
+    <Compile Include="ViewModels\CreateNewTiaPortalProjectViewModel.cs" />
+    <Compile Include="ViewModels\LogicalProjectTreeViewModel.cs" />
+    <Compile Include="ViewModels\PhysicalProjectTreeViewModel.cs" />
+    <Compile Include="ViewModels\EmptyProjectTreeViewModel.cs" />
+    <Compile Include="Views\CaxImportView.xaml.cs">
+      <DependentUpon>CaxImportView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\CreateNewTiaPortalProjectView.xaml.cs">
+      <DependentUpon>CreateNewTiaPortalProjectView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\LogicalProjectTreeView.xaml.cs">
+      <DependentUpon>LogicalProjectTreeView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PhysicalProjectTreeView.xaml.cs">
+      <DependentUpon>PhysicalProjectTreeView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\EmptyProjectTreeView.xaml.cs">
+      <DependentUpon>EmptyProjectTreeView.xaml</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LibraryModule\LibraryModule.csproj">
+      <Project>{9F186273-D998-409E-9DD0-FB75B1C615AF}</Project>
+      <Name>LibraryModule</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SharedResourceDictionary\SharedResourceDictionary.csproj">
+      <Project>{b7b553b0-fead-478d-8730-85af5194c46f}</Project>
+      <Name>SharedResourceDictionary</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TiaPortalOpennessAdapterBase\TiaPortalOpennessAdapterBase.csproj">
+      <Project>{04BFC5B3-F277-4B44-9049-820A75EB7D12}</Project>
+      <Name>TiaPortalOpennessAdapterBase</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TiaPortalOpennessAdapterContracts\TiaPortalOpennessAdapterContracts.csproj">
+      <Project>{C04ED9AC-4C77-46BF-931A-D51E6AF6AA6A}</Project>
+      <Name>TiaPortalOpennessAdapterContracts</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TiaPortalOpennessAdapter\TiaPortalOpennessAdapter.csproj">
+      <Project>{9d4dd413-5b46-4212-8e2c-107d45b3cdbe}</Project>
+      <Name>TiaPortalOpennessAdapter</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TIAPortalOpennessCore\TiaPortalOpennessCore.csproj">
+      <Project>{e53b1649-d520-40f9-9223-5672c2393a43}</Project>
+      <Name>TiaPortalOpennessCore</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TiaPortalOpennessInfrastructure\TiaPortalOpennessInfrastructure.csproj">
+      <Project>{9d1ecee3-7418-486b-8b5e-50f07bc8255c}</Project>
+      <Name>TiaPortalOpennessInfrastructure</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="Views\CaxImportView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\CreateNewTiaPortalProjectView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\LogicalProjectTreeView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\PhysicalProjectTreeView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\EmptyProjectTreeView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>xcopy "$(TargetDir)$(TargetName)*$(TargetExt)" "$(SolutionDir)$(SolutionName)\$(OutDir)Modules\" /Y /S</PostBuildEvent>
+  </PropertyGroup>
+</Project>

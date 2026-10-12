@@ -1,0 +1,57 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="TiaPortalOpennessDemo.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="HidePreSelectionAssemblyVersion" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="SelectedEngineeringVersion" Type="System.String" Scope="User">
+      <Value Profile="(Default)">15.0</Value>
+    </Setting>
+    <Setting Name="SelectedOpennessApiVersion" Type="System.String" Scope="User">
+      <Value Profile="(Default)">15.0.0.0</Value>
+    </Setting>
+    <Setting Name="DefaultExportPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">C:\Temp</Value>
+    </Setting>
+    <Setting Name="not_used_UserInterfaceEnabled_not_used" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="ExportWithDefaults" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="ExportReadOnly" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="TiaPortalMode" Type="System.String" Scope="User">
+      <Value Profile="(Default)">WithUserInterface</Value>
+    </Setting>
+    <Setting Name="ModulePath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">C:\</Value>
+    </Setting>
+    <Setting Name="TreeExpendLevel" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">2</Value>
+    </Setting>
+    <Setting Name="ProjectPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">C:\</Value>
+    </Setting>
+    <Setting Name="GlobalUserLibraryPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">C:\</Value>
+    </Setting>
+    <Setting Name="LocalSessionPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">C:\</Value>
+    </Setting>
+    <Setting Name="LoadSinamicsStartdriveModule" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="LoadStep7Module" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="LoadWinCcProfessionalModule" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="LoadWinCcUnifiedModule" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

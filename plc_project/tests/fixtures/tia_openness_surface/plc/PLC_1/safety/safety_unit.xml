@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <SW.Safety.SafetyUnit Name="F-Runtime">
+    <Supervision Name="F-ESTOP" />
+  </SW.Safety.SafetyUnit>
+</Document>

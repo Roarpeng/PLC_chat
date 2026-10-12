@@ -1,0 +1,467 @@
+<!-- saved from url=(0014)about:internet -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Siemens Third-Party Software disclosure document</title>
+	<meta charset="utf-8" />
+
+	<style>
+		td, th, tr, table
+			{font-size: 8.0pt;
+			border: 1px solid #2F4F4F;
+			border-collapse: collapse;
+			margin-left: 10.4pt;
+			padding: 5.4pt 5.4pt 5.4pt 5.4pt;}
+
+		table.componentSummary
+			{width: 95%; 
+			border: 1px solid #2F4F4F; 
+			table-layout: fixed; 
+			border-collapse: collapse;}
+
+		th.componentSummary
+			{padding: 1.0pt 1.0pt 1.0pt 1.0pt;}
+
+		td.componentSummary
+			{padding: 1.0pt 1.0pt 1.0pt 1.0pt;}
+
+		table.componentDetail
+				{font-size: 12.0pt;
+				border-style: none;}
+
+		tr.componentDetail
+				{font-size: 12.0pt;
+				border-style: none;}
+
+		td.componentDetail
+				{font-size: 12.0pt;
+				border-style: none;
+				margin-left: 5.1pt;
+				padding: 5.4pt 5.4pt 5.4pt 5.4pt;}
+
+		p
+			{font-family: "Arial";
+			font-size: 10.0pt;
+			margin-left: 5.1pt;}
+
+		p.important
+			{font-family: "Arial";
+			font-size: 12.0pt;}
+
+		p.tiny
+			{
+				font-size: 0.5em;
+			}
+
+		td.applicationCopyright
+			{width: 440.0pt;
+			border: solid windowtext 1.0pt;
+			padding: 5.4pt 5.4pt 5.4pt 5.4pt;}
+
+		table.licenseText
+			{border-style: none;
+			width: 95%;
+			table-layout: fixed;}
+
+		tr.licenseText
+			{border-style: none;}
+
+		td.licenseText
+			{border-style: none;
+			margin-left: 5.1pt;
+			padding: 5.4pt 5.4pt 5.4pt 5.4pt;}
+
+		table.passThroughInformationText
+			{border-style: none;
+			width: 95%;
+			table-layout: fixed;}
+
+		tr.passThroughInformationText
+			{border-style: none;}
+
+		td.passThroughInformationText
+			{border-style: none;
+			margin-left: 5.1pt;
+			padding: 5.4pt 5.4pt 5.4pt 5.4pt;}
+
+		table.copyrightText
+			{width: 95%;
+			table-layout: fixed;}
+
+		td.copyrightText
+			{border-style: none;
+			margin-left: 0.0pt;
+			padding: 5.4pt 5.4pt 5.4pt 5.4pt;}
+
+		h4
+			{font-size: 14.0pt;}
+
+		h5
+			{margin-left: 8.0pt;
+			font-size: 12.0pt;}
+
+		.watermark {
+			position: fixed;
+			left: 50%;
+			margin-left: -18%;
+			margin-top: 20px;
+			z-index: -10;
+		}
+		@media print{
+			.watermark {
+				position: fixed;
+				left: 0%;
+				margin: 0%;
+				z-index: -10;
+			}
+		}
+	</style>	
+</head>
+
+<body>
+	
+	<div id="application-info" style="visibility:hidden;" data-template="">
+		TiaPortalOpennessDemo 2.1 - 
+	</div>
+    <div id="template">
+	    Информация для партнёров по сбыту: просим передать этот документ вашим клиентам во избежание нарушений лицензионных прав.<br><br><br>Информация о программном обеспечении сторонних разработчиков<br><br>Настоящий продукт, настоящее решение или сервис ("Продукт") включает в себя программные компоненты сторонних разработчиков, перечисленные ниже. Это компоненты программного обеспечения с открытым кодом, имеющие лицензию, признанную организацией Open Source Initiative (www.opensource.org), либо иную лицензию согласно определению компании SIEMENS ("OSS"), и / или компоненты коммерческого либо свободно распространяемого программного обеспечения. В отношении компонентов OSS соответствующие условия лицензии OSS имеют приоритет перед всеми прочими положениями, применимыми к данному Продукту. SIEMENS предоставляет вам долевые права на OSS в отношении данного Продукта на безвозмездной основе.<br><br>Если SIEMENS комбинирует или связывает определённые компоненты Продукта с компонентами OSS в соответствии с определением применимой лицензии, лицензированными по версии 2 или более поздней GNU LGPL, и если неограниченное использование соответствующего объектного файла не разрешено ("Модуль по лицензии LGPL", причём Модуль по лицензии LGPL и компоненты, с которыми скомбинирован или связан Модуль по лицензии LGPL, далее именуются "Комбинированный продукт") и выполнены соответствующие критерии лицензии LGPL, вам разрешается дополнительно (i) обрабатывать Комбинированный продукт в собственных целях и, в частности, но не ограничиваясь, обрабатывать Комбинированный продукт таким образом, чтобы связать его с модифицированной версией Модуля по лицензии LGPL, а также (ii) проводить обратную разработку Комбинированного продукта, но только в целях исправления ошибок вашей обработки. Право на обработку не включает в себя право на дистрибуцию. Вы обязаны сохранять конфиденциальность в отношении всей информации, полученной вами в ходе обратной разработки Комбинированного продукта.<br><br>Определённые лицензии OSS обязывают SIEMENS раскрывать исходный код, например, GNU General Public License, GNU Lesser General Public License и Mozilla Public License. Если указанные лицензии применимы и Продукт поставлен без необходимого исходного кода, копия исходного кода может быть запрошена обладателем настоящей информации в течение времени, указанного в применимой лицензии OSS, по следующему адресу:<br><br>Siemens AG<br><br>LC TE SL<br><br>Werner-von-Siemens Str. 60<br><br>91052 Erlangen<br><br>Germany<br><br>Тема: запрос исходного кода (укажите название продукта и номер версии, если применимо)<br><br>За выполнение запроса SIEMENS может взимать сбор в размере до 5 евро.<br><br><br>Гарантия в отношении дальнейшего применения программного обеспечения с открытым кодом:<br><br>Гарантийные обязательства SIEMENS регулируются соответствующим договором с компанией SIEMENS. Если вы модифицируете Продукт или компоненты OSS либо используете их иным образом, чем указано компанией SIEMENS, гарантия аннулируется, техническая поддержка не предоставляется. Приведённые ниже лицензионные условия могут включать в себя положения об ограничении ответственности, действующие в отношениях между вами и соответствующим лицензиаром. Во избежание сомнений подчёркиваем, что SIEMENS не даёт гарантии от имени сторонних лицензиаров и гарантии, налагающей обязательства на сторонних лицензиаров.<br><br>В данном продукте содержится следующее программное обеспечение с открытым кодом и / или программное обеспечение сторонних разработчиков:<br><br>
+	</div>
+
+	<p id="not-approved-warn">
+		
+	</p>
+
+	<p id="general-info">
+		Please note the following license conditions and copyright notices applicable to Open Source Software and/or other components (or parts thereof):
+	</p>
+	<!-- Component summary (table) -->
+
+	<table class="componentSummary">
+		<thead>
+			<tr>
+				<th class="componentSummary">Component</th>
+				<th class="componentSummary">Open Source Software<br />[Yes/No]</th>
+				<th class="componentSummary">Acknowledgements/Comment</th>
+				<th class="componentSummary">License conditions and copyright notices</th>
+			</tr>
+		</thead>
+		
+		<tbody id="component-summary" data-template="">
+			<tr>
+				<td id="BlackDuckCompSummCellInsertionPoint" class="componentSummary">abstractions - unitycontainer/abstractions - 5.11.2</td>
+				<td class="componentSummary">Yes</td>
+				<td class="componentSummary"></td>
+				<td class="componentSummary"><a href="#compDetail_96261">LICENSE AND COPYRIGHT INFORMATION FOR COMPONENT abstractions - unitycontainer/abstractions - 5.11.2</a></td>
+			</tr>
+			<tr>
+				<td id="BlackDuckCompSummCellInsertionPoint" class="componentSummary">Microsoft.Xaml.Behaviors.Wpf - 1.1.19</td>
+				<td class="componentSummary">Yes</td>
+				<td class="componentSummary"></td>
+				<td class="componentSummary"><a href="#compDetail_99563">LICENSE AND COPYRIGHT INFORMATION FOR COMPONENT Microsoft.Xaml.Behaviors.Wpf - 1.1.19</a></td>
+			</tr>
+			<tr>
+				<td id="BlackDuckCompSummCellInsertionPoint" class="componentSummary">Prism Library - 8.1.97 (1)</td>
+				<td class="componentSummary">Yes</td>
+				<td class="componentSummary"></td>
+				<td class="componentSummary"><a href="#compDetail_130518">LICENSE AND COPYRIGHT INFORMATION FOR COMPONENT Prism Library - 8.1.97 (1)</a></td>
+			</tr>
+			<tr>
+				<td id="BlackDuckCompSummCellInsertionPoint" class="componentSummary">System.Runtime.CompilerServices.Unsafe - 4.5.2</td>
+				<td class="componentSummary">Yes</td>
+				<td class="componentSummary"></td>
+				<td class="componentSummary"><a href="#compDetail_53757">LICENSE AND COPYRIGHT INFORMATION FOR COMPONENT System.Runtime.CompilerServices.Unsafe - 4.5.2</a></td>
+			</tr>
+			<tr>
+				<td id="BlackDuckCompSummCellInsertionPoint" class="componentSummary">System.Threading.Tasks.Extensions - 4.5.2</td>
+				<td class="componentSummary">Yes</td>
+				<td class="componentSummary"></td>
+				<td class="componentSummary"><a href="#compDetail_53911">LICENSE AND COPYRIGHT INFORMATION FOR COMPONENT System.Threading.Tasks.Extensions - 4.5.2</a></td>
+			</tr>
+			<tr>
+				<td id="BlackDuckCompSummCellInsertionPoint" class="componentSummary">Unity.Container - 5.11.4</td>
+				<td class="componentSummary">Yes</td>
+				<td class="componentSummary"></td>
+				<td class="componentSummary"><a href="#compDetail_75478">LICENSE AND COPYRIGHT INFORMATION FOR COMPONENT Unity.Container - 5.11.4</a></td>
+			</tr>
+		</tbody>
+	</table>
+
+
+	<!-- Component detail -->
+	<table class="componentDetail">
+		<tbody id="component-detail">
+				<tr class="componentDetail">
+					<td class="componentDetail">
+					<!-- componentRowTextComponentHeader -->
+						<h4><br /><a name="compDetail_96261">LICENSE CONDITIONS AND COPYRIGHT NOTICES</a></h4>
+						<!-- Bug?: the '-' before component name-->
+						    <h4> Open Source Software: - abstractions - unitycontainer/abstractions - 5.11.2</h4>
+							<!-- There are BOTH license and copyright sections -->
+							<!-- Bug?: the componentType before the name plus the '-' before component name-->
+							<!-- origin: Open Source Software - abstractions - unitycontainer/abstractions - 5.11.2</p>-->
+								<p class='important'>Enclosed you will find the <a href='#compLicenseText_96261'>license conditions</a> and
+								<a href='#compCopyrightText_96261'>copyright notices</a> applicable for
+								 - abstractions - unitycontainer/abstractions - 5.11.2</p>
+								<br/>
+
+						<!-- componentRowTextLicenseText -->
+							<h5><a name='compLicenseText_96261'>License conditions:</a></h5>
+							<br />
+							<table class='licenseText'>
+									<tr>
+										<td>Apache License Version 2.0, January 2004<br> <br>http://www.apache.org/licenses/<br>TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION<br> <br>1. Definitions.<br> <br>"License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.<br> <br>"Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.<br> <br>"Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.<br> <br>"You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.<br> <br>"Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.<br> <br>"Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.<br> <br>"Work" shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).<br> <br>"Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.<br> <br>"Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, "submitted" means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as "Not a Contribution."<br> <br>"Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work.<br> <br>2. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form.<br> <br>3. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work to which such Contribution(s) was submitted. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Work or a Contribution incorporated within the Work constitutes direct or contributory patent infringement, then any patent licenses granted to You under this License for that Work shall terminate as of the date such litigation is filed.<br> <br>4. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications, and in Source or Object form, provided that You meet the following conditions:<br> <br>You must give any other recipients of the Work or Derivative Works a copy of this License; and <br> <br>You must cause any modified files to carry prominent notices stating that You changed the files; and <br> <br>You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, and attribution notices from the Source form of the Work, excluding those notices that do not pertain to any part of the Derivative Works; and <br> <br>If the Work includes a "NOTICE" text file as part of its distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License.<br>You may add Your own copyright statement to Your modifications and may provide additional or different license terms and conditions for use, reproduction, or distribution of Your modifications, or for any such Derivative Works as a whole, provided Your use, reproduction, and distribution of the Work otherwise complies with the conditions stated in this License.<br> <br>5. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work by You to the Licensor shall be under the terms and conditions of this License, without any additional terms or conditions. Notwithstanding the above, nothing herein shall supersede or modify the terms of any separate license agreement you may have executed with Licensor regarding such Contributions.<br> <br>6. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor, except as required for reasonable and customary use in describing the origin of the Work and reproducing the content of the NOTICE file.<br> <br>7. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides its Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under this License.<br> <br>8. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Contributor be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Work (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses), even if such Contributor has been advised of the possibility of such damages.<br> <br>9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability.<br> <br>END OF TERMS AND CONDITIONS</td>
+									</tr>
+							</table>
+						<br />
+
+						<!-- componentRowPassThroughInformationText -->
+						<br/>
+
+					<!-- componentRowTextCopyrightText -->
+							<br />
+							<h5><a name='compCopyrightText_96261'>Copyrights:</a></h5>
+                                <table class='copyrightText'>
+                                    <tr>
+                                        <td class='copyrightText'>
+                                            Copyright (c) Unity Container Project 2018
+                                        </td>
+                                    </tr>
+                                </table>
+							<br />
+						<br/>
+					</td>
+				</tr>
+				<tr class="componentDetail">
+					<td class="componentDetail">
+					<!-- componentRowTextComponentHeader -->
+						<h4><br /><a name="compDetail_99563">LICENSE CONDITIONS AND COPYRIGHT NOTICES</a></h4>
+						<!-- Bug?: the '-' before component name-->
+						    <h4> Open Source Software: - Microsoft.Xaml.Behaviors.Wpf - 1.1.19</h4>
+							<!-- There are BOTH license and copyright sections -->
+							<!-- Bug?: the componentType before the name plus the '-' before component name-->
+							<!-- origin: Open Source Software - Microsoft.Xaml.Behaviors.Wpf - 1.1.19</p>-->
+								<p class='important'>Enclosed you will find the <a href='#compLicenseText_99563'>license conditions</a> and
+								<a href='#compCopyrightText_99563'>copyright notices</a> applicable for
+								 - Microsoft.Xaml.Behaviors.Wpf - 1.1.19</p>
+								<br/>
+
+						<!-- componentRowTextLicenseText -->
+							<h5><a name='compLicenseText_99563'>License conditions:</a></h5>
+							<br />
+							<table class='licenseText'>
+									<tr>
+										<td>The MIT License<br><br>Copyright (c)  <br><br>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:<br> <br>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.<br> <br>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</td>
+									</tr>
+							</table>
+						<br />
+
+						<!-- componentRowPassThroughInformationText -->
+						<br/>
+
+					<!-- componentRowTextCopyrightText -->
+							<br />
+							<h5><a name='compCopyrightText_99563'>Copyrights:</a></h5>
+                                <table class='copyrightText'>
+                                    <tr>
+                                        <td class='copyrightText'>
+                                            (c) 2017 assembly AssemblyTrademark assembly AssemblyCulture; (c) 2019 assembly AssemblyTrademark assembly AssemblyCulture; (c) Microsoft Corporation.; Copyright (c) 2015 Microsoft; Copyright (c) Microsoft Corporation.; Copyright (c) Microsoft.
+                                        </td>
+                                    </tr>
+                                </table>
+							<br />
+						<br/>
+					</td>
+				</tr>
+				<tr class="componentDetail">
+					<td class="componentDetail">
+					<!-- componentRowTextComponentHeader -->
+						<h4><br /><a name="compDetail_130518">LICENSE CONDITIONS AND COPYRIGHT NOTICES</a></h4>
+						<!-- Bug?: the '-' before component name-->
+						    <h4> Open Source Software: - Prism Library - 8.1.97 (1)</h4>
+							<!-- There are BOTH license and copyright sections -->
+							<!-- Bug?: the componentType before the name plus the '-' before component name-->
+							<!-- origin: Open Source Software - Prism Library - 8.1.97 (1)</p>-->
+								<p class='important'>Enclosed you will find the <a href='#compLicenseText_130518'>license conditions</a> and
+								<a href='#compCopyrightText_130518'>copyright notices</a> applicable for
+								 - Prism Library - 8.1.97 (1)</p>
+								<br/>
+
+						<!-- componentRowTextLicenseText -->
+							<h5><a name='compLicenseText_130518'>License conditions:</a></h5>
+							<br />
+							<table class='licenseText'>
+									<tr>
+										<td>Apache License Version 2.0, January 2004<br> <br>http://www.apache.org/licenses/<br>TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION<br> <br>1. Definitions.<br> <br>"License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.<br> <br>"Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.<br> <br>"Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.<br> <br>"You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.<br> <br>"Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.<br> <br>"Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.<br> <br>"Work" shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).<br> <br>"Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.<br> <br>"Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, "submitted" means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as "Not a Contribution."<br> <br>"Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work.<br> <br>2. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form.<br> <br>3. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work to which such Contribution(s) was submitted. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Work or a Contribution incorporated within the Work constitutes direct or contributory patent infringement, then any patent licenses granted to You under this License for that Work shall terminate as of the date such litigation is filed.<br> <br>4. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications, and in Source or Object form, provided that You meet the following conditions:<br> <br>You must give any other recipients of the Work or Derivative Works a copy of this License; and <br> <br>You must cause any modified files to carry prominent notices stating that You changed the files; and <br> <br>You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, and attribution notices from the Source form of the Work, excluding those notices that do not pertain to any part of the Derivative Works; and <br> <br>If the Work includes a "NOTICE" text file as part of its distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License.<br>You may add Your own copyright statement to Your modifications and may provide additional or different license terms and conditions for use, reproduction, or distribution of Your modifications, or for any such Derivative Works as a whole, provided Your use, reproduction, and distribution of the Work otherwise complies with the conditions stated in this License.<br> <br>5. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work by You to the Licensor shall be under the terms and conditions of this License, without any additional terms or conditions. Notwithstanding the above, nothing herein shall supersede or modify the terms of any separate license agreement you may have executed with Licensor regarding such Contributions.<br> <br>6. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor, except as required for reasonable and customary use in describing the origin of the Work and reproducing the content of the NOTICE file.<br> <br>7. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides its Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under this License.<br> <br>8. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Contributor be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Work (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses), even if such Contributor has been advised of the possibility of such damages.<br> <br>9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability.<br> <br>END OF TERMS AND CONDITIONS</td>
+									</tr>
+									<tr>
+										<td>The MIT License<br><br>Copyright (c)  <br><br>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:<br> <br>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.<br> <br>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</td>
+									</tr>
+							</table>
+						<br />
+
+						<!-- componentRowPassThroughInformationText -->
+						<br/>
+
+					<!-- componentRowTextCopyrightText -->
+							<br />
+							<h5><a name='compCopyrightText_130518'>Copyrights:</a></h5>
+                                <table class='copyrightText'>
+                                    <tr>
+                                        <td class='copyrightText'>
+                                            Copyright (c) .NET Foundation; Copyright Microsoft Open Technologies, Inc.
+                                        </td>
+                                    </tr>
+                                </table>
+							<br />
+						<br/>
+					</td>
+				</tr>
+				<tr class="componentDetail">
+					<td class="componentDetail">
+					<!-- componentRowTextComponentHeader -->
+						<h4><br /><a name="compDetail_53757">LICENSE CONDITIONS AND COPYRIGHT NOTICES</a></h4>
+						<!-- Bug?: the '-' before component name-->
+						    <h4> Open Source Software: - System.Runtime.CompilerServices.Unsafe - 4.5.2</h4>
+							<!-- There are BOTH license and copyright sections -->
+							<!-- Bug?: the componentType before the name plus the '-' before component name-->
+							<!-- origin: Open Source Software - System.Runtime.CompilerServices.Unsafe - 4.5.2</p>-->
+								<p class='important'>Enclosed you will find the <a href='#compLicenseText_53757'>license conditions</a> and
+								<a href='#compCopyrightText_53757'>copyright notices</a> applicable for
+								 - System.Runtime.CompilerServices.Unsafe - 4.5.2</p>
+								<br/>
+
+						<!-- componentRowTextLicenseText -->
+							<h5><a name='compLicenseText_53757'>License conditions:</a></h5>
+							<br />
+							<table class='licenseText'>
+									<tr>
+										<td>The MIT License<br><br>Copyright (c)  <br><br>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:<br> <br>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.<br> <br>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</td>
+									</tr>
+							</table>
+						<br />
+
+						<!-- componentRowPassThroughInformationText -->
+							<br />
+							<h5>Pass-Through Information:</h5>
+							<table class='passThroughInformationText'>
+									<tr>
+										<td class='passThroughInformationText'>.NET Core uses third-party libraries or other resources that may be<br>distributed under licenses different than the .NET Core software.<br>In the event that we accidentally failed to list a required notice, please<br>bring it to our attention. Post an issue or email us:<br>           dotnet@microsoft.com<br>The attached notices are provided for information only.<br>License notice for Slicing-by-8 <br>-------------------------------<br>http://sourceforge.net/projects/slicing-by-8/<br>Copyright (c) 2004-2006 Intel Corporation - All Rights Reserved<br>This software program is licensed subject to the BSD License,  available at<br>http://www.opensource.org/licenses/bsd-license.html.<br>License notice for Unicode data<br>-------------------------------<br>http://www.unicode.org/copyright.html#License<br>Copyright © 1991-2017 Unicode, Inc. All rights reserved.<br>Distributed under the Terms of Use in http://www.unicode.org/copyright.html.<br>Permission is hereby granted, free of charge, to any person obtaining<br>a copy of the Unicode data files and any associated documentation<br>(the %22Data Files%22) or Unicode software and any associated documentation<br>(the %22Software%22) to deal in the Data Files or Software<br>without restriction, including without limitation the rights to use,<br>copy, modify, merge, publish, distribute, and/or sell copies of<br>the Data Files or Software, and to permit persons to whom the Data Files<br>or Software are furnished to do so, provided that either<br>(a) this copyright and permission notice appear with all copies<br>of the Data Files or Software, or<br>(b) this copyright and permission notice appear in associated<br>Documentation.<br>THE DATA FILES AND SOFTWARE ARE PROVIDED %22AS IS%22, WITHOUT WARRANTY OF<br>ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE<br>WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND<br>NONINFRINGEMENT OF THIRD PARTY RIGHTS.<br>IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS<br>NOTICE BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL<br>DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,<br>DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER<br>TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR<br>PERFORMANCE OF THE DATA FILES OR SOFTWARE.<br>Except as contained in this notice, the name of a copyright holder<br>shall not be used in advertising or otherwise to promote the sale,<br>use or other dealings in these Data Files or Software without prior<br>written authorization of the copyright holder.<br>License notice for Zlib <br>-----------------------<br>https://github.com/madler/zlib<br>http://zlib.net/zlib_license.html<br>/* zlib.h -- interface of the 'zlib' general purpose compression library<br>  version 1.2.11, January 15th, 2017<br>  Copyright (C) 1995-2017 Jean-loup Gailly and Mark Adler<br>  This software is provided 'as-is', without any express or implied<br>  warranty.  In no event will the authors be held liable for any damages<br>  arising from the use of this software.<br>  Permission is granted to anyone to use this software for any purpose,<br>  including commercial applications, and to alter it and redistribute it<br>  freely, subject to the following restrictions:<br>  1. The origin of this software must not be misrepresented; you must not<br>     claim that you wrote the original software. If you use this software<br>     in a product, an acknowledgment in the product documentation would be<br>     appreciated but is not required.<br>  2. Altered source versions must be plainly marked as such, and must not be<br>     misrepresented as being the original software.<br>  3. This notice may not be removed or altered from any source distribution.<br>  Jean-loup Gailly        Mark Adler<br>  jloup@gzip.org          madler@alumni.caltech.edu<br>*/<br>License notice for Mono<br>-------------------------------<br>http://www.mono-project.com/docs/about-mono/<br>Copyright (c) .NET Foundation Contributors<br>MIT License<br>Permission is hereby granted, free of charge, to any person obtaining a copy<br>of this software  and associated documentation files (the Software), to deal<br>in the Software without restriction,  including without limitation the rights<br>to use, copy, modify, merge, publish, distribute, sublicense,  and/or sell<br>copies of the Software, and to permit persons to whom the Software is<br>furnished to do so,  subject to the following conditions:<br>The above copyright notice and this permission notice shall be included in all<br>copies or substantial portions of the Software.<br>THE SOFTWARE IS PROVIDED %22AS IS%22, WITHOUT WARRANTY OF ANY KIND, <br>EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF <br>MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND <br>NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE <br>LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION <br>OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION <br>WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.<br>License notice for International Organization for Standardization<br>-----------------------------------------------------------------<br>Portions (C) International Organization for Standardization 1986:<br>     Permission to copy in any form is granted for use with<br>     conforming SGML systems and applications as defined in<br>     ISO 8879, provided this notice is included in all copies.<br>License notice for Intel<br>------------------------<br>%22Copyright (c) 2004-2006 Intel Corporation - All Rights Reserved<br>Redistribution and use in source and binary forms, with or without<br>modification, are permitted provided that the following conditions are met:<br>1. Redistributions of source code must retain the above copyright notice, this<br>list of conditions and the following disclaimer.<br>2. Redistributions in binary form must reproduce the above copyright notice,<br>this list of conditions and the following disclaimer in the documentation<br>and/or other materials provided with the distribution.<br>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS %22AS IS%22<br>AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE<br>IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE<br>DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE<br>FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL<br>DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR<br>SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER<br>CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,<br>OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE<br>OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.<br>License notice for Xamarin and Novell<br>-------------------------------------<br>Copyright (c) 2015 Xamarin, Inc (http://www.xamarin.com)<br>Permission is hereby granted, free of charge, to any person obtaining a copy<br>of this software and associated documentation files (the %22Software%22), to deal<br>in the Software without restriction, including without limitation the rights<br>to use, copy, modify, merge, publish, distribute, sublicense, and/or sell<br>copies of the Software, and to permit persons to whom the Software is<br>furnished to do so, subject to the following conditions:<br>The above copyright notice and this permission notice shall be included in<br>all copies or substantial portions of the Software.<br>THE SOFTWARE IS PROVIDED %22AS IS%22, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR<br>IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,<br>FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE<br>AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER<br>LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,<br>OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN<br>THE SOFTWARE.<br>Copyright (c) 2011 Novell, Inc (http://www.novell.com)<br>Permission is hereby granted, free of charge, to any person obtaining a copy<br>of this software and associated documentation files (the %22Software%22), to deal<br>in the Software without restriction, including without limitation the rights<br>to use, copy, modify, merge, publish, distribute, sublicense, and/or sell<br>copies of the Software, and to permit persons to whom the Software is<br>furnished to do so, subject to the following conditions:<br>The above copyright notice and this permission notice shall be included in<br>all copies or substantial portions of the Software.<br>THE SOFTWARE IS PROVIDED %22AS IS%22, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR<br>IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,<br>FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE<br>AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER<br>LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,<br>OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN<br>THE SOFTWARE.<br>Third party notice for W3C<br>--------------------------<br>%22W3C SOFTWARE AND DOCUMENT NOTICE AND LICENSE<br>Status: This license takes effect 13 May, 2015.<br>This work is being provided by the copyright holders under the following license.<br>License<br>By obtaining and/or copying this work, you (the licensee) agree that you have read, understood, and will comply with the following terms and conditions.<br>Permission to copy, modify, and distribute this work, with or without modification, for any purpose and without fee or royalty is hereby granted, provided that you include the following on ALL copies of the work or portions thereof, including modifications:<br>The full text of this NOTICE in a location viewable to users of the redistributed or derivative work.<br>Any pre-existing intellectual property disclaimers, notices, or terms and conditions. If none exist, the W3C Software and Document Short Notice should be included.<br>Notice of any changes or modifications, through a copyright statement on the new code or document such as %22This software or document includes material copied from or derived from [title and URI of the W3C document]. Copyright © [YEAR] W3C® (MIT, ERCIM, Keio, Beihang).%22<br>Disclaimers<br>THIS WORK IS PROVIDED %22AS IS,%22 AND COPYRIGHT HOLDERS MAKE NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO, WARRANTIES OF MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF THE SOFTWARE OR DOCUMENT WILL NOT INFRINGE ANY THIRD PARTY PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.<br>COPYRIGHT HOLDERS WILL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF ANY USE OF THE SOFTWARE OR DOCUMENT.<br>The name and trademarks of copyright holders may NOT be used in advertising or publicity pertaining to the work without specific, written prior permission. Title to copyright in this work will at all times remain with copyright holders.%22<br>License notice for Bit Twiddling Hacks<br>--------------------------------------<br>Bit Twiddling Hacks<br>By Sean Eron Anderson<br>seander@cs.stanford.edu<br>Individually, the code snippets here are in the public domain (unless otherwise<br>noted) — feel free to use them however you please. The aggregate collection and<br>descriptions are © 1997-2005 Sean Eron Anderson. The code and descriptions are<br>distributed in the hope that they will be useful, but WITHOUT ANY WARRANTY and<br>without even the implied warranty of merchantability or fitness for a particular<br>purpose. <br>License notice for Brotli<br>--------------------------------------<br>Copyright (c) 2009, 2010, 2013-2016 by the Brotli Authors.<br>Permission is hereby granted, free of charge, to any person obtaining a copy<br>of this software and associated documentation files (the %22Software%22), to deal<br>in the Software without restriction, including without limitation the rights<br>to use, copy, modify, merge, publish, distribute, sublicense, and/or sell<br>copies of the Software, and to permit persons to whom the Software is<br>furnished to do so, subject to the following conditions:<br>The above copyright notice and this permission notice shall be included in<br>all copies or substantial portions of the Software.<br>THE SOFTWARE IS PROVIDED %22AS IS%22, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR<br>IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,<br>FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE<br>AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER<br>LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,<br>OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN<br>THE SOFTWARE.<br>compress_fragment.c:<br>Copyright (c) 2011, Google Inc.<br>All rights reserved.<br>Redistribution and use in source and binary forms, with or without<br>modification, are permitted provided that the following conditions are<br>met:<br>    * Redistributions of source code must retain the above copyright<br>notice, this list of conditions and the following disclaimer.<br>    * Redistributions in binary form must reproduce the above<br>copyright notice, this list of conditions and the following disclaimer<br>in the documentation and/or other materials provided with the<br>distribution.<br>    * Neither the name of Google Inc. nor the names of its<br>contributors may be used to endorse or promote products derived from<br>this software without specific prior written permission.<br>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS<br>%22%22AS IS%22%22 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT<br>LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR<br>A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT<br>OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,<br>SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT<br>LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,<br>DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY<br>THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT<br>(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE<br>OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.<br>decode_fuzzer.c:<br>Copyright (c) 2015 The Chromium Authors. All rights reserved.<br>Redistribution and use in source and binary forms, with or without<br>modification, are permitted provided that the following conditions are<br>met:<br>   * Redistributions of source code must retain the above copyright<br>notice, this list of conditions and the following disclaimer.<br>   * Redistributions in binary form must reproduce the above<br>copyright notice, this list of conditions and the following disclaimer<br>in the documentation and/or other materials provided with the<br>distribution.<br>   * Neither the name of Google Inc. nor the names of its<br>contributors may be used to endorse or promote products derived from<br>this software without specific prior written permission.<br>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS<br>%22%22AS IS%22%22 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT<br>LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR<br>A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT<br>OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,<br>SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT<br>LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,<br>DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY<br>THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT<br>(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE<br>OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.%22</td>
+									</tr>
+							</table>
+							<br />
+						<br/>
+
+					<!-- componentRowTextCopyrightText -->
+							<br />
+							<h5><a name='compCopyrightText_53757'>Copyrights:</a></h5>
+                                <table class='copyrightText'>
+                                    <tr>
+                                        <td class='copyrightText'>
+                                            ; Copyright (c) .NET Foundation and Contributors
+                                        </td>
+                                    </tr>
+                                </table>
+							<br />
+						<br/>
+					</td>
+				</tr>
+				<tr class="componentDetail">
+					<td class="componentDetail">
+					<!-- componentRowTextComponentHeader -->
+						<h4><br /><a name="compDetail_53911">LICENSE CONDITIONS AND COPYRIGHT NOTICES</a></h4>
+						<!-- Bug?: the '-' before component name-->
+						    <h4> Open Source Software: - System.Threading.Tasks.Extensions - 4.5.2</h4>
+							<!-- There are BOTH license and copyright sections -->
+							<!-- Bug?: the componentType before the name plus the '-' before component name-->
+							<!-- origin: Open Source Software - System.Threading.Tasks.Extensions - 4.5.2</p>-->
+								<p class='important'>Enclosed you will find the <a href='#compLicenseText_53911'>license conditions</a> and
+								<a href='#compCopyrightText_53911'>copyright notices</a> applicable for
+								 - System.Threading.Tasks.Extensions - 4.5.2</p>
+								<br/>
+
+						<!-- componentRowTextLicenseText -->
+							<h5><a name='compLicenseText_53911'>License conditions:</a></h5>
+							<br />
+							<table class='licenseText'>
+									<tr>
+										<td>The MIT License<br><br>Copyright (c)  <br><br>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:<br> <br>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.<br> <br>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</td>
+									</tr>
+							</table>
+						<br />
+
+						<!-- componentRowPassThroughInformationText -->
+							<br />
+							<h5>Pass-Through Information:</h5>
+							<table class='passThroughInformationText'>
+									<tr>
+										<td class='passThroughInformationText'>.NET Core uses third-party libraries or other resources that may be<br>distributed under licenses different than the .NET Core software.<br>In the event that we accidentally failed to list a required notice, please<br>bring it to our attention. Post an issue or email us:<br>           dotnet@microsoft.com<br>The attached notices are provided for information only.<br>License notice for Slicing-by-8 <br>-------------------------------<br>http://sourceforge.net/projects/slicing-by-8/<br>Copyright (c) 2004-2006 Intel Corporation - All Rights Reserved<br>This software program is licensed subject to the BSD License,  available at<br>http://www.opensource.org/licenses/bsd-license.html.<br>License notice for Unicode data<br>-------------------------------<br>http://www.unicode.org/copyright.html#License<br>Copyright © 1991-2017 Unicode, Inc. All rights reserved.<br>Distributed under the Terms of Use in http://www.unicode.org/copyright.html.<br>Permission is hereby granted, free of charge, to any person obtaining<br>a copy of the Unicode data files and any associated documentation<br>(the %22Data Files%22) or Unicode software and any associated documentation<br>(the %22Software%22) to deal in the Data Files or Software<br>without restriction, including without limitation the rights to use,<br>copy, modify, merge, publish, distribute, and/or sell copies of<br>the Data Files or Software, and to permit persons to whom the Data Files<br>or Software are furnished to do so, provided that either<br>(a) this copyright and permission notice appear with all copies<br>of the Data Files or Software, or<br>(b) this copyright and permission notice appear in associated<br>Documentation.<br>THE DATA FILES AND SOFTWARE ARE PROVIDED %22AS IS%22, WITHOUT WARRANTY OF<br>ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE<br>WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND<br>NONINFRINGEMENT OF THIRD PARTY RIGHTS.<br>IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS<br>NOTICE BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL<br>DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,<br>DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER<br>TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR<br>PERFORMANCE OF THE DATA FILES OR SOFTWARE.<br>Except as contained in this notice, the name of a copyright holder<br>shall not be used in advertising or otherwise to promote the sale,<br>use or other dealings in these Data Files or Software without prior<br>written authorization of the copyright holder.<br>License notice for Zlib <br>-----------------------<br>https://github.com/madler/zlib<br>http://zlib.net/zlib_license.html<br>/* zlib.h -- interface of the 'zlib' general purpose compression library<br>  version 1.2.11, January 15th, 2017<br>  Copyright (C) 1995-2017 Jean-loup Gailly and Mark Adler<br>  This software is provided 'as-is', without any express or implied<br>  warranty.  In no event will the authors be held liable for any damages<br>  arising from the use of this software.<br>  Permission is granted to anyone to use this software for any purpose,<br>  including commercial applications, and to alter it and redistribute it<br>  freely, subject to the following restrictions:<br>  1. The origin of this software must not be misrepresented; you must not<br>     claim that you wrote the original software. If you use this software<br>     in a product, an acknowledgment in the product documentation would be<br>     appreciated but is not required.<br>  2. Altered source versions must be plainly marked as such, and must not be<br>     misrepresented as being the original software.<br>  3. This notice may not be removed or altered from any source distribution.<br>  Jean-loup Gailly        Mark Adler<br>  jloup@gzip.org          madler@alumni.caltech.edu<br>*/<br>License notice for Mono<br>-------------------------------<br>http://www.mono-project.com/docs/about-mono/<br>Copyright (c) .NET Foundation Contributors<br>MIT License<br>Permission is hereby granted, free of charge, to any person obtaining a copy<br>of this software  and associated documentation files (the Software), to deal<br>in the Software without restriction,  including without limitation the rights<br>to use, copy, modify, merge, publish, distribute, sublicense,  and/or sell<br>copies of the Software, and to permit persons to whom the Software is<br>furnished to do so,  subject to the following conditions:<br>The above copyright notice and this permission notice shall be included in all<br>copies or substantial portions of the Software.<br>THE SOFTWARE IS PROVIDED %22AS IS%22, WITHOUT WARRANTY OF ANY KIND, <br>EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF <br>MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND <br>NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE <br>LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION <br>OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION <br>WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.<br>License notice for International Organization for Standardization<br>-----------------------------------------------------------------<br>Portions (C) International Organization for Standardization 1986:<br>     Permission to copy in any form is granted for use with<br>     conforming SGML systems and applications as defined in<br>     ISO 8879, provided this notice is included in all copies.<br>License notice for Intel<br>------------------------<br>%22Copyright (c) 2004-2006 Intel Corporation - All Rights Reserved<br>Redistribution and use in source and binary forms, with or without<br>modification, are permitted provided that the following conditions are met:<br>1. Redistributions of source code must retain the above copyright notice, this<br>list of conditions and the following disclaimer.<br>2. Redistributions in binary form must reproduce the above copyright notice,<br>this list of conditions and the following disclaimer in the documentation<br>and/or other materials provided with the distribution.<br>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS %22AS IS%22<br>AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE<br>IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE<br>DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE<br>FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL<br>DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR<br>SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER<br>CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,<br>OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE<br>OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.<br>License notice for Xamarin and Novell<br>-------------------------------------<br>Copyright (c) 2015 Xamarin, Inc (http://www.xamarin.com)<br>Permission is hereby granted, free of charge, to any person obtaining a copy<br>of this software and associated documentation files (the %22Software%22), to deal<br>in the Software without restriction, including without limitation the rights<br>to use, copy, modify, merge, publish, distribute, sublicense, and/or sell<br>copies of the Software, and to permit persons to whom the Software is<br>furnished to do so, subject to the following conditions:<br>The above copyright notice and this permission notice shall be included in<br>all copies or substantial portions of the Software.<br>THE SOFTWARE IS PROVIDED %22AS IS%22, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR<br>IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,<br>FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE<br>AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER<br>LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,<br>OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN<br>THE SOFTWARE.<br>Copyright (c) 2011 Novell, Inc (http://www.novell.com)<br>Permission is hereby granted, free of charge, to any person obtaining a copy<br>of this software and associated documentation files (the %22Software%22), to deal<br>in the Software without restriction, including without limitation the rights<br>to use, copy, modify, merge, publish, distribute, sublicense, and/or sell<br>copies of the Software, and to permit persons to whom the Software is<br>furnished to do so, subject to the following conditions:<br>The above copyright notice and this permission notice shall be included in<br>all copies or substantial portions of the Software.<br>THE SOFTWARE IS PROVIDED %22AS IS%22, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR<br>IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,<br>FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE<br>AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER<br>LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,<br>OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN<br>THE SOFTWARE.<br>Third party notice for W3C<br>--------------------------<br>%22W3C SOFTWARE AND DOCUMENT NOTICE AND LICENSE<br>Status: This license takes effect 13 May, 2015.<br>This work is being provided by the copyright holders under the following license.<br>License<br>By obtaining and/or copying this work, you (the licensee) agree that you have read, understood, and will comply with the following terms and conditions.<br>Permission to copy, modify, and distribute this work, with or without modification, for any purpose and without fee or royalty is hereby granted, provided that you include the following on ALL copies of the work or portions thereof, including modifications:<br>The full text of this NOTICE in a location viewable to users of the redistributed or derivative work.<br>Any pre-existing intellectual property disclaimers, notices, or terms and conditions. If none exist, the W3C Software and Document Short Notice should be included.<br>Notice of any changes or modifications, through a copyright statement on the new code or document such as %22This software or document includes material copied from or derived from [title and URI of the W3C document]. Copyright © [YEAR] W3C® (MIT, ERCIM, Keio, Beihang).%22<br>Disclaimers<br>THIS WORK IS PROVIDED %22AS IS,%22 AND COPYRIGHT HOLDERS MAKE NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO, WARRANTIES OF MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF THE SOFTWARE OR DOCUMENT WILL NOT INFRINGE ANY THIRD PARTY PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.<br>COPYRIGHT HOLDERS WILL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF ANY USE OF THE SOFTWARE OR DOCUMENT.<br>The name and trademarks of copyright holders may NOT be used in advertising or publicity pertaining to the work without specific, written prior permission. Title to copyright in this work will at all times remain with copyright holders.%22<br>License notice for Bit Twiddling Hacks<br>--------------------------------------<br>Bit Twiddling Hacks<br>By Sean Eron Anderson<br>seander@cs.stanford.edu<br>Individually, the code snippets here are in the public domain (unless otherwise<br>noted) — feel free to use them however you please. The aggregate collection and<br>descriptions are © 1997-2005 Sean Eron Anderson. The code and descriptions are<br>distributed in the hope that they will be useful, but WITHOUT ANY WARRANTY and<br>without even the implied warranty of merchantability or fitness for a particular<br>purpose. <br>License notice for Brotli<br>--------------------------------------<br>Copyright (c) 2009, 2010, 2013-2016 by the Brotli Authors.<br>Permission is hereby granted, free of charge, to any person obtaining a copy<br>of this software and associated documentation files (the %22Software%22), to deal<br>in the Software without restriction, including without limitation the rights<br>to use, copy, modify, merge, publish, distribute, sublicense, and/or sell<br>copies of the Software, and to permit persons to whom the Software is<br>furnished to do so, subject to the following conditions:<br>The above copyright notice and this permission notice shall be included in<br>all copies or substantial portions of the Software.<br>THE SOFTWARE IS PROVIDED %22AS IS%22, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR<br>IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,<br>FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE<br>AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER<br>LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,<br>OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN<br>THE SOFTWARE.<br>compress_fragment.c:<br>Copyright (c) 2011, Google Inc.<br>All rights reserved.<br>Redistribution and use in source and binary forms, with or without<br>modification, are permitted provided that the following conditions are<br>met:<br>    * Redistributions of source code must retain the above copyright<br>notice, this list of conditions and the following disclaimer.<br>    * Redistributions in binary form must reproduce the above<br>copyright notice, this list of conditions and the following disclaimer<br>in the documentation and/or other materials provided with the<br>distribution.<br>    * Neither the name of Google Inc. nor the names of its<br>contributors may be used to endorse or promote products derived from<br>this software without specific prior written permission.<br>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS<br>%22%22AS IS%22%22 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT<br>LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR<br>A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT<br>OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,<br>SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT<br>LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,<br>DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY<br>THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT<br>(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE<br>OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.<br>decode_fuzzer.c:<br>Copyright (c) 2015 The Chromium Authors. All rights reserved.<br>Redistribution and use in source and binary forms, with or without<br>modification, are permitted provided that the following conditions are<br>met:<br>   * Redistributions of source code must retain the above copyright<br>notice, this list of conditions and the following disclaimer.<br>   * Redistributions in binary form must reproduce the above<br>copyright notice, this list of conditions and the following disclaimer<br>in the documentation and/or other materials provided with the<br>distribution.<br>   * Neither the name of Google Inc. nor the names of its<br>contributors may be used to endorse or promote products derived from<br>this software without specific prior written permission.<br>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS<br>%22%22AS IS%22%22 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT<br>LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR<br>A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT<br>OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,<br>SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT<br>LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,<br>DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY<br>THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT<br>(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE<br>OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.%22<br></td>
+									</tr>
+							</table>
+							<br />
+						<br/>
+
+					<!-- componentRowTextCopyrightText -->
+							<br />
+							<h5><a name='compCopyrightText_53911'>Copyrights:</a></h5>
+                                <table class='copyrightText'>
+                                    <tr>
+                                        <td class='copyrightText'>
+                                            Copyright (c) .NET Foundation and Contributors
+                                        </td>
+                                    </tr>
+                                </table>
+							<br />
+						<br/>
+					</td>
+				</tr>
+				<tr class="componentDetail">
+					<td class="componentDetail">
+					<!-- componentRowTextComponentHeader -->
+						<h4><br /><a name="compDetail_75478">LICENSE CONDITIONS AND COPYRIGHT NOTICES</a></h4>
+						<!-- Bug?: the '-' before component name-->
+						    <h4> Open Source Software: - Unity.Container - 5.11.4</h4>
+							<!-- There are BOTH license and copyright sections -->
+							<!-- Bug?: the componentType before the name plus the '-' before component name-->
+							<!-- origin: Open Source Software - Unity.Container - 5.11.4</p>-->
+								<p class='important'>Enclosed you will find the <a href='#compLicenseText_75478'>license conditions</a> and
+								<a href='#compCopyrightText_75478'>copyright notices</a> applicable for
+								 - Unity.Container - 5.11.4</p>
+								<br/>
+
+						<!-- componentRowTextLicenseText -->
+							<h5><a name='compLicenseText_75478'>License conditions:</a></h5>
+							<br />
+							<table class='licenseText'>
+									<tr>
+										<td>Apache License Version 2.0, January 2004<br> <br>http://www.apache.org/licenses/<br>TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION<br> <br>1. Definitions.<br> <br>"License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.<br> <br>"Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.<br> <br>"Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.<br> <br>"You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.<br> <br>"Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.<br> <br>"Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.<br> <br>"Work" shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).<br> <br>"Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.<br> <br>"Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, "submitted" means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as "Not a Contribution."<br> <br>"Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work.<br> <br>2. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form.<br> <br>3. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work to which such Contribution(s) was submitted. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Work or a Contribution incorporated within the Work constitutes direct or contributory patent infringement, then any patent licenses granted to You under this License for that Work shall terminate as of the date such litigation is filed.<br> <br>4. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications, and in Source or Object form, provided that You meet the following conditions:<br> <br>You must give any other recipients of the Work or Derivative Works a copy of this License; and <br> <br>You must cause any modified files to carry prominent notices stating that You changed the files; and <br> <br>You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, and attribution notices from the Source form of the Work, excluding those notices that do not pertain to any part of the Derivative Works; and <br> <br>If the Work includes a "NOTICE" text file as part of its distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License.<br>You may add Your own copyright statement to Your modifications and may provide additional or different license terms and conditions for use, reproduction, or distribution of Your modifications, or for any such Derivative Works as a whole, provided Your use, reproduction, and distribution of the Work otherwise complies with the conditions stated in this License.<br> <br>5. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work by You to the Licensor shall be under the terms and conditions of this License, without any additional terms or conditions. Notwithstanding the above, nothing herein shall supersede or modify the terms of any separate license agreement you may have executed with Licensor regarding such Contributions.<br> <br>6. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor, except as required for reasonable and customary use in describing the origin of the Work and reproducing the content of the NOTICE file.<br> <br>7. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides its Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under this License.<br> <br>8. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Contributor be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Work (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses), even if such Contributor has been advised of the possibility of such damages.<br> <br>9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability.<br> <br>END OF TERMS AND CONDITIONS</td>
+									</tr>
+							</table>
+						<br />
+
+						<!-- componentRowPassThroughInformationText -->
+						<br/>
+
+					<!-- componentRowTextCopyrightText -->
+							<br />
+							<h5><a name='compCopyrightText_75478'>Copyrights:</a></h5>
+                                <table class='copyrightText'>
+                                    <tr>
+                                        <td class='copyrightText'>
+                                            Copyright (c) Unity Container Project 2018
+                                        </td>
+                                    </tr>
+                                </table>
+							<br />
+						<br/>
+					</td>
+				</tr>
+		</tbody>
+	</table>
+
+ 	<p class='tiny'>
+ 		Portions generated with ScanCode and provided on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. No content created from ScanCode should be considered or used as legal 	advice. Consult an Attorney for any legal advice. ScanCode is a free software code scanning tool from nexB Inc. and others. 
+		 Visit <a href="https://github.com/nexB/scancode-toolkit/">https://github.com/nexB/scancode-toolkit/</a> for support and download.
+	</p>
+
+</body>
+</html>

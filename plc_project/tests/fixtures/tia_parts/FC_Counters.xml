@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Blocks.ObjectSW ID="0" CompositionName="Blocks">
+    <AttributeList>
+      <Name>FC_Counters</Name>
+      <Number>13</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <SW.Blocks.InterfaceSection ID="3" CompositionName="Interface">
+        <Sections>
+          <Section Name="Input">
+            <Member Name="Pulse" Datatype="Bool" />
+          </Section>
+          <Section Name="Output">
+            <Member Name="Count" Datatype="Int" />
+          </Section>
+          <Section Name="Static">
+            <Member Name="CUp" Datatype="CTU" />
+            <Member Name="CDn" Datatype="CTD" />
+            <Member Name="CUd" Datatype="CTUD" />
+          </Section>
+          <Section Name="InOut" />
+          <Section Name="Temp" />
+          <Section Name="Constant" />
+        </Sections>
+      </SW.Blocks.InterfaceSection>
+      <SW.Blocks.CompileUnit ID="10" CompositionName="Networks">
+        <AttributeList>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="10t" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="10ti" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>ctu</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <FlgNet ID="nCtU">
+            <Parts>
+              <Access Scope="LocalVariable" UId="31">
+                <Symbol><Component Name="Pulse" /></Symbol>
+              </Access>
+              <Access Scope="LiteralConstant" UId="32">
+                <Constant><ConstantType>Int</ConstantType><ConstantValue>10</ConstantValue></Constant>
+              </Access>
+              <Access Scope="LocalVariable" UId="33">
+                <Symbol><Component Name="Count" /></Symbol>
+              </Access>
+              <Part Name="CtU" UId="30">
+                <Instance Scope="LocalVariable"><Component Name="CUp" /></Instance>
+              </Part>
+            </Parts>
+            <Wires>
+              <Wire UId="34">
+                <IdentCon UId="31" /><NameCon UId="30" Name="CU" />
+              </Wire>
+              <Wire UId="35">
+                <IdentCon UId="32" /><NameCon UId="30" Name="PV" />
+              </Wire>
+              <Wire UId="36">
+                <NameCon UId="30" Name="CV" /><IdentCon UId="33" />
+              </Wire>
+            </Wires>
+          </FlgNet>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+      <SW.Blocks.CompileUnit ID="11" CompositionName="Networks">
+        <AttributeList>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="11t" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="11ti" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>ctd</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <FlgNet ID="nCtD">
+            <Parts>
+              <Access Scope="LocalVariable" UId="41">
+                <Symbol><Component Name="Pulse" /></Symbol>
+              </Access>
+              <Access Scope="LiteralConstant" UId="42">
+                <Constant><ConstantType>Int</ConstantType><ConstantValue>10</ConstantValue></Constant>
+              </Access>
+              <Access Scope="LocalVariable" UId="43">
+                <Symbol><Component Name="Count" /></Symbol>
+              </Access>
+              <Part Name="CtD" UId="40">
+                <Instance Scope="LocalVariable"><Component Name="CDn" /></Instance>
+              </Part>
+            </Parts>
+            <Wires>
+              <Wire UId="44">
+                <IdentCon UId="41" /><NameCon UId="40" Name="CD" />
+              </Wire>
+              <Wire UId="45">
+                <IdentCon UId="42" /><NameCon UId="40" Name="PV" />
+              </Wire>
+              <Wire UId="46">
+                <NameCon UId="40" Name="CV" /><IdentCon UId="43" />
+              </Wire>
+            </Wires>
+          </FlgNet>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+      <SW.Blocks.CompileUnit ID="12" CompositionName="Networks">
+        <AttributeList>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="12t" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="12ti" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>ctud</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <FlgNet ID="nCtUD">
+            <Parts>
+              <Access Scope="LocalVariable" UId="51">
+                <Symbol><Component Name="Pulse" /></Symbol>
+              </Access>
+              <Access Scope="LiteralConstant" UId="52">
+                <Constant><ConstantType>Int</ConstantType><ConstantValue>10</ConstantValue></Constant>
+              </Access>
+              <Access Scope="LocalVariable" UId="53">
+                <Symbol><Component Name="Count" /></Symbol>
+              </Access>
+              <Part Name="CtUD" UId="50">
+                <Instance Scope="LocalVariable"><Component Name="CUd" /></Instance>
+              </Part>
+            </Parts>
+            <Wires>
+              <Wire UId="54">
+                <IdentCon UId="51" /><NameCon UId="50" Name="CU" />
+              </Wire>
+              <Wire UId="55">
+                <IdentCon UId="52" /><NameCon UId="50" Name="PV" />
+              </Wire>
+              <Wire UId="56">
+                <NameCon UId="50" Name="CV" /><IdentCon UId="53" />
+              </Wire>
+            </Wires>
+          </FlgNet>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </SW.Blocks.ObjectSW>
+  <DocumentType>Simatic.ML.FC</DocumentType>
+</Document>

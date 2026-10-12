@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{C04ED9AC-4C77-46BF-931A-D51E6AF6AA6A}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>TiaPortalOpennessAdapterContracts</RootNamespace>
+    <AssemblyName>TiaPortalOpennessAdapterContracts</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="IHmiSoftwareService.cs" />
+    <Compile Include="IHmiTargetService.cs" />
+    <Compile Include="ILibraryContext.cs" />
+    <Compile Include="ILibraryServiceProvider.cs" />
+    <Compile Include="IMultiuserServiceProvider.cs" />
+    <Compile Include="IOpennessBaseModule.cs" />
+    <Compile Include="IOpennessDemoModel.cs" />
+    <Compile Include="IOpennessDemoNavigationContext.cs" />
+    <Compile Include="IOpennessModule.cs" />
+    <Compile Include="IOpenness.cs" />
+    <Compile Include="IOpennessService.cs" />
+    <Compile Include="IPlcSoftwareService.cs" />
+    <Compile Include="IProjectServiceProvider.cs" />
+    <Compile Include="IStartdriveService.cs" />
+    <Compile Include="ITiaPortalServiceProvider.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TiaPortalOpennessAdapterBase\TiaPortalOpennessAdapterBase.csproj">
+      <Project>{04bfc5b3-f277-4b44-9049-820a75eb7d12}</Project>
+      <Name>TiaPortalOpennessAdapterBase</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TiaPortalOpennessInfrastructure\TiaPortalOpennessInfrastructure.csproj">
+      <Project>{9D1ECEE3-7418-486B-8B5E-50F07BC8255C}</Project>
+      <Name>TiaPortalOpennessInfrastructure</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>xcopy "$(TargetDir)$(TargetName)*$(TargetExt)" "$(SolutionDir)$(SolutionName)\$(OutDir)Modules\" /Y /S</PostBuildEvent>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,80 @@
+﻿<UserControl
+    x:Class="TiaPortalModule.Views.TiaPortalView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:prism="http://prismlibrary.com/"
+    xmlns:utils="clr-namespace:TiaPortalModule.Utils"
+    xmlns:viewModels="clr-namespace:TiaPortalModule.DesignTimeViewModels"
+    d:DataContext="{d:DesignInstance viewModels:TiaPortalDesignTimeViewModel,
+                                     IsDesignTimeCreatable=True}"
+    d:DesignHeight="250"
+    d:DesignWidth="300"
+    prism:ViewModelLocator.AutoWireViewModel="True"
+    Background="#FFF0F0F0"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <SharedResourceDictionary>
+            <SharedResourceDictionary.MergedDictionaries>
+                <SharedResourceDictionary Source="pack://application:,,,/TiaPortalOpennessDemoStyling;component/LookAndFeel.xaml" />
+            </SharedResourceDictionary.MergedDictionaries>
+            <utils:TiaPortalModeSelectionConverter x:Key="TiaPortalModeSelectionConverter" />
+        </SharedResourceDictionary>
+
+    </UserControl.Resources>
+
+    <GroupBox
+        Margin="5"
+        Background="#FFF0F0F0"
+        Header="TIA Portal">
+        <Grid Margin="0" Background="#FFF0F0F0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0" Orientation="Vertical">
+                <Grid Margin="5">
+                    <Label
+                        Width="110"
+                        Margin="0,0,0,0"
+                        HorizontalAlignment="Left"
+                        Content="Current Process Id:" />
+                    <TextBox
+                        MinWidth="100"
+                        Margin="110,0,0,0"
+                        VerticalContentAlignment="Center"
+                        Style="{StaticResource TextBoxReadOnlyStyle}"
+                        Text="{Binding CurrentProcessId}" />
+                </Grid>
+                <Grid Margin="5,0,5,0">
+                    <Label
+                        Width="120"
+                        Margin="0,0,0,0"
+                        HorizontalAlignment="Left"
+                        Content="Running Processes:" />
+                    <Button
+                        MinWidth="100"
+                        Margin="110,0,0,0"
+                        Command="{Binding ConnectTiaPortalCommand}"
+                        Content="Connect TIA Portal"
+                        Style="{StaticResource ButtonToolTipStyle}" />
+                </Grid>
+            </StackPanel>
+            <Grid Grid.Row="1" Margin="5">
+                <ListBox
+                    Name="TraceMonitor"
+                    ItemsSource="{Binding Path=OpennessDemoModel.ProjectInformation}"
+                    SelectedItem="{Binding SelectedProcessInformation}">
+                    <i:Interaction.Triggers>
+                        <i:EventTrigger EventName="SelectionChanged">
+                            <prism:InvokeCommandAction Command="{Binding SelectedIndexChangedProcessesCommand}" TriggerParameterPath="Source" />
+                        </i:EventTrigger>
+                    </i:Interaction.Triggers>
+                </ListBox>
+            </Grid>
+        </Grid>
+    </GroupBox>
+</UserControl>

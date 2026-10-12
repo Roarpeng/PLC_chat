@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Blocks.GlobalDB ID="0" CompositionName="Blocks">
+    <AttributeList>
+      <Name>MotorInst</Name>
+      <Number>200</Number>
+      <OfType>FB_Motor</OfType>
+      <ProgrammingLanguage>DB</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text>Background instance of FB_Motor</Text>
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <SW.Blocks.InterfaceSection ID="3" CompositionName="Interface">
+        <Sections>
+          <Section Name="None">
+            <Member Name="Start" Datatype="Bool" />
+            <Member Name="Stop" Datatype="Bool" />
+            <Member Name="Fault" Datatype="Bool" />
+            <Member Name="Running" Datatype="Bool" />
+          </Section>
+        </Sections>
+      </SW.Blocks.InterfaceSection>
+    </ObjectList>
+  </SW.Blocks.GlobalDB>
+  <DocumentType>Simatic.ML.DB</DocumentType>
+</Document>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Blocks.ObjectSW ID="0" CompositionName="Blocks">
+    <AttributeList>
+      <Name>FC_Unknown</Name>
+      <Number>21</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <SW.Blocks.InterfaceSection ID="3" CompositionName="Interface">
+        <Sections>
+          <Section Name="Input">
+            <Member Name="X" Datatype="Bool" />
+          </Section>
+          <Section Name="Output" />
+          <Section Name="InOut" />
+          <Section Name="Temp" />
+          <Section Name="Constant" />
+        </Sections>
+      </SW.Blocks.InterfaceSection>
+      <SW.Blocks.CompileUnit ID="10" CompositionName="Networks">
+        <AttributeList>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="10t" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="10ti" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>unknown part</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <FlgNet ID="13">
+            <Parts>
+              <Access Scope="LocalVariable" UId="21">
+                <Symbol><Component Name="X" /></Symbol>
+              </Access>
+              <Part Name="MysteriousBox" UId="31" />
+              <Part Name="Coil" UId="32" />
+            </Parts>
+            <Wires>
+              <Wire UId="41">
+                <Powerrail /><NameCon UId="31" Name="in" />
+              </Wire>
+              <Wire UId="42">
+                <IdentCon UId="21" /><NameCon UId="31" Name="operand" />
+              </Wire>
+              <Wire UId="43">
+                <NameCon UId="31" Name="out" /><NameCon UId="32" Name="in" />
+              </Wire>
+              <Wire UId="44">
+                <IdentCon UId="21" /><NameCon UId="32" Name="operand" />
+              </Wire>
+            </Wires>
+          </FlgNet>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </SW.Blocks.ObjectSW>
+  <DocumentType>Simatic.ML.FC</DocumentType>
+</Document>

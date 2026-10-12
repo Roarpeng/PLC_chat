@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Blocks.ObjectSW ID="0" CompositionName="Blocks">
+    <AttributeList>
+      <Name>FB_Graph</Name>
+      <Number>20</Number>
+      <ProgrammingLanguage>GRAPH</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <SW.Blocks.InterfaceSection ID="3" CompositionName="Interface">
+        <Sections>
+          <Section Name="Input">
+            <Member Name="Start" Datatype="Bool" />
+          </Section>
+          <Section Name="Output">
+            <Member Name="Ready" Datatype="Bool" />
+            <Member Name="Busy" Datatype="Bool" />
+          </Section>
+          <Section Name="InOut" />
+          <Section Name="Temp" />
+          <Section Name="Constant" />
+        </Sections>
+      </SW.Blocks.InterfaceSection>
+      <SW.Blocks.CompileUnit ID="10" CompositionName="Networks">
+        <AttributeList>
+          <ProgrammingLanguage>GRAPH</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="10t" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="10ti" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>graph sequence</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+                    <Step Name="Init" Number="1" UId="s1">
+            <Action Text="#Ready := TRUE" />
+          </Step>
+          <Step Name="Run" Number="2" UId="s2">
+            <Action Text="#Busy := TRUE" />
+          </Step>
+          <Transition Name="T1" From="Init" To="Run" Condition="#Start" UId="t1" />
+
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </SW.Blocks.ObjectSW>
+  <DocumentType>Simatic.ML.FB</DocumentType>
+</Document>

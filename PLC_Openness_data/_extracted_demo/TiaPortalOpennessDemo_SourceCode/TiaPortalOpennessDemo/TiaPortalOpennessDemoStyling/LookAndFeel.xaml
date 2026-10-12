@@ -1,0 +1,11 @@
+﻿<SharedResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+
+    <SharedResourceDictionary.MergedDictionaries>
+        <SharedResourceDictionary Source="pack://application:,,,/TiaPortalOpennessDemoStyling;component/BitmapGraphics/Icons.xaml" />
+        <SharedResourceDictionary Source="pack://application:,,,/TiaPortalOpennessDemoStyling;component/Styles/TiaPortalToolButtonStyle.xaml" />
+        <SharedResourceDictionary Source="pack://application:,,,/TiaPortalOpennessDemoStyling;component/Styles/ButtonToolTipStyle.xaml" />
+        <SharedResourceDictionary Source="pack://application:,,,/TiaPortalOpennessDemoStyling;component/Styles/TextBoxReadOnlyStyle.xaml" />
+        <SharedResourceDictionary Source="pack://application:,,,/TiaPortalOpennessDemoStyling;component/Styles/TreeViewStaysHighlightedSelectedItemStyle.xaml" />
+    </SharedResourceDictionary.MergedDictionaries>
+
+</SharedResourceDictionary>

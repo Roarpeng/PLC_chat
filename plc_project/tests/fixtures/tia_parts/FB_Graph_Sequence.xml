@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Blocks.ObjectSW ID="0" CompositionName="Blocks">
+    <AttributeList>
+      <Name>FB_GraphSeq</Name>
+      <Number>21</Number>
+      <ProgrammingLanguage>GRAPH</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <SW.Blocks.CompileUnit ID="10" CompositionName="Networks">
+        <AttributeList>
+          <ProgrammingLanguage>GRAPH</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <NetworkSource>
+            <Sequence>
+              <Steps>
+                <Step Name="Idle" Number="1" UId="s1">
+                  <Action Text="#Ready := TRUE" />
+                  <Interlock>#Permissive</Interlock>
+                  <Supervision>#Watchdog</Supervision>
+                </Step>
+                <Step Name="Move" Number="2" UId="s2">
+                  <Action Text="#Busy := TRUE" />
+                </Step>
+              </Steps>
+              <Transitions>
+                <Transition Name="T_start" From="Idle" To="Move" UId="t1">
+                  <TransitionCondition>#Start</TransitionCondition>
+                </Transition>
+              </Transitions>
+            </Sequence>
+          </NetworkSource>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </SW.Blocks.ObjectSW>
+  <DocumentType>Simatic.ML.FB</DocumentType>
+</Document>

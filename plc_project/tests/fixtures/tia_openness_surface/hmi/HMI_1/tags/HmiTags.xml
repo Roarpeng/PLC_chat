@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Hmi.TagTable Name="HmiTags">
+    <Hmi.Tag Name="StartCmd" DataType="Bool" Address="%I0.0" />
+  </Hmi.TagTable>
+</Document>

@@ -1,0 +1,62 @@
+﻿<SharedResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--  Groups  -->
+    <ImageSource x:Key="NewGroup">Icons/Groups/NewGroup.ico</ImageSource>
+    <ImageSource x:Key="EditGroup">Icons/Groups/EditGroup.ico</ImageSource>
+
+    <!--  Help  -->
+    <ImageSource x:Key="ShowHelp">Icons/Help/ShowHelp.ico</ImageSource>
+
+    <!--  Libraries  -->
+    <ImageSource x:Key="OpenLibrary">Icons/Libraries/OpenLibrary.ico</ImageSource>
+    <ImageSource x:Key="CloseLibrary">Icons/Libraries/CloseLibrary.ico</ImageSource>
+    <ImageSource x:Key="CopyLibrary">Icons/Libraries/Copy.ico</ImageSource>
+    <ImageSource x:Key="CopyToProject">Icons/Libraries/CopyToProject.ico</ImageSource>
+    <ImageSource x:Key="ExportText">Icons/Libraries/ExportText.ico</ImageSource>
+    <ImageSource x:Key="ExportVersion">Icons/Libraries/ExportSimaticML.ico</ImageSource>
+    <ImageSource x:Key="ImportText">Icons/Libraries/ImportText.ico</ImageSource>
+    <ImageSource x:Key="NewLibrary">Icons/Libraries/NewLibrary.ico</ImageSource>
+    <ImageSource x:Key="SaveLibrary">Icons/Libraries/SaveLibrary.ico</ImageSource>
+    <ImageSource x:Key="UpdateLibrary">Icons/Libraries/UpdateLibrary.ico</ImageSource>
+    <ImageSource x:Key="UpdateTypes">Icons/Libraries/UpdateTypes.ico</ImageSource>
+
+    <!--  Local session  -->
+    <ImageSource x:Key="OpenLocalSession">Icons/LocalSession/LocalSession.ico</ImageSource>
+    <ImageSource x:Key="SaveLocalSession">Icons/LocalSession/Save.ico</ImageSource>
+
+    <!--  Navigation  -->
+    <ImageSource x:Key="ArrowToLeft">Icons/Navigation/ArrowToLeft.ico</ImageSource>
+    <ImageSource x:Key="ArrowToRight">Icons/Navigation/ArrowToRight.ico</ImageSource>
+    <ImageSource x:Key="GrayArrowToLeft">Icons/Navigation/GrayArrowToLeft.ico</ImageSource>
+    <ImageSource x:Key="GrayArrowToRight">Icons/Navigation/GrayArrowToRight.ico</ImageSource>
+
+    <!--  Options  -->
+    <ImageSource x:Key="Settings">Icons/Options/Settings.ico</ImageSource>
+
+    <!--  Plc  -->
+    <ImageSource x:Key="SourceFiles">Icons/Plc/ExternalSourceFiles.ico</ImageSource>
+    <ImageSource x:Key="AddExternalSource">Icons/Plc/NewObject.ico</ImageSource>
+    <ImageSource x:Key="GenerateSourceFromBlock">Icons/Plc/GenerateSource.ico</ImageSource>
+
+    <!--  Project  -->
+    <ImageSource x:Key="NewProject">Icons/Project/NewProject.ico</ImageSource>
+    <ImageSource x:Key="OpenProject">Icons/Project/Open.ico</ImageSource>
+    <ImageSource x:Key="SaveProject">Icons/Project/Save.ico</ImageSource>
+    <ImageSource x:Key="Editors">Icons/Project/Editors.ico</ImageSource>
+    <ImageSource x:Key="OpenEditor">Icons/Project/GoTo.ico</ImageSource>
+    <ImageSource x:Key="TopologyView">Icons/Project/TopologyView.ico</ImageSource>
+    <ImageSource x:Key="NetworkView">Icons/Project/NetworkView.ico</ImageSource>
+    <ImageSource x:Key="Compiler">Icons/Project/Compile.ico</ImageSource>
+    <ImageSource x:Key="ImportExport">Icons/Project/Synchronize.ico</ImageSource>
+    <ImageSource x:Key="CaxImport">Icons/Project/CAxData.ico</ImageSource>
+    <ImageSource x:Key="CaxExport">Icons/Project/CAxData.ico</ImageSource>
+    <ImageSource x:Key="ImportElement">Icons/Project/ImportSimaticML.ico</ImageSource>
+    <ImageSource x:Key="ImportStructure">Icons/Project/ImportStructure.ico</ImageSource>
+    <ImageSource x:Key="ExportStructure">Icons/Project/ExportStructure.ico</ImageSource>
+
+    <!--  View  -->
+    <ImageSource x:Key="LogicalTree">Icons/View/DeviceFolder.ico</ImageSource>
+    <ImageSource x:Key="PhysicalTree">Icons/View/Device.ico</ImageSource>
+    <ImageSource x:Key="UpdateView">Icons/View/UpdateView.ico</ImageSource>
+
+</SharedResourceDictionary>

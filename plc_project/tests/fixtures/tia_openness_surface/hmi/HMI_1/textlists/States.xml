@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Hmi.TextList Name="States">
+    <Entry Name="Off" />
+    <Entry Name="On" />
+  </Hmi.TextList>
+</Document>

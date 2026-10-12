@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<HardwareTree>
+  <Device Name="PLC_1" TypeIdentifier="OrderNumber:6ES7 515-2AM02-0AB0/V2.9" Failsafe="true" Address="192.168.0.1">
+    <DeviceItem Name="CPU_1515F" TypeIdentifier="OrderNumber:6ES7 515-2AM02-0AB0" Slot="0" Failsafe="true">
+      <Subnet Name="PN/IE_1" Kind="Subnet" />
+      <NetworkInterface Name="X1" Kind="ProfinetInterface" Address="192.168.0.1" InterfaceType="PN" />
+    </DeviceItem>
+    <Subnet Name="PN/IE_1" Kind="Subnet" />
+  </Device>
+  <Device Name="IM155" TypeIdentifier="6ES7 155-6AU01-0CN0" Failsafe="true" Address="192.168.0.22">
+    <DeviceItem Name="F-DI" Slot="1" Failsafe="true" />
+  </Device>
+</HardwareTree>

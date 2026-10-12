@@ -1,0 +1,164 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <OptionInfer>On</OptionInfer>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{7AFF5CCA-0479-0035-20B9-19E204E97FAC}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>Basic_Project_Generator</RootNamespace>
+    <AssemblyName>Basic Project Generator</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(ProjectDir)**\*.cs</DefaultItemExcludes>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG,TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
+    <WarningsAsErrors>41999,42016,42017,42018,42019,42020,42021,42022,42032,42036</WarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>none</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
+    <Prefer32Bit>false</Prefer32Bit>
+    <WarningsAsErrors>41999,42016,42017,42018,42019,42020,42021,42022,42032,42036</WarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>Basic_Project_Generator.Program</StartupObject>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionStrict>On</OptionStrict>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Siemens.Engineering">
+      <HintPath>C:\Program Files\Siemens\Automation\Portal V17\PublicAPI\V17\Siemens.Engineering.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Models\AccessLevel.vb" />
+    <Compile Include="Models\AutoLogoff.vb" />
+    <Compile Include="Models\Catalog.vb" />
+    <Compile Include="Models\Device.vb" />
+    <Compile Include="Models\DeviceItem.vb" />
+    <Compile Include="Models\DisplayAutoLogoff.vb" />
+    <Compile Include="Models\PlcAccessLevel.vb" />
+    <Compile Include="UserInterfaces\BasicProjectGenerator.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UserInterfaces\BasicProjectGenerator.Designer.vb">
+      <DependentUpon>BasicProjectGenerator.vb</DependentUpon>
+    </Compile>
+    <Compile Include="Interfaces\ApiResolver.vb" />
+    <Compile Include="Interfaces\ApiWrapper.vb" />
+    <Compile Include="Interfaces\TraceWriter.vb" />
+    <Compile Include="Models\DeviceModel.vb" />
+    <Compile Include="Models\ProjectModel.vb" />
+    <Compile Include="Services\ProjectGeneratorService.vb" />
+    <Compile Include="Program.vb" />
+    <Compile Include="Properties\AssemblyInfo.vb" />
+    <Compile Include="UserInterfaces\NewTiaPortalProject.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UserInterfaces\NewTiaPortalProject.Designer.vb">
+      <DependentUpon>NewTiaPortalProject.vb</DependentUpon>
+    </Compile>
+    <Compile Include="UserInterfaces\PlcSecuritySettings.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UserInterfaces\PlcSecuritySettings.Designer.vb">
+      <DependentUpon>PlcSecuritySettings.vb</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="UserInterfaces\BasicProjectGenerator.resx">
+      <DependentUpon>BasicProjectGenerator.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.vb</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <EmbeddedResource Include="UserInterfaces\NewTiaPortalProject.resx">
+      <DependentUpon>NewTiaPortalProject.vb</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserInterfaces\PlcSecuritySettings.resx">
+      <DependentUpon>PlcSecuritySettings.vb</DependentUpon>
+    </EmbeddedResource>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.vb</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="My Project\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\DeviceCatalog.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.8">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.8 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+</Project>

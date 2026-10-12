@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <SW.TechnologicalObjects.TechnologicalObject Name="Axis_1" Type="TO_PositioningAxis" Version="5.0">
+    <Parameter Name="Modulo" Value="360" />
+    <Parameter Name="ActorType" Value="Servo" />
+  </SW.TechnologicalObjects.TechnologicalObject>
+</Document>

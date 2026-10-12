@@ -1,0 +1,196 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{830C3D01-4FFB-4EBF-AA17-CA39F5FB6822}</ProjectGuid>
+    <OutputType>library</OutputType>
+    <RootNamespace>TiaPortalOpennessDemoStyling</RootNamespace>
+    <AssemblyName>TiaPortalOpennessDemoStyling</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <WarningLevel>4</WarningLevel>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\TiaPortalOpennessDemoStyling.xml</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xaml">
+      <RequiredTargetFramework>4.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="WindowsBase" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Include="Utils\AutoGrayableImage.cs" />
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SharedResourceDictionary\SharedResourceDictionary.csproj">
+      <Project>{b7b553b0-fead-478d-8730-85af5194c46f}</Project>
+      <Name>SharedResourceDictionary</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="BitmapGraphics\Icons.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="LookAndFeel.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Styles\TextBoxReadOnlyStyle.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Styles\TiaPortalToolButtonStyle.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Styles\ButtonToolTipStyle.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Styles\TreeViewStaysHighlightedSelectedItemStyle.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Groups\EditGroup.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Groups\NewGroup.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Libraries\CloseLibrary.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Libraries\Copy.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Libraries\CopyToProject.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Libraries\ExportText.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Libraries\ImportText.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Libraries\NewLibrary.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Libraries\OpenLibrary.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Libraries\SaveLibrary.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Libraries\UpdateLibrary.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Navigation\ArrowToLeft.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Navigation\ArrowToRight.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Navigation\GrayArrowToLeft.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Navigation\GrayArrowToRight.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Options\Settings.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Libraries\UpdateTypes.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Project\Dummy.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Project\NewProject.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\LocalSession\LocalSession.ico" />
+    <Resource Include="BitmapGraphics\Icons\LocalSession\Save.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\View\Device.ico" />
+    <Resource Include="BitmapGraphics\Icons\View\DeviceFolder.ico" />
+    <Resource Include="BitmapGraphics\Icons\View\UpdateView.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Project\CAxData.ico" />
+    <Resource Include="BitmapGraphics\Icons\Project\Compile.ico" />
+    <Resource Include="BitmapGraphics\Icons\Project\Editors.ico" />
+    <Resource Include="BitmapGraphics\Icons\Project\ExportStructure.ico" />
+    <Resource Include="BitmapGraphics\Icons\Project\GoTo.ico" />
+    <Resource Include="BitmapGraphics\Icons\Project\ImportSimaticML.ico" />
+    <Resource Include="BitmapGraphics\Icons\Project\NetworkView.ico" />
+    <Resource Include="BitmapGraphics\Icons\Project\Open.ico" />
+    <Resource Include="BitmapGraphics\Icons\Project\Save.ico" />
+    <Resource Include="BitmapGraphics\Icons\Project\Synchronize.ico" />
+    <Resource Include="BitmapGraphics\Icons\Project\TopologyView.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Plc\ExternalSourceFiles.ico" />
+    <Resource Include="BitmapGraphics\Icons\Plc\GenerateSource.ico" />
+    <Resource Include="BitmapGraphics\Icons\Plc\NewObject.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Help\ShowHelp.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Libraries\ExportSimaticML.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="BitmapGraphics\Icons\Project\ImportStructure.ico" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

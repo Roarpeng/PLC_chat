@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Blocks.ObjectSW ID="0" CompositionName="Blocks">
+    <AttributeList>
+      <Name>FC_Latch</Name>
+      <Number>11</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <SW.Blocks.InterfaceSection ID="3" CompositionName="Interface">
+        <Sections>
+          <Section Name="Input">
+            <Member Name="SetIn" Datatype="Bool" />
+            <Member Name="RstIn" Datatype="Bool" />
+          </Section>
+          <Section Name="Output">
+            <Member Name="Q1" Datatype="Bool" />
+            <Member Name="Q2" Datatype="Bool" />
+          </Section>
+          <Section Name="Static">
+            <Member Name="SR1" Datatype="SR" />
+            <Member Name="RS1" Datatype="RS" />
+          </Section>
+          <Section Name="InOut" />
+          <Section Name="Temp" />
+          <Section Name="Constant" />
+        </Sections>
+      </SW.Blocks.InterfaceSection>
+      <SW.Blocks.CompileUnit ID="10" CompositionName="Networks">
+        <AttributeList>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="10t" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="10ti" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>sr rs boxes</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <FlgNet ID="13">
+            <Parts>
+              <Access Scope="LocalVariable" UId="21">
+                <Symbol><Component Name="SetIn" /></Symbol>
+              </Access>
+              <Access Scope="LocalVariable" UId="22">
+                <Symbol><Component Name="RstIn" /></Symbol>
+              </Access>
+              <Access Scope="LocalVariable" UId="23">
+                <Symbol><Component Name="Q1" /></Symbol>
+              </Access>
+              <Access Scope="LocalVariable" UId="24">
+                <Symbol><Component Name="SetIn" /></Symbol>
+              </Access>
+              <Access Scope="LocalVariable" UId="25">
+                <Symbol><Component Name="RstIn" /></Symbol>
+              </Access>
+              <Access Scope="LocalVariable" UId="26">
+                <Symbol><Component Name="Q2" /></Symbol>
+              </Access>
+              <Part Name="SR" UId="31">
+                <Instance Scope="LocalVariable"><Component Name="SR1" /></Instance>
+              </Part>
+              <Part Name="RS" UId="32">
+                <Instance Scope="LocalVariable"><Component Name="RS1" /></Instance>
+              </Part>
+            </Parts>
+            <Wires>
+              <Wire UId="41">
+                <Powerrail /><NameCon UId="31" Name="S" /><NameCon UId="32" Name="R1" />
+              </Wire>
+              <Wire UId="42">
+                <IdentCon UId="21" /><NameCon UId="31" Name="S1" />
+              </Wire>
+              <Wire UId="43">
+                <IdentCon UId="22" /><NameCon UId="31" Name="R" />
+              </Wire>
+              <Wire UId="44">
+                <NameCon UId="31" Name="Q" /><IdentCon UId="23" />
+              </Wire>
+              <Wire UId="45">
+                <IdentCon UId="24" /><NameCon UId="32" Name="S" />
+              </Wire>
+              <Wire UId="46">
+                <IdentCon UId="25" /><NameCon UId="32" Name="R1" />
+              </Wire>
+              <Wire UId="47">
+                <NameCon UId="32" Name="Q" /><IdentCon UId="26" />
+              </Wire>
+            </Wires>
+          </FlgNet>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </SW.Blocks.ObjectSW>
+  <DocumentType>Simatic.ML.FC</DocumentType>
+</Document>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Blocks.OB Name="Main">
+    <AttributeList>
+      <Name>Main</Name>
+      <Number>1</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+    </AttributeList>
+  </SW.Blocks.OB>
+</Document>

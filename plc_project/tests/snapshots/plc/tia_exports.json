@@ -1,0 +1,38 @@
+{
+  "extraction_notes": [],
+  "fixture": "tia_exports",
+  "folded": {
+    "block_count": 3,
+    "digest": "018f973fef59292e"
+  },
+  "graph_step_networks": 0,
+  "kg": {
+    "edge_count": 29,
+    "edges_digest": "4f4f094a57e3759f",
+    "node_count": 26,
+    "nodes_digest": "78bf323e7b705667"
+  },
+  "scl": {
+    "block_count": 3,
+    "digest": "e43ede43daed9cd0",
+    "todo_histogram": {}
+  },
+  "summary": {
+    "Alarms": 0,
+    "CfcCharts": 0,
+    "DB": 1,
+    "FB": 1,
+    "ForceTables": 0,
+    "Hardware": 0,
+    "HmiDevices": 0,
+    "Networks": 2,
+    "OB": 1,
+    "OpcUaNodes": 0,
+    "ProDiag": 0,
+    "SafetyBlocks": 0,
+    "SafetyUnits": 0,
+    "TagTables": 2,
+    "TechnologyObjects": 0,
+    "WatchTables": 0
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "extraction_notes": [
+    "enriched multi-instance dc.IEC_Timer_0_DB : TON_TIME",
+    "mirrored interface dc → dc_DB (+1 members)"
+  ],
+  "fixture": "tia_dc",
+  "folded": {
+    "block_count": 2,
+    "digest": "bc6094b6de558b2e"
+  },
+  "graph_step_networks": 0,
+  "kg": {
+    "edge_count": 18,
+    "edges_digest": "9bb9c0d606f66e9e",
+    "node_count": 18,
+    "nodes_digest": "80183258431b41d6"
+  },
+  "scl": {
+    "block_count": 2,
+    "digest": "ab79af1e63dda880",
+    "todo_histogram": {}
+  },
+  "summary": {
+    "Alarms": 0,
+    "CfcCharts": 0,
+    "DB": 1,
+    "FB": 1,
+    "ForceTables": 0,
+    "Hardware": 0,
+    "HmiDevices": 0,
+    "Networks": 3,
+    "OpcUaNodes": 0,
+    "ProDiag": 0,
+    "SafetyBlocks": 0,
+    "SafetyUnits": 0,
+    "TagTables": 0,
+    "TechnologyObjects": 0,
+    "WatchTables": 0
+  }
+}

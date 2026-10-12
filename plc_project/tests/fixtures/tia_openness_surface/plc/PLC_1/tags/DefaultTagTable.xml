@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Tags.PlcTagTable ID="0">
+    <AttributeList>
+      <Name>Default tag table</Name>
+    </AttributeList>
+    <ObjectList>
+      <SW.Tags.PlcTag ID="10">
+        <AttributeList>
+          <DataTypeName>Bool</DataTypeName>
+          <LogicalAddress>%I0.0</LogicalAddress>
+          <Name>StartCmd</Name>
+        </AttributeList>
+      </SW.Tags.PlcTag>
+      <SW.Tags.PlcConstant ID="11">
+        <AttributeList>
+          <DataTypeName>Int</DataTypeName>
+          <Name>MAX_SPEED</Name>
+          <Value>1500</Value>
+        </AttributeList>
+      </SW.Tags.PlcConstant>
+    </ObjectList>
+  </SW.Tags.PlcTagTable>
+</Document>

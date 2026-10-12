@@ -1,0 +1,7 @@
+# TIA Openness MCP — ignore build artifacts
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+*.DotSettings.user

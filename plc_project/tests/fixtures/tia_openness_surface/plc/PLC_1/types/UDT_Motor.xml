@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Types.PlcStruct Name="UDT_Motor">
+    <AttributeList>
+      <Name>UDT_Motor</Name>
+    </AttributeList>
+    <ObjectList>
+      <SW.Blocks.InterfaceSection CompositionName="Interface">
+        <Sections>
+          <Section Name="Static">
+            <Member Name="Speed" Datatype="Real" />
+          </Section>
+        </Sections>
+      </SW.Blocks.InterfaceSection>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

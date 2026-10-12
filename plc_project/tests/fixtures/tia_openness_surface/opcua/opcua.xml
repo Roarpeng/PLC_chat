@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <OpcUa.ServerInterface Name="Server">
+    <OpcUa.Node Name="Motor.Running" />
+    <OpcUa.Node Name="Motor.Start" />
+  </OpcUa.ServerInterface>
+</Document>

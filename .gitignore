@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+.venv
+env/
+dist/
+build/
+*.egg-info/
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# GraphFlow cache & temporary artifacts
+.graphflow-cache/
+graphflow-out/
+
+# .NET build output
+bin/
+obj/
+*.user
+*.suo

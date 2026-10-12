@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <SW.WatchAndForceTables.PlcWatchTable Name="Watch_Main">
+    <SW.WatchAndForceTables.WatchTableEntry Name="StartCmd" Address="%I0.0" Tag="StartCmd" />
+    <SW.WatchAndForceTables.WatchTableEntry Name="Running" Address="%Q0.0" Tag="Running" />
+  </SW.WatchAndForceTables.PlcWatchTable>
+</Document>

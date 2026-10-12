@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <SW.WatchAndForceTables.PlcForceTable Name="Force_Main">
+    <SW.WatchAndForceTables.ForceTableEntry Name="Fault" Address="%M0.0" Tag="Fault" />
+  </SW.WatchAndForceTables.PlcForceTable>
+</Document>

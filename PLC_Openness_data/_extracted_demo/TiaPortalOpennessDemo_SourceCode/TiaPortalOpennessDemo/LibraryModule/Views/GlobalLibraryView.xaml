@@ -1,0 +1,169 @@
+﻿<UserControl
+    x:Class="LibraryModule.Views.GlobalLibraryView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:img="clr-namespace:TiaPortalOpennessDemoStyling.Utils;assembly=TiaPortalOpennessDemoStyling"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:prism="http://prismlibrary.com/"
+    xmlns:utils="clr-namespace:TiaPortalOpennessCore.Utils;assembly=TiaPortalOpennessCore"
+    d:DesignHeight="450"
+    d:DesignWidth="200"
+    prism:ViewModelLocator.AutoWireViewModel="True"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <SharedResourceDictionary>
+            <SharedResourceDictionary.MergedDictionaries>
+                <SharedResourceDictionary Source="pack://application:,,,/TiaPortalOpennessDemoStyling;component/LookAndFeel.xaml" />
+            </SharedResourceDictionary.MergedDictionaries>
+        </SharedResourceDictionary>
+    </UserControl.Resources>
+
+    <DockPanel
+        HorizontalAlignment="Stretch"
+        VerticalAlignment="Stretch"
+        Background="#FFF0F0F0">
+
+        <!--  Available system libraries  -->
+        <StackPanel
+            Margin="0,0,0,10"
+            HorizontalAlignment="Stretch"
+            DockPanel.Dock="Top">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Label
+                    Grid.Column="0"
+                    Content="System libraries:" />
+                <ComboBox
+                    Grid.Column="1"
+                    DisplayMemberPath="LibraryName"
+                    ItemsSource="{Binding AvailableGlobalLibraryInfos}"
+                    SelectedItem="{Binding SelectedGlobalLibraryInfo}"
+                    SelectedValue="{Binding GlobalLibraryInfo}" />
+            </Grid>
+            <Button
+                Command="{Binding OpenGlobalLibraryCommand}"
+                Content="Open system library"
+                IsEnabled="{Binding CanOpenSystemLibrary}"
+                Style="{StaticResource ButtonToolTipStyle}" />
+        </StackPanel>
+
+        <!--  Menu frame  -->
+        <DockPanel DockPanel.Dock="Top">
+            <StackPanel
+                Width="Auto"
+                HorizontalAlignment="Left"
+                Orientation="Horizontal">
+                <Button
+                    Margin="2,0,0,0"
+                    Command="{Binding CreateUserLibraryCommand}"
+                    IsEnabled="{Binding CanCreateUserLibrary}"
+                    Style="{StaticResource ButtonToolTipStyle}"
+                    ToolTip="Create new user library">
+                    <StackPanel>
+                        <img:AutoGrayableImage Source="{StaticResource NewLibrary}" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Margin="2,0,0,0"
+                    Command="{Binding OpenUserLibraryCommand}"
+                    IsEnabled="{Binding CanOpenUserLibrary}"
+                    Style="{StaticResource ButtonToolTipStyle}"
+                    ToolTip="Open user library">
+                    <StackPanel>
+                        <img:AutoGrayableImage Source="{StaticResource OpenLibrary}" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Margin="2,0,0,0"
+                    Command="{Binding SaveUserLibraryCommand}"
+                    IsEnabled="{Binding UserLibraryHasBeenChanged}"
+                    Style="{StaticResource ButtonToolTipStyle}"
+                    ToolTip="Save library">
+                    <StackPanel>
+                        <img:AutoGrayableImage Source="{StaticResource SaveLibrary}" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Margin="2,0,0,0"
+                    Command="{Binding CloseUserLibraryCommand}"
+                    IsEnabled="{Binding CanCloseUserLibrary}"
+                    Style="{StaticResource ButtonToolTipStyle}"
+                    ToolTip="Close user library">
+                    <StackPanel>
+                        <img:AutoGrayableImage Source="{StaticResource CloseLibrary}" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Margin="2,0,0,0"
+                    Command="{Binding UpdateProjectLibraryCommand}"
+                    IsEnabled="{Binding CanUpdateProjectLibrary}"
+                    Style="{StaticResource ButtonToolTipStyle}"
+                    ToolTip="Update project library">
+                    <StackPanel>
+                        <img:AutoGrayableImage Source="{StaticResource UpdateTypes}" />
+                    </StackPanel>
+                </Button>
+
+                <Button
+                    Margin="10,0,0,0"
+                    Command="{Binding ExportVersionCommand}"
+                    IsEnabled="{Binding CanExportVersion}"
+                    Style="{StaticResource ButtonToolTipStyle}"
+                    ToolTip="Export version">
+                    <StackPanel>
+                        <img:AutoGrayableImage Source="{StaticResource ExportVersion}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </DockPanel>
+
+        <!--  global library tree  -->
+        <Grid>
+            <ScrollViewer
+                CanContentScroll="True"
+                HorizontalScrollBarVisibility="Auto"
+                VerticalScrollBarVisibility="Auto">
+                <TreeView
+                    x:Name="Tree"
+                    Margin="0,0,0,0"
+                    HorizontalAlignment="Stretch"
+                    utils:TreeViewHelper.SelectedItem="{Binding GlobalLibraryTreeViewHandler.SelectedItem}"
+                    utils:TreeViewHelper.SelectedItemChanged="{Binding GlobalLibraryTreeViewHandler.SelectedItemChgCmd}"
+                    Background="#FFF0F0F0"
+                    DockPanel.Dock="Top"
+                    ItemContainerStyle="{StaticResource StaysHighlightedTreeViewItem}"
+                    ItemsSource="{Binding GlobalLibraryTreeViewHandler.View, Mode=OneWay}"
+                    SelectedValuePath="Header">
+                    <TreeView.Resources>
+                        <Style TargetType="{x:Type TreeView}">
+                            <Setter Property="BorderThickness">
+                                <Setter.Value>0.0</Setter.Value>
+                            </Setter>
+                            <Setter Property="Background">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="#FFF0F0F0" />
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Resources>
+                                <Style TargetType="{x:Type TreeViewItem}">
+                                    <Style.Resources>
+                                        <SolidColorBrush
+                                            x:Key="{x:Static SystemColors.ControlBrushKey}"
+                                            Color="#FF3399FF" />
+                                    </Style.Resources>
+                                </Style>
+                            </Style.Resources>
+                        </Style>
+                    </TreeView.Resources>
+                </TreeView>
+            </ScrollViewer>
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

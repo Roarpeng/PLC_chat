@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <SW.Alarm.AlarmTextList Name="AlarmTexts">
+    <Text>Overtemp</Text>
+    <Text>E-Stop</Text>
+  </SW.Alarm.AlarmTextList>
+</Document>

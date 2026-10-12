@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Blocks.ObjectSW ID="0" CompositionName="Blocks">
+    <AttributeList>
+      <Name>Main</Name>
+      <Number>1</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text>Cyclic main OB</Text>
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <SW.Blocks.InterfaceSection ID="3" CompositionName="Interface">
+        <Sections>
+          <Section Name="Temp" />
+          <Section Name="Constant" />
+        </Sections>
+      </SW.Blocks.InterfaceSection>
+      <SW.Blocks.CompileUnit ID="10" CompositionName="Networks">
+        <AttributeList>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="11" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="12" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>Run motor control</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <FlgNet ID="13">
+            <Parts>
+              <Part Name="Call" UId="21">
+                <Access Scope="LocalVariable" UId="22" Name="instance">
+                  <Symbol><Component Name="MotorInst" /></Symbol>
+                </Access>
+                <TemplateValue Name="Call" Type="String">FB_Motor</TemplateValue>
+              </Part>
+              <Access Scope="GlobalVariable" UId="23">
+                <Symbol><Component Name="HMI" /><Component Name="StartCmd" /></Symbol>
+              </Access>
+              <Access Scope="GlobalVariable" UId="24">
+                <Symbol><Component Name="HMI" /><Component Name="StopCmd" /></Symbol>
+              </Access>
+              <Access Scope="GlobalVariable" UId="25">
+                <Symbol><Component Name="Safety" /><Component Name="FaultOk" /></Symbol>
+              </Access>
+            </Parts>
+            <Wires>
+              <Wire UId="31">
+                <Powerrail />
+                <NameCon UId="21" Name="in" />
+              </Wire>
+              <Wire UId="32">
+                <IdentCon UId="23" />
+                <NameCon UId="21" Name="Start" />
+              </Wire>
+              <Wire UId="33">
+                <IdentCon UId="24" />
+                <NameCon UId="21" Name="Stop" />
+              </Wire>
+              <Wire UId="34">
+                <IdentCon UId="25" />
+                <NameCon UId="21" Name="Fault" />
+              </Wire>
+            </Wires>
+          </FlgNet>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </SW.Blocks.ObjectSW>
+  <DocumentType>Simatic.ML.OB</DocumentType>
+</Document>

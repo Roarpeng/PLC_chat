@@ -1,0 +1,166 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{9D4DD413-5B46-4212-8E2C-107D45B3CDBE}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>TiaPortalOpennessAdapter</RootNamespace>
+    <AssemblyName>TiaPortalOpennessAdapter</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <DocumentationFile>bin\Debug\TiaPortalOpennessAdapter.xml</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>none</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <DocumentationFile>
+    </DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
+    <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
+    <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="Siemens.Engineering.V15_0">
+      <HintPath>..\Dependencies\Openness\V15\Siemens.Engineering.V15_0.dll</HintPath>
+      <Aliases>V15_0</Aliases>
+    </Reference>
+    <Reference Include="Siemens.Engineering.V15_1">
+      <HintPath>..\Dependencies\Openness\V15.1\Siemens.Engineering.V15_1.dll</HintPath>
+      <Aliases>V15_1</Aliases>
+    </Reference>
+    <Reference Include="Siemens.Engineering.V16_0">
+      <HintPath>..\Dependencies\Openness\V16\Siemens.Engineering.V16_0.dll</HintPath>
+      <Aliases>V16_0</Aliases>
+    </Reference>
+    <Reference Include="Siemens.Engineering.V17_0">
+      <HintPath>..\Dependencies\Openness\V17\Siemens.Engineering.V17_0.dll</HintPath>
+      <Aliases>V17_0</Aliases>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Contracts\IModuleProvider.cs" />
+    <Compile Include="Models\LibraryContext.cs" />
+    <Compile Include="Models\OpennessDemoNavigationContext.cs" />
+    <Compile Include="Models\OpennessDemoModel.cs" />
+    <Compile Include="Models\V15_0\CopyDestinationMapping.cs" />
+    <Compile Include="Models\V15_0\ContentBlackList.cs" />
+    <Compile Include="Models\V15_0\EngineeringProjectModel.cs" />
+    <Compile Include="Models\TiaPortalModulesAndOptions.cs" />
+    <Compile Include="Models\V15_1\CopyDestinationMapping.cs" />
+    <Compile Include="Models\V15_1\ContentBlackList.cs" />
+    <Compile Include="Models\V15_1\EngineeringProjectModel.cs" />
+    <Compile Include="Models\V16_0\CopyDestinationMapping.cs" />
+    <Compile Include="Models\V16_0\ContentBlackList.cs" />
+    <Compile Include="Models\V16_0\EngineeringProjectModel.cs" />
+    <Compile Include="Models\V17_0\CopyDestinationMapping.cs" />
+    <Compile Include="Models\V17_0\ContentBlackList.cs" />
+    <Compile Include="Models\V17_0\EngineeringProjectModel.cs" />
+    <Compile Include="Properties\Annotations.cs" />
+    <Compile Include="Services\EnumService.cs" />
+    <Compile Include="Utils\AdjustNames.cs" />
+    <Compile Include="Utils\Resolver.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\TiaPortalOpennessAdapterBase\TiaPortalOpennessAdapterBase.csproj">
+      <Project>{04bfc5b3-f277-4b44-9049-820a75eb7d12}</Project>
+      <Name>TiaPortalOpennessAdapterBase</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TiaPortalOpennessAdapterContracts\TiaPortalOpennessAdapterContracts.csproj">
+      <Project>{c04ed9ac-4c77-46bf-931a-d51e6af6aa6a}</Project>
+      <Name>TiaPortalOpennessAdapterContracts</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TiaPortalOpennessInfrastructure\TiaPortalOpennessInfrastructure.csproj">
+      <Project>{9D1ECEE3-7418-486B-8B5E-50F07BC8255C}</Project>
+      <Name>TiaPortalOpennessInfrastructure</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>xcopy "$(TargetDir)$(TargetName)*$(TargetExt)" "$(SolutionDir)$(SolutionName)\$(OutDir)Modules\" /Y /S</PostBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

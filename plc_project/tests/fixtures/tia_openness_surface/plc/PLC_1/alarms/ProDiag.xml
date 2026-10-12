@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <SW.ProDiag.Supervision Name="MotorSupervision" Type="Limit">
+    <Text>Speed high</Text>
+  </SW.ProDiag.Supervision>
+</Document>

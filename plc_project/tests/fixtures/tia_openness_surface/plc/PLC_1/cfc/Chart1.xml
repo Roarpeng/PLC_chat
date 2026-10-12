@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <SW.Cfc.Chart Name="Chart1">
+    <Block Name="AND1" />
+    <Block Name="Motor" />
+    <Wire From="AND1.OUT" To="Motor.Start" />
+  </SW.Cfc.Chart>
+</Document>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V17" />
+  <SW.Tags.PlcTagTable ID="0" CompositionName="TagTables">
+    <AttributeList>
+      <Name>Safety</Name>
+    </AttributeList>
+    <ObjectList>
+      <SW.Tags.PlcTag ID="10" CompositionName="Tags">
+        <AttributeList>
+          <DataTypeName>Bool</DataTypeName>
+          <LogicalAddress>%I0.4</LogicalAddress>
+          <Name>FaultOk</Name>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="11" CompositionName="Comment">
+            <ObjectList>
+              <MultilingualTextItem ID="12" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>Safety chain feedback OK</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+        </ObjectList>
+      </SW.Tags.PlcTag>
+    </ObjectList>
+  </SW.Tags.PlcTagTable>
+  <DocumentType>Simatic.TagTable.ML</DocumentType>
+</Document>
