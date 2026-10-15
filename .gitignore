@@ -32,3 +32,12 @@ bin/
 obj/
 *.user
 *.suo
+
+# devctl runtime state & supervisor logs
+plc_project/.devctl/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# TIA Openness E2E run artifacts (regenerable)
+PLC_Openness_data/openness_e2e/

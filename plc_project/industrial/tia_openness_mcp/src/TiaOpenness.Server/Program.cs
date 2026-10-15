@@ -491,7 +491,9 @@ public static class Program
                 opts.TryGetValue("plc", out var plc);
 
                 var opened = projects.OpenProject(project, plc, withoutUi: true);
-                if (!opened.Ok)
+                // 空工程尚无 PLC 设备时 open 会报 not_found，但工程本身已打开——
+                // create-device 正是为此存在：放行并继续（CreateDevice 内部会再次解析 PLC）。
+                if (!opened.Ok && !(opened.Error is not null && opened.Error.Code == "not_found"))
                 {
                     Console.WriteLine(JsonSerializer.Serialize(opened, JsonDefaults.Options));
                     return 3;

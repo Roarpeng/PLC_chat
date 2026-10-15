@@ -1,0 +1,259 @@
+/* ==========================================================================
+   HistorySidebar — 左栏历史对话（前缀 sb-）
+   侧栏底 #EFEFEB 营造层次；白底条目 hover；钢蓝选中；细滚动条
+   ========================================================================== */
+
+.sb :focus-visible {
+  outline: 2px solid var(--accent, #1e5f97);
+  outline-offset: 1px;
+}
+
+.sb {
+  display: flex;
+  flex-direction: column;
+  width: 264px;
+  height: 100%;
+  flex-shrink: 0;
+  background: #efefeb;
+  border-right: 1px solid var(--line, #e3e4de);
+  font-family: var(--sans);
+}
+
+/* ---- 顶部品牌行 ---- */
+
+.sb-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 10px 8px 14px;
+  flex-shrink: 0;
+}
+
+.sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sb-brand-mark {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 5px;
+}
+
+.sb-brand-name {
+  font-family: var(--cond);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.sb-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.sb-iconbtn:hover {
+  background: var(--surface, #ffffff);
+  border-color: var(--line, #e3e4de);
+  color: var(--ink);
+}
+
+/* ---- 新对话按钮 ---- */
+
+.sb-new {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 10px 10px;
+  padding: 7px 10px;
+  flex-shrink: 0;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line-2, #c9ccc4);
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.sb-new:hover {
+  background: var(--surface-2, #f1f2ed);
+}
+
+.sb-new svg {
+  flex-shrink: 0;
+}
+
+/* ---- 分组列表 ---- */
+
+.sb-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px 10px 12px;
+}
+
+.sb-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sb-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sb-list::-webkit-scrollbar-thumb {
+  background: var(--line-2, #c9ccc4);
+  border-radius: 3px;
+}
+
+.sb-group {
+  margin-bottom: 4px;
+}
+
+.sb-group-label {
+  padding: 10px 6px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  color: var(--ink-3);
+}
+
+/* ---- 会话条目 ---- */
+
+.sb-item {
+  position: relative;
+}
+
+.sb-item-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.sb-item-main:hover {
+  background: var(--surface, #ffffff);
+}
+
+.sb-item-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.sb-item-time {
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  transition: opacity 0.12s ease;
+}
+
+/* 删除按钮：hover / 键盘聚焦条目时出现，覆盖时间戳位置 */
+
+.sb-item-del {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+}
+
+.sb-item:hover .sb-item-del,
+.sb-item:focus-within .sb-item-del {
+  opacity: 1;
+  visibility: visible;
+}
+
+.sb-item:hover .sb-item-time,
+.sb-item:focus-within .sb-item-time {
+  opacity: 0;
+}
+
+.sb-item-del:hover {
+  background: var(--surface-2, #f1f2ed);
+  color: var(--fault, #b3261e);
+}
+
+/* 当前会话：浅钢蓝底 + 加粗钢蓝文字 + 左缘 2px 竖条 */
+
+.sb-item--active .sb-item-main {
+  background: var(--accent-soft, #e4edf5);
+}
+
+.sb-item--active .sb-item-title {
+  color: var(--accent-2, #164a78);
+  font-weight: 600;
+}
+
+.sb-item--active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--accent, #1e5f97);
+}
+
+/* ---- 空态 ---- */
+
+.sb-empty {
+  padding: 48px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* ---- 动效偏好 ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .sb *,
+  .sb *::before,
+  .sb *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

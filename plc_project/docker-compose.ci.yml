@@ -1,0 +1,25 @@
+# CI 用容器后端（docs/10 方案 A 的定位：仅 CI/跨机一致性，日常开发走 devctl）
+# 用法：docker compose -f docker-compose.ci.yml run --rm gateway_test
+#       docker compose -f docker-compose.ci.yml run --rm web_build
+#
+# 注意：Openness/TIA 永远无法进容器（许可证绑定宿主），CI 中涉 Openness 的
+# 用例会被网关以 OPENNESS_EXPORT_REQUIRED 拒绝——这是设计内行为。
+
+services:
+  gateway_test:
+    image: python:3.12-slim
+    working_dir: /src/plc_project
+    volumes:
+      - ../:/src:ro
+    environment:
+      PLC_PATH_ALLOWLIST: /src
+    command: >
+      sh -c "pip install --no-cache-dir pytest fastapi pydantic-settings python-multipart httpx
+      && python -m pytest tests/unit -q"
+
+  web_build:
+    image: node:20-slim
+    working_dir: /app
+    volumes:
+      - ../frontend:/app
+    command: sh -c "npm ci || npm install && npm run build"

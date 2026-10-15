@@ -855,7 +855,11 @@ async def confirm_canvas_writeback_endpoint(
         )
 
     canvas = CanvasState.from_dict(canvas_raw)
-    result, attributions = execute_canvas_writeback(
+    import asyncio
+
+    # Openness 长操作（分钟级）放线程池，避免阻塞事件循环导致网关假死
+    result, attributions = await asyncio.to_thread(
+        execute_canvas_writeback,
         canvas=canvas,
         project_path=project_path,
         plc_name=plc_name,
@@ -901,3 +905,157 @@ async def canvas_auto_fix_endpoint(
     )
 
 
+@router.post("/canvas/import", response_model=ApiResponse[dict[str, Any]])
+async def canvas_import_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """Import a TIA Portal Openness export (.xml file / export directory) onto a fresh canvas."""
+    _ = principal
+    import asyncio
+
+    path = str(body.get("path") or "").strip()
+    project_name = str(body.get("project_name") or "").strip()
+    if not path:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "PATH_REQUIRED", "message": "path is required for canvas import"},
+        )
+    try:
+        resolved = plc.resolve_allowed_path(path)
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "PLC_PATH_NOT_FOUND", "message": str(exc)},
+        ) from exc
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "PLC_PATH_DENIED", "message": str(exc)},
+        ) from exc
+
+    from gateway.app.services.plc.canvas_import import (
+        APXX_SUFFIXES,
+        CanvasImportRejected,
+        import_canvas_from_path,
+    )
+
+    try:
+        if resolved.suffix.lower() in APXX_SUFFIXES:
+            # Openness export can take minutes — keep the event loop free.
+            data = await asyncio.to_thread(import_canvas_from_path, resolved, project_name)
+        else:
+            data = import_canvas_from_path(resolved, project_name)
+    except CanvasImportRejected as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": exc.code, "message": exc.message},
+        ) from exc
+
+    logger.info(
+        "plc canvas import path=%s blocks=%s tags=%s skipped=%s request_id=%s",
+        resolved,
+        data.get("blocks_parsed"),
+        data.get("tags_parsed"),
+        len(data.get("skipped") or []),
+        request_id,
+    )
+    return ApiResponse(ok=True, data=data, request_id=request_id)
+
+
+@router.post("/canvas/import/upload", response_model=ApiResponse[dict[str, Any]])
+async def canvas_import_upload_endpoint(
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+    file: UploadFile = File(...),
+    project_name: str = Form(default=""),
+) -> ApiResponse[dict[str, Any]]:
+    """Upload .xml / .zip / .zap* and import it onto a fresh interactive canvas."""
+    import asyncio
+
+    _ = principal
+    data = await file.read()
+    try:
+        # save_upload validates suffix/size; zip/zap* are unpacked (and completeness
+        # checked) beside the saved file, returning the parse root — which may be a
+        # directory (SimaticML export) or a .apxx project file.
+        saved = plc.save_upload(file.filename, data)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "PLC_UPLOAD_INVALID", "message": str(exc)},
+        ) from exc
+
+    from gateway.app.services.plc.canvas_import import (
+        CanvasImportRejected,
+        import_canvas_from_path,
+    )
+
+    try:
+        # Zap unpacking + Openness export can take minutes — keep the event loop free.
+        result = await asyncio.to_thread(import_canvas_from_path, saved, project_name)
+    except CanvasImportRejected as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": exc.code, "message": exc.message},
+        ) from exc
+
+    logger.info(
+        "plc canvas upload import file=%s blocks=%s tags=%s skipped=%s request_id=%s",
+        file.filename,
+        result.get("blocks_parsed"),
+        result.get("tags_parsed"),
+        len(result.get("skipped") or []),
+        request_id,
+    )
+    return ApiResponse(ok=True, data=result, request_id=request_id)
+
+
+
+
+@router.post("/canvas/explain-block", response_model=ApiResponse[dict[str, Any]])
+async def canvas_explain_block_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """LLM 深度解释：块数据 + 规则引擎预分析 → OpenAI 兼容端点 → 工程师向中文解释。
+
+    未配置 PLC_LLM_* 环境变量时返回 400 code=LLM_NOT_CONFIGURED（附配置指引），
+    前端据此显示一次性提示而非报错。
+    """
+    _ = principal
+    import asyncio
+
+    from gateway.app.services.plc.llm_explain import LlmNotConfigured, deep_explain_block
+
+    block = body.get("block")
+    if not isinstance(block, dict) or not block.get("name"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "BLOCK_REQUIRED", "message": "body.block is required"},
+        )
+    scaffold = body.get("scaffold") if isinstance(body.get("scaffold"), dict) else {}
+
+    try:
+        text = await asyncio.to_thread(deep_explain_block, block, scaffold)
+    except LlmNotConfigured as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "LLM_NOT_CONFIGURED",
+                "message": (
+                    "深度解释需要 LLM：在网关进程设置环境变量 "
+                    "PLC_LLM_BASE_URL（OpenAI 兼容端点）、PLC_LLM_API_KEY、PLC_LLM_MODEL，"
+                    "然后重启网关（python tools/devctl.py 重新 up gateway）。"
+                ),
+            },
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"code": "LLM_CALL_FAILED", "message": str(exc)},
+        ) from exc
+
+    return ApiResponse(ok=True, data={"explanation": text}, request_id=request_id)

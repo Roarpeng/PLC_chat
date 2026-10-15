@@ -1,0 +1,36 @@
+# devctl 服务清单（docs/10 微服务化落地）
+# 用法：
+#   python tools/devctl.py up gateway     # 按需起（uv 免装依赖，秒级）
+#   python tools/devctl.py up web         # 编辑前端时才起
+#   python tools/devctl.py status
+#   python tools/devctl.py prune          # 回收超过 idle_timeout 的服务
+#   python tools/devctl.py down --all     # 一键归零
+#
+# 说明：
+# - idle_timeout 按进程存活时长计（v1 语义）：到时即视为闲置可回收。
+# - openness 桥不需要登记——网关每次操作自行 spawn、干完退出（spawn-per-call）。
+
+[services.gateway]
+start = "uv run --no-project --with fastapi --with uvicorn --with pydantic-settings --with python-multipart --with httpx -- python -m uvicorn gateway.app.main:app --host 127.0.0.1 --port 8000 --log-level warning"
+cwd = "."
+health = "http://127.0.0.1:8000/health"
+health_timeout = 120
+idle_timeout = 3600
+
+[services.gateway.env]
+CORS_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
+RESEARCHOS_TIA_OPENNESS_EXE = "industrial/tia_openness_mcp/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe"
+# 本机代理不可达时用 uv 缓存离线组装依赖；代理恢复后可移除此行
+UV_OFFLINE = "1"
+
+[services.web]
+start = "npm run dev"
+cwd = "frontend"
+health = "tcp:5173"
+health_timeout = 90
+idle_timeout = 3600
+
+[services.gateway_test]
+start = "uv run --no-project --with pytest --with fastapi --with pydantic-settings --with python-multipart --with httpx --with uvicorn --with mcp --with langgraph -- python -m pytest tests/unit -q"
+cwd = "."
+once = true

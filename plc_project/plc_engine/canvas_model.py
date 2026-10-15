@@ -46,15 +46,30 @@ class CanvasBlock:
     status: NodeStatus = "draft"
     errors: list[str] = field(default_factory=list)
 
+    # 外部源（External Source）SCL 的合法声明区关键字；VAR_STAT 须映射为 VAR
+    _SCL_SECTION_KEYWORD = {
+        "VAR_INPUT": "VAR_INPUT",
+        "VAR_OUTPUT": "VAR_OUTPUT",
+        "VAR_IN_OUT": "VAR_IN_OUT",
+        "VAR_STAT": "VAR",
+        "VAR_TEMP": "VAR_TEMP",
+        "VAR": "VAR",
+    }
+
     def get_full_scl(self) -> str:
-        """Render complete SCL compilation unit text."""
+        """Render complete SCL compilation unit text (TIA External Source dialect).
+
+        外部源语法约束（由真实 GenerateBlocksFromSource 编译反馈确认）：
+        - 声明区结束符统一为 END_VAR（不是 END_VAR_INPUT 等变体）；
+        - 静态区写作 VAR（VAR_STAT 在外部源中非法）；
+        - 声明区不允许行内 // 注释（注释由 SimaticML XML 承载）；
+        - 块头（FUNCTION_BLOCK 等）之后只允许属性块，// 注释非法。
+        """
         lines: list[str] = []
         btype = self.block_type.upper()
         if btype in {"FB", "FC", "OB"}:
             kw = "FUNCTION_BLOCK" if btype == "FB" else "FUNCTION" if btype == "FC" else "ORGANIZATION_BLOCK"
             lines.append(f'{kw} "{self.name}"')
-            if self.comment:
-                lines.append(f"// {self.comment}")
 
             # Group variables by section
             sections: dict[str, list[CanvasVariable]] = {}
@@ -62,19 +77,20 @@ class CanvasBlock:
                 sections.setdefault(v.section.upper(), []).append(v)
 
             for sec, vars_list in sections.items():
-                lines.append(sec)
+                keyword = self._SCL_SECTION_KEYWORD.get(sec, "VAR")
+                lines.append(keyword)
                 for v in vars_list:
                     init = f" := {v.initial_value}" if v.initial_value else ""
-                    cmt = f"  // {v.comment}" if v.comment else ""
-                    lines.append(f"    {v.name} : {v.data_type}{init};{cmt}")
-                lines.append(f"END_{sec}")
+                    lines.append(f"    {v.name} : {v.data_type}{init};")
+                lines.append("END_VAR")
 
             lines.append("BEGIN")
             if self.scl_body.strip():
                 lines.append(self.scl_body.strip())
             elif self.networks:
                 for net in self.networks:
-                    lines.append(f"    // Network {net.id}: {net.title}")
+                    if net.title:
+                        lines.append(f"    // Network {net.id}: {net.title}")
                     if net.scl_text.strip():
                         lines.append("    " + net.scl_text.strip())
             lines.append(f"END_{kw}")
@@ -84,13 +100,12 @@ class CanvasBlock:
             lines.append("STRUCT")
             for v in self.interface:
                 init = f" := {v.initial_value}" if v.initial_value else ""
-                cmt = f"  // {v.comment}" if v.comment else ""
-                lines.append(f"    {v.name} : {v.data_type}{init};{cmt}")
+                lines.append(f"    {v.name} : {v.data_type}{init};")
             lines.append("END_STRUCT;")
             lines.append("BEGIN")
             lines.append("END_DATA_BLOCK")
 
-        return "\n".join(lines)
+        return "\n".join(lines) + "\n"
 
 
 @dataclass
@@ -351,6 +366,8 @@ def apply_canvas_patch(canvas: CanvasState, operations: list[dict[str, Any]]) ->
                     block.scl_body = patch["scl_body"]
                 if "interface" in patch and isinstance(patch["interface"], list):
                     block.interface = [CanvasVariable(**v) for v in patch["interface"] if isinstance(v, dict)]
+                if "networks" in patch and isinstance(patch["networks"], list):
+                    block.networks = [CanvasNetwork(**n) for n in patch["networks"] if isinstance(n, dict)]
                 block.status = "draft"
                 block.errors = []
 

@@ -1,0 +1,394 @@
+/* ==========================================================================
+   ImportDialog — 导入博图项目对话框（前缀 imp-）
+   浅色居中卡片：fixed 遮罩 rgba(27,30,28,.4) + 12px 圆角面板 + 单层弹窗投影；
+   条目（输入框 / 拖拽区 / 文件行）8px 圆角；无渐变、无阴影堆叠。
+   按钮本体复用全局 .btn / .btn--primary / .btn--ghost（index.css）。
+   ========================================================================== */
+
+.imp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(27, 30, 28, 0.4);
+  animation: imp-fade-in 0.14s ease-out;
+}
+
+.imp-card {
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line-2, #c9ccc4);
+  border-radius: 12px;
+  box-shadow: 0 24px 48px -16px rgba(27, 30, 28, 0.35);
+  animation: imp-card-in 0.16s cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes imp-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes imp-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* —— 头部 —— */
+
+.imp-head {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--line, #e3e4de);
+}
+
+.imp-heading {
+  min-width: 0;
+}
+
+.imp-title {
+  font-family: var(--cond, "Barlow Semi Condensed", "PingFang SC", "Microsoft YaHei", sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink, #1b1e1c);
+  line-height: 1.3;
+}
+
+.imp-sub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--ink-2, #565d57);
+  line-height: 1.45;
+}
+
+.imp-close {
+  appearance: none;
+  flex: none;
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2, #565d57);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.imp-close:hover {
+  background: var(--surface-2, #f1f2ed);
+  color: var(--ink, #1b1e1c);
+}
+
+/* —— 主体 —— */
+
+.imp-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px;
+}
+
+/* —— 分段 tab（与 App tabstrip 同款视觉） —— */
+
+.imp-tabs {
+  display: inline-flex;
+  gap: 2px;
+  align-self: flex-start;
+  padding: 2px;
+  background: var(--surface-2, #f1f2ed);
+  border: 1px solid var(--line, #e3e4de);
+  border-radius: 10px;
+}
+
+.imp-tab {
+  appearance: none;
+  border: none;
+  padding: 5px 13px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2, #565d57);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+.imp-tab:hover {
+  color: var(--ink, #1b1e1c);
+}
+
+.imp-tab--on {
+  color: var(--ink, #1b1e1c);
+  background: var(--surface, #ffffff);
+  box-shadow: 0 1px 2px rgba(27, 30, 28, 0.08);
+}
+
+/* —— 字段 —— */
+
+.imp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.imp-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2, #565d57);
+}
+
+.imp-input {
+  height: 32px;
+  padding: 0 11px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line-2, #c9ccc4);
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink, #1b1e1c);
+  transition: border-color 0.12s ease;
+}
+
+.imp-input::placeholder {
+  color: var(--ink-3, #8a918b);
+}
+
+.imp-input:focus,
+.imp-input:focus-visible {
+  outline: none;
+  border-color: var(--accent, #1e5f97);
+}
+
+.imp-input--mono {
+  font-family: var(--mono, "IBM Plex Mono", Consolas, monospace);
+  font-size: 12.5px;
+}
+
+.imp-file-input {
+  display: none;
+}
+
+/* —— 拖拽区 —— */
+
+.imp-drop {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 22px 14px;
+  background: var(--surface, #ffffff);
+  border: 1.5px dashed var(--line-2, #c9ccc4);
+  border-radius: 8px;
+  font-family: var(--sans);
+  color: var(--ink-2, #565d57);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+}
+
+.imp-drop:hover {
+  border-color: var(--ink-3, #8a918b);
+  color: var(--ink, #1b1e1c);
+}
+
+.imp-drop--over,
+.imp-drop--over:hover {
+  border-color: var(--accent, #1e5f97);
+  background: var(--accent-soft, #e4edf5);
+  color: var(--accent, #1e5f97);
+}
+
+.imp-drop__main {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.imp-drop__hint {
+  font-size: 11px;
+  color: var(--ink-3, #8a918b);
+}
+
+.imp-drop--over .imp-drop__hint {
+  color: var(--accent, #1e5f97);
+}
+
+/* —— 已选文件列表 —— */
+
+.imp-files {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.imp-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 10px;
+  background: var(--surface-2, #f1f2ed);
+  border: 1px solid var(--line, #e3e4de);
+  border-radius: 8px;
+}
+
+.imp-file__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono, "IBM Plex Mono", Consolas, monospace);
+  font-size: 12px;
+  color: var(--ink, #1b1e1c);
+  text-align: left;
+}
+
+.imp-file__x {
+  appearance: none;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-3, #8a918b);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.imp-file__x:hover {
+  background: var(--surface, #ffffff);
+  color: var(--fault, #b3261e);
+}
+
+/* 归档 chip：强调态（经网关解包） */
+.imp-file--archive {
+  border-color: var(--accent, #1e5f97);
+  background: var(--accent-soft, #e4edf5);
+}
+
+.imp-file--archive .imp-file__name {
+  color: var(--accent-2, #164a78);
+  font-weight: 600;
+}
+
+/* —— 解析结果 —— */
+
+.imp-summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--run, #1f7a33);
+}
+
+.imp-issues {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.imp-issue {
+  font-size: 12px;
+  color: var(--standby, #8f5e00);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+/* —— 说明 / 琥珀提示 / 错误 —— */
+
+.imp-note {
+  font-size: 12px;
+  color: var(--ink-3, #8a918b);
+  line-height: 1.55;
+}
+
+.imp-warn {
+  padding: 8px 11px;
+  background: #fbf5e9;
+  border: 1px solid #e6d5ac;
+  border-left: 3px solid var(--standby, #8f5e00);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #7a4f00;
+  line-height: 1.5;
+}
+
+.imp-err {
+  font-size: 12px;
+  color: var(--fault, #b3261e);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+/* —— 底部按钮行 —— */
+
+.imp-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px 18px;
+}
+
+.imp-actions__grow {
+  flex: 1 1 auto;
+}
+
+.imp-btn-sm {
+  padding: 5px 11px;
+  font-size: 12px;
+}
+
+/* —— 焦点与动效偏好 —— */
+
+.imp-overlay :focus-visible {
+  outline: 2px solid var(--accent, #1e5f97);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imp-overlay,
+  .imp-card,
+  .imp-overlay *,
+  .imp-overlay *::before,
+  .imp-overlay *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

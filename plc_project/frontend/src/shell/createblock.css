@@ -1,0 +1,266 @@
+/* ==========================================================================
+   CreateBlockDialog — 新建逻辑块 / 新建空白项目对话框（前缀 cbd-）
+   浅色居中卡片：fixed 遮罩 rgba(27,30,28,.4) + 12px 圆角面板 + 单层弹窗投影；
+   条目（输入框 / 类型分段）8px 圆角；无渐变、无阴影堆叠。
+   按钮本体复用全局 .btn / .btn--primary / .btn--ghost（index.css）。
+   ========================================================================== */
+
+.cbd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(27, 30, 28, 0.4);
+  animation: cbd-fade-in 0.14s ease-out;
+}
+
+.cbd-card {
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line-2, #c9ccc4);
+  border-radius: 12px;
+  box-shadow: 0 24px 48px -16px rgba(27, 30, 28, 0.35);
+  animation: cbd-card-in 0.16s cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes cbd-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cbd-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* —— 头部 —— */
+
+.cbd-head {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--line, #e3e4de);
+}
+
+.cbd-heading {
+  min-width: 0;
+}
+
+.cbd-title {
+  font-family: var(--cond, "Barlow Semi Condensed", "PingFang SC", "Microsoft YaHei", sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink, #1b1e1c);
+  line-height: 1.3;
+}
+
+.cbd-sub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--ink-2, #565d57);
+  line-height: 1.45;
+}
+
+.cbd-close {
+  appearance: none;
+  flex: none;
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2, #565d57);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.cbd-close:hover {
+  background: var(--surface-2, #f1f2ed);
+  color: var(--ink, #1b1e1c);
+}
+
+/* —— 表单主体 —— */
+
+.cbd-form {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cbd-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px;
+}
+
+/* —— 字段 —— */
+
+.cbd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cbd-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2, #565d57);
+}
+
+.cbd-input {
+  height: 32px;
+  padding: 0 11px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line-2, #c9ccc4);
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink, #1b1e1c);
+  transition: border-color 0.12s ease;
+}
+
+.cbd-input::placeholder {
+  color: var(--ink-3, #8a918b);
+}
+
+.cbd-input:focus,
+.cbd-input:focus-visible {
+  outline: none;
+  border-color: var(--accent, #1e5f97);
+}
+
+.cbd-input--mono {
+  font-family: var(--mono, "IBM Plex Mono", Consolas, monospace);
+  font-size: 12.5px;
+}
+
+.cbd-error {
+  font-size: 12px;
+  color: var(--fault, #b3261e);
+  line-height: 1.45;
+}
+
+/* —— 类型分段选择（FB / FC / DB / OB 四等宽，选中 accent-soft 底） —— */
+
+.cbd-seg {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-2, #f1f2ed);
+  border: 1px solid var(--line, #e3e4de);
+  border-radius: 10px;
+}
+
+.cbd-seg__opt {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 0 5px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.cbd-seg__code {
+  font-family: var(--mono, "IBM Plex Mono", Consolas, monospace);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2, #565d57);
+  line-height: 1.2;
+}
+
+.cbd-seg__cap {
+  font-size: 10.5px;
+  color: var(--ink-3, #8a918b);
+  line-height: 1.2;
+}
+
+.cbd-seg__opt:hover .cbd-seg__code {
+  color: var(--ink, #1b1e1c);
+}
+
+.cbd-seg__opt--on {
+  background: var(--accent-soft, #e4edf5);
+}
+
+.cbd-seg__opt--on .cbd-seg__code,
+.cbd-seg__opt--on .cbd-seg__cap {
+  color: var(--accent, #1e5f97);
+}
+
+/* —— 说明文字 —— */
+
+.cbd-note {
+  font-size: 12px;
+  color: var(--ink-3, #8a918b);
+  line-height: 1.55;
+}
+
+/* —— 底部按钮行 —— */
+
+.cbd-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px 18px;
+}
+
+.cbd-actions__grow {
+  flex: 1 1 auto;
+}
+
+/* —— 焦点与动效偏好 —— */
+
+.cbd-overlay :focus-visible {
+  outline: 2px solid var(--accent, #1e5f97);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cbd-overlay,
+  .cbd-card,
+  .cbd-overlay *,
+  .cbd-overlay *::before,
+  .cbd-overlay *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

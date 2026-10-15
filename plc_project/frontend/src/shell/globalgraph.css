@@ -1,0 +1,497 @@
+/* ==========================================================================
+   GlobalGraph — 全局块连线图（React Flow 版，前缀 gg-）
+   浅色工程风：点阵底 + 白底节点（顶部 3px 状态条）+ 计数着色贝塞尔连线。
+   设计令牌就地声明（与全局 index.css 同值），规则：无渐变装饰、无 emoji、
+   无阴影堆叠；focus-visible 2px accent；reduced-motion 禁动画。
+   ========================================================================== */
+
+/* —— 容器与设计令牌 —— */
+
+.gg {
+  --surface: #ffffff;
+  --surface-2: #f1f2ed;
+  --ink: #1b1e1c;
+  --ink-2: #565d57;
+  --ink-3: #8a918b;
+  --line: #e3e4de;
+  --line-2: #c9ccc4;
+  --accent: #1e5f97;
+  --accent-soft: #e4edf5;
+  --run: #1f7a33;
+  --standby: #8f5e00;
+  --fault: #b3261e;
+  --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  --sans: "Barlow", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --cond: "Barlow Semi Condensed", "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--sans);
+  color: var(--ink);
+}
+
+/* ==========================================================================
+   React Flow 覆写
+   ========================================================================== */
+
+.gg .react-flow {
+  width: 100%;
+  height: 100%;
+}
+
+/* 版权角标（proOptions 已关，双保险） */
+.gg .react-flow__attribution {
+  display: none;
+}
+
+.gg .react-flow__node {
+  font-family: var(--sans);
+}
+
+/* 关闭 React Flow 自带的选中投影：选中态由 .gg-node--sel 自绘 */
+.gg .react-flow__node.selected {
+  box-shadow: none;
+}
+
+.gg .react-flow__pane {
+  cursor: grab;
+}
+
+.gg .react-flow__pane.dragging {
+  cursor: grabbing;
+}
+
+.gg .react-flow__node.dragging {
+  cursor: grabbing;
+}
+
+/* 边标签（内联 style 兜底） */
+.gg .react-flow__edge-text {
+  font-family: var(--mono);
+}
+
+.gg .react-flow__edge-textbg {
+  fill: #ffffff;
+}
+
+.gg .react-flow__edge-path {
+  transition: stroke-width 0.12s ease;
+}
+
+/* 隐藏式锚点 Handle：仅作连线锚点，不可见不可交互 */
+.gg .react-flow__handle.gg-h {
+  width: 2px;
+  height: 2px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gg .react-flow__handle.gg-h.react-flow__handle-top {
+  top: -1px;
+}
+
+.gg .react-flow__handle.gg-h.react-flow__handle-bottom {
+  bottom: -1px;
+}
+
+/* 小地图：白底 1px 边圆角 8 */
+.gg .react-flow__minimap {
+  width: 160px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.gg .react-flow__minimap-svg {
+  display: block;
+  border-radius: 8px;
+}
+
+/* ==========================================================================
+   块节点（156×48：顶部 3px 状态条 / 第一行徽标+名称 / 第二行 comment）
+   ========================================================================== */
+
+.gg-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 156px;
+  height: 48px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: grab;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.gg-node:hover {
+  border-color: var(--ink-3);
+}
+
+/* 选中：加粗 accent 外框 + accent-soft 底 + 3px 外环（hover 不回落） */
+.gg-node--sel,
+.gg-node--sel:hover {
+  border: 2px solid var(--accent);
+  background: var(--accent-soft);
+  box-shadow:
+    0 0 0 3px rgba(30, 95, 151, 0.3),
+    0 6px 16px rgba(30, 95, 151, 0.22);
+}
+
+/* 选中块的 1 跳关联（调用方/被调方）：钢蓝描边 + 淡外晕提亮 */
+.gg-node--rel,
+.gg-node--rel:hover {
+  border-color: rgba(30, 95, 151, 0.72);
+  box-shadow:
+    0 0 0 1.5px rgba(30, 95, 151, 0.2),
+    0 2px 8px rgba(30, 95, 151, 0.14);
+}
+
+/* 已有选中块时的无关节点：轻度退后（保留全局上下文） */
+.gg-node--out {
+  opacity: 0.4;
+}
+
+/* 搜索未命中：整体淡化 */
+.gg-node--dim {
+  opacity: 0.15;
+}
+
+.gg-node:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 顶部 3px 状态条：synced=运行绿 / draft=待机琥珀 / error=故障红 */
+.gg-node__bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.gg-node--synced .gg-node__bar {
+  background: var(--run);
+}
+
+.gg-node--draft .gg-node__bar {
+  background: var(--standby);
+}
+
+.gg-node--error .gg-node__bar {
+  background: var(--fault);
+}
+
+.gg-node__row1 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 9px 10px 0;
+}
+
+.gg-node__badge {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--accent);
+}
+
+.gg-node__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gg-node__cmt {
+  padding: 3px 10px 0;
+  overflow: hidden;
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   只读分组框（OB 调用链视觉容器，纯背景，不拦截指针）
+   ========================================================================== */
+
+.gg-group {
+  position: relative;
+  box-sizing: border-box;
+  border: 1px dashed var(--line-2);
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+.gg-group__label {
+  position: absolute;
+  top: 5px;
+  left: 10px;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gg-group--dim {
+  opacity: 0.15;
+}
+
+/* ==========================================================================
+   搜索框 + 只看相关（左上角悬浮）
+   ========================================================================== */
+
+.gg-searchbar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gg-searchbar__input {
+  box-sizing: border-box;
+  width: 190px;
+  height: 26px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink);
+}
+
+.gg-searchbar__input::placeholder {
+  color: var(--ink-3);
+}
+
+.gg-searchbar__input:hover {
+  border-color: var(--ink-3);
+}
+
+.gg-toolbtn {
+  height: 26px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.gg-toolbtn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+
+.gg-toolbtn:disabled {
+  color: var(--ink-3);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.gg-toolbtn--on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   缩放工具栏（右上角，自绘）
+   ========================================================================== */
+
+.gg-zoombar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(27, 30, 28, 0.08);
+}
+
+.gg-zoombar__btn {
+  appearance: none;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.gg-zoombar__btn:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.gg-zoombar__fit {
+  font-size: 11.5px;
+}
+
+.gg-zoombar__pct {
+  min-width: 40px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--ink-3);
+  user-select: none;
+}
+
+/* ==========================================================================
+   引用次数色标（左下角）
+   ========================================================================== */
+
+.gg-legend {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.gg-legend__label {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+.gg-legend__min,
+.gg-legend__max {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.gg-legend__max {
+  color: rgb(224, 116, 0);
+}
+
+.gg-legend__bar {
+  width: 72px;
+  height: 6px;
+  border: 1px solid rgba(27, 30, 28, 0.08);
+  border-radius: 3px;
+}
+
+/* ==========================================================================
+   焦点可见性（统一 2px accent 外环）
+   ========================================================================== */
+
+.gg button:focus-visible,
+.gg input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ==========================================================================
+   空态（同全局 empty-stage 风格；按钮复用全局 .btn .btn--primary）
+   ========================================================================== */
+
+.gg--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gg-empty__card {
+  max-width: 420px;
+  padding: 40px 48px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.gg-empty__title {
+  margin-bottom: 10px;
+  font-family: var(--cond);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.gg-empty__text {
+  margin-bottom: 18px;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--ink-2);
+}
+
+.gg-empty__hint {
+  margin-top: 14px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+/* ==========================================================================
+   动效约束：reduced-motion 下禁用全部过渡
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .gg *,
+  .gg *::before,
+  .gg *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

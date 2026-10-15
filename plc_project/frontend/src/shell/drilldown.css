@@ -1,0 +1,319 @@
+/* ==========================================================================
+   DrillDownPanel — 双击块下钻：块内网络流程图（前缀 dd-）
+   依赖全局令牌：--surface/-2、--ink/-2/-3、--line/-2、--accent/-soft、
+   --mono/--sans/--cond、--r-md/-sm、--ease、--shadow-sheet
+   ========================================================================== */
+
+/* —— 覆盖层 —— */
+
+.dd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(27, 30, 28, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: dd-fade 0.14s ease-out;
+}
+
+.dd-card {
+  width: 100%;
+  max-width: 920px;
+  height: 76vh;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sheet);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dd-card-in 0.16s var(--ease);
+}
+
+@keyframes dd-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dd-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* —— 头部 —— */
+
+.dd-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dd-back {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+  flex: none;
+  transition: border-color 0.12s var(--ease), color 0.12s var(--ease);
+}
+
+.dd-back:hover {
+  border-color: var(--ink-3);
+  color: var(--ink);
+}
+
+.dd-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dd-title__type {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  padding: 0 5px;
+  line-height: 1.6;
+  flex: none;
+}
+
+.dd-title__name {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.dd-title__suffix {
+  font-family: var(--cond);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
+  flex: none;
+}
+
+.dd-close {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  flex: none;
+  transition: background 0.12s var(--ease), color 0.12s var(--ease);
+}
+
+.dd-close:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* —— 主体画布 —— */
+
+.dd-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.dd-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  line-height: 1.7;
+  text-align: center;
+}
+
+/* —— 网络节点（220 × auto）—— */
+
+.dd-nw {
+  width: 220px;
+  position: relative;
+  font-family: var(--sans);
+}
+
+.dd-nw__btn {
+  appearance: none;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-top: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 11px 10px;
+  font-family: var(--sans);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.12s var(--ease);
+}
+
+.dd-nw__btn:hover {
+  border-color: var(--accent);
+}
+
+.dd-nw__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.dd-nw__no {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: var(--r-sm);
+  padding: 0 5px;
+  line-height: 1.6;
+  margin-top: 1px;
+  flex: none;
+}
+
+.dd-nw__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.4;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: break-word;
+}
+
+.dd-nw__summary {
+  margin-top: 5px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: break-word;
+}
+
+/* —— 底部统计行 —— */
+
+.dd-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.dd-foot__stats {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.dd-foot__hint {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* —— 焦点可达 —— */
+
+.dd-back:focus-visible,
+.dd-close:focus-visible,
+.dd-nw__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* —— React Flow 覆写 —— */
+
+.dd-body .react-flow__attribution {
+  display: none;
+}
+
+.dd-body .react-flow__node {
+  font-family: var(--sans);
+}
+
+.dd-body .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+  border: none;
+}
+
+.dd-body .react-flow__edge-path {
+  stroke: var(--line-2);
+  stroke-width: 1.5px;
+}
+
+/* —— 降级：减少动态效果 —— */
+
+@media (prefers-reduced-motion: reduce) {
+  .dd-overlay,
+  .dd-card {
+    animation: none;
+  }
+
+  .dd-back,
+  .dd-close,
+  .dd-nw__btn {
+    transition: none;
+  }
+}

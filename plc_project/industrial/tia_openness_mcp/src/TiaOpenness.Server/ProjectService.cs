@@ -311,7 +311,13 @@ public sealed class ProjectService
                 {
                     Ok = false,
                     Api = created.Api,
-                    Error = new ToolError { Code = created.SkipReason ?? "openness_error", Message = created.Api },
+                    Error = new ToolError
+                    {
+                        Code = created.SkipReason ?? "openness_error",
+                        Message = string.IsNullOrWhiteSpace(created.RawError)
+                            ? created.Api
+                            : created.Api + "：" + created.RawError,
+                    },
                 };
             }
 

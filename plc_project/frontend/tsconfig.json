@@ -14,5 +14,22 @@
     "strict": false,
     "types": ["vite/client"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/index.ts",
+    "src/api.ts",
+    "src/canvasModel.ts",
+    "src/detail.ts",
+    "src/usePlcWorkspace.ts",
+    "src/CoverageStrip.tsx",
+    "src/DeviceSensorPanel.tsx",
+    "src/ProjectBrief.tsx",
+    "src/canvas/index.ts",
+    "src/canvas/NodeWorkbench.tsx",
+    "src/canvas/NodeInspector.tsx",
+    "src/canvas/CitationSourceList.tsx",
+    "src/canvas/demoFixture.ts",
+    "src/canvas/jump.ts",
+    "src/canvas/inspectModel.ts"
+  ]
 }

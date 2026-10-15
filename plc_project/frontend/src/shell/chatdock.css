@@ -1,0 +1,223 @@
+/* ==========================================================================
+   ChatDock — 中栏底部对话坞（前缀 dock-）
+   白底面板、上边线；展开态 max-height 40vh 内部滚动；无气泡时间戳保持干净
+   ========================================================================== */
+
+.dock :focus-visible {
+  outline: 2px solid var(--accent, #1e5f97);
+  outline-offset: 1px;
+}
+
+.dock {
+  flex-shrink: 0;
+  background: var(--surface, #ffffff);
+  border-top: 1px solid var(--line, #e3e4de);
+  font-family: var(--sans);
+}
+
+/* ---- 头部行（折叠/展开共用） ---- */
+
+.dock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 8px 6px 14px;
+}
+
+.dock-headinfo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dock-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.dock-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.dock-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.dock-toggle:hover {
+  background: var(--surface-2, #f1f2ed);
+  color: var(--ink);
+}
+
+/* ---- 展开态主体 ---- */
+
+.dock-body {
+  display: flex;
+  flex-direction: column;
+  max-height: 40vh;
+}
+
+.dock-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px 8px;
+}
+
+.dock-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dock-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dock-messages::-webkit-scrollbar-thumb {
+  background: var(--line-2, #c9ccc4);
+  border-radius: 3px;
+}
+
+/* 用户消息：右对齐气泡，浅钢蓝底，左下角 2px */
+
+.dock-msg {
+  display: flex;
+}
+
+.dock-msg--user {
+  justify-content: flex-end;
+}
+
+.dock-msg--system {
+  justify-content: flex-start;
+}
+
+.dock-bubble {
+  max-width: 72%;
+  padding: 6px 11px;
+  background: var(--accent-soft, #e4edf5);
+  color: var(--ink);
+  border-radius: 10px 10px 2px 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 系统消息：左对齐，灰底内嵌块，左上角 2px，可多行 */
+
+.dock-sysline {
+  max-width: 88%;
+  padding: 6px 11px;
+  background: var(--surface-2, #f1f2ed);
+  color: var(--ink-2);
+  border-radius: 2px 10px 10px 10px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dock-empty {
+  padding: 10px 2px 12px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* ---- 底部输入行 ---- */
+
+.dock-inputrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 10px;
+  flex-shrink: 0;
+}
+
+.dock-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  padding: 0 11px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line-2, #c9ccc4);
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink);
+  transition: border-color 0.12s ease;
+}
+
+.dock-input::placeholder {
+  color: var(--ink-3);
+}
+
+.dock-input:focus,
+.dock-input:focus-visible {
+  outline: none;
+  border-color: var(--accent, #1e5f97);
+}
+
+.dock-key {
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border: 1px solid var(--line, #e3e4de);
+  border-radius: 4px;
+  background: var(--surface-2, #f1f2ed);
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+.dock-send {
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent, #1e5f97);
+  color: #ffffff;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.dock-send:hover,
+.dock-send:active {
+  background: var(--accent-2, #164a78);
+}
+
+/* ---- 动效偏好 ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .dock *,
+  .dock *::before,
+  .dock *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

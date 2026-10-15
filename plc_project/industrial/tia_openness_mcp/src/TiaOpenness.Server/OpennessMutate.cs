@@ -274,7 +274,7 @@ public static class OpennessMutate
     }
 
     /// <summary>Official <c>Devices.CreateWithItem(typeIdentifier, name, deviceName)</c> when present.</summary>
-    public static (object? Device, string? SkipReason, string Api) TryCreateDevice(
+    public static (object? Device, string? SkipReason, string Api, string? RawError) TryCreateDevice(
         object devicesComposition,
         string typeIdentifier,
         string name,
@@ -285,7 +285,7 @@ public static class OpennessMutate
             .ToList();
         if (methods.Count == 0)
         {
-            return (null, "no_import", ApiCreateDevice + " not found on this Openness build");
+            return (null, "no_import", ApiCreateDevice + " not found on this Openness build", null);
         }
 
         var match = methods.FirstOrDefault(m => m.GetParameters().Length == 3);
@@ -294,15 +294,16 @@ public static class OpennessMutate
             try
             {
                 var device = match.Invoke(devicesComposition, new object[] { typeIdentifier, name, deviceName });
-                return (device, null, ApiCreateDevice);
+                return (device, null, ApiCreateDevice, null);
             }
             catch (Exception ex)
             {
-                return (null, OpennessExport.ClassifySkipReason(Unwrap(ex).Message), ApiCreateDevice);
+                var raw = Unwrap(ex).Message;
+                return (null, OpennessExport.ClassifySkipReason(raw), ApiCreateDevice, raw);
             }
         }
 
-        return (null, "no_import", ApiCreateDevice + " 3-argument overload not present");
+        return (null, "no_import", ApiCreateDevice + " 3-argument overload not present", null);
     }
 
     /// <summary>Official <c>GlobalLibraries.Open(FileInfo, FileAccess)</c> when present.</summary>
