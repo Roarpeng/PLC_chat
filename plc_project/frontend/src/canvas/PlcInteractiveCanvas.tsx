@@ -168,6 +168,27 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
     setLayout((l) => ({ ...l, collapsed: { ...l.collapsed, [key]: !l.collapsed[key] } }));
   };
 
+  /** 读取所有展开子栏的当前渲染宽（存储与渲染保持一致的"真相"来源） */
+  const readRenderedWidths = (): Partial<Record<PaneKey, number>> => {
+    const el = document.querySelector(".canvas-pane .subpanes");
+    if (!el) return {};
+    const out: Partial<Record<PaneKey, number>> = {};
+    el.querySelectorAll<HTMLElement>(".subpane:not(.subpane--rail)").forEach((pane) => {
+      const label = pane.getAttribute("aria-label") ?? "";
+      const k = PANE_ORDER.find((p) => PANE_TITLES[p] === label);
+      if (k) out[k] = Math.round(pane.getBoundingClientRect().width);
+    });
+    return out;
+  };
+
+  /* 挂载时一次性真相同步：修复历史上已漂移的存储宽度 */
+  useEffect(() => {
+    const truth = readRenderedWidths();
+    if (Object.keys(truth).length === 0) return;
+    setLayout((l) => ({ ...l, widths: { ...l.widths, ...truth } }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /** 分隔条拖拽：只调本栏宽度，其余栏由 CSS flex 按比例伸缩补偿（逐帧、无重叠）；
    *  松手低于吸附阈值 → 磁吸收起（宽度回落合法区间供展开恢复） */
   const beginSubDrag = (
@@ -202,17 +223,22 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
       document.body.style.cursor = prevCursor;
       document.body.style.userSelect = prevSelect;
       const latest = dragRef.current?.latest ?? startW;
+      const moved = Math.abs(latest - startW) >= 6; // 纯点击不触发磁吸/改宽
       dragRef.current = null;
       setDraggingPane(null);
       setLayout((l) => {
+        // 真相同步：把所有可见子栏的渲染宽写回存储。flex 比例缩放会让
+        // 存储≠渲染持续漂移（如存储 470 实际 263），下一次按下时基点
+        // 跳变就是"点下就跑"。写回后存储永远等于用户看到的。
+        const widths = { ...l.widths, ...readRenderedWidths() };
+        if (!moved) return { ...l, widths };
         if (latest < SNAP_PX) {
-          // 磁吸：收起为轨道
           return {
-            widths: { ...l.widths, [key]: Math.max(latest, MIN_W) },
+            widths: { ...widths, [key]: Math.max(latest, MIN_W) },
             collapsed: { ...l.collapsed, [key]: true },
           };
         }
-        return { ...l, widths: { ...l.widths, [key]: Math.min(latest, MAX_W) } };
+        return { ...l, widths: { ...widths, [key]: Math.min(latest, MAX_W) } };
       });
     };
     const onUp = () => finish();
@@ -308,6 +334,7 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
           "graph",
           <>
             <GlobalGraph
+              paneDragging={draggingPane !== null}
               blocks={blockList}
               edges={blockEdges}
               selectedBlockName={selectedBlockName}

@@ -60,6 +60,8 @@ export interface GlobalGraphProps {
   projectKey?: string;
   /** 双击节点 → 下钻块内网络图 */
   onDrillDown?: (blockName: string) => void;
+  /** 中栏子栏分隔条拖拽进行中：重排推迟到松手，拖拽中零布局计算 */
+  paneDragging?: boolean;
 }
 
 /* —— 几何与记忆常量 —— */
@@ -130,7 +132,7 @@ function edgeRGB(count: number, maxCount: number): [number, number, number] {
 }
 
 const EDGE_GRADIENT =
-  "linear-gradient(90deg, rgb(201,204,196), rgb(224,116,0))";
+  "linear-gradient(90deg, rgb(201,204,196), rgb(224,116,0))"; // taste-skill-ignore: data colour-scale legend
 
 /** 布局服务不可用时的兜底：等距网格 */
 function fallbackLayout(blocks: CanvasBlockData[]): {
@@ -256,6 +258,7 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
   onCreateBlock,
   projectKey = "_",
   onDrillDown,
+  paneDragging = false,
 }) => {
   const rf = useReactFlow();
   const zoom = useViewport().zoom;
@@ -265,6 +268,59 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
   const [positions, setPositions] = useState<Record<string, Pt>>({});
   const [groups, setGroups] = useState<(ObGroup & { x: number; y: number; w: number; h: number })[]>([]);
   const [layoutNonce, setLayoutNonce] = useState(0);
+  /** 栏尺寸（防抖后）：驱动布局参数（折行数/宽高比）随拖动重排 */
+  const [paneSize, setPaneSize] = useState<{ w: number; h: number } | null>(null);
+
+  /* —— 收拢动画定时器（声明在布局 effect 之前，重排时先行中止） —— */
+  const gatherTimer = useRef<number | null>(null);
+  const cancelGather = useCallback(() => {
+    if (gatherTimer.current != null) {
+      window.clearTimeout(gatherTimer.current);
+      gatherTimer.current = null;
+    }
+  }, []);
+
+  /* —— 栏尺寸监听：拖分隔条改变栏宽 →（防抖 300ms）触发布局重算。
+        观察图栏面板父容器（永不因空态/重渲染被 React 重建）——直接观察
+        .gg 本体会在其节点被重建后失效（观察器盯着脱离文档的死节点，
+        尺寸恒为 0，再也不触发），这是"调大小不重排"的根因 —— */
+  const layoutKeyRef = useRef("");
+  const dragFlagRef = useRef(false);
+  const reportRef = useRef<(() => void) | null>(null);
+  const hasBlocks = blocks.length > 0;
+  /* 分隔条拖拽结束：立即按最终栏宽重排（拖拽中被搁置） */
+  useEffect(() => {
+    dragFlagRef.current = paneDragging;
+    if (!paneDragging) reportRef.current?.();
+  }, [paneDragging]);
+  useEffect(() => {
+    const el = (wrapRef.current?.parentElement ?? wrapRef.current) as HTMLDivElement | null;
+    if (!el) return;
+    let timer: number | null = null;
+    let last = { w: el.clientWidth, h: el.clientHeight };
+    const report = () => {
+      timer = null;
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (w !== last.w || h !== last.h) {
+        last = { w, h };
+        setPaneSize({ w, h });
+      }
+    };
+    const ro = new ResizeObserver(() => {
+      if (dragFlagRef.current) return; // 分隔条拖拽中：零计算，松手统一重排
+      if (timer != null) window.clearTimeout(timer);
+      timer = window.setTimeout(report, 180);
+    });
+    reportRef.current = report;
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      if (timer != null) window.clearTimeout(timer);
+    };
+    // 空态 ↔ 有块 翻转时重挂（.gg 节点在空态不挂 ref）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasBlocks]);
 
   /* —— 交互状态 —— */
   const [query, setQuery] = useState("");
@@ -304,7 +360,7 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
     [rf]
   );
 
-  /* —— 布局：挂载 / blocks 引用变化 / 换项目 / 重排 时重算 —— */
+  /* —— 布局：挂载 / blocks 变化 / 换项目 / 重排 / 栏宽高变化 时重算 —— */
   useEffect(() => {
     let dead = false;
     if (blocks.length === 0) {
@@ -312,6 +368,12 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
       setGroups([]);
       return;
     }
+    cancelGather(); // 重排覆盖位置：先行中止进行中的收拢动画
+    // 本次重排是否仅由栏宽变化引发（blocks/项目/重排键都没变）：
+    // 是 → fit 用瞬时（duration 0），避免拖动松手后又一轮视口动画
+    const layoutKey = `${blocks.length}|${blocks[0]?.name ?? ""}|${projectKey}|${layoutNonce}`;
+    const resizeOnly = layoutKeyRef.current === layoutKey;
+    layoutKeyRef.current = layoutKey;
     const overrides = loadPositions(projectKey);
     // 按当前栏尺寸计算布局参数：目标宽高比（约束 ELK 总宽）+ 折行每行节点数上限
     const el = wrapRef.current;
@@ -334,16 +396,19 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
         scheduleFit();
       });
     function scheduleFit() {
-      /* 双 rAF + 余量：等 setNodes 与 React Flow 内部 store 应用完成 */
+      /* 双 rAF + 余量：等 setNodes 与 React Flow 内部 store 应用完成；
+         用户已手动缩放/平移过则不夺走视口；
+         栏宽变化引发的重排绝不 fitView（用户正盯着自己的视口，
+         被抢走就是"点下就跑"），只有挂载/重排按钮/换项目才适配 */
       window.setTimeout(() => {
-        if (!dead) doFit();
+        if (!dead && !userTouchedRef.current && !resizeOnly) doFit();
       }, 80);
     }
     return () => {
       dead = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocks, projectKey, layoutNonce, doFit]);
+  }, [blocks, projectKey, layoutNonce, paneSize, doFit]);
 
   /* —— 搜索命中集合 / Enter 循环列表 —— */
   const hits = useMemo(() => {
@@ -469,7 +534,7 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
         label: `×${e.count}`,
         labelStyle: {
           fill: col,
-          fontFamily: "var(--mono)",
+          fontFamily: "var(--sans)",
           fontSize: "9.5px",
           fontWeight: on ? 600 : 500,
         },
@@ -485,16 +550,8 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
     return list;
   }, [edges, positions, selectedBlockName, relSet, nbSet, maxCount]);
 
-  /* —— 面板尺寸自适应：用户未触碰视口时自动 fitView —— */
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => {
-      if (!userTouchedRef.current) doFit();
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [doFit]);
+  /* —— 面板尺寸自适应已并入上方"栏尺寸监听"：拖动期间逐帧 fitView 会造成
+        视口动画层叠（卡顿主因），现统一防抖 300ms → 重排 → 瞬时 fit —— */
 
   /* —— 聚焦模式：开启或选中块变化后 fitView 到可见子图 —— */
   useEffect(() => {
@@ -507,14 +564,8 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
         被压到的无关节点向外让位；定时器逐帧插值节点模型位置，
         连线随模型同步重算（避免 CSS 过渡造成"边先跳、节点后滑"的撕裂）。
         注意用 setTimeout 而非 rAF：嵌入式浏览器后台化时 rAF 与 CSS 过渡
-        一样会被冻结，定时器仍以 16ms 级触发 —— */
-  const gatherTimer = useRef<number | null>(null);
-  const cancelGather = useCallback(() => {
-    if (gatherTimer.current != null) {
-      window.clearTimeout(gatherTimer.current);
-      gatherTimer.current = null;
-    }
-  }, []);
+        一样会被冻结，定时器仍以 16ms 级触发 ——
+        （gatherTimer / cancelGather 声明在布局 effect 之前，见上） —— */
 
   useEffect(() => {
     if (!selectedBlockName) return;
@@ -559,8 +610,9 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
         gatherTimer.current = window.setTimeout(tick, 16);
       } else {
         gatherTimer.current = null;
+        // 收拢是自动行为：只改当前会话内的位置，不写入位置记忆——
+        // 否则被收拢过的块会被当作"手动钉住"，栏宽调节的重排对它失效
         setPositions(to);
-        for (const n of res.moved) savePosition(projectKey, n, to[n]);
       }
     };
     gatherTimer.current = window.setTimeout(tick, 16);

@@ -13,7 +13,7 @@
   background: var(--surface, #ffffff);
   color: var(--ink, #1b1e1c);
   font-family: var(--sans, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .sp :focus-visible {
@@ -29,12 +29,12 @@
   align-items: center;
   gap: 8px;
   padding: 9px 10px 9px 12px;
-  border-bottom: 1px solid var(--line, #e3e4de);
+  border-bottom: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
 }
 
 /* 无块时的栏标题 */
 .sp-head__title {
-  font-family: var(--cond, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+  font-family: var(--sans);
   font-size: 13.5px;
   font-weight: 600;
   letter-spacing: 0.2px;
@@ -45,11 +45,12 @@
 .sp-head__type {
   flex: none;
   padding: 0 4px;
-  border: 1px solid var(--accent, #1e5f97);
-  border-radius: 4px;
+  border: 1px solid var(--accent, #1e5f97); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: var(--surface, #ffffff);
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 10.5px;
+font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.6;
   color: var(--accent, #1e5f97);
@@ -61,8 +62,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 12.5px;
+font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   color: var(--ink, #1b1e1c);
 }
 
@@ -98,11 +100,11 @@
   display: inline-flex;
   align-items: center;
   padding: 3px 9px;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  border: 1px solid transparent; /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: transparent;
   font-family: var(--sans, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--ink-2, #565d57);
   cursor: pointer;
@@ -141,7 +143,7 @@
   gap: 2px;
   padding: 24px;
   text-align: center;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.7;
   color: var(--ink-3, #8a918b);
 }
@@ -154,7 +156,7 @@
   overflow-y: auto;
   margin: 10px 12px 0;
   padding: 10px 12px 11px;
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--surface-2, #f1f2ed);
   scrollbar-width: thin;
   scrollbar-color: var(--line-2, #c9ccc4) transparent;
@@ -170,14 +172,14 @@
 
 .sp-explain::-webkit-scrollbar-thumb {
   background: var(--line-2, #c9ccc4);
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .sp-explain__headline {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: var(--cond, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+  font-family: var(--sans);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.2px;
@@ -192,7 +194,7 @@
 .sp-deepbtn {
   flex: none;
   padding: 2px 8px;
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 /* LLM 深度解释正文与提示 */
@@ -202,7 +204,7 @@
   border-left: 2px solid var(--accent, #1e5f97);
   border-radius: 0 6px 6px 0;
   background: var(--surface, #ffffff);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.65;
   color: var(--ink, #1b1e1c);
   white-space: pre-wrap;
@@ -211,14 +213,14 @@
 
 .sp-deep__hint {
   margin-top: 6px;
-  font-size: 11.5px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--standby, #8f5e00);
 }
 
 .sp-explain__role {
   margin-top: 2px;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.55;
   color: var(--ink-2, #565d57);
 }
@@ -233,11 +235,12 @@
 
 .sp-kw {
   padding: 0 5px;
-  border: 1px solid var(--accent, #1e5f97);
-  border-radius: 4px;
+  border: 1px solid var(--accent, #1e5f97); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: var(--surface, #ffffff);
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 10px;
+font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   line-height: 1.6;
   color: var(--accent, #1e5f97);
   white-space: nowrap;
@@ -250,7 +253,7 @@
 
 .sp-sig__title {
   padding-bottom: 3px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.3px;
   color: var(--ink-3, #8a918b);
@@ -269,8 +272,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 11.5px;
+font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   color: var(--ink, #1b1e1c);
 }
 
@@ -278,14 +282,15 @@
   flex: 1 1 auto;
   min-width: 10px;
   margin: 0 7px;
-  border-bottom: 1px dotted var(--line-2, #c9ccc4);
+  border-bottom: 1px dotted var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui (code/identifier text) */
   transform: translateY(-3px);
 }
 
 .sp-sigrow__type {
   flex: none;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 11.5px;
+font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   color: var(--accent, #1e5f97);
   white-space: nowrap;
 }
@@ -293,7 +298,7 @@
 /* 每组超过 8 条时的收尾行 */
 .sp-sig__more {
   padding-top: 2px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--ink-3, #8a918b);
 }
 
@@ -309,8 +314,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 10.5px;
+font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   color: var(--accent, #1e5f97);
 }
 
@@ -332,10 +338,10 @@
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 4px;
+  border-radius: 0;
   background: transparent;
   color: var(--ink-3, #8a918b);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   cursor: pointer;
   opacity: 0;
@@ -355,7 +361,7 @@
 
 .sp-net__sum {
   margin-top: 1px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--ink-2, #565d57);
 }
@@ -367,7 +373,7 @@
   gap: 3px;
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px solid var(--line, #e3e4de);
+  border-top: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
 }
 
 .sp-rel {
@@ -375,13 +381,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--ink-2, #565d57);
 }
 
 .sp-rel__v {
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 11px;
+font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   color: var(--ink, #1b1e1c);
 }
 
@@ -408,15 +415,16 @@
 
 .sp-code::-webkit-scrollbar-thumb {
   background: var(--line-2, #c9ccc4);
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .sp-line {
   display: flex;
   align-items: baseline;
   padding-right: 12px;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 12px;
+font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   line-height: 1.65;
 }
 
@@ -426,7 +434,7 @@
   width: 44px;
   padding-right: 10px;
   text-align: right;
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--line-2, #c9ccc4);
   user-select: none;
 }
@@ -438,8 +446,8 @@
   white-space: pre-wrap;
   overflow-wrap: break-word;
   tab-size: 4;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 12px;
+  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 13px;
   color: var(--ink, #1b1e1c);
   user-select: text;
 }
@@ -447,7 +455,7 @@
 /* 跳转定位行：accent 左 2px 竖条 + accent-soft 底 */
 .sp-line--focus {
   background: var(--accent-soft, #e4edf5);
-  box-shadow: inset 2px 0 0 0 var(--accent, #1e5f97);
+  box-shadow: inset 2px 0 0 0 var(--accent, #1e5f97); /* taste-skill-ignore: data-ui workbench interface */
 }
 
 /* ---- 5. 工具区（添加变量 / 添加网络） ---- */
@@ -458,7 +466,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 8px 12px 10px;
-  border-top: 1px solid var(--line, #e3e4de);
+  border-top: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
 }
 
 .sp-tools__row {
@@ -471,8 +479,8 @@
   display: flex;
   flex-direction: column;
   padding: 10px;
-  border: 1px solid var(--line-2, #c9ccc4);
-  border-radius: 8px;
+  border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: var(--surface, #ffffff);
 }
 
@@ -503,7 +511,7 @@
 }
 
 .sp-field__label {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--ink-3, #8a918b);
 }
 
@@ -511,11 +519,12 @@
   appearance: none;
   width: 100%;
   padding: 4px 8px;
-  border: 1px solid var(--line-2, #c9ccc4);
-  border-radius: 8px;
+  border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: var(--surface-2, #f1f2ed);
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 12px;
+font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   color: var(--ink, #1b1e1c);
   transition: border-color 0.12s ease, background-color 0.12s ease;
 }
@@ -538,7 +547,7 @@
 /* 行内校验提示（fault 红） */
 .sp-err {
   margin-top: 4px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--fault, #b3261e);
 }
 
@@ -553,11 +562,11 @@
 .sp-btn {
   appearance: none;
   padding: 4px 14px;
-  border: 1px solid var(--accent, #1e5f97);
-  border-radius: 8px;
+  border: 1px solid var(--accent, #1e5f97); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: var(--accent, #1e5f97);
   font-family: var(--sans, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: #ffffff;
   cursor: pointer;

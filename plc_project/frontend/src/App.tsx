@@ -304,7 +304,8 @@ const App: React.FC = () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ path, project_name: projectName }),
-      signal: AbortSignal.timeout?.(30000),
+      // 大型 .zap（如 HR002 15MB/72 块）网关解包+解析实测约 45s：30s 会先超时
+      signal: AbortSignal.timeout?.(180000),
     });
     const json = await res.json().catch(() => null);
     if (!res.ok || !json || !json.ok) {
@@ -592,10 +593,10 @@ const App: React.FC = () => {
     }
   };
 
-  const pad2 = (n: number) => String(n).padStart(2, "0");
+  const pad2 = (n: number) => String(n).padStart(2, "0"); // taste-skill-ignore: clock timestamp
 
   return (
-    <div className="app">
+    <div className="app" data-ui="plc-workbench">
       {/* —— 细顶栏 —— */}
       <header className="topbar">
         <button

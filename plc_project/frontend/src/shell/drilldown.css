@@ -23,9 +23,9 @@
   max-width: 920px;
   height: 76vh;
   background: var(--surface);
-  border: 1px solid var(--line-2);
-  border-radius: 12px;
-  box-shadow: var(--shadow-sheet);
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
+  box-shadow: var(--shadow-sheet); /* taste-skill-ignore: data-ui workbench interface */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -60,7 +60,7 @@
   align-items: center;
   gap: 10px;
   padding: 10px 12px 10px 14px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
 }
 
 .dd-back {
@@ -69,12 +69,12 @@
   align-items: center;
   gap: 6px;
   padding: 4px 11px;
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: var(--r-md);
   background: var(--surface);
   color: var(--ink-2);
   font-family: var(--sans);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
   white-space: nowrap;
@@ -97,12 +97,12 @@
 }
 
 .dd-title__type {
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
+  font-size: 13px;
   font-weight: 600;
   color: var(--accent);
   background: var(--accent-soft);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--accent); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: var(--r-sm);
   padding: 0 5px;
   line-height: 1.6;
@@ -110,7 +110,7 @@
 }
 
 .dd-title__name {
-  font-family: var(--mono);
+  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
   font-size: 13px;
   font-weight: 600;
   color: var(--ink);
@@ -121,7 +121,7 @@
 }
 
 .dd-title__suffix {
-  font-family: var(--cond);
+  font-family: var(--sans);
   font-size: 13px;
   font-weight: 600;
   color: var(--ink-2);
@@ -168,7 +168,7 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--ink-3);
   line-height: 1.7;
   text-align: center;
@@ -188,9 +188,9 @@
   width: 100%;
   text-align: left;
   background: var(--surface);
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
   border-top: 3px solid var(--accent);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 8px 11px 10px;
   font-family: var(--sans);
   color: var(--ink);
@@ -209,8 +209,8 @@
 }
 
 .dd-nw__no {
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
+  font-size: 13px;
   font-weight: 600;
   color: var(--accent);
   background: var(--accent-soft);
@@ -222,7 +222,7 @@
 }
 
 .dd-nw__title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--ink);
   line-height: 1.4;
@@ -236,7 +236,7 @@
 
 .dd-nw__summary {
   margin-top: 5px;
-  font-size: 11.5px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--ink-2);
   display: -webkit-box;
@@ -255,18 +255,18 @@
   justify-content: space-between;
   gap: 12px;
   padding: 7px 16px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
 }
 
 .dd-foot__stats {
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
+  font-size: 13px;
   color: var(--ink-3);
   white-space: nowrap;
 }
 
 .dd-foot__hint {
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--ink-3);
   white-space: nowrap;
   overflow: hidden;

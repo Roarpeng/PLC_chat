@@ -41,3 +41,9 @@ plc_project/.devctl/
 
 # TIA Openness E2E run artifacts (regenerable)
 PLC_Openness_data/openness_e2e/
+
+# GraphFlow workspace state (macros/trajectories/brief)
+.graphflow/
+
+# taste-skill working artifacts (direction sheets, inspect screenshots)
+.taste-skill/

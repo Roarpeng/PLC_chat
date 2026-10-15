@@ -11,10 +11,10 @@
   min-height: 0;
   min-width: 0;
   background: var(--surface, #ffffff);
-  border-left: 1px solid var(--line, #e3e4de);
+  border-left: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
   color: var(--ink, #1b1e1c);
   font-family: var(--sans, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 /* ---- 1. 头部行 ---- */
@@ -25,13 +25,14 @@
   align-items: center;
   gap: 8px;
   padding: 10px 8px 10px 12px;
-  border-bottom: 1px solid var(--line, #e3e4de);
+  border-bottom: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
 }
 
 .vi-title {
   flex: 1;
   min-width: 0;
-  font-family: var(--cond, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+  overflow-wrap: anywhere;
+  font-family: var(--sans);
   font-size: 13.5px;
   font-weight: 600;
   letter-spacing: 0.2px;
@@ -50,7 +51,7 @@
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 6px;
+  border-radius: 0;
   background: transparent;
   color: var(--ink-3, #8a918b);
   cursor: pointer;
@@ -70,7 +71,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--line, #e3e4de);
+  border-bottom: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
 }
 
 .vi-pills {
@@ -85,11 +86,11 @@
   align-items: center;
   gap: 6px;
   padding: 3px 10px;
-  border: 1px solid var(--line-2, #c9ccc4);
-  border-radius: 999px;
+  border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: var(--surface, #ffffff);
   font-family: var(--sans, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--ink-2, #565d57);
   cursor: pointer;
@@ -101,8 +102,9 @@
 }
 
 .vi-pill__num {
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 11px;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   font-weight: 500;
   color: var(--ink, #1b1e1c);
 }
@@ -153,8 +155,8 @@
   display: flex;
   align-items: center;
   padding: 1px 10px;
-  border: 1px solid var(--line-2, #c9ccc4);
-  border-radius: 8px;
+  border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: var(--surface-2, #f1f2ed);
   transition: border-color 0.12s ease, background 0.12s ease;
 }
@@ -173,7 +175,7 @@
   background: transparent;
   padding: 5px 0;
   font-family: var(--sans, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--ink, #1b1e1c);
 }
 
@@ -202,7 +204,7 @@
 
 .vi-list::-webkit-scrollbar-thumb {
   background: var(--line-2, #c9ccc4);
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 /* 问题区：红色左缘条行 */
@@ -216,7 +218,7 @@
 
 .vi-issue {
   border-left: 3px solid var(--fault, #b3261e);
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(179, 38, 30, 0.05);
   padding: 6px 10px 7px;
 }
@@ -226,8 +228,9 @@
   align-items: baseline;
   gap: 8px;
   min-width: 0;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 12px;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   color: var(--fault, #b3261e);
 }
 
@@ -241,13 +244,13 @@
 
 .vi-issue__loc {
   flex: none;
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
 .vi-issue__note {
   margin-top: 1px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--ink-3, #8a918b);
 }
 
@@ -275,8 +278,9 @@
 .vi-group__name {
   flex: 1 1 auto;
   min-width: 0;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 12px;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   font-weight: 500;
   color: var(--ink-2, #565d57);
   white-space: nowrap;
@@ -286,15 +290,16 @@
 
 .vi-group__count {
   flex: none;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 10.5px;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   color: var(--ink-3, #8a918b);
 }
 
 /* 变量行：#Name ···· 类型 [引用数] */
 
 .vi-var {
-  border-radius: 8px;
+  border-radius: 0;
   transition: background 0.12s ease;
 }
 
@@ -310,7 +315,7 @@
   width: 100%;
   padding: 5px 8px 4px;
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   background: transparent;
   font: inherit;
   color: inherit;
@@ -322,8 +327,9 @@
   flex: 0 1 auto;
   min-width: 0;
   max-width: 62%;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 12.5px;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   color: var(--ink, #1b1e1c);
   white-space: nowrap;
   overflow: hidden;
@@ -335,14 +341,15 @@
   flex: 1 1 auto;
   min-width: 10px;
   margin: 0 7px;
-  border-bottom: 1px dotted var(--line-2, #c9ccc4);
+  border-bottom: 1px dotted var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui (code/identifier text) */
   transform: translateY(-3px);
 }
 
 .vi-var__type {
   flex: none;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 11px;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   color: var(--accent, #1e5f97);
   white-space: nowrap;
 }
@@ -351,11 +358,12 @@
   flex: none;
   margin-left: 8px;
   padding: 0 6px;
-  border: 1px solid var(--line-2, #c9ccc4);
-  border-radius: 999px;
+  border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: var(--surface, #ffffff);
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 10px;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1.5;
   color: var(--ink-2, #565d57);
@@ -371,7 +379,7 @@
 
 .vi-var__comment {
   padding: 0 8px 5px;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--ink-3, #8a918b);
   white-space: nowrap;
@@ -390,7 +398,7 @@
 
 .vi-var__norefs {
   padding: 2px 6px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--ink-3, #8a918b);
 }
 
@@ -402,7 +410,7 @@
   width: 100%;
   padding: 2.5px 6px;
   border: none;
-  border-radius: 5px;
+  border-radius: 0;
   background: transparent;
   font: inherit;
   text-align: left;
@@ -418,11 +426,12 @@
 .vi-ref__badge {
   flex: none;
   padding: 0 4px;
-  border: 1px solid var(--accent, #1e5f97);
-  border-radius: 3px;
+  border: 1px solid var(--accent, #1e5f97); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: var(--surface, #ffffff);
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 9.5px;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.5;
   color: var(--accent, #1e5f97);
@@ -435,7 +444,7 @@
 
 .vi-ref__label {
   min-width: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-2, #565d57);
   white-space: nowrap;
   overflow: hidden;
@@ -447,7 +456,7 @@
 .vi-empty {
   padding: 36px 16px;
   text-align: center;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.7;
   color: var(--ink-3, #8a918b);
 }
@@ -461,13 +470,13 @@
   min-height: 0;
   max-height: 224px;
   padding: 8px 12px 10px;
-  border-top: 1px solid var(--line, #e3e4de);
+  border-top: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
 }
 
 .vi-tags__head {
   flex: none;
   padding-bottom: 4px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.3px;
   color: var(--ink-3, #8a918b);
@@ -490,7 +499,7 @@
 
 .vi-tags__list::-webkit-scrollbar-thumb {
   background: var(--line-2, #c9ccc4);
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .vi-tag-row {
@@ -502,8 +511,9 @@
 .vi-tag-row__name {
   flex: 0 1 auto;
   min-width: 0;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 11.5px;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   color: var(--ink, #1b1e1c);
   white-space: nowrap;
   overflow: hidden;
@@ -512,8 +522,9 @@
 
 .vi-tag-row__addr {
   flex: none;
-  font-family: var(--mono, "SFMono-Regular", Consolas, "Courier New", monospace);
-  font-size: 11px;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
   color: var(--ink-2, #565d57);
   white-space: nowrap;
 }

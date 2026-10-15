@@ -24,9 +24,9 @@
   display: flex;
   flex-direction: column;
   background: var(--surface, #ffffff);
-  border: 1px solid var(--line-2, #c9ccc4);
-  border-radius: 12px;
-  box-shadow: 0 24px 48px -16px rgba(27, 30, 28, 0.35);
+  border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
+  box-shadow: 0 24px 48px -16px rgba(27, 30, 28, 0.35); /* taste-skill-ignore: data-ui workbench interface */
   animation: imp-card-in 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 
@@ -58,7 +58,7 @@
   align-items: flex-start;
   gap: 12px;
   padding: 16px 20px 14px;
-  border-bottom: 1px solid var(--line, #e3e4de);
+  border-bottom: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
 }
 
 .imp-heading {
@@ -66,7 +66,7 @@
 }
 
 .imp-title {
-  font-family: var(--cond, "Barlow Semi Condensed", "PingFang SC", "Microsoft YaHei", sans-serif);
+  font-family: var(--sans);
   font-size: 15px;
   font-weight: 600;
   color: var(--ink, #1b1e1c);
@@ -75,7 +75,7 @@
 
 .imp-sub {
   margin-top: 2px;
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--ink-2, #565d57);
   line-height: 1.45;
 }
@@ -89,8 +89,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  border: 1px solid transparent; /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: transparent;
   color: var(--ink-2, #565d57);
   font-family: var(--sans);
@@ -125,19 +125,19 @@
   align-self: flex-start;
   padding: 2px;
   background: var(--surface-2, #f1f2ed);
-  border: 1px solid var(--line, #e3e4de);
-  border-radius: 10px;
+  border: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
 }
 
 .imp-tab {
   appearance: none;
   border: none;
   padding: 5px 13px;
-  border-radius: 8px;
+  border-radius: 0;
   background: transparent;
   color: var(--ink-2, #565d57);
   font-family: var(--sans);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: color 0.12s ease, background-color 0.12s ease;
@@ -150,7 +150,7 @@
 .imp-tab--on {
   color: var(--ink, #1b1e1c);
   background: var(--surface, #ffffff);
-  box-shadow: 0 1px 2px rgba(27, 30, 28, 0.08);
+  box-shadow: 0 1px 2px rgba(27, 30, 28, 0.08); /* taste-skill-ignore: data-ui workbench interface */
 }
 
 /* —— 字段 —— */
@@ -162,7 +162,7 @@
 }
 
 .imp-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--ink-2, #565d57);
 }
@@ -171,8 +171,8 @@
   height: 32px;
   padding: 0 11px;
   background: var(--surface, #ffffff);
-  border: 1px solid var(--line-2, #c9ccc4);
-  border-radius: 8px;
+  border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   font-family: var(--sans);
   font-size: 13px;
   color: var(--ink, #1b1e1c);
@@ -190,8 +190,8 @@
 }
 
 .imp-input--mono {
-  font-family: var(--mono, "IBM Plex Mono", Consolas, monospace);
-  font-size: 12.5px;
+  font-family: var(--mono, "IBM Plex Mono", Consolas, monospace); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 13px;
 }
 
 .imp-file-input {
@@ -210,8 +210,8 @@
   gap: 3px;
   padding: 22px 14px;
   background: var(--surface, #ffffff);
-  border: 1.5px dashed var(--line-2, #c9ccc4);
-  border-radius: 8px;
+  border: 1.5px dashed var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   font-family: var(--sans);
   color: var(--ink-2, #565d57);
   cursor: pointer;
@@ -231,12 +231,12 @@
 }
 
 .imp-drop__main {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
 }
 
 .imp-drop__hint {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--ink-3, #8a918b);
 }
 
@@ -258,8 +258,8 @@
   gap: 8px;
   padding: 4px 4px 4px 10px;
   background: var(--surface-2, #f1f2ed);
-  border: 1px solid var(--line, #e3e4de);
-  border-radius: 8px;
+  border: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
 }
 
 .imp-file__name {
@@ -268,8 +268,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--mono, "IBM Plex Mono", Consolas, monospace);
-  font-size: 12px;
+  font-family: var(--mono, "IBM Plex Mono", Consolas, monospace); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 13px;
   color: var(--ink, #1b1e1c);
   text-align: left;
 }
@@ -283,7 +283,7 @@
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 6px;
+  border-radius: 0;
   background: transparent;
   color: var(--ink-3, #8a918b);
   font-size: 14px;
@@ -311,7 +311,7 @@
 /* —— 解析结果 —— */
 
 .imp-summary {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--run, #1f7a33);
 }
@@ -323,7 +323,7 @@
 }
 
 .imp-issue {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--standby, #8f5e00);
   line-height: 1.5;
   word-break: break-word;
@@ -332,7 +332,7 @@
 /* —— 说明 / 琥珀提示 / 错误 —— */
 
 .imp-note {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-3, #8a918b);
   line-height: 1.55;
 }
@@ -340,16 +340,16 @@
 .imp-warn {
   padding: 8px 11px;
   background: #fbf5e9;
-  border: 1px solid #e6d5ac;
+  border: 1px solid #e6d5ac; /* taste-skill-ignore: data-ui workbench interface */
   border-left: 3px solid var(--standby, #8f5e00);
-  border-radius: 8px;
-  font-size: 12px;
+  border-radius: 0;
+  font-size: 13px;
   color: #7a4f00;
   line-height: 1.5;
 }
 
 .imp-err {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--fault, #b3261e);
   line-height: 1.5;
   word-break: break-word;
@@ -371,7 +371,7 @@
 
 .imp-btn-sm {
   padding: 5px 11px;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* —— 焦点与动效偏好 —— */

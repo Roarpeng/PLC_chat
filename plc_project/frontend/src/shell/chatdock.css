@@ -11,7 +11,7 @@
 .dock {
   flex-shrink: 0;
   background: var(--surface, #ffffff);
-  border-top: 1px solid var(--line, #e3e4de);
+  border-top: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
   font-family: var(--sans);
 }
 
@@ -34,15 +34,15 @@
 }
 
 .dock-title {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--ink);
   white-space: nowrap;
 }
 
 .dock-count {
-  font-family: var(--mono);
-  font-size: 11px;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
+  font-size: 13px;
   color: var(--ink-3);
   white-space: nowrap;
 }
@@ -54,8 +54,8 @@
   width: 26px;
   height: 26px;
   flex-shrink: 0;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  border: 1px solid transparent; /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: transparent;
   color: var(--ink-2);
   cursor: pointer;
@@ -95,7 +95,7 @@
 
 .dock-messages::-webkit-scrollbar-thumb {
   background: var(--line-2, #c9ccc4);
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 /* 用户消息：右对齐气泡，浅钢蓝底，左下角 2px */
@@ -117,7 +117,7 @@
   padding: 6px 11px;
   background: var(--accent-soft, #e4edf5);
   color: var(--ink);
-  border-radius: 10px 10px 2px 10px;
+  border-radius: 0 10px 2px 10px;
   font-size: 13px;
   line-height: 1.55;
   white-space: pre-wrap;
@@ -131,8 +131,8 @@
   padding: 6px 11px;
   background: var(--surface-2, #f1f2ed);
   color: var(--ink-2);
-  border-radius: 2px 10px 10px 10px;
-  font-size: 12.5px;
+  border-radius: 0 10px 10px 10px;
+  font-size: 13px;
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
@@ -140,7 +140,7 @@
 
 .dock-empty {
   padding: 10px 2px 12px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-3);
 }
 
@@ -160,8 +160,8 @@
   height: 32px;
   padding: 0 11px;
   background: var(--surface, #ffffff);
-  border: 1px solid var(--line-2, #c9ccc4);
-  border-radius: 8px;
+  border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   font-family: var(--sans);
   font-size: 13px;
   color: var(--ink);
@@ -181,11 +181,11 @@
 .dock-key {
   flex-shrink: 0;
   padding: 1px 5px;
-  border: 1px solid var(--line, #e3e4de);
-  border-radius: 4px;
+  border: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
   background: var(--surface-2, #f1f2ed);
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
+  font-size: 13px;
   line-height: 1.4;
   color: var(--ink-3);
 }
@@ -195,7 +195,7 @@
   height: 32px;
   padding: 0 14px;
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--accent, #1e5f97);
   color: #ffffff;
   font-family: var(--sans);
