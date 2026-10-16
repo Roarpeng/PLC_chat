@@ -32,6 +32,21 @@ export function renderBlockScl(block: CanvasBlockData): string {
     return lines.join("\n") + "\n";
   }
 
+  if (btype === "UDT") {
+    if (block.scl_body && block.scl_body.trim()) {
+      return block.scl_body.trim() + "\n";
+    }
+    lines.push(`TYPE "${block.name}"`);
+    lines.push("STRUCT");
+    for (const v of block.interface) {
+      const init = v.initial_value ? ` := ${v.initial_value}` : "";
+      lines.push(`    ${v.name} : ${v.data_type}${init};`);
+    }
+    lines.push("END_STRUCT;");
+    lines.push("END_TYPE");
+    return lines.join("\n") + "\n";
+  }
+
   const kw =
     btype === "FB" ? "FUNCTION_BLOCK" : btype === "FC" ? "FUNCTION" : "ORGANIZATION_BLOCK";
   lines.push(`${kw} "${block.name}"`);

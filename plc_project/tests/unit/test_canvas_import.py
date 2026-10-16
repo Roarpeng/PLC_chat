@@ -15,6 +15,21 @@ from plc_engine.canvas_model import CanvasState
 FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "tia_exports"
 
 
+def test_import_progress_stages_reported() -> None:
+    stages: list[str] = []
+
+    def on_progress(stage: str, message: str, **_extra) -> None:
+        stages.append(stage)
+
+    data = import_canvas_from_path(
+        FIXTURE_DIR, project_name="progress_project", on_progress=on_progress
+    )
+    assert data["blocks_parsed"] >= 3
+    assert "start" in stages
+    assert "parse" in stages
+    assert "done" in stages
+
+
 def test_import_canvas_from_export_directory() -> None:
     data = import_canvas_from_path(FIXTURE_DIR, project_name="fixture_project")
 
@@ -49,8 +64,10 @@ def test_import_canvas_from_export_directory() -> None:
     assert net["title"] == "Self-holding motor start"
     assert net["language"] == "LAD"
     assert net["status"] == "synced"
-    assert net["scl_text"].startswith("// 图形网络（LAD/FBD），引用符号：")
-    assert "Start" in net["scl_text"] and "Stop" in net["scl_text"]
+    # NetworkTranslator fills IEC-style SCL (not the old graphic placeholder).
+    assert "Running" in net["scl_text"] and "Start" in net["scl_text"] and "Stop" in net["scl_text"]
+    assert ":=" in net["scl_text"] or "图形" in net["scl_text"]
+    assert fb["scl_body"], "full-block translate_block_to_scl body should populate scl_body"
 
     db = blocks["MotorInst"]
     assert db["block_type"] == "DB"
@@ -66,8 +83,9 @@ def test_import_canvas_from_export_directory() -> None:
     assert ob["comment"] == "Cyclic main OB"
     ob_net = ob["networks"][0]
     assert ob_net["title"] == "Run motor control"
-    assert "HMI.StartCmd" in ob_net["scl_text"]
-    assert "Safety.FaultOk" in ob_net["scl_text"]
+    # NetworkTranslator emits Siemens SCL quoted namespaces: "HMI".StartCmd
+    assert "StartCmd" in ob_net["scl_text"]
+    assert "FaultOk" in ob_net["scl_text"]
     assert "MotorInst" in ob_net["scl_text"]
 
     tags = canvas["tags"]

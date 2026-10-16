@@ -29,7 +29,8 @@ import {
   type ChatSession,
 } from "./state/sessions";
 import { useResizablePanes } from "./state/useResizablePanes";
-import type { CanvasStateData } from "./canvas/types";
+import type { CanvasStateData, CompileJobData, CompilerAttribution } from "./canvas/types";
+import { CompileDrawer } from "./shell/CompileDrawer";
 
 const API_BASE = "http://localhost:8000";
 
@@ -78,7 +79,8 @@ const App: React.FC = () => {
   /* 回写门禁 */
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [attributions, setAttributions] = useState<any[]>([]);
+  const [attributions, setAttributions] = useState<CompilerAttribution[]>([]);
+  const [compileJob, setCompileJob] = useState<CompileJobData | null>(null);
   const [writebackNotice, setWritebackNotice] = useState<string | null>(null);
 
   const panes = useResizablePanes("plc-copilot.panes.v1");
@@ -199,29 +201,77 @@ const App: React.FC = () => {
     return next;
   };
 
-  /* 发送自然语言指令（串行化：上一条未完成时保留输入） */
+  /* 发送自然语言指令：优先后端 /canvas/chat-ops，失败回落本地规则引擎 */
   const handleSend = async () => {
     const prompt = chatInput.trim();
     if (!prompt || isSubmitting) return;
-    const ops = buildOpsFromPrompt(prompt, canvas);
-    if (ops.length === 0) {
-      // 无可执行意图（例如空画布且未命名块）→ 记录对话但不动画布
-      setChatInput("");
-      commitSession(canvas, [
-        { id: msgId(), role: "user", text: prompt, ts: Date.now() },
-        {
-          id: msgId(),
-          role: "system",
-          text: "暂未识别出可执行的画布操作，试试：创建 FB ConveyorCtrl / 在 ConveyorCtrl 中添加变量 Speed Real / 添加急停按钮。",
-          ts: Date.now(),
-        },
-      ], prompt);
-      return;
-    }
     setIsSubmitting(true);
     setChatInput("");
     try {
-      await applyOpsAndCommit(ops, prompt);
+      let ops: any[] = [];
+      let previewNote = "";
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/plc/canvas/chat-ops`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            canvas,
+            prompt,
+            apply: false,
+            use_llm: true,
+            context: { selected_block: selectedBlockName, focus },
+          }),
+          signal: AbortSignal.timeout?.(60000),
+        });
+        const json = await res.json();
+        if (json?.ok && Array.isArray(json.data?.ops) && json.data.ops.length) {
+          ops = json.data.ops;
+          previewNote = `（${json.data.source || "chat-ops"}）`;
+        }
+      } catch {
+        /* fall through to local rules */
+      }
+      if (!ops.length) {
+        ops = buildOpsFromPrompt(prompt, canvas);
+      }
+      if (ops.length === 0) {
+        commitSession(canvas, [
+          { id: msgId(), role: "user", text: prompt, ts: Date.now() },
+          {
+            id: msgId(),
+            role: "system",
+            text: "暂未识别出可执行的画布操作，试试：创建 FB ConveyorCtrl / 在 ConveyorCtrl 中添加变量 Speed Real / 添加急停按钮。",
+            ts: Date.now(),
+          },
+        ], prompt);
+        return;
+      }
+      // Local precheck when ops touch SCL
+      try {
+        const pre = await fetch(`${API_BASE}/api/v1/plc/canvas/precheck`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ canvas: applyOpsLocally(canvas, ops) }),
+          signal: AbortSignal.timeout?.(10000),
+        });
+        const preJson = await pre.json();
+        if (preJson?.data && preJson.data.ok === false) {
+          const errs = (preJson.data.errors || []).map((e: any) => e.message).join("；");
+          commitSession(canvas, [
+            { id: msgId(), role: "user", text: prompt, ts: Date.now() },
+            {
+              id: msgId(),
+              role: "system",
+              text: `本地预检未通过，未应用修改：${errs || "未知错误"}`,
+              ts: Date.now(),
+            },
+          ], prompt);
+          return;
+        }
+      } catch {
+        /* precheck optional */
+      }
+      await applyOpsAndCommit(ops, `${prompt}${previewNote}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -299,58 +349,112 @@ const App: React.FC = () => {
     setTimeout(() => setWritebackNotice(null), 3000);
   };
 
-  const handleImportServerPath = async (path: string, projectName: string) => {
-    const res = await fetch(`${API_BASE}/api/v1/plc/canvas/import`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path, project_name: projectName }),
-      // 大型 .zap（如 HR002 15MB/72 块）网关解包+解析实测约 45s：30s 会先超时
-      signal: AbortSignal.timeout?.(180000),
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok || !json || !json.ok) {
-      const detail = json?.detail;
-      const message =
-        detail && typeof detail === "object" && detail.message
-          ? detail.message
-          : detail && typeof detail === "string"
-          ? detail
-          : `导入失败（HTTP ${res.status}）`;
-      throw new Error(message);
+  const pollImportProgress = (
+    progressId: string,
+    onStage: (message: string) => void,
+  ) => {
+    const tick = async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/v1/plc/canvas/import/progress/${encodeURIComponent(progressId)}`,
+        );
+        const json = await res.json().catch(() => null);
+        const msg = json?.data?.message;
+        if (typeof msg === "string" && msg.trim()) onStage(msg.trim());
+      } catch {
+        /* poll is best-effort */
+      }
+    };
+    void tick();
+    const timer = window.setInterval(() => void tick(), 500);
+    return () => window.clearInterval(timer);
+  };
+
+  const handleImportServerPath = async (
+    path: string,
+    projectName: string,
+    onStage?: (message: string) => void,
+  ) => {
+    const progressId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `imp-${Date.now()}`;
+    const stopPoll = onStage ? pollImportProgress(progressId, onStage) : () => {};
+    onStage?.("正在连接网关…");
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/plc/canvas/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path,
+          project_name: projectName,
+          progress_id: progressId,
+        }),
+        // 大型 .zap（如 HR002 15MB/72 块）网关解包+解析实测约 45s：30s 会先超时
+        signal: AbortSignal.timeout?.(180000),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.ok) {
+        const detail = json?.detail;
+        const message =
+          detail && typeof detail === "object" && detail.message
+            ? detail.message
+            : detail && typeof detail === "string"
+            ? detail
+            : `导入失败（HTTP ${res.status}）`;
+        throw new Error(message);
+      }
+      const data = json.data;
+      const imported: CanvasStateData = data.canvas;
+      const name = imported.project_name || projectName || "ImportedProject";
+      handleImportCanvas(imported, name);
+    } finally {
+      stopPoll();
     }
-    const data = json.data;
-    const imported: CanvasStateData = data.canvas;
-    const name = imported.project_name || projectName || "ImportedProject";
-    handleImportCanvas(imported, name);
   };
 
   /** .zap19/.ap19/.zip 归档上传导入：网关解包 + Openness 导出，可能耗时 1–3 分钟 */
-  const handleImportUpload = async (file: File, projectName: string) => {
-    const form = new FormData();
-    form.append("file", file);
-    if (projectName.trim()) form.append("project_name", projectName.trim());
-    const res = await fetch(`${API_BASE}/api/v1/plc/canvas/import/upload`, {
-      method: "POST",
-      body: form,
-      signal: AbortSignal.timeout?.(180000),
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok || !json || !json.ok) {
-      const detail = json?.detail;
-      const message =
-        detail && typeof detail === "object" && detail.message
-          ? detail.message
-          : detail && typeof detail === "string"
-          ? detail
-          : `导入失败（HTTP ${res.status}）`;
-      throw new Error(message);
+  const handleImportUpload = async (
+    file: File,
+    projectName: string,
+    onStage?: (message: string) => void,
+  ) => {
+    const progressId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `imp-${Date.now()}`;
+    const stopPoll = onStage ? pollImportProgress(progressId, onStage) : () => {};
+    onStage?.("正在上传归档…");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      if (projectName.trim()) form.append("project_name", projectName.trim());
+      form.append("progress_id", progressId);
+      const res = await fetch(`${API_BASE}/api/v1/plc/canvas/import/upload`, {
+        method: "POST",
+        body: form,
+        signal: AbortSignal.timeout?.(180000),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json || !json.ok) {
+        const detail = json?.detail;
+        const message =
+          detail && typeof detail === "object" && detail.message
+            ? detail.message
+            : detail && typeof detail === "string"
+            ? detail
+            : `导入失败（HTTP ${res.status}）`;
+        throw new Error(message);
+      }
+      const imported: CanvasStateData = json.data.canvas;
+      const name =
+        json.data.canvas.project_name ||
+        projectName.trim() ||
+        file.name.replace(/\.(zap\d*|ap1\d|zip)$/i, "");
+      handleImportCanvas(imported, name);
+    } finally {
+      stopPoll();
     }
-    const imported: CanvasStateData = json.data.canvas;
-    const name =
-      json.data.canvas.project_name ||
-      projectName.trim() ||
-      file.name.replace(/\.(zap\d*|ap1\d|zip)$/i, "");
-    handleImportCanvas(imported, name);
   };
 
   /* —— 从零构建 —— */
@@ -509,63 +613,103 @@ const App: React.FC = () => {
     return json.data.explanation as string;
   };
 
-  /* 人工确认门禁回写 */
+  /* 人工确认门禁回写：异步编译作业 + 轮询；路径取自 canvas.source */
   const handleExecuteWriteback = async () => {
     setIsSubmitting(true);
+    setShowConfirmModal(false);
     try {
-      let result: {
-        writeback: Record<string, any>;
-        attributions: any[];
-        canvas: CanvasStateData;
-      };
-      try {
-        const res = await fetch(`${API_BASE}/api/v1/plc/canvas/confirm-writeback`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            canvas,
-            project_path: `${canvas.project_name}.ap19`,
-            plc_name: "PLC_1",
-            compile_after: true,
-          }),
-          signal: AbortSignal.timeout?.(8000),
-        });
-        const json = await res.json();
-        if (json && json.ok && json.data) {
-          result = json.data;
-        } else {
-          throw new Error("writeback failed");
-        }
-      } catch {
-        // 本地沙箱回退：全部置为已同步
-        result = {
-          writeback: { ok: true, note: "Local client simulated writeback" },
-          attributions: [],
-          canvas: {
-            ...canvas,
-            blocks: Object.fromEntries(
-              Object.entries(canvas.blocks).map(([k, b]) => [k, { ...b, status: "synced" as const }])
-            ),
-            hmi_widgets: Object.fromEntries(
-              Object.entries(canvas.hmi_widgets).map(([k, w]) => [k, { ...w, status: "synced" as const }])
-            ),
-          },
-        };
+      const projectPath = canvas.source?.project_path || `${canvas.project_name}.ap19`;
+      const plcName = canvas.source?.plc_name || "PLC_1";
+      const res = await fetch(`${API_BASE}/api/v1/plc/canvas/confirm-writeback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          canvas,
+          project_path: projectPath,
+          plc_name: plcName,
+          compile_after: true,
+          sync: false,
+        }),
+        signal: AbortSignal.timeout?.(30000),
+      });
+      const json = await res.json();
+      if (!json?.ok || !json.data) {
+        const detail = json?.detail;
+        const msg =
+          detail && typeof detail === "object" && detail.message
+            ? String(detail.message)
+            : detail && typeof detail === "string"
+            ? detail
+            : "writeback failed";
+        throw new Error(msg);
       }
 
-      setCanvas(result.canvas);
-      setAttributions(result.attributions || []);
-      const noticeText = result.writeback?.ok
-        ? "博图 1:1 还原成功，编译通过（0 Error / 0 Warning）"
-        : "回写失败，请检查网关与工程路径";
-      setWritebackNotice(noticeText);
-      setTimeout(() => setWritebackNotice(null), 4000);
-      if (activeSessionId) {
-        commitSession(result.canvas, [
-          { id: msgId(), role: "system", text: noticeText, ts: Date.now() },
-        ]);
+      if (json.data.async && json.data.job?.id) {
+        let job: CompileJobData = json.data.job;
+        setCompileJob(job);
+        setWritebackNotice("编译作业已启动…");
+        for (let i = 0; i < 600; i++) {
+          await new Promise((r) => setTimeout(r, 1000));
+          const jr = await fetch(`${API_BASE}/api/v1/plc/canvas/compile-jobs/${job.id}`);
+          const jjson = await jr.json();
+          if (jjson?.ok && jjson.data) {
+            job = jjson.data;
+            setCompileJob(job);
+            if (job.status === "ok" || job.status === "error" || job.status === "cancelled") break;
+          }
+        }
+        if (job.canvas) {
+          setCanvas(job.canvas);
+          commitSession(job.canvas, [
+            { id: msgId(), role: "system", text: `编译作业 ${job.status}`, ts: Date.now() },
+          ]);
+        }
+        setAttributions((job.attributions || []) as CompilerAttribution[]);
+        let notice =
+          job.status === "ok"
+            ? "博图回写并编译通过，工程已保存"
+            : `编译未通过：${job.error || "见诊断面板"}`;
+        if (job.status === "error" && (job.attributions || []).length) {
+          try {
+            const fr = await fetch(`${API_BASE}/api/v1/plc/canvas/fix-loop`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                canvas: job.canvas || canvas,
+                attributions: job.attributions,
+                project_path: projectPath,
+                plc_name: plcName,
+                auto: true,
+                max_rounds: 3,
+              }),
+              signal: AbortSignal.timeout?.(600000),
+            });
+            const fjson = await fr.json();
+            if (fjson?.ok && fjson.data?.canvas) {
+              setCanvas(fjson.data.canvas);
+              setAttributions((fjson.data.attributions || []) as CompilerAttribution[]);
+              notice = fjson.data.ok
+                ? `自动修正后编译通过（${(fjson.data.rounds || []).length} 轮）`
+                : `自动修正未完全成功（${(fjson.data.rounds || []).length} 轮）`;
+            }
+          } catch {
+            /* optional */
+          }
+        }
+        setWritebackNotice(notice);
+        setTimeout(() => setWritebackNotice(null), 10000);
+        return;
       }
-      setShowConfirmModal(false);
+
+      const result = json.data;
+      if (result.canvas) setCanvas(result.canvas);
+      setAttributions(result.attributions || []);
+      setWritebackNotice(result.writeback?.ok ? "回写成功" : `回写失败`);
+      setTimeout(() => setWritebackNotice(null), 6000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setWritebackNotice(`回写/编译失败：${msg}`);
+      setTimeout(() => setWritebackNotice(null), 8000);
     } finally {
       setIsSubmitting(false);
     }
@@ -786,6 +930,26 @@ const App: React.FC = () => {
         </div>
       )}
 
+      <CompileDrawer
+        job={compileJob}
+        attributions={attributions}
+        onJump={(a) => {
+          if (a.target_type === "block" || a.target_type === "network") {
+            setSelectedBlockName(a.target_id);
+            setFocus({ kind: "block", blockName: a.target_id });
+          } else if (a.target_type === "hmi_widget") {
+            setFocus({ kind: "hmi", widgetId: a.target_id });
+          }
+        }}
+        onCancel={async () => {
+          if (!compileJob?.id) return;
+          await fetch(`${API_BASE}/api/v1/plc/canvas/compile-jobs/${compileJob.id}/cancel`, {
+            method: "POST",
+          });
+        }}
+        onClose={() => setCompileJob(null)}
+      />
+
       {/* —— 人工确认门禁 —— */}
       {showConfirmModal && (
         <div
@@ -816,7 +980,9 @@ const App: React.FC = () => {
             <div className="spec">
               <div className="spec-row">
                 <span className="spec-row__label">目标博图工程</span>
-                <span className="spec-row__value">{canvas.project_name}.ap19</span>
+                <span className="spec-row__value">
+                  {canvas.source?.project_path || `${canvas.project_name}.ap19`}
+                </span>
               </div>
               <div className="spec-row">
                 <span className="spec-row__label">待转译回写逻辑块</span>

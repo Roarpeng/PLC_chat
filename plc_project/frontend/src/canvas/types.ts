@@ -30,20 +30,54 @@ export interface CanvasBlockData {
   errors?: string[];
 }
 
+export type HmiWidgetType =
+  | "button"
+  | "indicator"
+  | "io_field"
+  | "text"
+  | "bar"
+  | "gauge"
+  | "slider"
+  | "rect"
+  | "alarm_banner"
+  | "placeholder";
+
 export interface CanvasHmiWidgetData {
   id: string;
-  widget_type: "button" | "indicator" | "io_field" | "slider" | "gauge" | "alarm_banner";
+  widget_type: HmiWidgetType | string;
   title: string;
   x: number;
   y: number;
   width: number;
   height: number;
   plc_tag: string;
+  hmi_tag?: string;
   data_type: string;
   current_value: any;
   properties?: Record<string, any>;
+  device?: string;
+  screen?: string;
+  source_name?: string;
+  source_type?: string;
+  text?: string;
+  supported?: boolean;
   status: NodeStatus;
   errors?: string[];
+}
+
+export interface CanvasHmiScreenData {
+  name: string;
+  start_screen?: boolean;
+  width?: number;
+  height?: number;
+}
+
+export interface CanvasHmiDeviceData {
+  name: string;
+  kind: "classic" | "unified" | string;
+  width: number;
+  height: number;
+  screens: CanvasHmiScreenData[];
 }
 
 export interface CanvasTagData {
@@ -53,11 +87,30 @@ export interface CanvasTagData {
   comment?: string;
 }
 
+export interface CanvasSourceData {
+  project_id: string;
+  project_path: string;
+  plc_name?: string;
+  hmi_device_names?: string[];
+  export_mode?: string;
+}
+
+export interface CanvasRevisionData {
+  id: number;
+  source: string;
+  ops: Record<string, any>[];
+  message?: string;
+  ts?: number;
+}
+
 export interface CanvasStateData {
   project_name: string;
   blocks: Record<string, CanvasBlockData>;
   hmi_widgets: Record<string, CanvasHmiWidgetData>;
+  hmi_devices?: CanvasHmiDeviceData[];
   tags: Record<string, CanvasTagData>;
+  source?: CanvasSourceData | null;
+  revisions?: CanvasRevisionData[];
   last_compile_result?: Record<string, any> | null;
 }
 
@@ -66,4 +119,25 @@ export interface CompilerAttribution {
   target_id: string;
   severity: "error" | "warning" | "info";
   message: string;
+}
+
+export interface CompileJobStage {
+  name: string;
+  status: "pending" | "running" | "ok" | "error" | "skipped";
+  message?: string;
+  started_at?: number;
+  finished_at?: number;
+  log?: string[];
+}
+
+export interface CompileJobData {
+  id: string;
+  status: "queued" | "running" | "ok" | "error" | "cancelled";
+  stages: CompileJobStage[];
+  attributions?: CompilerAttribution[];
+  result?: Record<string, any> | null;
+  canvas?: CanvasStateData | null;
+  error?: string | null;
+  created_at?: number;
+  updated_at?: number;
 }

@@ -30,6 +30,7 @@
   overflow: hidden;
   font-family: var(--sans);
   color: var(--ink);
+  container-type: inline-size;
 }
 
 /* ==========================================================================
@@ -279,12 +280,16 @@
   z-index: 20;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
+  max-width: calc(100% - 148px);
 }
 
 .gg-searchbar__input {
   box-sizing: border-box;
-  width: 190px;
+  width: 100%;
+  max-width: 190px;
+  min-width: 0;
   height: 26px;
   padding: 0 10px;
   background: var(--surface);
@@ -354,6 +359,17 @@
   background: var(--surface);
   border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: 0;
+}
+
+/* 栏变窄时搜索条占满顶边，缩放条下移，避免叠在一起 */
+@container (max-width: 520px) {
+  .gg-searchbar {
+    max-width: calc(100% - 20px);
+  }
+
+  .gg-zoombar {
+    top: 44px;
+  }
 }
 
 .gg-zoombar__btn {

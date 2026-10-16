@@ -24,18 +24,15 @@ public sealed class ExportSurface
         _blocks = blocks;
     }
 
-    public ExportBlockResult Export(string exportDir, bool skipCompile = false, bool blocksOnly = false)
+    public ExportBlockResult Export(string exportDir, bool skipCompile = false, bool blocksOnly = false, bool canvasMode = false)
     {
         if (_projects.PlcSoftware is null && _projects.Project is null)
         {
             return Fail("invalid_argument", "No project open. Call tia.open_project first.");
         }
 
-        if (blocksOnly)
-        {
-            return _blocks.ExportAllBlocks(exportDir, skipCompile);
-        }
-
+        // blocksOnly = PLC blocks+types+tags only.
+        // canvasMode = blocks+types+tags + HMI screens/tags (skip hardware/project texts).
         try
         {
             var root = Path.GetFullPath(exportDir);
@@ -52,8 +49,12 @@ public sealed class ExportSurface
                 _blocks.CompilePlcSoftware();
             }
 
-            ExportProjectTexts(root);
-            ExportHardware(root);
+            var skipHeavy = blocksOnly || canvasMode;
+            if (!skipHeavy)
+            {
+                ExportProjectTexts(root);
+                ExportHardware(root);
+            }
 
             var targets = _projects.EnumerateSoftware();
             if (targets.Count == 0 && _projects.PlcSoftware is not null)
@@ -68,13 +69,19 @@ public sealed class ExportSurface
                 {
                     var plcRoot = Path.Combine(root, "plc", safePlc);
                     Directory.CreateDirectory(plcRoot);
-                    ExportPlcSoftware(software, plcRoot, root);
+                    ExportPlcSoftware(software, plcRoot, root, coreOnly: blocksOnly || canvasMode);
                 }
-                else
+                else if (!blocksOnly)
                 {
+                    // full OR canvasMode exports HMI
                     var hmiRoot = Path.Combine(root, "hmi", OpennessExport.Sanitize(softwareName));
                     Directory.CreateDirectory(hmiRoot);
                     ExportHmiSoftware(software, hmiRoot, kind);
+                    if (string.Equals(kind, "hmi_unified", StringComparison.OrdinalIgnoreCase)
+                        || kind.IndexOf("unified", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        HmiUnifiedDump.TryDump(software, Path.Combine(hmiRoot, "unified_screens.json"));
+                    }
                     _ = device;
                     _ = deviceName;
                 }
@@ -86,12 +93,14 @@ public sealed class ExportSurface
             var manifest = new
             {
                 ok = exported > 0 || failed == 0,
-                mode = "full",
+                mode = blocksOnly ? "canvas-core" : "full",
                 projectName = _projects.ProjectName,
                 projectPath = _projects.ProjectPath,
                 counts = _counts,
                 skipped = _skipped,
-                layout = "plc/<plc>/blocks(+system)|types|tags|watch|force|to|alarms|cfc|safety|units + hardware/ + hmi/<hmi>/ + project/",
+                layout = blocksOnly
+                    ? "plc/<plc>/blocks(+system)|types|tags"
+                    : "plc/<plc>/blocks(+system)|types|tags|watch|force|to|alarms|cfc|safety|units + hardware/ + hmi/<hmi>/ + project/",
             };
             var manifestPath = Path.Combine(root, "manifest.json");
             File.WriteAllText(
@@ -100,12 +109,12 @@ public sealed class ExportSurface
                 new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
             var message =
-                $"Full Openness export: exported={exported} failed={failed} skipped={skipped} → {root}";
+                $"{(blocksOnly ? "Canvas-core" : "Full")} Openness export: exported={exported} failed={failed} skipped={skipped} → {root}";
             return new ExportBlockResult
             {
                 Ok = exported > 0 || failed == 0,
                 BlockName = "*",
-                BlockType = "FULL",
+                BlockType = blocksOnly ? "CORE" : "FULL",
                 ExportPath = root,
                 ExportedCount = exported,
                 FailedCount = failed,
@@ -129,7 +138,7 @@ public sealed class ExportSurface
         }
     }
 
-    private void ExportPlcSoftware(object plc, string plcRoot, string exportRoot)
+    private void ExportPlcSoftware(object plc, string plcRoot, string exportRoot, bool coreOnly = false)
     {
         ExportGroupTree(
             OpennessExport.GetFirstProp(plc, "BlockGroup"),
@@ -151,7 +160,10 @@ public sealed class ExportSurface
             NoteMissing(OpennessExport.CatBlocks, "SystemBlockGroup", "no_export");
         }
 
-        ExportSoftwareUnits(plc, plcRoot);
+        if (!coreOnly)
+        {
+            ExportSoftwareUnits(plc, plcRoot);
+        }
 
         ExportGroupTree(
             OpennessExport.GetFirstProp(plc, "TypeGroup"),
@@ -163,6 +175,11 @@ public sealed class ExportSurface
             Path.Combine(plcRoot, "tags"),
             OpennessExport.CatTags,
             new[] { "TagTables", "ConstantTables" });
+
+        if (coreOnly)
+        {
+            return;
+        }
 
         var watchRoot = OpennessExport.GetFirstProp(
             plc, "WatchAndForceTableGroup", "WatchAndForceTableSystemGroup", "PlcWatchAndForceTableGroup");

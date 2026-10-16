@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import type { CanvasBlockData, CanvasHmiWidgetData } from "../canvas/types";
+import type {
+  CanvasBlockData,
+  CanvasHmiWidgetData,
+  CanvasTagData,
+} from "../canvas/types";
 import { renderBlockScl } from "../canvas/sclRender";
 import { highlightSclLines } from "../canvas/sclHighlight";
 import { explainBlock, type BlockExplanation } from "../state/blockExplainer";
@@ -9,6 +13,8 @@ export interface SclPaneProps {
   block: CanvasBlockData | null;
   edges: { from: string; to: string; count: number }[];
   widgets: CanvasHmiWidgetData[];
+  /** 全局标签表（导入后在 SCL 栏空态 / 解释区展示） */
+  tags?: Record<string, CanvasTagData>;
   /** 需要高亮定位的网络 id（变量面板跳转触发） */
   focusNetworkId: number | null;
   onAddVariable?: (
@@ -69,6 +75,7 @@ export const SclPane: React.FC<SclPaneProps> = ({
   block,
   edges,
   widgets,
+  tags = {},
   focusNetworkId,
   onAddVariable,
   onAddNetwork,
@@ -291,10 +298,39 @@ export const SclPane: React.FC<SclPaneProps> = ({
       </header>
 
       {!block ? (
-        /* 2. 无块空态 */
+        /* 2. 无块空态：展示标签表与 HMI 绑定清单 */
         <div className="sp-empty">
           <p>点击全局图中的块，</p>
           <p>查看解释与源码</p>
+          {Object.keys(tags).length > 0 && (
+            <div className="sp-tagtable" aria-label="标签表">
+              <div className="sp-tagtable__title">标签表 · {Object.keys(tags).length}</div>
+              {Object.values(tags)
+                .slice(0, 24)
+                .map((t) => (
+                  <div key={t.name} className="sp-tagrow">
+                    <span className="sp-tagrow__name">{t.name}</span>
+                    <span className="sp-tagrow__type">{t.data_type}</span>
+                    <span className="sp-tagrow__addr">{t.logical_address}</span>
+                  </div>
+                ))}
+              {Object.keys(tags).length > 24 && (
+                <div className="sp-sig__more">… 等 {Object.keys(tags).length} 项</div>
+              )}
+            </div>
+          )}
+          {widgets.length > 0 && (
+            <div className="sp-tagtable" aria-label="HMI 绑定">
+              <div className="sp-tagtable__title">HMI 绑定 · {widgets.length}</div>
+              {widgets.slice(0, 16).map((w) => (
+                <div key={w.id} className="sp-tagrow">
+                  <span className="sp-tagrow__name">{w.title || w.id}</span>
+                  <span className="sp-tagrow__type">{w.widget_type}</span>
+                  <span className="sp-tagrow__addr">{w.plc_tag || "—"}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <>

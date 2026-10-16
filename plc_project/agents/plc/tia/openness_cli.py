@@ -1,4 +1,4 @@
-"""Locate and invoke the TIA Openness MCP / CLI host (C# net481)."""
+"""Locate and invoke the TIA Openness one-shot CLI host (C# net481, no MCP)."""
 
 from __future__ import annotations
 
@@ -15,15 +15,16 @@ def repo_root() -> Path:
 
 
 def openness_server_project() -> Path:
-    return (
-        repo_root()
-        / "tools"
-        / "industrial-mcp"
-        / "tia-openness"
-        / "src"
-        / "TiaOpenness.Server"
-        / "TiaOpenness.Server.csproj"
+    root = repo_root()
+    candidates = (
+        root / "industrial" / "tia_openness_cli" / "src" / "TiaOpenness.Server" / "TiaOpenness.Server.csproj",
+        root / "industrial" / "tia_openness_mcp" / "src" / "TiaOpenness.Server" / "TiaOpenness.Server.csproj",
     )
+    for path in candidates:
+        if path.is_file():
+            return path
+    return candidates[0]
+
 
 
 def find_openness_exe() -> Path | None:
@@ -31,22 +32,21 @@ def find_openness_exe() -> Path | None:
     override = os.getenv("RESEARCHOS_TIA_OPENNESS_EXE", "").strip()
     if override:
         p = Path(override).expanduser()
+        if not p.is_absolute():
+            p = (repo_root() / p).resolve()
         return p if p.is_file() else None
 
-    base = (
-        repo_root()
-        / "tools"
-        / "industrial-mcp"
-        / "tia-openness"
-        / "src"
-        / "TiaOpenness.Server"
-        / "bin"
+    bases = (
+        repo_root() / "industrial" / "tia_openness_cli" / "src" / "TiaOpenness.Server" / "bin",
+        repo_root() / "industrial" / "tia_openness_mcp" / "src" / "TiaOpenness.Server" / "bin",
     )
-    for cfg in ("Release", "Debug"):
-        candidate = base / cfg / "net481" / "TiaOpenness.Server.exe"
-        if candidate.is_file():
-            return candidate
+    for base in bases:
+        for cfg in ("Release", "Debug"):
+            candidate = base / cfg / "net481" / "TiaOpenness.Server.exe"
+            if candidate.is_file():
+                return candidate
     return None
+
 
 
 def _payload_text(payload: Any) -> str:
@@ -207,7 +207,7 @@ def _openness_command(*cli_args: str) -> tuple[list[str], str, bool]:
         ]
         return cmd, str(repo_root()), True
     raise FileNotFoundError(
-        "TiaOpenness.Server not found. Build tools/industrial-mcp/tia-openness "
+        "TiaOpenness.Server not found. Build industrial/tia_openness_cli "
         "or set RESEARCHOS_TIA_OPENNESS_EXE."
     )
 
@@ -377,12 +377,16 @@ def export_project_via_openness_cli(
     plc_name: str = "",
     timeout_s: int = 600,
     skip_compile: bool | None = None,
+    blocks_only: bool | None = None,
     on_export_event=None,
 ) -> tuple[Path, list[str], dict[str, int]]:
-    """Export all blocks via C# Openness CLI; returns (export_dir, notes, timings_ms).
+    """Export via C# Openness CLI; returns (export_dir, notes, timings_ms).
 
     When skip-compile is enabled (default via RESEARCHOS_TIA_SKIP_COMPILE=1), passes
     ``--skip-compile``. On inconsistent-blocks failure, retries once with compile.
+
+    ``blocks_only`` (default True for canvas speed): exports blocks+types+tags only.
+    Set False or RESEARCHOS_TIA_EXPORT_BLOCKS_ONLY=0 for full HMI/hardware surface.
 
     ``on_export_event`` receives each ``_exported.jsonl`` object while Export runs
     so Python can parse XML in parallel with the still-serial Openness Export.
@@ -394,6 +398,23 @@ def export_project_via_openness_cli(
     out.mkdir(parents=True, exist_ok=True)
 
     use_skip = skip_compile_enabled() if skip_compile is None else bool(skip_compile)
+    env_mode = os.getenv("RESEARCHOS_TIA_EXPORT_MODE", "").strip().lower()
+    env_blocks = os.getenv("RESEARCHOS_TIA_EXPORT_BLOCKS_ONLY", "").strip().lower()
+    # Mode resolution: env mode wins; else blocks_only kwarg; else legacy blocks-only default.
+    if env_mode == "canvas":
+        export_flag = "--canvas"
+    elif env_mode == "full":
+        export_flag = "--full"
+    elif env_mode == "blocks-only" or env_mode == "blocks_only":
+        export_flag = "--blocks-only"
+    elif blocks_only is True:
+        export_flag = "--blocks-only"
+    elif blocks_only is False:
+        export_flag = "--full"
+    elif env_blocks in {"0", "false", "no", "off"}:
+        export_flag = "--full"
+    else:
+        export_flag = "--blocks-only"
 
     args = [
         "export-project",
@@ -408,17 +429,10 @@ def export_project_via_openness_cli(
         args.extend(["--plc", plc_name])
     if use_skip:
         args.append("--skip-compile")
-    if os.getenv("RESEARCHOS_TIA_EXPORT_BLOCKS_ONLY", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }:
-        args.append("--blocks-only")
-    else:
-        args.append("--full")
+    args.append(export_flag)
+    notes_mode = export_flag.lstrip("-")
 
-    notes: list[str] = []
+    notes: list[str] = [f"Openness export mode={notes_mode}"]
     if use_skip:
         notes.append("Openness skip-compile enabled (RESEARCHOS_TIA_SKIP_COMPILE)")
 

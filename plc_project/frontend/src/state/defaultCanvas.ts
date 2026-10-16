@@ -35,15 +35,26 @@ export const defaultCanvas: CanvasStateData = {
       status: "synced",
     },
   },
+  hmi_devices: [
+    {
+      name: "HMI_1",
+      kind: "classic",
+      width: 800,
+      height: 480,
+      screens: [{ name: "Screen_1", start_screen: true, width: 800, height: 480 }],
+    },
+  ],
   hmi_widgets: {
-    btn_start: { id: "btn_start", widget_type: "button", title: "一键启动 (START)", x: 40, y: 40, width: 150, height: 52, plc_tag: "MainDB.StartCmd", data_type: "Bool", current_value: false, properties: { color: "green" }, status: "synced" },
-    btn_stop: { id: "btn_stop", widget_type: "button", title: "安全停止 (STOP)", x: 210, y: 40, width: 150, height: 52, plc_tag: "MainDB.StopCmd", data_type: "Bool", current_value: false, properties: { color: "red" }, status: "synced" },
-    lamp_run: { id: "lamp_run", widget_type: "indicator", title: "变频运行指示", x: 60, y: 140, width: 110, height: 86, plc_tag: "MainDB.MotorRunning", data_type: "Bool", current_value: false, status: "synced" },
-    gauge_speed: { id: "gauge_speed", widget_type: "gauge", title: "主轴转速 (RPM)", x: 190, y: 140, width: 170, height: 86, plc_tag: "MainDB.ActualSpeed", data_type: "Real", current_value: 0, status: "synced" },
+    btn_start: { id: "btn_start", widget_type: "button", title: "一键启动 (START)", x: 40, y: 40, width: 150, height: 52, plc_tag: "MainDB.StartCmd", data_type: "Bool", current_value: false, properties: { color: "green" }, device: "HMI_1", screen: "Screen_1", supported: true, status: "synced" },
+    btn_stop: { id: "btn_stop", widget_type: "button", title: "安全停止 (STOP)", x: 210, y: 40, width: 150, height: 52, plc_tag: "MainDB.StopCmd", data_type: "Bool", current_value: false, properties: { color: "red" }, device: "HMI_1", screen: "Screen_1", supported: true, status: "synced" },
+    lamp_run: { id: "lamp_run", widget_type: "indicator", title: "变频运行指示", x: 60, y: 140, width: 110, height: 86, plc_tag: "MainDB.MotorRunning", data_type: "Bool", current_value: false, device: "HMI_1", screen: "Screen_1", supported: true, status: "synced" },
+    gauge_speed: { id: "gauge_speed", widget_type: "gauge", title: "主轴转速 (RPM)", x: 190, y: 140, width: 170, height: 86, plc_tag: "MainDB.ActualSpeed", data_type: "Real", current_value: 0, device: "HMI_1", screen: "Screen_1", supported: true, status: "synced" },
   },
   tags: {
     Start_PB: { name: "Start_PB", data_type: "Bool", logical_address: "%I0.0", comment: "柜面物理启动按键" },
     Stop_PB: { name: "Stop_PB", data_type: "Bool", logical_address: "%I0.1", comment: "柜面物理急停按键" },
     Motor_Q1: { name: "Motor_Q1", data_type: "Bool", logical_address: "%Q0.0", comment: "电机输出接触器主触点" },
   },
+  source: null,
+  revisions: [],
 };

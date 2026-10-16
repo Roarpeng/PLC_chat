@@ -19,7 +19,7 @@ idle_timeout = 3600
 
 [services.gateway.env]
 CORS_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
-RESEARCHOS_TIA_OPENNESS_EXE = "industrial/tia_openness_mcp/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe"
+RESEARCHOS_TIA_OPENNESS_EXE = "industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe"
 # 本机代理不可达时用 uv 缓存离线组装依赖；代理恢复后可移除此行
 UV_OFFLINE = "1"
 
@@ -31,6 +31,6 @@ health_timeout = 90
 idle_timeout = 3600
 
 [services.gateway_test]
-start = "uv run --no-project --with pytest --with fastapi --with pydantic-settings --with python-multipart --with httpx --with uvicorn --with mcp --with langgraph -- python -m pytest tests/unit -q"
+start = "uv run --no-project --with pytest --with fastapi --with pydantic-settings --with python-multipart --with httpx --with uvicorn -- python -m pytest tests/unit -q"
 cwd = "."
 once = true

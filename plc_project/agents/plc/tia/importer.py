@@ -223,18 +223,23 @@ def _sibling_tree_fingerprint(sibling: Path) -> str:
     return "\n".join(entries)
 
 
-def export_cache_key(project_path: str | Path) -> str:
-    """Path-independent fingerprint: apxx name+size+head/tail + sibling names/sizes.
+def export_cache_key(project_path: str | Path, *, export_mode: str = "") -> str:
+    """Path-independent fingerprint: apxx name+size+head/tail + sibling + export mode.
 
     Chat unzip extracts to a new temp dir each time; absolute path / mtime would
-    miss the cache even when the Siemens tree is identical.
+    miss the cache even when the Siemens tree is identical. Mode is included so
+    ``blocks-only`` / ``canvas`` / ``full`` caches do not collide.
     """
+    import os
+
     project = Path(project_path).expanduser().resolve()
     st = project.stat()
+    mode = (export_mode or os.getenv("RESEARCHOS_TIA_EXPORT_MODE", "") or "blocks-only").strip().lower()
     parts = [
         project.name.lower(),
         str(st.st_size),
         _file_head_tail_digest(project),
+        f"mode={mode}",
     ]
     sibling = project.parent / project.stem
     if sibling.is_dir():

@@ -18,9 +18,17 @@ export interface ImportDialogProps {
   /** 前端解析成功后回调（.xml 上传） */
   onImportCanvas(canvas: CanvasStateData, sourceName: string): void;
   /** 服务器路径导入（App 发请求）；reject 时对话框内显示 err.message */
-  onImportServerPath(path: string, projectName: string): Promise<void>;
+  onImportServerPath(
+    path: string,
+    projectName: string,
+    onStage?: (message: string) => void,
+  ): Promise<void>;
   /** 归档上传导入（.zap19/.ap19/.zip，经网关解包 + Openness）；reject 时显示 err.message */
-  onImportUpload(file: File, projectName: string): Promise<void>;
+  onImportUpload(
+    file: File,
+    projectName: string,
+    onStage?: (message: string) => void,
+  ): Promise<void>;
   /** 网关连接状态：null = 未知 */
   backendConnected: boolean | null;
 }
@@ -59,6 +67,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
   const [serverError, setServerError] = useState<string | null>(null);
   const [demoMissing, setDemoMissing] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [stageMsg, setStageMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   // 打开时复位全部瞬态状态
@@ -77,6 +86,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
     setServerProject("");
     setServerBusy(false);
     setServerError(null);
+    setStageMsg(null);
   }, [open]);
 
   // Esc 关闭
@@ -192,8 +202,9 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
     if (!archive || uploading || backendConnected === false) return;
     setUploading(true);
     setIssues([]);
+    setStageMsg("正在上传归档…");
     try {
-      await onImportUpload(archive, resolvedProject);
+      await onImportUpload(archive, resolvedProject, setStageMsg);
       onClose();
     } catch (err) {
       setIssues([
@@ -201,6 +212,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
       ]);
     } finally {
       setUploading(false);
+      setStageMsg(null);
     }
   };
 
@@ -210,13 +222,15 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
     if (!path || serverBusy || backendConnected === false) return;
     setServerBusy(true);
     setServerError(null);
+    setStageMsg("正在连接网关…");
     try {
-      await onImportServerPath(path, serverProject.trim());
+      await onImportServerPath(path, serverProject.trim(), setStageMsg);
       onClose();
     } catch (err) {
       setServerError(err instanceof Error ? err.message : String(err));
     } finally {
       setServerBusy(false);
+      setStageMsg(null);
     }
   };
 
@@ -325,7 +339,8 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                     </div>
                     {uploading && (
                       <div className="imp-note">
-                        正在解包工程并通过 TIA Openness 导出，可能需要 1–3 分钟，请勿关闭…
+                        {stageMsg ||
+                          "正在解包工程并通过 TIA Openness 导出（blocks+types+tags），请勿关闭…"}
                       </div>
                     )}
                     {backendConnected === false && !uploading && (
@@ -407,6 +422,8 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                 <div className="imp-warn">网关未连接，服务器导入不可用（可改用上传 XML）</div>
               )}
 
+              {serverBusy && stageMsg && <div className="imp-note">{stageMsg}</div>}
+
               {serverError && <div className="imp-err">{serverError}</div>}
             </>
           )}
@@ -434,7 +451,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                   disabled={uploading || backendConnected === false}
                   onClick={() => void runUploadImport()}
                 >
-                  {uploading ? "解包导入中…" : "上传并解析（经网关）"}
+                  {uploading ? stageMsg || "解包导入中…" : "上传并解析（经网关）"}
                 </button>
               </>
             ) : (
@@ -474,7 +491,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                 disabled={!serverPath.trim() || serverBusy || backendConnected === false}
                 onClick={() => void runServerImport()}
               >
-                {serverBusy ? "导入中…" : "从服务器导入"}
+                {serverBusy ? stageMsg || "导入中…" : "从服务器导入"}
               </button>
             </>
           )}

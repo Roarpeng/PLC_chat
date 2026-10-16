@@ -838,26 +838,45 @@ async def confirm_canvas_writeback_endpoint(
     principal: PrincipalDep,
     request_id: RequestIdDep,
 ) -> ApiResponse[dict[str, Any]]:
-    """Human Confirmation Gate: 1:1 writeback canvas into TIA Portal with compiler feedback."""
+    """Human Confirmation Gate: schedules a compile job (or sync writeback if sync=true)."""
     _ = principal
     from plc_engine.canvas_model import CanvasState
-    from plc_engine.canvas_tia_transpiler import execute_canvas_writeback
 
     canvas_raw = body.get("canvas") or {}
+    canvas = CanvasState.from_dict(canvas_raw)
     project_path = str(body.get("project_path") or "").strip()
+    if not project_path and canvas.source:
+        project_path = canvas.source.project_path
     plc_name = str(body.get("plc_name") or "").strip()
+    if not plc_name and canvas.source:
+        plc_name = canvas.source.plc_name
     compile_after = bool(body.get("compile_after", True))
+    sync = bool(body.get("sync", False))
 
     if not project_path:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"code": "PATH_REQUIRED", "message": "project_path is required for 1:1 writeback"},
+            detail={"code": "PATH_REQUIRED", "message": "project_path or canvas.source.project_path required"},
         )
 
-    canvas = CanvasState.from_dict(canvas_raw)
+    if not sync:
+        from gateway.app.services.plc.compile_jobs import create_compile_job
+
+        job = create_compile_job(
+            canvas.to_dict(),
+            project_path=project_path,
+            plc_name=plc_name,
+            compile_plc=compile_after,
+            compile_hmi=bool(canvas.hmi_devices) and compile_after,
+            save_on_success=True,
+            reset_work=True,
+        )
+        return ApiResponse(ok=True, data={"job": job, "async": True}, request_id=request_id)
+
     import asyncio
 
-    # Openness 长操作（分钟级）放线程池，避免阻塞事件循环导致网关假死
+    from plc_engine.canvas_tia_transpiler import execute_canvas_writeback
+
     result, attributions = await asyncio.to_thread(
         execute_canvas_writeback,
         canvas=canvas,
@@ -865,16 +884,154 @@ async def confirm_canvas_writeback_endpoint(
         plc_name=plc_name,
         compile_after=compile_after,
     )
-
     return ApiResponse(
         ok=True,
-        data={
-            "writeback": result,
-            "attributions": attributions,
-            "canvas": canvas.to_dict(),
-        },
+        data={"writeback": result, "attributions": attributions, "canvas": canvas.to_dict(), "async": False},
         request_id=request_id,
     )
+
+
+@router.post("/canvas/compile-jobs", response_model=ApiResponse[dict[str, Any]])
+async def create_compile_job_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    _ = principal
+    from gateway.app.services.plc.compile_jobs import create_compile_job
+    from plc_engine.canvas_model import CanvasState
+
+    canvas = CanvasState.from_dict(body.get("canvas") or {})
+    project_path = str(body.get("project_path") or (canvas.source.project_path if canvas.source else "")).strip()
+    plc_name = str(body.get("plc_name") or (canvas.source.plc_name if canvas.source else "")).strip()
+    job = create_compile_job(
+        canvas.to_dict(),
+        project_path=project_path,
+        plc_name=plc_name,
+        compile_plc=bool(body.get("compile_plc", True)),
+        compile_hmi=bool(body.get("compile_hmi", True)),
+        save_on_success=bool(body.get("save_on_success", True)),
+        reset_work=bool(body.get("reset_work", True)),
+    )
+    return ApiResponse(ok=True, data=job, request_id=request_id)
+
+
+@router.get("/canvas/compile-jobs/{job_id}", response_model=ApiResponse[dict[str, Any]])
+async def get_compile_job_endpoint(
+    job_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    _ = principal
+    from gateway.app.services.plc.compile_jobs import get_job
+
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"code": "JOB_NOT_FOUND"})
+    return ApiResponse(ok=True, data=job, request_id=request_id)
+
+
+@router.post("/canvas/compile-jobs/{job_id}/cancel", response_model=ApiResponse[dict[str, Any]])
+async def cancel_compile_job_endpoint(
+    job_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    _ = principal
+    from gateway.app.services.plc.compile_jobs import cancel_job
+
+    job = cancel_job(job_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"code": "JOB_NOT_FOUND"})
+    return ApiResponse(ok=True, data=job, request_id=request_id)
+
+
+@router.post("/canvas/chat-ops", response_model=ApiResponse[dict[str, Any]])
+async def canvas_chat_ops_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    _ = principal
+    from gateway.app.services.plc.chat_ops import build_chat_ops
+    from plc_engine.canvas_model import CanvasState, apply_canvas_patch
+    from plc_engine.scl_precheck import precheck_canvas
+
+    canvas = CanvasState.from_dict(body.get("canvas") or {})
+    prompt = str(body.get("prompt") or body.get("message") or "").strip()
+    apply = bool(body.get("apply", False))
+    built = build_chat_ops(prompt, canvas, context=body.get("context") or {}, use_llm=bool(body.get("use_llm", True)))
+    if apply and built.get("ops"):
+        canvas = apply_canvas_patch(canvas, built["ops"])
+        canvas.append_revision(built["ops"], source="nl", message=prompt[:120])
+        built["canvas"] = canvas.to_dict()
+        built["precheck"] = precheck_canvas(canvas)
+    return ApiResponse(ok=True, data=built, request_id=request_id)
+
+
+@router.post("/canvas/precheck", response_model=ApiResponse[dict[str, Any]])
+async def canvas_precheck_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    _ = principal
+    from plc_engine.canvas_model import CanvasState
+    from plc_engine.scl_precheck import precheck_canvas
+
+    canvas = CanvasState.from_dict(body.get("canvas") or {})
+    return ApiResponse(ok=True, data=precheck_canvas(canvas), request_id=request_id)
+
+
+@router.post("/canvas/migrate-scl", response_model=ApiResponse[dict[str, Any]])
+async def canvas_migrate_scl_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    _ = principal
+    from plc_engine.canvas_model import CanvasState, apply_canvas_patch
+    from plc_engine.lad_migrate import migrate_block_to_scl, migrate_canvas_graphic_blocks
+
+    canvas = CanvasState.from_dict(body.get("canvas") or {})
+    block_name = str(body.get("block") or "").strip()
+    apply = bool(body.get("apply", False))
+    if block_name:
+        report = migrate_block_to_scl(canvas, block_name)
+    else:
+        report = migrate_canvas_graphic_blocks(canvas)
+    if apply and report.get("ops"):
+        canvas = apply_canvas_patch(canvas, report["ops"])
+        canvas.append_revision(report["ops"], source="migrate", message="LAD/FBD→SCL")
+        report["canvas"] = canvas.to_dict()
+    return ApiResponse(ok=True, data=report, request_id=request_id)
+
+
+@router.post("/canvas/fix-loop", response_model=ApiResponse[dict[str, Any]])
+async def canvas_fix_loop_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    _ = principal
+    import asyncio
+
+    from gateway.app.services.plc.fix_loop import run_fix_loop
+    from plc_engine.canvas_model import CanvasState
+
+    canvas = CanvasState.from_dict(body.get("canvas") or {})
+    project_path = str(body.get("project_path") or (canvas.source.project_path if canvas.source else "")).strip()
+    result = await asyncio.to_thread(
+        run_fix_loop,
+        canvas,
+        body.get("attributions") or [],
+        project_path=project_path,
+        plc_name=str(body.get("plc_name") or (canvas.source.plc_name if canvas.source else "")),
+        max_rounds=int(body.get("max_rounds") or 3),
+        use_llm=bool(body.get("use_llm", True)),
+        auto=bool(body.get("auto", True)),
+    )
+    return ApiResponse(ok=True, data=result, request_id=request_id)
 
 
 @router.post("/canvas/auto-fix", response_model=ApiResponse[dict[str, Any]])
@@ -905,6 +1062,24 @@ async def canvas_auto_fix_endpoint(
     )
 
 
+@router.get("/canvas/import/progress/{progress_id}", response_model=ApiResponse[dict[str, Any]])
+async def canvas_import_progress_endpoint(
+    progress_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """Poll staged progress for a long-running canvas import (Openness / parse)."""
+    _ = principal
+    from gateway.app.services.plc.import_progress import get as get_import_progress
+
+    data = get_import_progress(progress_id) or {
+        "progress_id": progress_id,
+        "stage": "unknown",
+        "message": "暂无进度（导入尚未开始或已过期）",
+    }
+    return ApiResponse(ok=True, data=data, request_id=request_id)
+
+
 @router.post("/canvas/import", response_model=ApiResponse[dict[str, Any]])
 async def canvas_import_endpoint(
     body: dict[str, Any],
@@ -917,6 +1092,7 @@ async def canvas_import_endpoint(
 
     path = str(body.get("path") or "").strip()
     project_name = str(body.get("project_name") or "").strip()
+    progress_id = str(body.get("progress_id") or "").strip()
     if not path:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -936,17 +1112,21 @@ async def canvas_import_endpoint(
         ) from exc
 
     from gateway.app.services.plc.canvas_import import (
-        APXX_SUFFIXES,
         CanvasImportRejected,
         import_canvas_from_path,
     )
+    from gateway.app.services.plc.import_progress import make_reporter
+
+    on_progress = make_reporter(progress_id)
 
     try:
-        if resolved.suffix.lower() in APXX_SUFFIXES:
-            # Openness export can take minutes — keep the event loop free.
-            data = await asyncio.to_thread(import_canvas_from_path, resolved, project_name)
-        else:
-            data = import_canvas_from_path(resolved, project_name)
+        # Openness / large trees can take minutes — keep the event loop free.
+        data = await asyncio.to_thread(
+            import_canvas_from_path,
+            resolved,
+            project_name,
+            on_progress=on_progress,
+        )
     except CanvasImportRejected as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -970,6 +1150,7 @@ async def canvas_import_upload_endpoint(
     request_id: RequestIdDep,
     file: UploadFile = File(...),
     project_name: str = Form(default=""),
+    progress_id: str = Form(default=""),
 ) -> ApiResponse[dict[str, Any]]:
     """Upload .xml / .zip / .zap* and import it onto a fresh interactive canvas."""
     import asyncio
@@ -991,10 +1172,19 @@ async def canvas_import_upload_endpoint(
         CanvasImportRejected,
         import_canvas_from_path,
     )
+    from gateway.app.services.plc.import_progress import make_reporter
+
+    on_progress = make_reporter(progress_id)
+    on_progress("upload_saved", f"已接收 {file.filename}，开始导入…")
 
     try:
         # Zap unpacking + Openness export can take minutes — keep the event loop free.
-        result = await asyncio.to_thread(import_canvas_from_path, saved, project_name)
+        result = await asyncio.to_thread(
+            import_canvas_from_path,
+            saved,
+            project_name,
+            on_progress=on_progress,
+        )
     except CanvasImportRejected as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1010,8 +1200,6 @@ async def canvas_import_upload_endpoint(
         request_id,
     )
     return ApiResponse(ok=True, data=result, request_id=request_id)
-
-
 
 
 @router.post("/canvas/explain-block", response_model=ApiResponse[dict[str, Any]])

@@ -1,12 +1,22 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CanvasHmiWidgetData, CanvasStateData } from "./types";
 import { GlobalGraph } from "../shell/GlobalGraph";
 import { SclPane } from "../shell/SclPane";
 import { HmiPane } from "../shell/HmiPane";
 import { DrillDownPanel } from "../shell/DrillDownPanel";
+import {
+  SNAP_PX,
+  expandedKeys,
+  fitPaneWidths,
+  resizePair,
+  settlePair,
+  type PaneCollapsed,
+  type PaneKey,
+  type PaneWidths,
+} from "./centerPaneLayout";
 
 export interface FocusTarget {
-  kind: "network" | "hmi";
+  kind: "block" | "network" | "hmi";
   blockName?: string;
   networkId?: number;
   widgetId?: string;
@@ -44,14 +54,12 @@ interface Props {
 }
 
 /* ------------------------------------------------------------------ */
-/* 三栏子面板布局：宽度可拖 + 磁吸折叠（拖过阈值松手即收起）             */
+/* 三栏子面板布局：相邻栏交换宽度，外缘始终贴住左右侧栏                   */
 /* ------------------------------------------------------------------ */
 
-type PaneKey = "graph" | "scl" | "hmi";
-
 interface CenterLayout {
-  widths: Record<PaneKey, number>;
-  collapsed: Record<PaneKey, boolean>;
+  widths: PaneWidths;
+  collapsed: PaneCollapsed;
 }
 
 const PANE_TITLES: Record<PaneKey, string> = {
@@ -60,27 +68,22 @@ const PANE_TITLES: Record<PaneKey, string> = {
   hmi: "HMI 仿真",
 };
 
-/** 子栏从左到右的顺序（分割拖拽与重分配依赖） */
-const PANE_ORDER: PaneKey[] = ["graph", "scl", "hmi"];
-
 const LAYOUT_KEY = "plc-copilot.centerpanes.v1";
 const DEFAULT_LAYOUT: CenterLayout = {
   widths: { graph: 470, scl: 430, hmi: 340 },
   collapsed: { graph: false, scl: false, hmi: false },
 };
-const MIN_W = 190;
-const MAX_W = 980;
-const DRAG_FLOOR = 64; // 拖拽过程中允许压到的最小像素（再往下就是吸附区）
-const SNAP_PX = 130; // 松手时低于该宽度 → 磁吸收起
 const RAIL_W = 30;
+/** 松手后写回的展开宽度下限（与 centerPaneLayout.MIN_W 一致） */
+const RESTORE_W = 190;
 
 function loadLayout(): CenterLayout {
   try {
     const raw = localStorage.getItem(LAYOUT_KEY);
-    if (!raw) return { ...DEFAULT_LAYOUT };
+    if (!raw) return { ...DEFAULT_LAYOUT, widths: { ...DEFAULT_LAYOUT.widths }, collapsed: { ...DEFAULT_LAYOUT.collapsed } };
     const parsed = JSON.parse(raw) as Partial<CenterLayout>;
     const num = (v: unknown, d: number) =>
-      typeof v === "number" && Number.isFinite(v) ? Math.min(MAX_W, Math.max(MIN_W, v)) : d;
+      typeof v === "number" && Number.isFinite(v) && v > 0 ? v : d;
     return {
       widths: {
         graph: num(parsed.widths?.graph, DEFAULT_LAYOUT.widths.graph),
@@ -94,8 +97,13 @@ function loadLayout(): CenterLayout {
       },
     };
   } catch {
-    return { ...DEFAULT_LAYOUT };
+    return { ...DEFAULT_LAYOUT, widths: { ...DEFAULT_LAYOUT.widths }, collapsed: { ...DEFAULT_LAYOUT.collapsed } };
   }
+}
+
+function outerWidth(el: HTMLElement): number {
+  const s = getComputedStyle(el);
+  return el.offsetWidth + (parseFloat(s.marginLeft) || 0) + (parseFloat(s.marginRight) || 0);
 }
 
 const ChevronLeft: React.FC = () => (
@@ -131,7 +139,15 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
 }) => {
   const [layout, setLayout] = useState<CenterLayout>(() => loadLayout());
   const [draggingPane, setDraggingPane] = useState<PaneKey | null>(null);
-  const dragRef = useRef<null | { key: PaneKey; latest: number }>(null);
+  const layoutRef = useRef<CenterLayout>(layout);
+  const subpanesRef = useRef<HTMLDivElement>(null);
+  const paneRefs = useRef<Partial<Record<PaneKey, HTMLElement | null>>>({});
+  const dragRef = useRef<null | {
+    key: PaneKey;
+    startX: number;
+    startWidths: PaneWidths;
+    pointerId: number;
+  }>(null);
   /* 双击块下钻：块内网络流程图 */
   const [drillBlock, setDrillBlock] = useState<string | null>(null);
   const drillBlockData = drillBlock ? canvas.blocks[drillBlock] ?? null : null;
@@ -140,11 +156,11 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
   const widgetList = useMemo(() => Object.values(canvas.hmi_widgets), [canvas.hmi_widgets]);
   const selectedBlock = selectedBlockName ? canvas.blocks[selectedBlockName] ?? null : null;
 
-  // 布局持久化（拖拽中不写）
+  // 布局持久化（拖拽中不写）。写 ref：收起/适配发生在 layout effect 之后。
   useEffect(() => {
-    if (draggingPane) return;
+    if (draggingPane || dragRef.current) return;
     try {
-      localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout));
+      localStorage.setItem(LAYOUT_KEY, JSON.stringify(layoutRef.current));
     } catch {
       /* 静默 */
     }
@@ -153,100 +169,159 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
   // 跳转定位时自动展开目标栏（磁吸收起的栏在需要时弹开）
   useEffect(() => {
     if (!focus) return;
-    if (focus.kind === "network") {
-      setLayout((l) =>
-        l.collapsed.scl ? { ...l, collapsed: { ...l.collapsed, scl: false } } : l
-      );
-    } else if (focus.kind === "hmi") {
-      setLayout((l) =>
-        l.collapsed.hmi ? { ...l, collapsed: { ...l.collapsed, hmi: false } } : l
-      );
-    }
+    setLayout((l) => {
+      const key = focus.kind === "network" ? "scl" : focus.kind === "hmi" ? "hmi" : null;
+      if (!key || !l.collapsed[key]) return l;
+      const next = { ...l, collapsed: { ...l.collapsed, [key]: false } };
+      layoutRef.current = next;
+      return next;
+    });
   }, [focus]);
 
   const togglePane = (key: PaneKey) => {
-    setLayout((l) => ({ ...l, collapsed: { ...l.collapsed, [key]: !l.collapsed[key] } }));
+    const current = layoutRef.current;
+    const next = { ...current, collapsed: { ...current.collapsed, [key]: !current.collapsed[key] } };
+    layoutRef.current = next;
+    setLayout(next);
   };
 
-  /** 读取所有展开子栏的当前渲染宽（存储与渲染保持一致的"真相"来源） */
-  const readRenderedWidths = (): Partial<Record<PaneKey, number>> => {
-    const el = document.querySelector(".canvas-pane .subpanes");
-    if (!el) return {};
-    const out: Partial<Record<PaneKey, number>> = {};
-    el.querySelectorAll<HTMLElement>(".subpane:not(.subpane--rail)").forEach((pane) => {
-      const label = pane.getAttribute("aria-label") ?? "";
-      const k = PANE_ORDER.find((p) => PANE_TITLES[p] === label);
-      if (k) out[k] = Math.round(pane.getBoundingClientRect().width);
+  /** 分隔条、窄轨和内边距之外，留给展开栏的像素 */
+  const measureAvailable = () => {
+    const root = subpanesRef.current;
+    if (!root) return 0;
+    const cs = getComputedStyle(root);
+    const pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    let chrome = pad;
+    root.querySelectorAll<HTMLElement>(".subgutter, .subpane--rail").forEach((el) => {
+      chrome += outerWidth(el);
     });
-    return out;
+    return Math.max(0, root.clientWidth - chrome);
   };
 
-  /* 挂载时一次性真相同步：修复历史上已漂移的存储宽度 */
+  const applyDomWidths = (widths: PaneWidths) => {
+    for (const key of expandedKeys(layoutRef.current.collapsed)) {
+      const el = paneRefs.current[key];
+      if (!el) continue;
+      const px = `${Math.round(widths[key])}px`;
+      if (el.style.width !== px) el.style.width = px;
+    }
+  };
+
+  /** 每次提交后把展开栏铺满中区：左缘贴历史栏，右缘贴变量栏 */
+  useLayoutEffect(() => {
+    if (dragRef.current) return;
+    const available = measureAvailable();
+    if (available <= 0) return;
+    const fitted = fitPaneWidths(layoutRef.current.widths, layoutRef.current.collapsed, available);
+    layoutRef.current = { ...layoutRef.current, widths: fitted };
+    applyDomWidths(fitted);
+  });
+
+  /* 侧栏拖动 / 窗口变化时中区变宽，但本组件不一定重渲染：观察器直接改宽度 */
   useEffect(() => {
-    const truth = readRenderedWidths();
-    if (Object.keys(truth).length === 0) return;
-    setLayout((l) => ({ ...l, widths: { ...l.widths, ...truth } }));
+    const root = subpanesRef.current;
+    if (!root) return;
+    let timer = 0;
+    const ro = new ResizeObserver(() => {
+      if (dragRef.current) return;
+      const available = measureAvailable();
+      if (available <= 0) return;
+      const fitted = fitPaneWidths(layoutRef.current.widths, layoutRef.current.collapsed, available);
+      layoutRef.current = { ...layoutRef.current, widths: fitted };
+      applyDomWidths(fitted);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (!dragRef.current) setLayout({ ...layoutRef.current });
+      }, 90);
+    });
+    ro.observe(root);
+    return () => {
+      ro.disconnect();
+      window.clearTimeout(timer);
+    };
+    // 测量函数闭包只读 ref，挂载一次即可
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /** 分隔条拖拽：只调本栏宽度，其余栏由 CSS flex 按比例伸缩补偿（逐帧、无重叠）；
-   *  松手低于吸附阈值 → 磁吸收起（宽度回落合法区间供展开恢复） */
-  const beginSubDrag = (
-    key: PaneKey,
-    e: React.PointerEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>
-  ) => {
+  /** 分隔条只跟相邻栏交换宽度，不触发整页重渲染；松手低于吸附阈值则收起 */
+  const beginSubDrag = (key: PaneKey, e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     if (dragRef.current) return;
+    const gutter = e.currentTarget;
     e.preventDefault();
-    const startX = e.clientX;
-    // 以元素当前真实渲染宽为基点（flex 可能已按比例调整过）
-    const paneEl = (e.currentTarget as HTMLElement).previousElementSibling as HTMLElement | null;
-    const startW = paneEl ? paneEl.getBoundingClientRect().width : layout.widths[key];
-    dragRef.current = { key, latest: startW };
-    setDraggingPane(key);
+    e.stopPropagation();
+
+    const startWidths: PaneWidths = { ...layoutRef.current.widths };
+    for (const k of expandedKeys(layoutRef.current.collapsed)) {
+      const el = paneRefs.current[k];
+      if (el) startWidths[k] = el.offsetWidth;
+    }
+    layoutRef.current = { ...layoutRef.current, widths: startWidths };
+    dragRef.current = { key, startX: e.clientX, startWidths, pointerId: e.pointerId };
+    try {
+      gutter.setPointerCapture(e.pointerId);
+    } catch {
+      /* 个别环境不支持 capture，监听仍挂在分隔条上 */
+    }
 
     const prevCursor = document.body.style.cursor;
     const prevSelect = document.body.style.userSelect;
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
+    setDraggingPane(key);
 
-    const onMove = (ev: PointerEvent | MouseEvent) => {
-      const latest = Math.max(DRAG_FLOOR, startW + (ev.clientX - startX));
-      if (dragRef.current) dragRef.current.latest = latest;
-      setLayout((l) => ({ ...l, widths: { ...l.widths, [key]: latest } }));
+    const pane = paneRefs.current[key];
+    const onMove = (ev: PointerEvent) => {
+      const session = dragRef.current;
+      if (!session || ev.pointerId !== session.pointerId) return;
+      const widths = resizePair(
+        session.startWidths,
+        layoutRef.current.collapsed,
+        key,
+        ev.clientX - session.startX,
+      );
+      layoutRef.current = { ...layoutRef.current, widths };
+      applyDomWidths(widths);
+      const snap = widths[key] < SNAP_PX;
+      pane?.classList.toggle("subpane--will-snap", snap);
+      gutter.classList.toggle("subgutter--snap", snap);
     };
-    const finish = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("mouseup", onUp);
+    const finish = (ev: PointerEvent) => {
+      const session = dragRef.current;
+      if (session && ev.pointerId !== session.pointerId) return;
+      gutter.removeEventListener("pointermove", onMove);
+      gutter.removeEventListener("pointerup", finish);
+      gutter.removeEventListener("pointercancel", finish);
       document.body.style.cursor = prevCursor;
       document.body.style.userSelect = prevSelect;
-      const latest = dragRef.current?.latest ?? startW;
-      const moved = Math.abs(latest - startW) >= 6; // 纯点击不触发磁吸/改宽
+      pane?.classList.remove("subpane--will-snap");
+      gutter.classList.remove("subgutter--snap");
       dragRef.current = null;
+      if (!session) {
+        setDraggingPane(null);
+        return;
+      }
+      const latest = layoutRef.current.widths[key];
+      const moved = Math.abs(latest - session.startWidths[key]) >= 6;
+      let next = layoutRef.current;
+      if (moved && latest < SNAP_PX) {
+        next = {
+          widths: { ...next.widths, [key]: Math.max(RESTORE_W, latest) },
+          collapsed: { ...next.collapsed, [key]: true },
+        };
+      } else if (moved) {
+        next = { ...next, widths: settlePair(next.widths, next.collapsed, key) };
+      } else {
+        next = { ...next, widths: session.startWidths };
+      }
+      layoutRef.current = next;
       setDraggingPane(null);
-      setLayout((l) => {
-        // 真相同步：把所有可见子栏的渲染宽写回存储。flex 比例缩放会让
-        // 存储≠渲染持续漂移（如存储 470 实际 263），下一次按下时基点
-        // 跳变就是"点下就跑"。写回后存储永远等于用户看到的。
-        const widths = { ...l.widths, ...readRenderedWidths() };
-        if (!moved) return { ...l, widths };
-        if (latest < SNAP_PX) {
-          return {
-            widths: { ...widths, [key]: Math.max(latest, MIN_W) },
-            collapsed: { ...l.collapsed, [key]: true },
-          };
-        }
-        return { ...l, widths: { ...widths, [key]: Math.min(latest, MAX_W) } };
-      });
+      setLayout({ ...next });
     };
-    const onUp = () => finish();
 
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("mouseup", onUp);
+    gutter.addEventListener("pointermove", onMove);
+    gutter.addEventListener("pointerup", finish);
+    gutter.addEventListener("pointercancel", finish);
   };
 
   // HMI 触摸仿真：PLC 逻辑反馈（与后端无关的本地仿真）
@@ -288,11 +363,13 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
         </div>
       );
     }
-    const nearSnap = layout.widths[key] < SNAP_PX;
     return (
       <section
-        className={"subpane" + (nearSnap && draggingPane === key ? " subpane--will-snap" : "")}
-        style={{ width: layout.widths[key] }}
+        ref={(el) => {
+          paneRefs.current[key] = el;
+        }}
+        className="subpane"
+        style={{ width: layoutRef.current.widths[key], flex: "0 0 auto" }}
         aria-label={PANE_TITLES[key]}
       >
         <div className="subpane__head">
@@ -323,13 +400,12 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
       aria-orientation="vertical"
       aria-label={`拖拽调整${PANE_TITLES[key]}宽度，拖到很小自动吸附收起`}
       onPointerDown={(e) => beginSubDrag(key, e)}
-      onMouseDown={(e) => beginSubDrag(key, e)}
     />
   );
 
   return (
     <div className={"canvas-pane" + (draggingPane ? " canvas-pane--dragging" : "")}>
-      <div className="subpanes">
+      <div className="subpanes" ref={subpanesRef}>
         {renderPane(
           "graph",
           <>
@@ -363,6 +439,7 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
             block={selectedBlock}
             edges={blockEdges}
             widgets={widgetList}
+            tags={canvas.tags}
             focusNetworkId={focus?.kind === "network" ? focus.networkId ?? null : null}
             onAddVariable={onAddVariable}
             onAddNetwork={onAddNetwork}
@@ -379,6 +456,7 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
           "hmi",
           <HmiPane
             widgets={widgetList}
+            devices={canvas.hmi_devices || []}
             focusWidgetId={focus?.kind === "hmi" ? focus.widgetId ?? null : null}
             onWidgetClick={handleWidgetClick}
           />

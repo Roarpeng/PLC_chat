@@ -1,17 +1,15 @@
-# TIA Openness MCP Server
+# TIA Openness CLI (no MCP)
 
-ResearchOS industrial MCP for Siemens **TIA Portal V19** via official Openness
-(Windows HostGateway / C# `TiaOpenness.Server`). Python on Linux can **stage**
-XML/SCL; GenerateBlocksFromSource / Retrieve / Archive run on Windows.
+Siemens **TIA Portal V19** Openness one-shot CLI (`TiaOpenness.Server.exe`).
+Wraps official PublicAPI calls; the gateway / Python importer spawn it per
+operation and read JSON from stdout. **No MCP stdio host, no agent session.**
 
 ```text
-ResearchOS Agent
+Gateway / openness_cli.py
         |
-       MCP / one-shot CLI
+  TiaOpenness.Server.exe  [--cli] <command>   ← this package (net481)
         |
-TIA Openness Server   ← this package (net481)
-        |
-TIA Portal V19 PublicAPI
+TIA Portal V19 PublicAPI (Siemens.Engineering)
 ```
 
 Export XML feeds the offline stack:
@@ -29,7 +27,7 @@ tia.open_project → import-xml and/or generate-from-source
 
 **License:** Export / Import / Archive / Retrieve need a valid STEP 7 / TIA license.
 
-## Implemented CLI / MCP tools
+## Implemented CLI commands (official Openness)
 
 | Command / tool | Official Openness API | Notes |
 |----------------|----------------------|--------|

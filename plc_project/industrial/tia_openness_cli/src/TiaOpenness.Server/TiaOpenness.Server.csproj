@@ -9,12 +9,10 @@
     <RootNamespace>TiaOpenness.Server</RootNamespace>
     <AssemblyName>TiaOpenness.Server</AssemblyName>
     <LangVersion>latest</LangVersion>
-    <Description>ResearchOS MCP server for Siemens TIA Portal Openness (V19).</Description>
+    <Description>Siemens TIA Portal Openness CLI (V19 PublicAPI). No MCP — one-shot JSON CLI for gateway/import.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
-    <PackageReference Include="ModelContextProtocol" Version="2.1.0" />
     <PackageReference Include="System.Text.Json" Version="10.0.10" />
   </ItemGroup>
 

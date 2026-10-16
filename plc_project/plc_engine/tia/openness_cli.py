@@ -1,4 +1,4 @@
-"""Locate and invoke the TIA Openness MCP / CLI host (C# net481)."""
+"""Locate and invoke the TIA Openness one-shot CLI host (C# net481, no MCP)."""
 
 from __future__ import annotations
 
@@ -15,15 +15,16 @@ def repo_root() -> Path:
 
 
 def openness_server_project() -> Path:
-    return (
-        repo_root()
-        / "tools"
-        / "industrial-mcp"
-        / "tia-openness"
-        / "src"
-        / "TiaOpenness.Server"
-        / "TiaOpenness.Server.csproj"
+    root = repo_root()
+    candidates = (
+        root / "industrial" / "tia_openness_cli" / "src" / "TiaOpenness.Server" / "TiaOpenness.Server.csproj",
+        root / "industrial" / "tia_openness_mcp" / "src" / "TiaOpenness.Server" / "TiaOpenness.Server.csproj",
     )
+    for path in candidates:
+        if path.is_file():
+            return path
+    return candidates[0]
+
 
 
 def find_openness_exe() -> Path | None:
@@ -31,22 +32,21 @@ def find_openness_exe() -> Path | None:
     override = os.getenv("RESEARCHOS_TIA_OPENNESS_EXE", "").strip()
     if override:
         p = Path(override).expanduser()
+        if not p.is_absolute():
+            p = (repo_root() / p).resolve()
         return p if p.is_file() else None
 
-    base = (
-        repo_root()
-        / "tools"
-        / "industrial-mcp"
-        / "tia-openness"
-        / "src"
-        / "TiaOpenness.Server"
-        / "bin"
+    bases = (
+        repo_root() / "industrial" / "tia_openness_cli" / "src" / "TiaOpenness.Server" / "bin",
+        repo_root() / "industrial" / "tia_openness_mcp" / "src" / "TiaOpenness.Server" / "bin",
     )
-    for cfg in ("Release", "Debug"):
-        candidate = base / cfg / "net481" / "TiaOpenness.Server.exe"
-        if candidate.is_file():
-            return candidate
+    for base in bases:
+        for cfg in ("Release", "Debug"):
+            candidate = base / cfg / "net481" / "TiaOpenness.Server.exe"
+            if candidate.is_file():
+                return candidate
     return None
+
 
 
 def _payload_text(payload: Any) -> str:
@@ -207,7 +207,7 @@ def _openness_command(*cli_args: str) -> tuple[list[str], str, bool]:
         ]
         return cmd, str(repo_root()), True
     raise FileNotFoundError(
-        "TiaOpenness.Server not found. Build tools/industrial-mcp/tia-openness "
+        "TiaOpenness.Server not found. Build industrial/tia_openness_cli "
         "or set RESEARCHOS_TIA_OPENNESS_EXE."
     )
 
@@ -377,12 +377,16 @@ def export_project_via_openness_cli(
     plc_name: str = "",
     timeout_s: int = 600,
     skip_compile: bool | None = None,
+    blocks_only: bool | None = None,
     on_export_event=None,
 ) -> tuple[Path, list[str], dict[str, int]]:
-    """Export all blocks via C# Openness CLI; returns (export_dir, notes, timings_ms).
+    """Export via C# Openness CLI; returns (export_dir, notes, timings_ms).
 
     When skip-compile is enabled (default via RESEARCHOS_TIA_SKIP_COMPILE=1), passes
     ``--skip-compile``. On inconsistent-blocks failure, retries once with compile.
+
+    ``blocks_only`` (default True for canvas speed): exports blocks+types+tags only.
+    Set False or RESEARCHOS_TIA_EXPORT_BLOCKS_ONLY=0 for full HMI/hardware surface.
 
     ``on_export_event`` receives each ``_exported.jsonl`` object while Export runs
     so Python can parse XML in parallel with the still-serial Openness Export.
@@ -394,6 +398,12 @@ def export_project_via_openness_cli(
     out.mkdir(parents=True, exist_ok=True)
 
     use_skip = skip_compile_enabled() if skip_compile is None else bool(skip_compile)
+    env_blocks = os.getenv("RESEARCHOS_TIA_EXPORT_BLOCKS_ONLY", "").strip().lower()
+    if blocks_only is None:
+        # Default ON (canvas). Explicit 0/false/off forces full surface.
+        use_blocks_only = env_blocks not in {"0", "false", "no", "off"}
+    else:
+        use_blocks_only = bool(blocks_only)
 
     args = [
         "export-project",
@@ -408,93 +418,10 @@ def export_project_via_openness_cli(
         args.extend(["--plc", plc_name])
     if use_skip:
         args.append("--skip-compile")
-    if os.getenv("RESEARCHOS_TIA_EXPORT_BLOCKS_ONLY", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }:
+    if use_blocks_only:
         args.append("--blocks-only")
     else:
         args.append("--full")
-
-    notes: list[str] = []
-    if use_skip:
-        notes.append("Openness skip-compile enabled (RESEARCHOS_TIA_SKIP_COMPILE)")
-
-    t0 = time.monotonic()
-    result = _invoke_export_cli(
-        args, export_dir=out, timeout_s=timeout_s, on_export_event=on_export_event
-    )
-    wall_ms = int((time.monotonic() - t0) * 1000)
-
-    timings: dict[str, int] = {"openness_cli_ms": wall_ms}
-    if use_skip:
-        timings["openness_skip_compile_ms"] = wall_ms
-
-    failure_text = _payload_text(result)
-    retried_with_compile = False
-    if (
-        not result.get("ok")
-        and use_skip
-        and is_inconsistent_export_error(failure_text)
-    ):
-        notes.append(
-            "Openness skip-compile hit inconsistent blocks; "
-            "retrying once with compile enabled"
-        )
-        if on_export_event is not None:
-            on_export_event({"reset": True})
-        retry_args = [a for a in args if a != "--skip-compile"]
-        t1 = time.monotonic()
-        result = _invoke_export_cli(
-            retry_args,
-            export_dir=out,
-            timeout_s=timeout_s,
-            on_export_event=on_export_event,
-        )
-        retry_ms = int((time.monotonic() - t1) * 1000)
-        timings["openness_compile_retry_ms"] = retry_ms
-        timings["openness_cli_ms"] = wall_ms + retry_ms
-        retried_with_compile = True
-        wall_ms = wall_ms + retry_ms
-
-    _merge_cli_phase_timings(timings, result)
-
-    export = result.get("export") if isinstance(result.get("export"), dict) else {}
-    msg = str((export or {}).get("message") or "").strip()
-    if msg:
-        notes.append(msg)
-    exported = (export or {}).get("exportedCount")
-    failed = (export or {}).get("failedCount")
-    if exported is not None or failed is not None:
-        notes.append(
-            f"Openness export counts: exported={exported or 0}, failed={failed or 0}"
-        )
-    know_how = (export or {}).get("knowHowProtectedCount")
-    if know_how is not None:
-        notes.append(f"Openness know-how protected blocks: {know_how}")
-        try:
-            timings["openness_knowhow_count"] = int(know_how)
-        except (TypeError, ValueError):
-            pass
-    timing_bits = [
-        f"{k}={v}ms"
-        for k, v in timings.items()
-        if k != "openness_cli_ms"
-    ]
-    if timing_bits:
-        notes.append("Openness timings: " + ", ".join(timing_bits))
-    notes.append(f"Openness CLI wall={wall_ms}ms")
-    if retried_with_compile:
-        notes.append(
-            f"Openness compile retry wall={timings.get('openness_compile_retry_ms', 0)}ms"
-        )
-    if not result.get("ok"):
-        raise RuntimeError(
-            format_openness_failure(result, project_path=project, action="export")
-        )
-    return out, notes, timings
 
 
 def import_block_via_openness_cli(

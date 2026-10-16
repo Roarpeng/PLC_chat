@@ -68,10 +68,15 @@ class CanvasBlock:
         lines: list[str] = []
         btype = self.block_type.upper()
         if btype in {"FB", "FC", "OB"}:
-            kw = "FUNCTION_BLOCK" if btype == "FB" else "FUNCTION" if btype == "FC" else "ORGANIZATION_BLOCK"
+            kw = (
+                "FUNCTION_BLOCK"
+                if btype == "FB"
+                else "FUNCTION"
+                if btype == "FC"
+                else "ORGANIZATION_BLOCK"
+            )
             lines.append(f'{kw} "{self.name}"')
 
-            # Group variables by section
             sections: dict[str, list[CanvasVariable]] = {}
             for v in self.interface:
                 sections.setdefault(v.section.upper(), []).append(v)
@@ -105,22 +110,68 @@ class CanvasBlock:
             lines.append("BEGIN")
             lines.append("END_DATA_BLOCK")
 
+        elif btype == "UDT":
+            if self.scl_body.strip():
+                return self.scl_body.strip() + "\n"
+            lines.append(f'TYPE "{self.name}"')
+            lines.append("STRUCT")
+            for v in self.interface:
+                init = f" := {v.initial_value}" if v.initial_value else ""
+                lines.append(f"    {v.name} : {v.data_type}{init};")
+            lines.append("END_STRUCT;")
+            lines.append("END_TYPE")
+
         return "\n".join(lines) + "\n"
+
+
+@dataclass
+class CanvasSource:
+    """Persistent engineering workspace reference for 1:1 writeback."""
+
+    project_id: str = ""
+    project_path: str = ""  # absolute .apxx under work/
+    plc_name: str = ""
+    hmi_device_names: list[str] = field(default_factory=list)
+    export_mode: str = "canvas"  # blocks-only | canvas | full
+
+
+@dataclass
+class CanvasHmiScreen:
+    name: str
+    start_screen: bool = False
+    width: int = 0
+    height: int = 0
+
+
+@dataclass
+class CanvasHmiDevice:
+    name: str
+    kind: str = "classic"  # classic | unified
+    width: int = 800
+    height: int = 480
+    screens: list[CanvasHmiScreen] = field(default_factory=list)
 
 
 @dataclass
 class CanvasHmiWidget:
     id: str
-    widget_type: str  # button, indicator, io_field, slider, gauge, alarm_banner
+    widget_type: str  # button, indicator, io_field, text, bar, gauge, slider, rect, alarm_banner, placeholder
     title: str
     x: int = 0
     y: int = 0
     width: int = 120
     height: int = 60
     plc_tag: str = ""  # e.g. "MainDB.StartCmd" or "MotorCtrl.Running"
+    hmi_tag: str = ""  # HMI-side tag name before connection resolve
     data_type: str = "Bool"
     current_value: Any = False
     properties: dict[str, Any] = field(default_factory=dict)
+    device: str = ""
+    screen: str = ""
+    source_name: str = ""  # original TIA control name
+    source_type: str = ""  # original TIA type (Button, HmiButton, …)
+    text: str = ""
+    supported: bool = True
     status: NodeStatus = "draft"
     errors: list[str] = field(default_factory=list)
 
@@ -134,11 +185,25 @@ class CanvasTag:
 
 
 @dataclass
+class CanvasRevision:
+    """One applied ops batch for undo / diff / writeback delta."""
+
+    id: int
+    source: str  # nl | fix | manual | import | migrate
+    ops: list[dict[str, Any]] = field(default_factory=list)
+    message: str = ""
+    ts: float = 0.0
+
+
+@dataclass
 class CanvasState:
     project_name: str
     blocks: dict[str, CanvasBlock] = field(default_factory=dict)
     hmi_widgets: dict[str, CanvasHmiWidget] = field(default_factory=dict)
+    hmi_devices: list[CanvasHmiDevice] = field(default_factory=list)
     tags: dict[str, CanvasTag] = field(default_factory=dict)
+    source: CanvasSource | None = None
+    revisions: list[CanvasRevision] = field(default_factory=list)
     last_compile_result: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -146,7 +211,10 @@ class CanvasState:
             "project_name": self.project_name,
             "blocks": {k: asdict(v) for k, v in self.blocks.items()},
             "hmi_widgets": {k: asdict(v) for k, v in self.hmi_widgets.items()},
+            "hmi_devices": [asdict(d) for d in self.hmi_devices],
             "tags": {k: asdict(v) for k, v in self.tags.items()},
+            "source": asdict(self.source) if self.source else None,
+            "revisions": [asdict(r) for r in self.revisions],
             "last_compile_result": self.last_compile_result,
         }
 
@@ -159,10 +227,14 @@ class CanvasState:
             if not isinstance(b_data, dict):
                 continue
             vars_list = [
-                CanvasVariable(**v) for v in b_data.get("interface", []) if isinstance(v, dict)
+                CanvasVariable(**{k: v for k, v in v.items() if k in CanvasVariable.__dataclass_fields__})
+                for v in b_data.get("interface", [])
+                if isinstance(v, dict)
             ]
             nets_list = [
-                CanvasNetwork(**n) for n in b_data.get("networks", []) if isinstance(n, dict)
+                CanvasNetwork(**{k: v for k, v in n.items() if k in CanvasNetwork.__dataclass_fields__})
+                for n in b_data.get("networks", [])
+                if isinstance(n, dict)
             ]
             state.blocks[b_name] = CanvasBlock(
                 name=b_data.get("name", b_name),
@@ -179,21 +251,30 @@ class CanvasState:
 
         for w_id, w_data in (data.get("hmi_widgets") or {}).items():
             if isinstance(w_data, dict):
-                state.hmi_widgets[w_id] = CanvasHmiWidget(
-                    id=w_data.get("id", w_id),
-                    widget_type=w_data.get("widget_type", "indicator"),
-                    title=w_data.get("title", ""),
-                    x=w_data.get("x", 0),
-                    y=w_data.get("y", 0),
-                    width=w_data.get("width", 120),
-                    height=w_data.get("height", 60),
-                    plc_tag=w_data.get("plc_tag", ""),
-                    data_type=w_data.get("data_type", "Bool"),
-                    current_value=w_data.get("current_value", False),
-                    properties=w_data.get("properties", {}),
-                    status=w_data.get("status", "draft"),
-                    errors=w_data.get("errors", []),
+                fields = CanvasHmiWidget.__dataclass_fields__
+                kwargs = {k: w_data[k] for k in fields if k in w_data}
+                kwargs.setdefault("id", w_id)
+                kwargs.setdefault("widget_type", "indicator")
+                kwargs.setdefault("title", "")
+                state.hmi_widgets[w_id] = CanvasHmiWidget(**kwargs)
+
+        for d in data.get("hmi_devices") or []:
+            if not isinstance(d, dict):
+                continue
+            screens = [
+                CanvasHmiScreen(**{k: s[k] for k in CanvasHmiScreen.__dataclass_fields__ if k in s})
+                for s in d.get("screens") or []
+                if isinstance(s, dict)
+            ]
+            state.hmi_devices.append(
+                CanvasHmiDevice(
+                    name=d.get("name", ""),
+                    kind=d.get("kind", "classic"),
+                    width=int(d.get("width") or 800),
+                    height=int(d.get("height") or 480),
+                    screens=screens,
                 )
+            )
 
         for t_name, t_data in (data.get("tags") or {}).items():
             if isinstance(t_data, dict):
@@ -204,8 +285,49 @@ class CanvasState:
                     comment=t_data.get("comment", ""),
                 )
 
+        src = data.get("source")
+        if isinstance(src, dict) and (src.get("project_id") or src.get("project_path")):
+            state.source = CanvasSource(
+                project_id=str(src.get("project_id") or ""),
+                project_path=str(src.get("project_path") or ""),
+                plc_name=str(src.get("plc_name") or ""),
+                hmi_device_names=list(src.get("hmi_device_names") or []),
+                export_mode=str(src.get("export_mode") or "canvas"),
+            )
+
+        for r in data.get("revisions") or []:
+            if isinstance(r, dict):
+                state.revisions.append(
+                    CanvasRevision(
+                        id=int(r.get("id") or 0),
+                        source=str(r.get("source") or "manual"),
+                        ops=list(r.get("ops") or []),
+                        message=str(r.get("message") or ""),
+                        ts=float(r.get("ts") or 0),
+                    )
+                )
+
         state.last_compile_result = data.get("last_compile_result")
         return state
+
+    def append_revision(
+        self,
+        ops: list[dict[str, Any]],
+        *,
+        source: str = "manual",
+        message: str = "",
+    ) -> CanvasRevision:
+        import time
+
+        rev = CanvasRevision(
+            id=len(self.revisions) + 1,
+            source=source,
+            ops=copy.deepcopy(ops),
+            message=message,
+            ts=time.time(),
+        )
+        self.revisions.append(rev)
+        return rev
 
 
 def create_empty_canvas(project_name: str = "PlcDemoProject") -> CanvasState:
@@ -315,6 +437,20 @@ def create_empty_canvas(project_name: str = "PlcDemoProject") -> CanvasState:
     state.tags["Stop_PB"] = CanvasTag(name="Stop_PB", data_type="Bool", logical_address="%I0.1", comment="Cabinet Stop")
     state.tags["Motor_Contactor"] = CanvasTag(name="Motor_Contactor", data_type="Bool", logical_address="%Q0.0", comment="Motor Contactor Q1")
 
+    state.hmi_devices = [
+        CanvasHmiDevice(
+            name="HMI_1",
+            kind="classic",
+            width=800,
+            height=480,
+            screens=[CanvasHmiScreen(name="Screen_1", start_screen=True, width=800, height=480)],
+        )
+    ]
+    for w in state.hmi_widgets.values():
+        w.device = "HMI_1"
+        w.screen = "Screen_1"
+        w.supported = True
+
     return state
 
 
@@ -331,6 +467,8 @@ def apply_canvas_patch(canvas: CanvasState, operations: list[dict[str, Any]]) ->
     - op: "add_hmi_widget", widget: dict
     - op: "update_hmi_widget", id: str, patch: dict
     - op: "remove_hmi_widget", id: str
+    - op: "add_screen", device: str, screen: dict
+    - op: "update_block_scl", name: str, scl_body: str  (alias for update_block patch.scl_body)
     - op: "add_tag", tag: dict
     - op: "clear_errors"
     """
@@ -341,8 +479,16 @@ def apply_canvas_patch(canvas: CanvasState, operations: list[dict[str, Any]]) ->
             b_dict = op_item.get("block") or {}
             name = b_dict.get("name")
             if name:
-                vars_list = [CanvasVariable(**v) for v in b_dict.get("interface", []) if isinstance(v, dict)]
-                nets_list = [CanvasNetwork(**n) for n in b_dict.get("networks", []) if isinstance(n, dict)]
+                vars_list = [
+                    CanvasVariable(**{k: v for k, v in v.items() if k in CanvasVariable.__dataclass_fields__})
+                    for v in b_dict.get("interface", [])
+                    if isinstance(v, dict)
+                ]
+                nets_list = [
+                    CanvasNetwork(**{k: v for k, v in n.items() if k in CanvasNetwork.__dataclass_fields__})
+                    for n in b_dict.get("networks", [])
+                    if isinstance(n, dict)
+                ]
                 canvas.blocks[name] = CanvasBlock(
                     name=name,
                     block_type=b_dict.get("block_type", "FB"),
@@ -355,19 +501,32 @@ def apply_canvas_patch(canvas: CanvasState, operations: list[dict[str, Any]]) ->
                     status="draft",
                 )
 
-        elif op == "update_block":
+        elif op in {"update_block", "update_block_scl"}:
             name = op_item.get("name", "")
             if name in canvas.blocks:
-                patch = op_item.get("patch", {})
+                patch = dict(op_item.get("patch") or {})
+                if op == "update_block_scl" and "scl_body" in op_item:
+                    patch["scl_body"] = op_item["scl_body"]
                 block = canvas.blocks[name]
                 if "comment" in patch:
                     block.comment = patch["comment"]
                 if "scl_body" in patch:
                     block.scl_body = patch["scl_body"]
+                    block.language = "SCL"
+                if "language" in patch:
+                    block.language = patch["language"]
                 if "interface" in patch and isinstance(patch["interface"], list):
-                    block.interface = [CanvasVariable(**v) for v in patch["interface"] if isinstance(v, dict)]
+                    block.interface = [
+                        CanvasVariable(**{k: v for k, v in v.items() if k in CanvasVariable.__dataclass_fields__})
+                        for v in patch["interface"]
+                        if isinstance(v, dict)
+                    ]
                 if "networks" in patch and isinstance(patch["networks"], list):
-                    block.networks = [CanvasNetwork(**n) for n in patch["networks"] if isinstance(n, dict)]
+                    block.networks = [
+                        CanvasNetwork(**{k: v for k, v in n.items() if k in CanvasNetwork.__dataclass_fields__})
+                        for n in patch["networks"]
+                        if isinstance(n, dict)
+                    ]
                 block.status = "draft"
                 block.errors = []
 
@@ -416,28 +575,24 @@ def apply_canvas_patch(canvas: CanvasState, operations: list[dict[str, Any]]) ->
         elif op == "add_hmi_widget":
             w_dict = op_item.get("widget", {})
             w_id = w_dict.get("id") or f"widget_{len(canvas.hmi_widgets) + 1}"
-            canvas.hmi_widgets[w_id] = CanvasHmiWidget(
-                id=w_id,
-                widget_type=w_dict.get("widget_type", "indicator"),
-                title=w_dict.get("title", "Widget"),
-                x=w_dict.get("x", 100),
-                y=w_dict.get("y", 100),
-                width=w_dict.get("width", 120),
-                height=w_dict.get("height", 60),
-                plc_tag=w_dict.get("plc_tag", ""),
-                data_type=w_dict.get("data_type", "Bool"),
-                current_value=w_dict.get("current_value", False),
-                properties=w_dict.get("properties", {}),
-                status="draft",
-            )
+            fields = CanvasHmiWidget.__dataclass_fields__
+            kwargs = {k: w_dict[k] for k in fields if k in w_dict}
+            kwargs["id"] = w_id
+            kwargs.setdefault("widget_type", "indicator")
+            kwargs.setdefault("title", "Widget")
+            kwargs["status"] = "draft"
+            canvas.hmi_widgets[w_id] = CanvasHmiWidget(**kwargs)
 
         elif op == "update_hmi_widget":
             w_id = op_item.get("id", "")
             if w_id in canvas.hmi_widgets:
                 patch = op_item.get("patch", {})
                 widget = canvas.hmi_widgets[w_id]
+                # Placeholder widgets: only allow move/delete (delete handled separately).
+                if not widget.supported:
+                    patch = {k: v for k, v in patch.items() if k in {"x", "y"}}
                 for k, v in patch.items():
-                    if hasattr(widget, k):
+                    if hasattr(widget, k) and k != "id":
                         setattr(widget, k, v)
                 widget.status = "draft"
                 widget.errors = []
@@ -446,11 +601,32 @@ def apply_canvas_patch(canvas: CanvasState, operations: list[dict[str, Any]]) ->
             w_id = op_item.get("id", "")
             canvas.hmi_widgets.pop(w_id, None)
 
+        elif op == "add_screen":
+            device_name = str(op_item.get("device") or "").strip()
+            screen_dict = op_item.get("screen") or {}
+            screen_name = str(screen_dict.get("name") or "").strip()
+            if device_name and screen_name:
+                device = next((d for d in canvas.hmi_devices if d.name == device_name), None)
+                if device is None:
+                    device = CanvasHmiDevice(name=device_name, kind="classic")
+                    canvas.hmi_devices.append(device)
+                if not any(s.name == screen_name for s in device.screens):
+                    device.screens.append(
+                        CanvasHmiScreen(
+                            name=screen_name,
+                            start_screen=bool(screen_dict.get("start_screen")),
+                            width=int(screen_dict.get("width") or device.width),
+                            height=int(screen_dict.get("height") or device.height),
+                        )
+                    )
+
         elif op == "add_tag":
             t_dict = op_item.get("tag", {})
             name = t_dict.get("name")
             if name:
-                canvas.tags[name] = CanvasTag(**t_dict)
+                canvas.tags[name] = CanvasTag(
+                    **{k: v for k, v in t_dict.items() if k in CanvasTag.__dataclass_fields__}
+                )
 
         elif op == "clear_errors":
             for b in canvas.blocks.values():
@@ -521,7 +697,57 @@ def attribute_compiler_errors(canvas: CanvasState, compile_result: dict[str, Any
                 "message": raw_msg,
             })
 
-    # 3. Check HMI tags referencing non-existent block variables
+    # 3. Structured messages from compile-plc / compile-hmi
+    messages = compile_result.get("messages") or []
+    if isinstance(compile_result.get("hmi"), dict):
+        messages = list(messages) + list(compile_result["hmi"].get("messages") or [])
+    if isinstance(compile_result.get("compile"), dict):
+        messages = list(messages) + list(compile_result["compile"].get("Messages") or [])
+    for m in messages:
+        if not isinstance(m, dict):
+            continue
+        path = str(m.get("path") or "")
+        desc = str(m.get("description") or m.get("message") or "")
+        sev = "warning" if "warn" in str(m.get("severity") or "").lower() else "error"
+        # HMI path often Screen/Control
+        matched_widget = None
+        for w_id, widget in canvas.hmi_widgets.items():
+            if widget.source_name and widget.source_name in path:
+                matched_widget = w_id
+                break
+            if widget.screen and widget.screen in path and widget.title in path:
+                matched_widget = w_id
+                break
+        if matched_widget:
+            widget = canvas.hmi_widgets[matched_widget]
+            widget.status = "error"
+            if desc and desc not in widget.errors:
+                widget.errors.append(desc)
+            attributions.append(
+                {
+                    "target_type": "hmi_widget",
+                    "target_id": matched_widget,
+                    "severity": sev,
+                    "message": desc or path,
+                }
+            )
+            continue
+        for name, block in canvas.blocks.items():
+            if name in path or name in desc:
+                block.status = "error"
+                if desc and desc not in block.errors:
+                    block.errors.append(desc)
+                attributions.append(
+                    {
+                        "target_type": "block",
+                        "target_id": name,
+                        "severity": sev,
+                        "message": desc or path,
+                    }
+                )
+                break
+
+    # 4. Check HMI tags referencing non-existent block variables
     for w_id, widget in canvas.hmi_widgets.items():
         if widget.plc_tag and "." in widget.plc_tag:
             blk_ref, var_ref = widget.plc_tag.split(".", 1)

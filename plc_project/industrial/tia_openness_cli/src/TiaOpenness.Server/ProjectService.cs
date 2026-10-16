@@ -865,7 +865,7 @@ public sealed class ProjectService
             var ext = Path.GetExtension(projectPath);
             if (ext.StartsWith(".ap", StringComparison.OrdinalIgnoreCase) && ext.Length > 3)
             {
-                ver = ext[3..];
+                ver = ext.Substring(3);
             }
         }
         stem ??= "project";

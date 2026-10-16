@@ -27,6 +27,7 @@
   flex: none;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 9px 10px 9px 12px;
   border-bottom: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
@@ -146,6 +147,44 @@ font-family: var(--sans);
   font-size: 13px;
   line-height: 1.7;
   color: var(--ink-3, #8a918b);
+}
+
+.sp-tagtable {
+  align-self: stretch;
+  margin-top: 14px;
+  padding: 8px 10px;
+  text-align: left;
+  background: var(--surface-2, #f1f2ed);
+  font-size: 12px;
+  color: var(--ink-2, #5c635d);
+}
+
+.sp-tagtable__title {
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--ink-1, #2e332f);
+}
+
+.sp-tagrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.7fr) minmax(0, 0.9fr);
+  gap: 6px;
+  padding: 2px 0;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.sp-tagrow__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-tagrow__type,
+.sp-tagrow__addr {
+  color: var(--ink-3, #8a918b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ---- 3. 解释卡（surface-2 底、内部滚动） ---- */

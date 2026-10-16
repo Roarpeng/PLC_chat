@@ -24,7 +24,14 @@ class Settings(BaseSettings):
     jwt_secret: str = Field(default="dev-insecure-change-me-32chars!!", alias="JWT_SECRET")
     jwt_ttl_seconds: int = Field(default=1800, alias="JWT_TTL_SECONDS")
     refresh_ttl_seconds: int = Field(default=604800, alias="REFRESH_TTL_SECONDS")
-    cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
+    # 开发默认放行 Vite(5173)；生产请用 CORS_ORIGINS 环境变量收紧
+    cors_origins: str = Field(
+        default=(
+            "http://localhost:5173,http://127.0.0.1:5173,"
+            "http://localhost:3000,http://127.0.0.1:3000"
+        ),
+        alias="CORS_ORIGINS",
+    )
     cookie_secure: bool = Field(default=False, alias="COOKIE_SECURE")
     auth_api_keys_enabled: bool = Field(default=True, alias="AUTH_API_KEYS_ENABLED")
     dev_api_key: str = Field(default="ros_ak_dev_change_me", alias="DEV_API_KEY")

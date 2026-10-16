@@ -89,17 +89,73 @@ class MCPClient:
         return fn(**args)
 
     def _call_tia(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
-        """Dispatch tia.* Openness tools.
-
-        - `tia.get_status` / one-shot `tia.export_project` via C# CLI
-        - interactive open/list/export-block prefer stdio MCP host (Cursor) or
-          `plc.tia.ingest` for the full XML→IR→KG path
-        """
+        """Dispatch tia.* via Siemens Openness one-shot CLI (no MCP stdio session)."""
         from agents.plc.tia.openness_cli import openness_cli
 
         args = {k: v for k, v in args.items() if k != "task_id"}
         if name == "tia.get_status":
             return openness_cli("status", timeout_s=60)
+
+        if name == "tia.open_project":
+            project = str(args.get("project_path") or args.get("project") or "")
+            if not project:
+                return {
+                    "ok": False,
+                    "error": {"code": "invalid_argument", "message": "project_path is required"},
+                }
+            cli_args = ["open-project", "--project", project]
+            if args.get("plc_name"):
+                cli_args.extend(["--plc", str(args["plc_name"])])
+            return openness_cli(*cli_args, timeout_s=int(args.get("timeout_s") or 600))
+
+        if name == "tia.list_blocks":
+            project = str(args.get("project_path") or args.get("project") or "")
+            if not project:
+                return {
+                    "ok": False,
+                    "error": {
+                        "code": "invalid_argument",
+                        "message": "project_path is required (one-shot Openness CLI)",
+                    },
+                }
+            cli_args = ["list-blocks", "--project", project]
+            if args.get("type"):
+                cli_args.extend(["--type", str(args["type"])])
+            if args.get("plc_name"):
+                cli_args.extend(["--plc", str(args["plc_name"])])
+            return openness_cli(*cli_args, timeout_s=int(args.get("timeout_s") or 600))
+
+        if name == "tia.export_block":
+            project = str(args.get("project_path") or args.get("project") or "")
+            block = str(args.get("block_name") or args.get("block") or "")
+            if not project or not block:
+                return {
+                    "ok": False,
+                    "error": {
+                        "code": "invalid_argument",
+                        "message": "project_path and block_name are required",
+                    },
+                }
+            cli_args = ["export-block", "--project", project, "--block", block]
+            if args.get("export_path") or args.get("out"):
+                cli_args.extend(["--out", str(args.get("export_path") or args.get("out"))])
+            if args.get("type"):
+                cli_args.extend(["--type", str(args["type"])])
+            if args.get("plc_name"):
+                cli_args.extend(["--plc", str(args["plc_name"])])
+            return openness_cli(*cli_args, timeout_s=int(args.get("timeout_s") or 600))
+
+        if name == "tia.close_project":
+            project = str(args.get("project_path") or args.get("project") or "")
+            if not project:
+                return {
+                    "ok": False,
+                    "error": {"code": "invalid_argument", "message": "project_path is required"},
+                }
+            cli_args = ["close-project", "--project", project]
+            if args.get("plc_name"):
+                cli_args.extend(["--plc", str(args["plc_name"])])
+            return openness_cli(*cli_args, timeout_s=int(args.get("timeout_s") or 600))
 
         if name == "tia.export_project":
             project = str(args.get("project_path") or args.get("project") or "")
@@ -233,93 +289,38 @@ class MCPClient:
                 timeout_s=int(args.get("timeout_s") or 600),
             )
 
-        # Stateful tools: open_project / list_blocks / export_block / close_project need a live MCP session.
-        mode = (self.settings.mcp_tia_mode or "cli").lower()
-        if mode == "stdio":
-            return self._call_tia_stdio(name, args)
         return {
             "ok": False,
             "error": {
-                "code": "use_stdio_or_ingest",
+                "code": "unsupported_tia_tool",
                 "message": (
-                    f"{name} requires a persistent Openness session. "
-                    "Configure Cursor/Runtime MCP stdio for tia-openness, "
-                    "set MCP_TIA_MODE=stdio, or use plc.tia.ingest / tia.export_project."
+                    f"{name} is not mapped to the Openness CLI. "
+                    "Use tia.export_project / plc.tia.ingest / gateway canvas import."
                 ),
             },
         }
 
-    def _call_tia_stdio(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
-        """Invoke tools/industrial-mcp/tia-openness over stdio (sync helper)."""
-        import anyio
-        from mcp import ClientSession, StdioServerParameters
-        from mcp.client.stdio import stdio_client
-
-        from agents.plc.tia.openness_cli import find_openness_exe, openness_server_project
-
-        exe = find_openness_exe()
-        if exe is not None:
-            params = StdioServerParameters(command=str(exe), args=[], cwd=str(exe.parent))
-        else:
-            csproj = openness_server_project()
-            params = StdioServerParameters(
-                command="dotnet",
-                args=["run", "--project", str(csproj), "-c", "Release", "--no-build"],
-                cwd=str(Path(__file__).resolve().parents[2]),
-            )
-
-        async def _run() -> dict[str, Any]:
-            async with stdio_client(params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    result = await session.call_tool(name, args)
-                    texts: list[str] = []
-                    for block in result.content or []:
-                        text = getattr(block, "text", None)
-                        if text:
-                            texts.append(text)
-                    joined = "\n".join(texts) if texts else "{}"
-                    try:
-                        return json.loads(joined)
-                    except json.JSONDecodeError:
-                        return {"ok": True, "raw": joined}
-
-        return anyio.run(_run)
-
-    def _call_hello_stdio(self, *, message: str, task_id: str | None) -> dict[str, Any]:
-        """Invoke tools/hello MCP server over stdio (sync helper)."""
-        import anyio
-        from mcp import ClientSession, StdioServerParameters
-        from mcp.client.stdio import stdio_client
+def _call_hello_stdio(self, *, message: str, task_id: str | None) -> dict[str, Any]:
+        """Invoke tools/hello CLI (MCP package removed — subprocess JSON)."""
+        import subprocess
 
         root = Path(__file__).resolve().parents[2]
         server_script = root / "tools" / "hello" / "server.py"
-        params = StdioServerParameters(
-            command=sys.executable,
-            args=[str(server_script)],
+        cmd = [sys.executable, str(server_script), "--message", message]
+        if task_id:
+            cmd.extend(["--task-id", str(task_id)])
+        proc = subprocess.run(
+            cmd,
             cwd=str(root),
+            capture_output=True,
+            text=True,
+            check=False,
         )
-
-        async def _run() -> dict[str, Any]:
-            async with stdio_client(params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    result = await session.call_tool(
-                        "hello.echo",
-                        {"message": message, "task_id": task_id},
-                    )
-                    texts: list[str] = []
-                    for block in result.content or []:
-                        text = getattr(block, "text", None)
-                        if text:
-                            texts.append(text)
-                    joined = "\n".join(texts) if texts else "{}"
-                    try:
-                        return json.loads(joined)
-                    except json.JSONDecodeError:
-                        return {"ok": True, "raw": joined}
-
-        return anyio.run(_run)
+        raw = (proc.stdout or "").strip() or (proc.stderr or "").strip() or "{}"
+        try:
+            return json.loads(raw.splitlines()[-1])
+        except json.JSONDecodeError:
+            return {"ok": proc.returncode == 0, "raw": raw}
 
 
 _default_client: MCPClient | None = None

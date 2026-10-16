@@ -268,7 +268,7 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
   const [positions, setPositions] = useState<Record<string, Pt>>({});
   const [groups, setGroups] = useState<(ObGroup & { x: number; y: number; w: number; h: number })[]>([]);
   const [layoutNonce, setLayoutNonce] = useState(0);
-  /** 栏尺寸（防抖后）：驱动布局参数（折行数/宽高比）随拖动重排 */
+  /** 栏尺寸（节流后）：驱动布局参数（折行数/宽高比）随拖动重排 */
   const [paneSize, setPaneSize] = useState<{ w: number; h: number } | null>(null);
 
   /* —— 收拢动画定时器（声明在布局 effect 之前，重排时先行中止） —— */
@@ -280,39 +280,52 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
     }
   }, []);
 
-  /* —— 栏尺寸监听：拖分隔条改变栏宽 →（防抖 300ms）触发布局重算。
+  /* —— 栏尺寸监听：拖分隔条改变栏宽 → 节流重算布局（拖动中也排，不只等松手）。
         观察图栏面板父容器（永不因空态/重渲染被 React 重建）——直接观察
         .gg 本体会在其节点被重建后失效（观察器盯着脱离文档的死节点，
         尺寸恒为 0，再也不触发），这是"调大小不重排"的根因 —— */
   const layoutKeyRef = useRef("");
-  const dragFlagRef = useRef(false);
   const reportRef = useRef<(() => void) | null>(null);
   const hasBlocks = blocks.length > 0;
-  /* 分隔条拖拽结束：立即按最终栏宽重排（拖拽中被搁置） */
+  /* 分隔条拖拽结束：立刻按最终栏宽再排一次（拖动过程中由下面的节流观察器跟着重排） */
   useEffect(() => {
-    dragFlagRef.current = paneDragging;
     if (!paneDragging) reportRef.current?.();
   }, [paneDragging]);
   useEffect(() => {
     const el = (wrapRef.current?.parentElement ?? wrapRef.current) as HTMLDivElement | null;
     if (!el) return;
     let timer: number | null = null;
+    let lastRun = 0;
     let last = { w: el.clientWidth, h: el.clientHeight };
     const report = () => {
-      timer = null;
       const w = el.clientWidth;
       const h = el.clientHeight;
-      if (w !== last.w || h !== last.h) {
-        last = { w, h };
-        setPaneSize({ w, h });
-      }
+      if (w === last.w && h === last.h) return;
+      last = { w, h };
+      setPaneSize({ w, h });
     };
-    const ro = new ResizeObserver(() => {
-      if (dragFlagRef.current) return; // 分隔条拖拽中：零计算，松手统一重排
-      if (timer != null) window.clearTimeout(timer);
-      timer = window.setTimeout(report, 180);
-    });
     reportRef.current = report;
+    /* 节流而不是防抖：拖动过程中大约每 120ms 重排一次，松手后的尾巴再补一次 */
+    const schedule = () => {
+      const now = performance.now();
+      const wait = 120 - (now - lastRun);
+      if (wait <= 0) {
+        if (timer != null) {
+          window.clearTimeout(timer);
+          timer = null;
+        }
+        lastRun = now;
+        report();
+        return;
+      }
+      if (timer != null) return;
+      timer = window.setTimeout(() => {
+        timer = null;
+        lastRun = performance.now();
+        report();
+      }, wait);
+    };
+    const ro = new ResizeObserver(() => schedule());
     ro.observe(el);
     return () => {
       ro.disconnect();
@@ -550,8 +563,8 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
     return list;
   }, [edges, positions, selectedBlockName, relSet, nbSet, maxCount]);
 
-  /* —— 面板尺寸自适应已并入上方"栏尺寸监听"：拖动期间逐帧 fitView 会造成
-        视口动画层叠（卡顿主因），现统一防抖 300ms → 重排 → 瞬时 fit —— */
+  /* —— 栏宽变化只重排节点、不 fitView（避免拖动时视口被抢走）。
+        重排由上方观察器按 120ms 节流触发，拖动过程中内容跟着折行。 —— */
 
   /* —— 聚焦模式：开启或选中块变化后 fitView 到可见子图 —— */
   useEffect(() => {
