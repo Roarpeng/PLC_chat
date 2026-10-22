@@ -166,6 +166,12 @@ describe("buildOpsFromPrompt", () => {
     expect(buildOpsFromPrompt("什么是互锁？", fixture())).toEqual([]);
     expect(buildOpsFromPrompt("解释一下 MotorCtrl", fixture())).toEqual([]);
     expect(buildOpsFromPrompt("如何优化启动逻辑", fixture())).toEqual([]);
+    expect(buildOpsFromPrompt("当前功能块作用", fixture())).toEqual([]);
+    expect(buildOpsFromPrompt("FB1063 的用途", fixture())).toEqual([]);
+  });
+  it("无编辑信号的杂项输入不再兜底塞 UserVar（回归：'当前功能块作用'曾新增 UserVar_949）", () => {
+    expect(buildOpsFromPrompt("看看这个", fixture())).toEqual([]);
+    expect(buildOpsFromPrompt("hello", fixture())).toEqual([]);
   });
   it("带疑问词但可解析的编辑指令仍正常匹配（意图优先于提问守卫）", () => {
     const ops = buildOpsFromPrompt("怎么创建 FB Sorter？", fixture());

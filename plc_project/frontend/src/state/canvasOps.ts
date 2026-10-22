@@ -585,8 +585,13 @@ function buildPumpOps(canvas: CanvasStateData): any[] | null {
   return null;
 }
 
+/** 疑似编辑指令的信号：兜底意图只对"看起来想改东西"的输入生效，
+ * 纯提问/名词短语（"该项目的运行逻辑"/"当前功能块作用"）一律不造操作 */
+const EDITISH_HINT = /(添加|增加|加|创建|新建|建|设|修改|改|配置|变量|信号|按钮|指示灯|控件|急停|网络|块)/;
+
 /** 意图 5：默认——向第一个 DB 块（无 DB 则第一个块）加变量；完全无块返回 [] */
 function buildDefaultOps(prompt: string, canvas: CanvasStateData): any[] {
+  if (!EDITISH_HINT.test(prompt)) return []; // 无编辑信号的输入绝不乱改画布
   const target = firstBlockOfType(canvas, "DB") ?? firstBlockName(canvas);
   if (!target) return [];
   return [
@@ -661,7 +666,7 @@ export function buildOpsFromPrompt(prompt: string, canvas: CanvasStateData): any
 export function looksLikeQuestion(prompt: string): boolean {
   return (
     /[？?]\s*$/.test(prompt.trim()) ||
-    /(什么是|是什么|为什么|怎么|怎样|如何|哪些|哪个|介绍|解释|说明|描述|分析|评价|总结|梳理|运行逻辑|控制逻辑|工作原理|原理)/.test(
+    /(什么是|是什么|为什么|怎么|怎样|如何|哪些|哪个|介绍|解释|说明|描述|分析|评价|总结|梳理|运行逻辑|控制逻辑|工作原理|原理|作用|用途|含义|功能|干嘛|干什么)/.test(
       prompt,
     )
   );
