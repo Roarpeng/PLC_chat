@@ -51,8 +51,35 @@ def validate_ops(canvas: CanvasState, ops: list[dict[str, Any]]) -> tuple[list[d
             if wid and wid not in canvas.hmi_widgets:
                 errors.append(f"op[{i}] unknown hmi widget: {wid}")
                 continue
+        if op == "add_block":
+            # LLM 生成的 add_block 可能缺 name/块体——放行会导致前端"已执行"
+            # 但 applyOpsLocally 静默忽略，块根本没建。缺关键字段直接剔除。
+            blk = op_item.get("block")
+            name = str(blk.get("name") or "").strip() if isinstance(blk, dict) else ""
+            if not name:
+                errors.append(f"op[{i}] add_block missing block.name")
+                continue
         cleaned.append(op_item)
     return cleaned, errors
+
+
+def ops_touched_blocks(ops: list[dict[str, Any]]) -> list[str]:
+    """提取 ops 触及的块名（add_variable/add_network 的 block、add_block 的新块名、
+    update_block/remove_block 的 name），供预检按需收窄范围。"""
+    names: list[str] = []
+    for op in ops or []:
+        if not isinstance(op, dict):
+            continue
+        if isinstance(op.get("block"), str) and op["block"].strip():
+            names.append(op["block"].strip())
+        elif isinstance(op.get("block"), dict):
+            name = str(op["block"].get("name") or "").strip()
+            if name:
+                names.append(name)
+        elif op.get("op") in {"update_block", "remove_block"} and isinstance(op.get("name"), str):
+            if op["name"].strip():
+                names.append(op["name"].strip())
+    return list(dict.fromkeys(names))
 
 
 def build_ops_from_rules(prompt: str, canvas: CanvasState) -> list[dict[str, Any]]:
@@ -174,53 +201,65 @@ def build_ops_from_rules(prompt: str, canvas: CanvasState) -> list[dict[str, Any
     return ops
 
 
+_LLM_OPS_SYSTEM = (
+    "You are a PLC/HMI editor that outputs ONLY a json object "
+    '{{"ops": [...]}} with canvas ops. '
+    "Allowed op names: {allowed}. "
+    "For block body changes prefer update_block_scl with full SCL statements between BEGIN/END. "
+    "Only reference blocks present in the context unless op is add_block. "
+    "If the request is a question, analysis, or meta request (e.g. read/analyze/explain/"
+    "compile the project) rather than a CONCRETE edit instruction, return "
+    '{{"ops": []}} exactly — do not fabricate edits. '
+    "Reply with raw json object, no markdown."
+)
+
+
 def _llm_ops(prompt: str, canvas: CanvasState, context: dict[str, Any]) -> list[dict[str, Any]]:
-    from gateway.app.services.plc.llm_explain import call_chat_completions, llm_settings
+    from gateway.app.services.plc.llm_explain import chat_completion_raw, llm_settings
 
     settings = llm_settings()
     if settings is None:
         return []
 
-    # Compact context
-    block_summaries = []
-    for name, b in list(canvas.blocks.items())[:40]:
-        block_summaries.append(
+    # 精准上下文：稳定骨架（缓存前缀）+ 与指令相关的块详情；指令放最后
+    focus = str((context or {}).get("selected_block") or "").strip()
+    relevant = []
+    for name in select_relevant_blocks(prompt, canvas, focus, k=8):
+        b = canvas.blocks[name]
+        relevant.append(
             {
                 "name": name,
                 "type": b.block_type,
-                "language": b.language,
-                "vars": [v.name for v in b.interface[:20]],
+                "vars": [v.name for v in b.interface[:16]],
             }
         )
     widgets = [
         {"id": w.id, "type": w.widget_type, "plc_tag": w.plc_tag, "title": w.title}
-        for w in list(canvas.hmi_widgets.values())[:40]
+        for w in sorted(canvas.hmi_widgets.values(), key=lambda w: w.id)[:40]
     ]
-    system = (
-        "You are a PLC/HMI editor that outputs ONLY a JSON array of canvas ops. "
-        f"Allowed op names: {sorted(ALLOWED_OPS)}. "
-        "For block body changes prefer update_block_scl with full SCL statements between BEGIN/END. "
-        "Do not invent block names that are not in context unless op is add_block. "
-        "Reply with raw JSON array, no markdown."
-    )
+    system = _LLM_OPS_SYSTEM.format(allowed=sorted(ALLOWED_OPS))
     user = json.dumps(
         {
-            "request": prompt,
-            "selected": context,
-            "blocks": block_summaries,
+            "project": canvas.project_name,
+            "blocks": _block_skeleton(canvas),  # 稳定前缀（排序，缓存命中）
             "hmi_widgets": widgets,
-            "tags": list(canvas.tags.keys())[:80],
+            "relevant_blocks": relevant,
+            "selected": context,
+            "request": prompt,  # 变化内容放最后
         },
         ensure_ascii=False,
     )
-    raw = call_chat_completions(
+    text, _usage = chat_completion_raw(
         [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
         settings,
+        timeout_s=60.0,
+        max_tokens=1024,
+        json_mode=True,
     )
-    text = (raw or "").strip()
+    text = (text or "").strip()
     if text.startswith("```"):
         text = re.sub(r"^```(?:json)?\s*", "", text)
         text = re.sub(r"\s*```$", "", text)
@@ -238,6 +277,191 @@ def _llm_ops(prompt: str, canvas: CanvasState, context: dict[str, Any]) -> list[
     if isinstance(data, dict) and "ops" in data:
         data = data["ops"]
     return data if isinstance(data, list) else []
+
+
+# ---------------------------------------------------------------- 精准上下文（省 token）
+
+def _block_skeleton(canvas: CanvasState) -> list[dict[str, Any]]:
+    """全画布骨架：每块一行，按块名排序保证字节级稳定。
+
+    稳定前缀跨请求一致 → DeepSeek 磁盘缓存命中，命中部分按低价计费。
+    """
+    rows = []
+    for name in sorted(canvas.blocks):
+        b = canvas.blocks[name]
+        rows.append(
+            {
+                "name": name,
+                "type": b.block_type,
+                "language": b.language,
+                "comment": (b.comment or "")[:60],
+                "networks": [n.title or f"Net{n.id}" for n in b.networks[:4]],
+                "var_count": len(b.interface),
+            }
+        )
+    return rows
+
+
+def _cjk_terms(text: str) -> set[str]:
+    """提取匹配用词元：英文标识符 + 中文 2-4 字滑窗。"""
+    terms = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]+", text))
+    for run in re.findall(r"[\u4e00-\u9fff]+", text):
+        for n in (2, 3, 4):
+            for i in range(len(run) - n + 1):
+                terms.add(run[i : i + n])
+    return terms
+
+
+def _block_refs(block: Any) -> set[str]:
+    """块 SCL 中引用的其他块名（"Other".xxx 形态）。"""
+    refs = set()
+    for n in block.networks:
+        refs.update(re.findall(r'"([A-Za-z_][A-Za-z0-9_]*)"\s*\.', n.scl_text or ""))
+    if block.scl_body:
+        refs.update(re.findall(r'"([A-Za-z_][A-Za-z0-9_]*)"\s*\.', block.scl_body))
+    refs.discard(block.name)
+    return refs
+
+
+def select_relevant_blocks(
+    prompt: str, canvas: CanvasState, focus_block: str = "", k: int = 8
+) -> list[str]:
+    """按问题挑相关块：名字命中 > 变量命中 > 标题/注释关键词 > 选中块的调用邻居。
+
+    只把少数相关块的详情交给 LLM，替代“整包画布”式投喂。
+    """
+    lowered = (prompt or "").lower()
+    terms = _cjk_terms(prompt or "")
+    scores: dict[str, int] = {}
+    for name, b in canvas.blocks.items():
+        s = 0
+        if name and name.lower() in lowered:
+            s += 100
+        for v in b.interface:
+            if v.name and v.name.lower() in lowered:
+                s += 40
+                break
+        blob = " ".join(
+            filter(None, [b.comment or "", " ".join(n.title or "" for n in b.networks)])
+        )
+        if blob:
+            s += min(sum(1 for t in terms if t in blob) * 5, 20)
+        if s:
+            scores[name] = s
+    if focus_block and focus_block in canvas.blocks:
+        scores[focus_block] = scores.get(focus_block, 0) + 60
+        for ref in _block_refs(canvas.blocks[focus_block]):
+            if ref in canvas.blocks:
+                scores[ref] = scores.get(ref, 0) + 25
+    return sorted(scores, key=lambda n: (-scores[n], n))[:k]
+
+
+def build_question_messages(
+    prompt: str, canvas: CanvasState, context: dict[str, Any] | None = None
+) -> list[dict[str, str]]:
+    """提问 → LLM 消息。成本结构（DeepSeek 前缀缓存友好）：
+
+    稳定骨架在前（跨问题字节一致 → 缓存命中），随问题变化的相关块详情居中，
+    问题本身放最后。回答人设与块深度解释同风格。
+    """
+    ctx = context or {}
+    focus_block = str(ctx.get("selected_block") or "").strip()
+
+    relevant = []
+    for name in select_relevant_blocks(prompt, canvas, focus_block, k=8):
+        b = canvas.blocks[name]
+        row: dict[str, Any] = {
+            "name": name,
+            "type": b.block_type,
+            "language": b.language,
+            "comment": (b.comment or "")[:80],
+            "vars": [v.name for v in b.interface[:16]],
+            "networks": [n.title or f"Net{n.id}" for n in b.networks[:4]],
+            "refs": sorted(_block_refs(b)),
+        }
+        if name == focus_block:
+            row["scl_preview"] = b.get_full_scl()[:1200]
+        relevant.append(row)
+
+    widgets = [
+        {"id": w.id, "type": w.widget_type, "plc_tag": w.plc_tag, "title": w.title}
+        for w in sorted(canvas.hmi_widgets.values(), key=lambda w: w.id)[:40]
+    ]
+
+    system = (
+        "你是资深工业自动化工程师，熟悉西门子 TIA Portal / SCL / HMI。"
+        "用户给出 PLC 画布的块骨架清单、与问题相关的块详情和 HMI 控件清单，并提出问题；"
+        "请基于给定信息用中文回答，面向工程师、结构化、务实"
+        "（控制逻辑、数据流、联锁关系、风险点、改进建议）。"
+        "给定信息里没有的内容不要编造，需要更多信息时明确指出应查看哪些块"
+        "（块骨架清单里有全部块名可供引用）。"
+        "若用户要的是操作而非分析（如“修改/编译项目”），明确告诉他们怎么做："
+        "修改请给出具体编辑指令（例：创建 FB ConveyorCtrl / 在 MainDB 中添加变量 "
+        "PumpRun Bool），编译与回写 TIA 用界面右上角的「回写博图」按钮，"
+        "单块深度分析可选中块后点「深度解释」。"
+    )
+    user = json.dumps(
+        {
+            "project": canvas.project_name,
+            "blocks": _block_skeleton(canvas),  # 稳定前缀：全量骨架（排序）
+            "hmi_widgets": widgets,  # 稳定（按 id 排序）
+            "relevant_blocks": relevant,  # 随问题检索的详情
+            "selected": ctx,
+            "question": prompt,  # 变化内容放最后，保住前缀缓存
+        },
+        ensure_ascii=False,
+    )
+    return [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+
+
+def answer_project_question(
+    prompt: str, canvas: CanvasState, context: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """回答项目级/分析类问题；未配置 LLM 时抛 LlmNotConfigured。
+
+    返回 {answer, usage}——usage 含 prompt_cache_hit_tokens 等缓存计费字段，
+    供前端展示本次 token 消耗与缓存命中。
+    """
+    from gateway.app.services.plc.llm_explain import (
+        LlmNotConfigured,
+        chat_completion_raw,
+        llm_settings,
+    )
+
+    settings = llm_settings()
+    if settings is None:
+        raise LlmNotConfigured("未配置 LLM（PLC_LLM_* 或 DEEPSEEK_API_KEY）")
+    text, usage = chat_completion_raw(
+        build_question_messages(prompt, canvas, context),
+        settings,
+        timeout_s=90.0,
+        max_tokens=3072,
+    )
+    return {"answer": text, "usage": usage}
+
+
+def stream_project_answer(
+    prompt: str, canvas: CanvasState, context: dict[str, Any] | None = None
+):
+    """流式回答：yield (delta, None) 逐段，结束 yield ("", usage)；未配置抛 LlmNotConfigured。"""
+    from gateway.app.services.plc.llm_explain import (
+        LlmNotConfigured,
+        chat_completion_stream,
+        llm_settings,
+    )
+
+    settings = llm_settings()
+    if settings is None:
+        raise LlmNotConfigured("未配置 LLM（PLC_LLM_* 或 DEEPSEEK_API_KEY）")
+    yield from chat_completion_stream(
+        build_question_messages(prompt, canvas, context),
+        settings,
+        timeout_s=90.0,
+        max_tokens=3072,
+    )
 
 
 def build_chat_ops(

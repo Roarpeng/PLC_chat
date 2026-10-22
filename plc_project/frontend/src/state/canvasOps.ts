@@ -603,13 +603,34 @@ function buildDefaultOps(prompt: string, canvas: CanvasStateData): any[] {
   ];
 }
 
+/** 提取 ops 触及的块名（与后端 ops_touched_blocks 同规则），供预检按需收窄范围 */
+export function touchedBlockNames(ops: any[]): string[] {
+  const names: string[] = [];
+  for (const op of ops || []) {
+    if (!op || typeof op !== "object") continue;
+    if (typeof op.block === "string" && op.block.trim()) {
+      names.push(op.block.trim());
+    } else if (op.block && typeof op.block === "object" && typeof op.block.name === "string" && op.block.name.trim()) {
+      names.push(op.block.name.trim());
+    } else if (
+      (op.op === "update_block" || op.op === "remove_block") &&
+      typeof op.name === "string" &&
+      op.name.trim()
+    ) {
+      names.push(op.name.trim());
+    }
+  }
+  return [...new Set(names)];
+}
+
 /**
  * 自然语言指令 → 画布操作。意图按序匹配：
  * 1. 创建块（创建/新建/添加/建 + FB|FC|DB|OB|功能块|数据块|组织块 或 FB_/… 前缀标识符）
  * 2. 给已存在的块加变量（在/给 <块> 添加/增加/加 <变量>）
  * 3. 急停 / 报警 / estop
  * 4. 冷却 / 泵 / pump
- * 5. 默认：向第一个 DB 块（无 DB 则第一个块）加变量
+ * 5. 默认：向第一个 DB 块（无 DB 则第一个块）加变量——仅对疑似编辑指令生效；
+ *    分析/提问类输入（"该项目的运行逻辑"）返回 []，不造修改。
  */
 export function buildOpsFromPrompt(prompt: string, canvas: CanvasStateData): any[] {
   const createIntent = matchCreateBlockIntent(prompt);
@@ -632,7 +653,18 @@ export function buildOpsFromPrompt(prompt: string, canvas: CanvasStateData): any
     const pumpOps = buildPumpOps(canvas);
     if (pumpOps) return pumpOps;
   }
+  if (looksLikeQuestion(prompt)) return [];
   return buildDefaultOps(prompt, canvas);
+}
+
+/** 提问/分析类输入的信号：问号结尾，或含疑问词/分析动词（深度解释入口在前端面板） */
+export function looksLikeQuestion(prompt: string): boolean {
+  return (
+    /[？?]\s*$/.test(prompt.trim()) ||
+    /(什么是|是什么|为什么|怎么|怎样|如何|哪些|哪个|介绍|解释|说明|描述|分析|评价|总结|梳理|运行逻辑|控制逻辑|工作原理|原理)/.test(
+      prompt,
+    )
+  );
 }
 
 /** 意图：重命名块——“重命名/改名 X 为 Y”、“把 X 改名(为) Y”、“X 改名成 Y”；X 必须存在、Y 合法且不冲突 */

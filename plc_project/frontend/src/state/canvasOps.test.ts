@@ -6,6 +6,8 @@ import {
   deleteNetworkOps,
   buildOpsFromPrompt,
   summarizeOps,
+  touchedBlockNames,
+  looksLikeQuestion,
 } from "./canvasOps";
 import type { CanvasStateData } from "../canvas/types";
 
@@ -159,6 +161,24 @@ describe("buildOpsFromPrompt", () => {
     expect(ops[0].op).toBe("add_block");
     expect(ops[0].block.name).toBe("ConveyorCtrl");
   });
+  it("提问/分析类输入不造编辑操作（回归：'该项目的运行逻辑'曾落入默认意图塞 UserVar）", () => {
+    expect(buildOpsFromPrompt("该项目的运行逻辑", fixture())).toEqual([]);
+    expect(buildOpsFromPrompt("什么是互锁？", fixture())).toEqual([]);
+    expect(buildOpsFromPrompt("解释一下 MotorCtrl", fixture())).toEqual([]);
+    expect(buildOpsFromPrompt("如何优化启动逻辑", fixture())).toEqual([]);
+  });
+  it("带疑问词但可解析的编辑指令仍正常匹配（意图优先于提问守卫）", () => {
+    const ops = buildOpsFromPrompt("怎么创建 FB Sorter？", fixture());
+    expect(ops[0].op).toBe("add_block");
+    expect(ops[0].block.name).toBe("Sorter");
+  });
+  it("疑似编辑指令仍走默认意图", () => {
+    const ops = buildOpsFromPrompt("加一个变量", fixture());
+    expect(ops.length).toBe(1);
+    expect(ops[0].op).toBe("add_variable");
+    expect(ops[0].block).toBe("MainDB"); // 第一个 DB 块
+    expect(ops[0].variable.name).toMatch(/^UserVar_/);
+  });
   it("指定块加变量意图（类型推断 Real）", () => {
     const ops = buildOpsFromPrompt("在 MainDB 中添加变量 SpeedSet 实数", fixture());
     expect(ops[0].op).toBe("add_variable");
@@ -195,5 +215,37 @@ describe("summarizeOps", () => {
     expect(s).toContain("删除块");
     expect(s).toContain("修改块 B");
     expect(s).toContain("interface");
+  });
+});
+
+describe("touchedBlockNames", () => {
+  it("提取各 op 形态的块名并去重，HMI/标签 op 不贡献块名", () => {
+    const names = touchedBlockNames([
+      { op: "add_variable", block: "MainDB", variable: { name: "X" } },
+      { op: "add_block", block: { name: "NewFB", block_type: "FB" } },
+      { op: "update_block", name: "MotorCtrl", patch: { comment: "c" } },
+      { op: "add_variable", block: "MainDB", variable: { name: "Y" } },
+      { op: "add_hmi_widget", widget: { id: "w1" } },
+      { op: "add_tag", tag: { name: "T1" } },
+    ]);
+    expect(names).toEqual(["MainDB", "NewFB", "MotorCtrl"]);
+  });
+  it("空 ops / 纯 HMI ops 返回空数组（后端据此只做 HMI 绑定检查）", () => {
+    expect(touchedBlockNames([])).toEqual([]);
+    expect(touchedBlockNames([{ op: "add_hmi_widget", widget: { id: "w2" } }])).toEqual([]);
+  });
+});
+
+describe("looksLikeQuestion", () => {
+  it("识别提问/分析类输入", () => {
+    expect(looksLikeQuestion("该项目的运行逻辑")).toBe(true);
+    expect(looksLikeQuestion("什么是互锁？")).toBe(true);
+    expect(looksLikeQuestion("为什么电机不启动")).toBe(true);
+    expect(looksLikeQuestion("解释一下 MotorCtrl")).toBe(true);
+  });
+  it("编辑指令不是提问", () => {
+    expect(looksLikeQuestion("创建 FB ConveyorCtrl")).toBe(false);
+    expect(looksLikeQuestion("在 MainDB 中添加变量 Speed")).toBe(false);
+    expect(looksLikeQuestion("添加急停按钮")).toBe(false);
   });
 });

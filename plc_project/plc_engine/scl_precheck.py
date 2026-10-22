@@ -157,10 +157,23 @@ def precheck_block(name: str, scl: str, declared: set[str]) -> list[dict[str, An
     return findings
 
 
-def precheck_canvas(canvas: CanvasState) -> dict[str, Any]:
-    """Return {ok, errors, warnings, findings[]}."""
+def precheck_canvas(canvas: CanvasState, block_names: list[str] | None = None) -> dict[str, Any]:
+    """Return {ok, errors, warnings, findings[]}.
+
+    block_names 提供时只检查这些块：None=全部（编译门禁等旧语义不变），
+    []（ops 只涉及 HMI/标签时前端会传空数组）= 不查任何 SCL 块、只做 HMI
+    绑定检查。与编译门禁（compile_jobs 只预检待写回块）同语义：刚导入的
+    synced 占位块（TODO/空网络，来自不支持语言的降级导入）不会被写回，
+    不该拦住对其他块的编辑。
+    """
+    if block_names is None:
+        only = None
+    else:
+        only = {str(n).strip() for n in block_names if str(n).strip()}
     findings: list[dict[str, Any]] = []
     for name, block in canvas.blocks.items():
+        if only is not None and name not in only:
+            continue
         declared = {v.name for v in block.interface}
         scl = block.get_full_scl()
         findings.extend(precheck_block(name, scl, declared))

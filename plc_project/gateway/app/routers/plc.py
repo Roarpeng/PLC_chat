@@ -971,7 +971,7 @@ async def canvas_chat_ops_endpoint(
     request_id: RequestIdDep,
 ) -> ApiResponse[dict[str, Any]]:
     _ = principal
-    from gateway.app.services.plc.chat_ops import build_chat_ops
+    from gateway.app.services.plc.chat_ops import build_chat_ops, ops_touched_blocks
     from plc_engine.canvas_model import CanvasState, apply_canvas_patch
     from plc_engine.scl_precheck import precheck_canvas
 
@@ -983,8 +983,116 @@ async def canvas_chat_ops_endpoint(
         canvas = apply_canvas_patch(canvas, built["ops"])
         canvas.append_revision(built["ops"], source="nl", message=prompt[:120])
         built["canvas"] = canvas.to_dict()
-        built["precheck"] = precheck_canvas(canvas)
+        # 与编译门禁同语义：只预检 ops 触及的块，导入产生的 synced 占位块不拦编辑
+        built["precheck"] = precheck_canvas(canvas, block_names=ops_touched_blocks(built["ops"]))
     return ApiResponse(ok=True, data=built, request_id=request_id)
+
+
+@router.post("/canvas/chat-answer", response_model=ApiResponse[dict[str, Any]])
+async def canvas_chat_answer_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """分析/提问类输入 → LLM 工程师向中文回答（画布摘要作上下文）。
+
+    未配置 LLM 返回 400 code=LLM_NOT_CONFIGURED，前端回落到编辑指令提示。
+    """
+    _ = principal
+    import asyncio
+
+    from gateway.app.services.plc.chat_ops import answer_project_question
+    from gateway.app.services.plc.llm_explain import LlmNotConfigured
+    from plc_engine.canvas_model import CanvasState
+
+    canvas = CanvasState.from_dict(body.get("canvas") or {})
+    prompt = str(body.get("prompt") or body.get("message") or "").strip()
+    if not prompt:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "PROMPT_REQUIRED", "message": "body.prompt is required"},
+        )
+    try:
+        result = await asyncio.to_thread(
+            answer_project_question, prompt, canvas, body.get("context") or {}
+        )
+    except LlmNotConfigured as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "LLM_NOT_CONFIGURED",
+                "message": (
+                    "回答分析类问题需要 LLM：设置 PLC_LLM_* 或 DEEPSEEK_API_KEY 后重启网关。"
+                ),
+            },
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"code": "LLM_CALL_FAILED", "message": str(exc)},
+        ) from exc
+    return ApiResponse(
+        ok=True,
+        data={
+            "answer": result.get("answer") or "",
+            "usage": result.get("usage") or {},
+            "llm": True,
+        },
+        request_id=request_id,
+    )
+
+
+@router.post("/canvas/chat-answer/stream")
+async def canvas_chat_answer_stream_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> Any:
+    """chat-answer 的 SSE 流式版：data:{"delta":…} 逐段 → data:{"usage":…} → data:[DONE]。
+
+    未配置 LLM 时以 data:{"error":{"code":"LLM_NOT_CONFIGURED"}} 事件返回（HTTP 仍 200，
+    因为 StreamingResponse 状态码在首字节前就已提交），前端回落到非流式端点/提示。
+    """
+    _ = principal
+    import json as _json
+
+    from fastapi.responses import StreamingResponse
+
+    from gateway.app.services.plc.chat_ops import stream_project_answer
+    from gateway.app.services.plc.llm_explain import LlmNotConfigured
+    from plc_engine.canvas_model import CanvasState
+
+    canvas = CanvasState.from_dict(body.get("canvas") or {})
+    prompt = str(body.get("prompt") or body.get("message") or "").strip()
+    if not prompt:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "PROMPT_REQUIRED", "message": "body.prompt is required"},
+        )
+    context = body.get("context") or {}
+
+    def gen():
+        try:
+            for delta, usage in stream_project_answer(prompt, canvas, context):
+                if delta:
+                    yield f"data: {_json.dumps({'delta': delta}, ensure_ascii=False)}\n\n"
+                elif usage:
+                    yield f"data: {_json.dumps({'usage': usage})}\n\n"
+        except LlmNotConfigured:
+            yield f"data: {_json.dumps({'error': {'code': 'LLM_NOT_CONFIGURED'}})}\n\n"
+        except RuntimeError as exc:
+            yield (
+                "data: "
+                + _json.dumps({"error": {"code": "LLM_CALL_FAILED", "message": str(exc)[:300]}})
+                + "\n\n"
+            )
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/canvas/precheck", response_model=ApiResponse[dict[str, Any]])
@@ -998,7 +1106,13 @@ async def canvas_precheck_endpoint(
     from plc_engine.scl_precheck import precheck_canvas
 
     canvas = CanvasState.from_dict(body.get("canvas") or {})
-    return ApiResponse(ok=True, data=precheck_canvas(canvas), request_id=request_id)
+    raw_names = body.get("block_names")
+    block_names = (
+        [str(n).strip() for n in raw_names if str(n).strip()] if isinstance(raw_names, list) else None
+    )
+    return ApiResponse(
+        ok=True, data=precheck_canvas(canvas, block_names=block_names), request_id=request_id
+    )
 
 
 @router.post("/canvas/migrate-scl", response_model=ApiResponse[dict[str, Any]])
@@ -1254,7 +1368,8 @@ async def canvas_explain_block_endpoint(
                 "message": (
                     "深度解释需要 LLM：在网关进程设置环境变量 "
                     "PLC_LLM_BASE_URL（OpenAI 兼容端点）、PLC_LLM_API_KEY、PLC_LLM_MODEL，"
-                    "然后重启网关（python tools/devctl.py 重新 up gateway）。"
+                    "或执行 setx DEEPSEEK_API_KEY <key> 后重启网关即可沿用 DeepSeek"
+                    "（默认 deepseek-chat @ https://api.deepseek.com/v1）。"
                 ),
             },
         ) from exc

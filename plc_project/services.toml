@@ -34,6 +34,15 @@ COMPILE_JOB_TIMEOUT_S = "1500"
 PLC_COMPILE_JOB_SUBPROCESS = "1"
 # 本机代理不可达时用 uv 缓存离线组装依赖；代理恢复后可移除此行
 UV_OFFLINE = "1"
+# LLM 深度解释：DeepSeek（OpenAI 兼容）。密钥不落仓库——沿用用户环境变量
+# DEEPSEEK_API_KEY（setx 设置即可；llm_explain.py 会回退读进程 env 和注册表）。
+# deepseek-flash 为官方文档现行低价型号（deepseek-chat 为旧别名）；V4 系列
+# thinking 默认开启，代码已对 deepseek 端点显式关闭以省 reasoning tokens。
+PLC_LLM_BASE_URL = "https://api.deepseek.com/v1"
+PLC_LLM_MODEL = "deepseek-flash"
+# 本机 127.0.0.1:10808 代理常不在线；DeepSeek 直连可达，别让死代理拦截
+NO_PROXY = "127.0.0.1,localhost,api.deepseek.com"
+no_proxy = "127.0.0.1,localhost,api.deepseek.com"
 
 [services.web]
 start = "npm run dev"

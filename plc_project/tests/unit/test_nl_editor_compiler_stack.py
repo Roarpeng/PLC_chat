@@ -45,6 +45,38 @@ def test_precheck_catches_todo_and_end_mismatch():
     assert any("TODO" in e["message"] or "配对" in e["message"] for e in report["errors"])
 
 
+def test_precheck_scoped_to_block_names():
+    """chat 编辑流程只预检触及的块：导入降级产生的 synced 占位块（TODO/空网络）不拦无关编辑。"""
+    c = create_empty_canvas("Demo")
+    c.blocks["MotorCtrl"].scl_body = "(* EMPTY NETWORK *)"  # 模拟 HR001 降级导入占位
+    c.blocks["MotorCtrl"].networks = []
+
+    full = precheck_canvas(c)
+    assert full["ok"] is False  # 全量检查会被占位块拦住
+
+    scoped = precheck_canvas(c, block_names=["MainDB"])
+    assert scoped["ok"] is True  # 只查 MainDB（DB 块无 SCL 问题）→ 不拦
+
+    # 空数组 = ops 只涉及 HMI/标签：不查任何 SCL 块，仅 HMI 绑定检查
+    scoped_empty = precheck_canvas(c, block_names=[])
+    assert scoped_empty["ok"] is True
+
+
+def test_ops_touched_blocks_extracts_all_shapes():
+    from gateway.app.services.plc.chat_ops import ops_touched_blocks
+
+    ops = [
+        {"op": "add_variable", "block": "MainDB", "variable": {"name": "X"}},
+        {"op": "add_block", "block": {"name": "NewFB", "block_type": "FB"}},
+        {"op": "update_block", "name": "MotorCtrl", "patch": {"comment": "c"}},
+        {"op": "remove_block", "name": "MainDB"},
+        {"op": "add_hmi_widget", "widget": {"id": "w1"}},
+        {"op": "add_variable", "block": "MainDB", "variable": {"name": "Y"}},
+    ]
+    assert ops_touched_blocks(ops) == ["MainDB", "NewFB", "MotorCtrl"]
+    assert ops_touched_blocks([]) == []
+
+
 def test_chat_ops_rules_estop(monkeypatch):
     from gateway.app.services.plc.chat_ops import build_chat_ops
 

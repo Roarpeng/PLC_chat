@@ -16,6 +16,8 @@ import {
   makeRenameOps,
   deleteVariableOps,
   deleteNetworkOps,
+  touchedBlockNames,
+  looksLikeQuestion,
 } from "./state/canvasOps";
 import { blankCanvas } from "./state/tiaXmlImport";
 import { analyzeCanvas, type VarRef } from "./state/crossRef";
@@ -32,6 +34,7 @@ import { useResizablePanes } from "./state/useResizablePanes";
 import type { CanvasStateData, CompileJobData, CompilerAttribution } from "./canvas/types";
 import { CompileDrawer } from "./shell/CompileDrawer";
 import {
+  GATEWAY_BASE,
   GatewayError,
   pollUntil,
   requestPlc,
@@ -171,6 +174,14 @@ const App: React.FC = () => {
   const [backendConnected, setBackendConnected] = useState<boolean | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>(() => loadSessions());
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  // 异步流程（handleSend→applyOpsAndCommit）跨 await 后闭包里的 activeSessionId/sessions
+  // 已过期：曾据此再建一个空会话抢占显示、丢掉刚写入的消息。用 ref 跟踪最新 active id，
+  // commitSession 全函数式读最新 sessions，杜绝 stale closure。
+  const activeSessionIdRef = React.useRef<string | null>(null);
+  const setActiveSession = (id: string | null) => {
+    activeSessionIdRef.current = id;
+    setActiveSessionId(id);
+  };
 
   /* 对话坞 */
   const [chatInput, setChatInput] = useState("");
@@ -322,31 +333,50 @@ const App: React.FC = () => {
 
   /* 会话提交：追加消息 + 画布快照，必要时新建会话；返回会话 id */
   const commitSession = (nextCanvas: CanvasStateData, msgs: ChatMessage[], firstPrompt?: string): string => {
-    let id = activeSessionId;
-    let list: ChatSession[];
-    if (!id) {
-      const s = makeSession(nextCanvas, firstPrompt);
-      s.messages = [...s.messages, ...msgs];
-      id = s.id;
-      list = [s, ...sessions];
-    } else {
-      const cur = sessions.find((s) => s.id === id);
-      if (!cur) {
-        const s = makeSession(nextCanvas, firstPrompt);
-        s.messages = [...s.messages, ...msgs];
-        id = s.id;
-        list = [s, ...sessions];
-      } else {
+    // 新会话 id 在 updater 外生成（updater 必须可重入幂等，React 严格模式会双调用）
+    const pendingId = newSessionId();
+    setSessions((prev) => {
+      const id = activeSessionIdRef.current;
+      const cur = id ? prev.find((s) => s.id === id) : undefined;
+      let list: ChatSession[];
+      if (cur) {
         list = [
-          { ...cur, messages: [...cur.messages, ...msgs], updatedAt: Date.now(), canvas: nextCanvas },
-          ...sessions.filter((s) => s.id !== id),
+          {
+            ...cur,
+            messages: msgs.length ? [...cur.messages, ...msgs] : cur.messages,
+            updatedAt: Date.now(),
+            canvas: nextCanvas,
+          },
+          ...prev.filter((s) => s.id !== cur.id),
         ];
+      } else {
+        // makeSession(firstPrompt) 会预置同名用户消息——msgs 已含该消息，直接覆盖避免重复气泡
+        const s = makeSession(nextCanvas, firstPrompt);
+        s.id = pendingId;
+        s.messages = msgs;
+        list = [s, ...prev];
       }
+      persistSessions(list);
+      return list;
+    });
+    if (!activeSessionIdRef.current) {
+      setActiveSession(pendingId);
+      return pendingId;
     }
-    setSessions(list);
-    setActiveSessionId(id);
-    persistSessions(list);
-    return id;
+    return activeSessionIdRef.current;
+  };
+
+  /* 原位更新某条消息文本（流式回答逐段刷新用）；persist=false 时只改内存，
+     流结束再落 localStorage，避免逐 token 写盘 */
+  const updateMessageText = (id: string, text: string, persist = true) => {
+    setSessions((prev) => {
+      const list = prev.map((s) => ({
+        ...s,
+        messages: s.messages.map((m) => (m.id === id ? { ...m, text } : m)),
+      }));
+      if (persist) persistSessions(list);
+      return list;
+    });
   };
 
   /* 通用 ops 管道：本地乐观应用（立即渲染 + 记会话），后端结果后台和解 */
@@ -355,17 +385,25 @@ const App: React.FC = () => {
   const applyOpsAndCommit = async (
     ops: any[],
     userText: string | null,
-    systemText?: string
+    systemText?: string,
+    opts?: { reuseSystemId?: string },
   ): Promise<CanvasStateData> => {
     const seq = ++editSeqRef.current;
     const next = applyOpsLocally(canvas, ops);
 
     // 立即乐观渲染 + 会话记录（不等网络）
     setCanvas(next);
-    const msgs: ChatMessage[] = [];
-    if (userText) msgs.push({ id: msgId(), role: "user", text: userText, ts: Date.now() });
-    msgs.push({ id: msgId(), role: "system", text: systemText ?? summarizeOps(ops), ts: Date.now() });
-    const sessionId = commitSession(next, msgs, userText ?? undefined);
+    let sessionId: string;
+    if (opts?.reuseSystemId) {
+      // 会话里已有占位消息（handleSend 预写），原位写入结果并刷新画布快照
+      updateMessageText(opts.reuseSystemId, systemText ?? summarizeOps(ops));
+      sessionId = commitSession(next, [], undefined);
+    } else {
+      const msgs: ChatMessage[] = [];
+      if (userText) msgs.push({ id: msgId(), role: "user", text: userText, ts: Date.now() });
+      msgs.push({ id: msgId(), role: "system", text: systemText ?? summarizeOps(ops), ts: Date.now() });
+      sessionId = commitSession(next, msgs, userText ?? undefined);
+    }
 
     // 后端尽力同步：成功且期间无新编辑时，用权威结果和解（同时刷新会话快照）
     requestPlc<CanvasStateData>(`/api/v1/plc/canvas/patch`, {
@@ -391,15 +429,122 @@ const App: React.FC = () => {
     return next;
   };
 
-  /* 发送自然语言指令：优先后端 /canvas/chat-ops，失败回落本地规则引擎 */
+  /* 提问 → 后端 SSE 流式问答：delta 逐段刷进占位消息（打字机效果），
+     结束附 token 成本脚注；流式不可用时回落非流式端点；都失败返回 false */
+  const tryChatAnswerStream = async (prompt: string, phId: string): Promise<boolean> => {
+    let sysText = "";
+    let usage: Record<string, number> | null = null;
+    try {
+      const res = await fetch(`${GATEWAY_BASE}/api/v1/plc/canvas/chat-answer/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          canvas,
+          prompt,
+          context: { selected_block: selectedBlockName, focus },
+        }),
+        signal: AbortSignal.timeout?.(120000),
+      });
+      if (res.ok && res.body) {
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          const parts = buf.split("\n");
+          buf = parts.pop() ?? "";
+          for (const line of parts) {
+            const t = line.trim();
+            if (!t.startsWith("data:")) continue;
+            const data = t.slice(5).trim();
+            if (!data || data === "[DONE]") continue;
+            let obj: any;
+            try {
+              obj = JSON.parse(data);
+            } catch {
+              continue;
+            }
+            if (obj.error) throw new GatewayError(obj.error.message || obj.error.code, {
+              status: 200,
+              code: obj.error.code,
+              body: obj.error,
+            });
+            if (typeof obj.delta === "string" && obj.delta) {
+              sysText += obj.delta;
+              updateMessageText(phId, sysText, false);
+            }
+            if (obj.usage) usage = obj.usage;
+          }
+        }
+      }
+    } catch {
+      /* 流式中断/不可用 → 下方回落非流式 */
+    }
+    if (!sysText) {
+      try {
+        const data = await requestPlc<{ answer?: string; usage?: Record<string, number> }>(
+          `/api/v1/plc/canvas/chat-answer`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              canvas,
+              prompt,
+              context: { selected_block: selectedBlockName, focus },
+            }),
+            signal: AbortSignal.timeout?.(120000),
+          },
+        );
+        if (data?.answer) {
+          sysText = data.answer;
+          usage = data.usage || null;
+        }
+      } catch {
+        return false;
+      }
+    }
+    if (!sysText) return false;
+    const u = usage || {};
+    const hitRate = u.prompt_tokens
+      ? Math.round(((u.prompt_cache_hit_tokens || 0) / u.prompt_tokens) * 100)
+      : null;
+    const footer =
+      u.prompt_tokens || u.completion_tokens
+        ? `\n\n（DeepSeek · 输入 ${u.prompt_tokens ?? "?"} tok${
+            hitRate !== null ? ` · 缓存命中 ${hitRate}%` : ""
+          } · 输出 ${u.completion_tokens ?? "?"} tok）`
+        : "";
+    updateMessageText(phId, sysText + footer);
+    return true;
+  };
+
+  /* 发送自然语言指令：优先后端 /canvas/chat-ops，失败回落本地规则引擎。
+     用户消息与"正在思考…"占位立即上屏（不等网络），结果原位写入占位 */
   const handleSend = async () => {
     const prompt = chatInput.trim();
     if (!prompt || isSubmitting) return;
     setIsSubmitting(true);
     setChatInput("");
+    const phId = msgId();
+    commitSession(canvas, [
+      { id: msgId(), role: "user", text: prompt, ts: Date.now() },
+      { id: phId, role: "system", text: "正在思考…", ts: Date.now() },
+    ], prompt);
+    const settle = (text: string) => updateMessageText(phId, text);
     try {
       let ops: any[] = [];
       let previewNote = "";
+      // 提问/分析类输入且本地无编辑意图 → 直接走流式问答，绝不让 LLM ops 路径
+      // 把"修改项目"这类元请求字面执行成画布变更
+      const localOps = buildOpsFromPrompt(prompt, canvas);
+      const question = looksLikeQuestion(prompt);
+      let answerTried = false;
+      if (!localOps.length && question) {
+        answerTried = true;
+        if (await tryChatAnswerStream(prompt, phId)) return;
+      }
       try {
         const data = await requestPlc<{ ops?: any[]; source?: string }>(
           `/api/v1/plc/canvas/chat-ops`,
@@ -424,48 +569,42 @@ const App: React.FC = () => {
         /* fall through to local rules */
       }
       if (!ops.length) {
-        ops = buildOpsFromPrompt(prompt, canvas);
+        ops = localOps;
       }
       if (ops.length === 0) {
-        commitSession(canvas, [
-          { id: msgId(), role: "user", text: prompt, ts: Date.now() },
-          {
-            id: msgId(),
-            role: "system",
-            text: "暂未识别出可执行的画布操作，试试：创建 FB ConveyorCtrl / 在 ConveyorCtrl 中添加变量 Speed Real / 添加急停按钮。",
-            ts: Date.now(),
-          },
-        ], prompt);
+        // LLM 对提问正确返回空 ops 时也走问答（此前只兜本地意图）
+        if (question && !answerTried) {
+          if (await tryChatAnswerStream(prompt, phId)) return;
+        }
+        settle("暂未识别出可执行的画布操作。分析类问题（如运行逻辑/原理）请选中画布中的块后查看深度解释；编辑指令示例：创建 FB ConveyorCtrl / 在 ConveyorCtrl 中添加变量 Speed Real / 添加急停按钮。");
         return;
       }
-      // Local precheck when ops touch SCL
+      // Local precheck when ops touch SCL（只检查 ops 触及的块——导入产生的
+      // synced 占位块不会被写回，不该拦住无关编辑；与编译门禁同语义）
       try {
         const pre = await requestPlc<{ ok?: boolean; errors?: Array<{ message?: string }> }>(
           `/api/v1/plc/canvas/precheck`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ canvas: applyOpsLocally(canvas, ops) }),
+            body: JSON.stringify({
+              canvas: applyOpsLocally(canvas, ops),
+              block_names: touchedBlockNames(ops),
+            }),
             signal: AbortSignal.timeout?.(10000),
           },
         );
         if (pre && pre.ok === false) {
-          const errs = (pre.errors || []).map((e: any) => e.message).join("；");
-          commitSession(canvas, [
-            { id: msgId(), role: "user", text: prompt, ts: Date.now() },
-            {
-              id: msgId(),
-              role: "system",
-              text: `本地预检未通过，未应用修改：${errs || "未知错误"}`,
-              ts: Date.now(),
-            },
-          ], prompt);
+          const unique = [...new Set((pre.errors || []).map((e: any) => e.message))];
+          settle(`本地预检未通过，未应用修改：${unique.join("；") || "未知错误"}`);
           return;
         }
       } catch {
         /* precheck optional */
       }
-      await applyOpsAndCommit(ops, `${prompt}${previewNote}`);
+      await applyOpsAndCommit(ops, null, `${summarizeOps(ops)}${previewNote}`, {
+        reuseSystemId: phId,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -476,7 +615,7 @@ const App: React.FC = () => {
     const s = sessions.find((x) => x.id === id);
     if (!s) return;
     abortCompilePoll(); // 别让上一个会话的编译结果盖掉这份画布
-    setActiveSessionId(id);
+    setActiveSession(id);
     setCanvas(s.canvas);
     setSelectedBlockName(
       Object.values(s.canvas.blocks).find((b) => b.block_type !== "DB")?.name ?? null
@@ -486,7 +625,7 @@ const App: React.FC = () => {
 
   const handleNewSession = () => {
     abortCompilePoll();
-    setActiveSessionId(null);
+    setActiveSession(null);
     setCanvas(defaultCanvas);
     setSelectedBlockName("MotorCtrl");
     setFocus(null);
@@ -500,7 +639,7 @@ const App: React.FC = () => {
     persistSessions(list);
     if (activeSessionId === id) {
       abortCompilePoll();
-      setActiveSessionId(null);
+      setActiveSession(null);
       setCanvas(defaultCanvas);
       setSelectedBlockName("MotorCtrl");
     }
@@ -534,7 +673,7 @@ const App: React.FC = () => {
     ];
     const list = [s, ...sessions];
     setSessions(list);
-    setActiveSessionId(s.id);
+    setActiveSession(s.id);
     persistSessions(list);
 
     setCanvas(imported);
@@ -657,7 +796,7 @@ const App: React.FC = () => {
     ];
     const list = [s, ...sessions];
     setSessions(list);
-    setActiveSessionId(s.id);
+    setActiveSession(s.id);
     persistSessions(list);
     setSelectedBlockName(null);
     setFocus(null);
