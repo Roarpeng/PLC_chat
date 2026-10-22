@@ -1,4 +1,4 @@
-import type { PlcCoverage, PlcJobDetail, PlcStructureUnit } from "../api";
+import type { PlcCoverage, PlcJobDetail, PlcStructureUnit } from "./lib/plcGateway";
 
 function coverageConvertedPct(cov: PlcCoverage | null | undefined): number {
   const total = Number(cov?.total_blocks || 0);

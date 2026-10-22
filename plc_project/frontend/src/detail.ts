@@ -1,5 +1,8 @@
-import type { PlcJobDetail } from "../api";
-import type { SclDiffItem } from "../SclDiffPreview";
+import type { PlcJobDetail } from "./lib/plcGateway";
+import type { SclDiffItem } from "./SclDiffPreview";
+
+/** Returned by `writebackHintForBlock` and consumed by `NodeWorkbench`'s write-back gate. */
+export type WritebackChipHint = { canWrite: boolean; reason: string };
 
 type CsOp = { kind?: string; payload?: Record<string, unknown> };
 
@@ -34,7 +37,7 @@ export function helperNamesFromChangeset(ops: CsOp[], notes: unknown[], focus: s
 export function writebackHintForBlock(
   job: PlcJobDetail | null | undefined,
   blockName: string,
-): { canWrite: boolean; reason: string } {
+): WritebackChipHint {
   const name = String(blockName || "").trim();
   if (!name) {
     return { canWrite: false, reason: "未选中程序块" };

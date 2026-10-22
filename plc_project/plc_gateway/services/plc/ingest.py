@@ -4,16 +4,15 @@ from __future__ import annotations
 
 import logging
 import os
-import threading
 import tempfile
+import threading
 from pathlib import Path
 from typing import Any
 
 from gateway.app.config import get_settings
-
 from gateway.app.services.plc.job_store import (
-    _finish_progress,
     _append_progress,
+    _finish_progress,
     _now,
     _start_progress,
     get_job,
@@ -449,8 +448,8 @@ def run_ingest_job(
             )[:400],
         )
         try:
-            from agents.plc.tia.review import run_review
             from agents.plc.tia.dossier import build_block_dossiers
+            from agents.plc.tia.review import run_review
 
             _start_progress(job, "review", "确定性审查与节点档案")
             t_review = time.monotonic()
@@ -533,7 +532,7 @@ def run_ingest_job(
         job["ingest_phase"] = "ready"
         job["brief_ready"] = True
         job["error"] = None
-    except Exception as exc:  # noqa: BLE001 — surface to API
+    except Exception as exc:
         logger.exception("PLC ingest failed job_id=%s", job_id)
         job["status"] = "failed"
         job["ingest_phase"] = "failed"

@@ -1,5 +1,17 @@
-import type { PlcCitation, PlcJobDetail } from "../../api";
-import type { ChatMsg } from "../../workbench/model";
+import type { PlcCitation, PlcJobDetail } from "../lib/plcGateway";
+
+/**
+ * Minimal chat message shape used for node-scoped Q&A and citation collection.
+ * Declared locally: the original upstream owner of this type no longer exists in this repo.
+ */
+export type ChatMsg = {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  /** When set, the message belongs to the node matching this label. */
+  scopeLabel?: string;
+  citations?: PlcCitation[];
+};
 
 export type PlcGraphType =
   | "OB"

@@ -20,6 +20,18 @@ idle_timeout = 3600
 [services.gateway.env]
 CORS_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
 RESEARCHOS_TIA_OPENNESS_EXE = "industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe"
+# 常驻 Openness 会话（8791）与一次性 CLI 写回会争抢同一个 .apXX 工程：
+# 会话持有工程时，后续一次性 CLI 再打开会被 TIA 拒绝，导致导入失败（真机复现）。
+# 在「写入/编译也走会话 API」落地前，默认关闭常驻会话，全流程走一次性 CLI。
+RESEARCHOS_TIA_SESSION = "0"
+# 博图真机操作耗时，默认 900s 偏紧；TIA 冷启动单次可达 30s+
+COMPILE_JOB_TIMEOUT_S = "1500"
+# 编译作业放进独立子进程：硬超时/取消到期能 taskkill 整个进程树（含一次性
+# TiaOpenness.Server.exe 及其 TIA 实例），真正释放 .apXX 工程锁，而不是只打
+# timed_out 标记、任由卡死的线程继续持有锁卡住后续作业。
+# 注意：仅在一次性 CLI 路径（RESEARCHOS_TIA_SESSION=0）下有效；常驻会话/远程
+# worker 模式的 TIA 实例不在本进程树内，杀不到（详见 compile_jobs.py 模块注释）。
+PLC_COMPILE_JOB_SUBPROCESS = "1"
 # 本机代理不可达时用 uv 缓存离线组装依赖；代理恢复后可移除此行
 UV_OFFLINE = "1"
 

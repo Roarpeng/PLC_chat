@@ -1,4 +1,13 @@
-import type { CanvasFocusRequest } from "../../KnowledgeCanvas";
+/**
+ * Canvas focus request produced from a jump intent.
+ * Declared locally: the original upstream owner of this type no longer exists in this repo.
+ */
+export type CanvasFocusRequest = {
+  key: number;
+  nodeId?: string;
+  blockName?: string;
+  ask?: boolean;
+};
 
 /** Brief / device-card → canvas. Default is inspect-only; `ask` opens Workbench. */
 export type CanvasJumpIntent = {

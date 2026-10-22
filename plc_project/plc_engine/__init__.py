@@ -14,19 +14,19 @@ from __future__ import annotations
 from typing import Any
 
 __all__ = [
-    "run",
-    "StandalonePlcEngine",
-    "translate_simaticml_to_scl",
-    "parse_simaticml_block_content",
-    "extract_tag_table_content",
-    "audit_block_content",
     "CanvasState",
-    "create_empty_canvas",
+    "StandalonePlcEngine",
     "apply_canvas_patch",
     "attribute_compiler_errors",
-    "generate_canvas_autofix_patch",
-    "preview_canvas_scl",
+    "audit_block_content",
+    "create_empty_canvas",
     "execute_canvas_writeback",
+    "extract_tag_table_content",
+    "generate_canvas_autofix_patch",
+    "parse_simaticml_block_content",
+    "preview_canvas_scl",
+    "run",
+    "translate_simaticml_to_scl",
 ]
 
 

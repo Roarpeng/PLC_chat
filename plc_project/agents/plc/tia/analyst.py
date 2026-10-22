@@ -12,9 +12,17 @@ from typing import Any
 try:  # Agent B may add this module independently.
     from agents.plc.tia.graph_query import (  # type: ignore[import-not-found]
         callees_of as _query_callees_of,
+    )
+    from agents.plc.tia.graph_query import (
         callers_of as _query_callers_of,
+    )
+    from agents.plc.tia.graph_query import (
         dead_blocks as _query_dead_blocks,
+    )
+    from agents.plc.tia.graph_query import (
         readers_of_tag as _query_readers_of_tag,
+    )
+    from agents.plc.tia.graph_query import (
         writers_of_tag as _query_writers_of_tag,
     )
 except ImportError:  # Self-sufficient JSON KG fallbacks are used below.

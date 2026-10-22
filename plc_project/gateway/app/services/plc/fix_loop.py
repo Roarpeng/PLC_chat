@@ -24,8 +24,8 @@ def run_fix_loop(
     compile_runner=None,
 ) -> dict[str, Any]:
     """Return {ok, rounds:[{attributions, ops, result}], canvas}."""
-    from gateway.app.services.plc.compile_jobs import default_compile_runner
     from gateway.app.services.plc.chat_ops import build_chat_ops
+    from gateway.app.services.plc.compile_jobs import default_compile_runner
 
     runner = compile_runner or default_compile_runner
     rounds: list[dict[str, Any]] = []

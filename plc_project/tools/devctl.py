@@ -141,7 +141,7 @@ def cmd_up(name: str) -> int:
     state = load_state()
     pid = state.get(name, {}).get("pid")
     if alive(pid):
-        ok, detail = probe_health(spec.get("health", ""))
+        _ok, detail = probe_health(spec.get("health", ""))
         print(f"[{name}] 已在运行 pid={pid} 健康={detail}")
         return 0
 
@@ -207,7 +207,7 @@ def cmd_status() -> int:
         entry = state.get(name)
         pid = entry and entry.get("pid")
         run = alive(pid)
-        ok, detail = probe_health(spec.get("health", "")) if run else (False, "—")
+        _ok, detail = probe_health(spec.get("health", "")) if run else (False, "—")
         up = f"{int(now - entry['started_at']) // 60} 分钟" if run and entry else "—"
         ttl = spec.get("idle_timeout")
         flag = ""

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import ipaddress
 import json
 import os
 import secrets
@@ -12,8 +13,8 @@ import tempfile
 import threading
 import time
 import zipfile
-from typing import Annotated
 from pathlib import Path
+from typing import Annotated
 
 import uvicorn
 from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
@@ -30,7 +31,6 @@ from agents.plc.tia.importer import (
     is_tia_archive_suffix,
     pick_project_root_from_extracted,
 )
-
 
 app = FastAPI(title="ResearchOS Openness Worker", version="1.1.0")
 #: One TIA Portal instance per worker — exports and imports serialize on it.
@@ -201,7 +201,7 @@ def _file_response(
 
 
 @app.post("/export", dependencies=[Depends(require_bearer)])
-def export_project(project: UploadFile = File(...)):
+def export_project(project: Annotated[UploadFile, File()]):
     filename = Path(project.filename or "").name
     suffix = Path(filename).suffix.lower()
     is_apxx = suffix in APXX_SUFFIXES
@@ -280,7 +280,7 @@ def export_project(project: UploadFile = File(...)):
 
 @app.post("/import", dependencies=[Depends(require_bearer)])
 def import_writeback_bundle(
-    bundle: UploadFile = File(...),
+    bundle: Annotated[UploadFile, File()],
     plc_name: str = "",
     compile_after: bool = True,
 ) -> dict[str, object]:
@@ -357,7 +357,7 @@ def import_writeback_bundle(
         return report
     except HTTPException:
         raise
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         from agents.plc.tia.openness_cli import format_openness_failure
 
         detail = format_openness_failure(exc, project_path=source, action="import")
@@ -452,14 +452,47 @@ def get_tags_endpoint(
         _OPENNESS_LOCK.release()
 
 
+def _is_loopback_host(host: str) -> bool:
+    normalized = host.strip().strip("[]").lower()
+    if normalized in {"localhost", "localhost.localdomain"}:
+        return True
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
+    except ValueError:
+        return False
+
+
+def worker_host() -> str:
+    """Bind address for the worker; defaults to loopback.
+
+    ``POST /import`` really mutates a TIA project, so exposing the worker beyond
+    loopback is only allowed when a bearer token is configured — otherwise the
+    process refuses to start instead of serving unauthenticated write endpoints.
+    """
+    host = os.getenv("RESEARCHOS_OPENNESS_WORKER_HOST", "").strip() or "127.0.0.1"
+    if not _is_loopback_host(host) and not _bearer_token():
+        raise RuntimeError(
+            f"Refusing to bind the Openness worker to non-loopback host {host!r}: "
+            "RESEARCHOS_OPENNESS_WORKER_TOKEN must be set for remote access. "
+            "Set the token, or leave RESEARCHOS_OPENNESS_WORKER_HOST unset to bind 127.0.0.1."
+        )
+    return host
+
+
 def run() -> None:
     """Run the worker from the repository virtual environment."""
+    host = worker_host()
     uvicorn.run(
         app,
-        host=os.getenv("RESEARCHOS_OPENNESS_WORKER_HOST", "0.0.0.0"),
+        host=host,
         port=int(os.getenv("RESEARCHOS_OPENNESS_WORKER_PORT", "8015")),
     )
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Console-script entry point (``plc-openness-worker``)."""
     run()
+
+
+if __name__ == "__main__":
+    main()

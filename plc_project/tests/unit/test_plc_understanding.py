@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from gateway.app.services.chat_turns import _assistant_from_plc
-from gateway.app.services.plc_jobs import answer_block_chat
 from agents.plc.tia.optimize import propose_optimization_changeset
 from agents.plc.tia.understanding import (
     format_welcome_interview,
     ingest_engineer_reply,
     is_understanding_thin,
 )
-from tests.unit.test_plc_nested_fb_type import _job_from_project, _nested_project
+from gateway.app.services.chat_turns import _assistant_from_plc
+from gateway.app.services.plc_jobs import answer_block_chat
 from tests.unit.test_plc_analyst import _job as _analyst_job
+from tests.unit.test_plc_nested_fb_type import _job_from_project, _nested_project
 
 
 def test_welcome_asks_questions_instead_of_claiming_understanding():

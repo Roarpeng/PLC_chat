@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger("researchos.plc.understanding")
@@ -40,11 +40,11 @@ _ROLE_PATTERNS: list[tuple[str, str]] = [
 _NESTED_REQUIRED_RE = re.compile(
     r"必须的(西门子)?多实例|必须保留嵌套|是必须的多实例|required\s*multi.?instance|"
     r"不要拍平|不建议拍平|不能拍平|must_keep_nested",
-    re.I,
+    re.IGNORECASE,
 )
 _NESTED_ACCIDENTAL_RE = re.compile(
     r"意外耦合|可以拍平|可拍平|不是必须的(多实例)?|偶然耦合|accidental",
-    re.I,
+    re.IGNORECASE,
 )
 
 _QUESTION_RE = re.compile(
@@ -63,7 +63,7 @@ WRITE_OP_KINDS = frozenset(
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def empty_understanding() -> dict[str, Any]:
@@ -536,7 +536,7 @@ def _set_nested(
 
 def _strip_at(message: str) -> tuple[str | None, str]:
     msg = (message or "").strip()
-    hit = re.match(r"^@(\S+)\s*(.*)$", msg, re.S)
+    hit = re.match(r"^@(\S+)\s*(.*)$", msg, re.DOTALL)
     if not hit:
         return None, msg
     return hit.group(1).strip(), (hit.group(2) or "").strip()
@@ -561,7 +561,7 @@ def _match_role(text: str) -> str | None:
     if blob in LABEL_TO_ROLE:
         return LABEL_TO_ROLE[blob]
     for pat, role in _ROLE_PATTERNS:
-        if re.search(pat, blob, re.I):
+        if re.search(pat, blob, re.IGNORECASE):
             return role
     return None
 

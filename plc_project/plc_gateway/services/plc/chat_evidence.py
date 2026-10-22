@@ -14,8 +14,8 @@ from gateway.app.services.plc.chat_intents import (
 
 from .evidence.blocks import (
     _block_assoc_lines,
-    _block_meta,
     _block_io_lists,
+    _block_meta,
     _block_network_titles,
     _call_relation_names,
     _match_block_query,
@@ -40,7 +40,6 @@ from .evidence.optimize import (
     _block_risk_notes,
     _format_optimize_hints,
 )
-from .evidence.signal import _format_signal_trace
 from .evidence.scl import (
     _expr_dict_to_scl,
     _folded_logic_lines,
@@ -58,12 +57,11 @@ from .evidence.shared import (
     _network_titles_from_scl,
     logger,
 )
+from .evidence.signal import _format_signal_trace
 
 __all__ = [
     "Any",
     "Path",
-    "re",
-    "logger",
     "_block_assoc_lines",
     "_block_io_lists",
     "_block_meta",
@@ -72,16 +70,16 @@ __all__ = [
     "_call_relation_names",
     "_describe_block_function",
     "_describe_instance_from_kg",
-    "_expr_dict_to_scl",
     "_explain_block_understanding",
+    "_expr_dict_to_scl",
     "_folded_logic_lines",
     "_folded_scl_dump",
     "_format_block_runtime_explain",
     "_format_block_scl_markdown",
     "_format_nested_fb_line",
     "_format_optimize_hints",
-    "_format_signal_trace",
     "_format_scl_logic_block",
+    "_format_signal_trace",
     "_format_typed_as_nest_lines",
     "_join_capped",
     "_lookup_instance_entity",
@@ -98,4 +96,6 @@ __all__ = [
     "_tag_io_for_block",
     "_typed_as_nest_payload",
     "_wants_block_explain",
+    "logger",
+    "re",
 ]

@@ -1,23 +1,27 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import MarkdownBody from "../../MarkdownBody";
-import type { PlcCitation, PlcJobDetail } from "../../api";
-import type { KnowledgeNode, WritebackChipHint } from "../../KnowledgeCanvas";
-import { writebackHintForBlock } from "../detail";
-import type { ChatMsg } from "../../workbench/model";
-import { userBubbleParts } from "../../workbench/model";
+import MarkdownBody from "../MarkdownBody";
+import type { PlcCitation, PlcJobDetail } from "../lib/plcGateway";
+import { writebackHintForBlock, type WritebackChipHint } from "../detail";
+import type { ChatMsg } from "./inspectModel";
 import { CitationSourceList } from "./CitationSourceList";
 import { readHumanNote, writeHumanNote } from "./humanNotes";
 import {
   collectNodeCitations,
   inspectNode,
   nodeScopedMessages,
+  type InspectableNode,
   type InspectContext,
 } from "./inspectModel";
 
 export type NodeWorkbenchTab = "meaning" | "run" | "tune";
 
+/** Splits a user bubble into its visible body. Kept local: upstream helper module is gone. */
+function userBubbleParts(m: ChatMsg): { body: string } {
+  return { body: String(m.content || "").trim() };
+}
+
 type Props = {
-  node: KnowledgeNode;
+  node: InspectableNode;
   job?: PlcJobDetail | null;
   messages: ChatMsg[];
   busy?: boolean;
@@ -29,9 +33,9 @@ type Props = {
   getSclPreview?: (blockName: string) => Array<{ block?: string }>;
   onTabChange: (tab: NodeWorkbenchTab) => void;
   onClose: () => void;
-  onAsk: (node: KnowledgeNode, question: string) => Promise<void> | void;
+  onAsk: (node: InspectableNode, question: string) => Promise<void> | void;
   onOptimizePropose?: () => Promise<void> | void;
-  onConfirmWriteback?: (node: KnowledgeNode) => Promise<void> | void;
+  onConfirmWriteback?: (node: InspectableNode) => Promise<void> | void;
   onJumpCitation?: (ref: string) => void;
 };
 

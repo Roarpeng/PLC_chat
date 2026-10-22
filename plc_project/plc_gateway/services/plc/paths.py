@@ -9,7 +9,6 @@ from uuid import uuid4
 
 from gateway.app.config import Settings, get_settings
 
-
 ALLOWED_UPLOAD_SUFFIXES = {
     ".xml",
     ".zip",

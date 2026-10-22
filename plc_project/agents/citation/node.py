@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from runtime.researchos_runtime.state import TaskState
@@ -71,7 +71,7 @@ def _host(url: str) -> str:
 
 
 def _bare_host(host: str) -> str:
-    return host[4:] if host.startswith("www.") else host
+    return host.removeprefix("www.")
 
 
 def _trust_level(url: str, source_type: str | None = None) -> str:
@@ -101,7 +101,7 @@ def _publisher(item: dict[str, Any], url: str) -> str:
 def run(state: TaskState) -> dict[str, Any]:
     evidence = list(state.get("evidence") or [])
     existing = list(state.get("citations") or [])
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     seen_keys: set[str] = set()
     for cit in existing:
         key = cit.get("url") or cit.get("evidence_id") or cit.get("id")

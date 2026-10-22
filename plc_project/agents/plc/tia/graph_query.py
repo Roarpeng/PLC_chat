@@ -7,9 +7,17 @@ from typing import Any
 
 from agents.plc.tia.typed_as import (
     TYPED_AS,
+)
+from agents.plc.tia.typed_as import (
     nest_depth_of as _nest_depth_of,
+)
+from agents.plc.tia.typed_as import (
     typed_as_chains as _typed_as_chains,
+)
+from agents.plc.tia.typed_as import (
     typed_as_children as _typed_as_children,
+)
+from agents.plc.tia.typed_as import (
     typed_as_members as _typed_as_members,
 )
 

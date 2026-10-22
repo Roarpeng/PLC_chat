@@ -10,7 +10,6 @@ from fastapi.testclient import TestClient
 
 from gateway.app.main import create_app
 from plc_engine.canvas_model import (
-    CanvasState,
     apply_canvas_patch,
     attribute_compiler_errors,
     create_empty_canvas,
@@ -234,7 +233,7 @@ def test_gateway_rest_canvas_endpoints(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "MainDB" in scl_data["scl_sources"]
     assert "TestVar : DInt;" in scl_data["scl_sources"]["MainDB"]
 
-    # 4. POST /canvas/confirm-writeback (with mock)
+    # 4. POST /canvas/confirm-writeback (sync branch, with mock)
     def fake_wb(*args: Any, **kwargs: Any) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         return {"ok": True, "compile": {"ok": True}}, []
 
@@ -249,11 +248,35 @@ def test_gateway_rest_canvas_endpoints(monkeypatch: pytest.MonkeyPatch) -> None:
             "canvas": patched_canvas,
             "project_path": "test.ap19",
             "plc_name": "PLC_1",
+            "sync": True,
         },
     )
     assert resp4.status_code == 200
     wb_data = resp4.json()["data"]
+    # Envelope shared with the async branch: async/job/writeback/attributions/canvas.
+    assert wb_data["async"] is False
+    assert wb_data["job"] is None
     assert wb_data["writeback"]["ok"] is True
+    assert wb_data["attributions"] == []
+    assert "MainDB" in wb_data["canvas"]["blocks"]
+
+    # 4b. Async branch (default) keeps the same envelope so the UI polling path
+    # (`data.async && data.job.id`) and the sync path share one contract.
+    monkeypatch.setattr(
+        "gateway.app.services.plc.compile_jobs.create_compile_job",
+        lambda *a, **k: {"id": "job-1", "status": "queued", "canvas": None, "attributions": []},
+    )
+    resp4b = client.post(
+        "/api/v1/plc/canvas/confirm-writeback",
+        json={"canvas": patched_canvas, "project_path": "test.ap19", "plc_name": "PLC_1"},
+    )
+    assert resp4b.status_code == 200
+    job_data = resp4b.json()["data"]
+    assert job_data["async"] is True
+    assert job_data["job"]["id"] == "job-1"
+    assert job_data["writeback"] is None
+    assert job_data["attributions"] == []
+    assert "MainDB" in job_data["canvas"]["blocks"]
 
     # 5. POST /canvas/auto-fix
     resp5 = client.post(

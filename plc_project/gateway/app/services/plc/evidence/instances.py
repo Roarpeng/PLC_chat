@@ -10,8 +10,8 @@ from .blocks import _block_assoc_lines
 from .cards import _describe_block_function
 
 __all__ = [
-    "_lookup_instance_entity",
     "_describe_instance_from_kg",
+    "_lookup_instance_entity",
 ]
 
 

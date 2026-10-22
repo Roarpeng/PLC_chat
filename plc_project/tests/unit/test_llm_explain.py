@@ -19,6 +19,7 @@ def client(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     for var in ("PLC_LLM_BASE_URL", "PLC_LLM_API_KEY", "PLC_LLM_MODEL"):
         monkeypatch.delenv(var, raising=False)
     from fastapi.testclient import TestClient
+
     from gateway.app.config import get_settings
 
     get_settings.cache_clear()
@@ -83,7 +84,7 @@ def test_deep_explain_via_mock_openai_endpoint(monkeypatch):
     captured: dict = {}
 
     class Handler(BaseHTTPRequestHandler):
-        def do_POST(self):  # noqa: N802
+        def do_POST(self):
             length = int(self.headers.get("Content-Length", 0))
             captured["path"] = self.path
             captured["auth"] = self.headers.get("Authorization", "")

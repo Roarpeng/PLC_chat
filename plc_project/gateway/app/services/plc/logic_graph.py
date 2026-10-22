@@ -11,9 +11,9 @@ def _is_ob_props(props: dict[str, Any], label: str = "") -> bool:
     name = label or str(props.get("name") or "")
     if bt == "OB":
         return True
-    if re.match(r"^OB\d", name, re.I):
+    if re.match(r"^OB\d", name, re.IGNORECASE):
         return True
-    if re.match(r"^(Startup|System|Pull|Rack|Main)\b", name, re.I):
+    if re.match(r"^(Startup|System|Pull|Rack|Main)\b", name, re.IGNORECASE):
         return True
     return False
 

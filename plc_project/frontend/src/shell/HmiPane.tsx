@@ -8,6 +8,16 @@ export interface HmiPaneProps {
   onWidgetClick(w: CanvasHmiWidgetData): void;
 }
 
+/** Accept only values a browser can render (parsed TIA colours are #RRGGBB). */
+function cssColor(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const text = value.trim();
+  if (!text) return undefined;
+  if (/^#[0-9a-fA-F]{3,8}$/.test(text)) return text;
+  if (/^rgba?\(/i.test(text)) return text;
+  return undefined;
+}
+
 /** HMI 仿真：多设备/多画面、真实分辨率、核心控件 + placeholder。 */
 export const HmiPane: React.FC<HmiPaneProps> = ({
   widgets,
@@ -132,6 +142,11 @@ export const HmiPane: React.FC<HmiPaneProps> = ({
                 const isFocused = focusWidgetId === widget.id;
                 const btnColor = widget.properties?.color || "green";
                 const supported = widget.supported !== false;
+                const bgColor = cssColor(widget.properties?.bg_color);
+                const fgColor = cssColor(widget.properties?.fg_color);
+                const borderColor = cssColor(widget.properties?.border_color);
+                const bindingUnresolved = widget.properties?.binding_unresolved === true;
+                const tagLabel = bindingUnresolved ? "未绑定" : widget.plc_tag || widget.hmi_tag || "未绑定";
                 return (
                   <div
                     key={widget.id}
@@ -155,14 +170,21 @@ export const HmiPane: React.FC<HmiPaneProps> = ({
                         className={`hw-btn ${btnColor === "red" || btnColor === "rose" ? "hw-btn--red" : ""} ${
                           widget.current_value ? "is-on" : ""
                         }`}
+                        style={{ background: bgColor, color: fgColor, borderColor }}
                       >
                         {widget.text || widget.title}
                       </button>
                     )}
 
                     {widget.widget_type === "indicator" && (
-                      <div className="hw-panel">
-                        <i className={`hw-lamp ${widget.current_value ? "is-on" : ""}`} />
+                      <div
+                        className="hw-panel"
+                        style={{ background: bgColor, borderColor }}
+                      >
+                        <i
+                          className={`hw-lamp ${widget.current_value ? "is-on" : ""}`}
+                          style={{ background: fgColor, borderColor }}
+                        />
                         <span className="hw-panel__label">{widget.title}</span>
                       </div>
                     )}
@@ -199,7 +221,10 @@ export const HmiPane: React.FC<HmiPaneProps> = ({
                     )}
 
                     {widget.widget_type === "text" && (
-                      <div className="hw-text" style={{ padding: 4, fontSize: 13 }}>
+                      <div
+                        className="hw-text"
+                        style={{ padding: 4, fontSize: 13, color: fgColor, background: bgColor, borderColor }}
+                      >
                         {widget.text || widget.title}
                       </div>
                     )}
@@ -234,7 +259,8 @@ export const HmiPane: React.FC<HmiPaneProps> = ({
                         style={{
                           width: "100%",
                           height: "100%",
-                          background: widget.properties?.color || "#334155",
+                          background: bgColor || widget.properties?.color || "#334155",
+                          borderColor,
                           opacity: 0.5,
                         }}
                       />
@@ -245,8 +271,9 @@ export const HmiPane: React.FC<HmiPaneProps> = ({
                         style={{
                           width: "100%",
                           height: "100%",
-                          background: widget.current_value ? "#7f1d1d" : "#1e293b",
-                          color: "#fecaca",
+                          background: bgColor || (widget.current_value ? "#7f1d1d" : "#1e293b"),
+                          color: fgColor || "#fecaca",
+                          borderColor,
                           fontSize: 12,
                           padding: 6,
                           display: "flex",
@@ -287,7 +314,16 @@ export const HmiPane: React.FC<HmiPaneProps> = ({
                         </div>
                       )}
 
-                    <div className="hw-tag">{widget.plc_tag || widget.hmi_tag || "未绑定"}</div>
+                    <div
+                      className="hw-tag"
+                      title={
+                        bindingUnresolved && widget.hmi_tag
+                          ? `HMI 变量 ${widget.hmi_tag} 未映射到 PLC 变量`
+                          : undefined
+                      }
+                    >
+                      {tagLabel}
+                    </div>
                   </div>
                 );
               })}

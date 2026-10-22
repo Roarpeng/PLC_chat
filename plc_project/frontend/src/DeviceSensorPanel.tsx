@@ -4,7 +4,7 @@ import {
   fetchPlcDeviceCard,
   listPlcDeviceCards,
   type DeviceSensorCard,
-} from "../api";
+} from "./lib/plcGateway";
 import type { CanvasJumpIntent } from "./canvas/jump";
 
 const STATUS_LABEL: Record<string, string> = {

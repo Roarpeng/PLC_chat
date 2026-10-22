@@ -11,8 +11,8 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from agents.plc.tia.flgnet_fold import fold_network
-from agents.plc.tia.simaticml import parse_block_xml
 from agents.plc.tia.scl import translate_block_to_scl
+from agents.plc.tia.simaticml import parse_block_xml
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 TEMP = Path(r"C:\Users\vboxuser\AppData\Local\Temp")

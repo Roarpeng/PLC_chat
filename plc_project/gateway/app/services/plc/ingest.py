@@ -4,16 +4,15 @@ from __future__ import annotations
 
 import logging
 import os
-import threading
 import tempfile
+import threading
 from pathlib import Path
 from typing import Any
 
 from gateway.app.config import get_settings
-
 from gateway.app.services.plc.job_store import (
-    _finish_progress,
     _append_progress,
+    _finish_progress,
     _now,
     _start_progress,
     get_job,
@@ -208,6 +207,54 @@ def _annotate_block_nest_depth(job: dict[str, Any]) -> None:
 
 
 
+
+
+def _degradation_warnings(job: dict[str, Any]) -> list[dict[str, Any]]:
+    """Flatten coverage warnings + review truncation into one visible list."""
+    warnings: list[dict[str, Any]] = [
+        item
+        for item in (job.get("coverage") or {}).get("warnings") or []
+        if isinstance(item, dict)
+    ]
+    review = job.get("review") or {}
+    if review.get("truncated"):
+        warnings.append(
+            {
+                "level": "info",
+                "code": "review.truncated",
+                "message": (
+                    f"确定性审查报告被截断：实际命中 {int(review.get('total_count') or 0)} 处，"
+                    "每条规则只展示前若干条，别把报告里的条数当成问题总数。"
+                ),
+                "affected_blocks": sorted(
+                    {
+                        str(finding.get("block"))
+                        for finding in review.get("findings") or []
+                        if isinstance(finding, dict)
+                        and finding.get("truncated")
+                        and finding.get("block")
+                    }
+                ),
+                "count": int(review.get("total_count") or 0),
+            }
+        )
+    return warnings
+
+
+def _degradation_summary(job: dict[str, Any]) -> dict[str, Any]:
+    """Compact rollup for the UI — coverage numbers plus every honest warning."""
+    coverage = job.get("coverage") or {}
+    warnings = _degradation_warnings(job)
+    export_dir = str(job.get("export_dir") or "")
+    return {
+        "count": len(warnings),
+        "warnings": warnings,
+        "todo_rate": coverage.get("todo_rate", 0.0),
+        "translated_rate": coverage.get("translated_rate"),
+        "review_truncated": bool((job.get("review") or {}).get("truncated")),
+        "review_total_count": int((job.get("review") or {}).get("total_count") or 0),
+        "coverage_path": str(Path(export_dir) / "reports" / "coverage.json") if export_dir else None,
+    }
 
 
 def run_ingest_job(
@@ -449,8 +496,8 @@ def run_ingest_job(
             )[:400],
         )
         try:
-            from agents.plc.tia.review import run_review
             from agents.plc.tia.dossier import build_block_dossiers
+            from agents.plc.tia.review import run_review
 
             _start_progress(job, "review", "确定性审查与节点档案")
             t_review = time.monotonic()
@@ -508,6 +555,14 @@ def run_ingest_job(
         total_ms = int((time.monotonic() - t_all) * 1000)
         pipeline_timings["total_ms"] = total_ms
         job["timings"] = pipeline_timings
+        job["degradations"] = _degradation_summary(job)
+        if job["degradations"]["count"]:
+            logger.info(
+                "PLC ingest degradations job_id=%s count=%s codes=%s",
+                job_id,
+                job["degradations"]["count"],
+                [w.get("code") for w in job["degradations"]["warnings"]],
+            )
         if publish_graph:
             job["graph_publish"] = {"ok": True, "status": "queued"}
             threading.Thread(
@@ -533,7 +588,7 @@ def run_ingest_job(
         job["ingest_phase"] = "ready"
         job["brief_ready"] = True
         job["error"] = None
-    except Exception as exc:  # noqa: BLE001 — surface to API
+    except Exception as exc:
         logger.exception("PLC ingest failed job_id=%s", job_id)
         job["status"] = "failed"
         job["ingest_phase"] = "failed"

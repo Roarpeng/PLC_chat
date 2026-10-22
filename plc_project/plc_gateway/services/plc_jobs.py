@@ -7,9 +7,9 @@ imports and test seams stable.
 
 from __future__ import annotations
 
-import logging
 import io
 import json
+import logging
 import re
 import tempfile
 import zipfile
@@ -20,8 +20,8 @@ from uuid import uuid4
 
 from gateway.app.config import Settings, get_settings
 from gateway.app.services import store as mem
-
 from gateway.app.services.plc import changesets
+from gateway.app.services.plc.brief import build_project_brief
 from gateway.app.services.plc.changesets import (
     confirm_job_writeback,
     propose_job_optimize,
@@ -35,16 +35,16 @@ from gateway.app.services.plc.chat_evidence import (
     _call_relation_names,
     _describe_block_function,
     _describe_instance_from_kg,
-    _expr_dict_to_scl,
     _explain_block_understanding,
+    _expr_dict_to_scl,
     _folded_logic_lines,
     _folded_scl_dump,
     _format_block_runtime_explain,
     _format_block_scl_markdown,
-    _format_optimize_hints,
-    _format_signal_trace,
-    _format_scl_logic_block,
     _format_nested_fb_line,
+    _format_optimize_hints,
+    _format_scl_logic_block,
+    _format_signal_trace,
     _format_typed_as_nest_lines,
     _join_capped,
     _lookup_instance_entity,
@@ -62,8 +62,8 @@ from gateway.app.services.plc.chat_evidence import (
     _typed_as_nest_payload,
 )
 from gateway.app.services.plc.chat_intents import (
-    _wants_brief_card,
     _wants_block_explain,
+    _wants_brief_card,
     _wants_confirm_writeback,
     _wants_full_scl,
     _wants_nest_chains,
@@ -76,7 +76,6 @@ from gateway.app.services.plc.chat_intents import (
     _wants_understand_logic,
 )
 from gateway.app.services.plc.chat_router import answer_block_chat as _answer_block_chat
-from gateway.app.services.plc.brief import build_project_brief
 from gateway.app.services.plc.device_cards import (
     build_device_cards,
     clear_device_card_annotation,
@@ -84,9 +83,6 @@ from gateway.app.services.plc.device_cards import (
     get_device_card,
     list_device_cards,
     set_device_card_annotation,
-)
-from gateway.app.services.plc.project_brief import (
-    device_sensor_summary_section,
 )
 from gateway.app.services.plc.ingest import (
     _annotate_block_nest_depth,
@@ -122,6 +118,9 @@ from gateway.app.services.plc.paths import (
     resolve_allowed_path,
     save_upload,
 )
+from gateway.app.services.plc.project_brief import (
+    device_sensor_summary_section,
+)
 from gateway.app.services.plc.writeback_views import (
     _excerpt_optimize_plan,
     _format_writeback_recap,
@@ -135,11 +134,6 @@ __all__ = [
     "Any",
     "Path",
     "Settings",
-    "datetime",
-    "get_settings",
-    "io",
-    "json",
-    "mem",
     "_allowlist_roots",
     "_annotate_block_nest_depth",
     "_append_progress",
@@ -154,8 +148,8 @@ __all__ = [
     "_describe_block_function",
     "_describe_instance_from_kg",
     "_excerpt_optimize_plan",
-    "_expr_dict_to_scl",
     "_explain_block_understanding",
+    "_expr_dict_to_scl",
     "_finish_progress",
     "_folded_logic_lines",
     "_folded_scl_dump",
@@ -165,8 +159,8 @@ __all__ = [
     "_format_nested_fb_line",
     "_format_optimize_hints",
     "_format_optimize_scl_chat",
-    "_format_signal_trace",
     "_format_scl_logic_block",
+    "_format_signal_trace",
     "_format_typed_as_nest_lines",
     "_format_writeback_recap",
     "_is_ob_props",
@@ -190,8 +184,8 @@ __all__ = [
     "_strip_at_hint",
     "_tag_io_for_block",
     "_typed_as_nest_payload",
-    "_wants_brief_card",
     "_wants_block_explain",
+    "_wants_brief_card",
     "_wants_confirm_writeback",
     "_wants_full_scl",
     "_wants_nest_chains",
@@ -204,32 +198,36 @@ __all__ = [
     "_wants_understand_logic",
     "analyze_job",
     "answer_block_chat",
-    "build_project_brief",
     "append_chat_turn",
     "build_device_cards",
     "build_export_zip",
     "build_project_brief",
     "clear_device_card_annotation",
+    "confirm_job_writeback",
+    "create_job_record",
+    "datetime",
+    "delete_job",
     "device_sensor_summary_section",
     "find_card_by_symbol",
     "get_device_card",
-    "list_device_cards",
-    "set_device_card_annotation",
-    "confirm_job_writeback",
-    "create_job_record",
-    "delete_job",
     "get_job",
+    "get_settings",
+    "io",
+    "json",
+    "list_device_cards",
     "list_jobs",
     "logger",
+    "mem",
     "propose_job_changeset",
     "propose_job_optimize",
     "query_job_graph",
+    "re",
     "refresh_logic_graph",
     "resolve_allowed_path",
-    "re",
     "retry_structure_export",
     "run_ingest_job",
     "save_upload",
+    "set_device_card_annotation",
     "tempfile",
     "timezone",
     "uuid4",

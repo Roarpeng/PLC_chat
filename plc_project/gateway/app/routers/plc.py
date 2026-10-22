@@ -95,7 +95,7 @@ async def create_job_from_upload(
     background: BackgroundTasks,
     principal: PrincipalDep,
     request_id: RequestIdDep,
-    file: UploadFile = File(...),
+    file: UploadFile = File(...),  # noqa: B008 (FastAPI dependency marker)
     project_name: str = Form(default=""),
     publish_graph: bool = Form(default=True),
     plc_name: str = Form(default=""),
@@ -585,7 +585,7 @@ async def writeback_plc_job(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "PLC_WRITEBACK_INVALID", "message": str(exc)},
         ) from exc
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("PLC writeback failed job_id=%s", job_id)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -871,7 +871,19 @@ async def confirm_canvas_writeback_endpoint(
             save_on_success=True,
             reset_work=True,
         )
-        return ApiResponse(ok=True, data={"job": job, "async": True}, request_id=request_id)
+        # Same envelope as the sync branch (async/job/writeback/attributions/canvas) so
+        # consumers switch on ``async`` alone instead of guessing the payload shape.
+        return ApiResponse(
+            ok=True,
+            data={
+                "async": True,
+                "job": job,
+                "writeback": None,
+                "attributions": [],
+                "canvas": canvas.to_dict(),
+            },
+            request_id=request_id,
+        )
 
     import asyncio
 
@@ -886,7 +898,13 @@ async def confirm_canvas_writeback_endpoint(
     )
     return ApiResponse(
         ok=True,
-        data={"writeback": result, "attributions": attributions, "canvas": canvas.to_dict(), "async": False},
+        data={
+            "async": False,
+            "job": None,
+            "writeback": result,
+            "attributions": attributions,
+            "canvas": canvas.to_dict(),
+        },
         request_id=request_id,
     )
 
@@ -1148,7 +1166,7 @@ async def canvas_import_endpoint(
 async def canvas_import_upload_endpoint(
     principal: PrincipalDep,
     request_id: RequestIdDep,
-    file: UploadFile = File(...),
+    file: UploadFile = File(...),  # noqa: B008 (FastAPI dependency marker)
     project_name: str = Form(default=""),
     progress_id: str = Form(default=""),
 ) -> ApiResponse[dict[str, Any]]:

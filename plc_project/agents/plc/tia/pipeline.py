@@ -18,8 +18,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from agents.plc.tia.importer import resolve_project_input
 from agents.plc.tia.flgnet_fold import attach_folded, fold_project
+from agents.plc.tia.importer import resolve_project_input
 from agents.plc.tia.ir import BlockType, PlcProject
 from agents.plc.tia.kg import PlcKnowledgeGraph, build_knowledge_graph
 from agents.plc.tia.package import build_conversion_report, write_result_package

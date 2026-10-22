@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from agents.plc.tia.simaticml import parse_block_xml, parse_tag_table_xml
 from plc_engine.canvas_model import (
@@ -414,7 +415,7 @@ def _parse_export_tree(
     hmi_count = 0
     try:
         on_progress("hmi_parse", "解析 HMI 画面…")
-        from plc_engine.tia.hmi_screens import parse_hmi_export_tree
+        from agents.plc.tia.hmi_screens import parse_hmi_export_tree
 
         devices, widgets = parse_hmi_export_tree(parse_root)
         canvas.hmi_devices = devices

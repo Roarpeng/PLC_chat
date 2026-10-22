@@ -7,8 +7,8 @@ import logging
 logger = logging.getLogger("researchos.gateway.plc")
 
 __all__ = [
-    "_network_titles_from_scl",
     "_join_capped",
+    "_network_titles_from_scl",
 ]
 
 

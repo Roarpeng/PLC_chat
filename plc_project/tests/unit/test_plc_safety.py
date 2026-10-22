@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agents.plc.tia.ir import Block, BlockType
+from agents.plc.tia.analyst import analyze_project
+from agents.plc.tia.ir import Block, BlockType, PlcProject
 from agents.plc.tia.safety import apply_safety_flags, detect_block_safety, is_safety_name
 from agents.plc.tia.simaticml import parse_block_xml
-from agents.plc.tia.ir import PlcProject
-from agents.plc.tia.analyst import analyze_project
 from gateway.app.services.plc_jobs import _logic_graph_from_kg
 
 PARTS = Path(__file__).resolve().parents[1] / "fixtures" / "tia_parts"

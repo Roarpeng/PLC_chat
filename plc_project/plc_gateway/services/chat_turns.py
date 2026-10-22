@@ -6,9 +6,10 @@ import json
 import logging
 import re
 import threading
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from uuid import uuid4
 
 from fastapi import BackgroundTasks
@@ -27,7 +28,7 @@ ScheduleIngest = Callable[[Callable[..., Any]], None]
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _knowledge_recall_appendix(query: str) -> str:
@@ -110,7 +111,7 @@ def _ingest_and_refresh_welcome(job_id: str, task_id: str | None = None) -> None
     """Background ingest then refresh welcome chat + linked task canvas."""
     try:
         job = plc.run_ingest_job(job_id, publish_graph=True)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("async plc ingest failed job=%s: %s", job_id, exc)
         job = plc.get_job(job_id)
         if not job:

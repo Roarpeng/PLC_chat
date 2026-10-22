@@ -153,7 +153,9 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
     try {
       const loaded = await Promise.all(
         DEMO_FILES.map(async (url) => {
-          const res = await fetch(url);
+          // 静态示例资源（public/demo-import），由 Vite / nginx 同源提供，不走网关，
+          // 因此不能用 requestPlc（它会拼上 GATEWAY_BASE 并按 {ok,data} 解包）。
+          const res = await fetch(url, { signal: AbortSignal.timeout?.(10000) });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const name = url.slice(url.lastIndexOf("/") + 1);
           return { name, text: await res.text() };

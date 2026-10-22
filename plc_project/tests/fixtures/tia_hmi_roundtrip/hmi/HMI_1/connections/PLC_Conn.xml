@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Hmi.Connection Name="PLC_Conn">
+    <AttributeList>
+      <Name>PLC_Conn</Name>
+      <Controller>PLC_1</Controller>
+      <CommunicationDriver>SIMATIC S7 1200</CommunicationDriver>
+    </AttributeList>
+  </Hmi.Connection>
+</Document>

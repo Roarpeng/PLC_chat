@@ -47,3 +47,12 @@ PLC_Openness_data/openness_e2e/
 
 # taste-skill working artifacts (direction sheets, inspect screenshots)
 .taste-skill/
+
+# Local work journal (session memory)
+.workbuddy/
+
+# PLC export cache (regenerable)
+plc_project/.researchos/
+
+# Real TIA project data (large binary, not reference material)
+PLC_Openness_data/hr001/

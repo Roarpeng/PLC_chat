@@ -189,6 +189,9 @@ class Variable:
     comment: str = ""
     is_retain: bool = False
     logical_address: str = ""
+    # STRUCT 类型的嵌套成员。TIA 导出里 <Member Datatype="Struct"> 下会嵌子 <Member>，
+    # 只保留 "Struct" 这个名字会导致 SCL 生成出空的 "X : Struct;"（TIA 判定语法错误）。
+    members: list[Variable] = field(default_factory=list)
 
 
 @dataclass

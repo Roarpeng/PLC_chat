@@ -12,9 +12,9 @@ from agents.plc.tia.structure import (
     normalize_skip_reason,
     status_from_reason,
 )
-from gateway.app.services.plc.ingest import _block_list
 from gateway.app.services import plc_jobs as plc
 from gateway.app.services import store as mem
+from gateway.app.services.plc.ingest import _block_list
 
 SURFACE = Path(__file__).resolve().parents[1] / "fixtures" / "tia_openness_surface"
 EXPORTS = Path(__file__).resolve().parents[1] / "fixtures" / "tia_exports"

@@ -1,0 +1,35 @@
+{
+  "extraction_notes": [],
+  "fixture": "tia_hmi_roundtrip",
+  "folded": {
+    "block_count": 0,
+    "digest": "44136fa355b3678a"
+  },
+  "graph_step_networks": 0,
+  "kg": {
+    "edge_count": 0,
+    "edges_digest": "4f53cda18c2baa0c",
+    "node_count": 1,
+    "nodes_digest": "0f78e6d2b693d3ba"
+  },
+  "scl": {
+    "block_count": 0,
+    "digest": "44136fa355b3678a",
+    "todo_histogram": {}
+  },
+  "summary": {
+    "Alarms": 0,
+    "CfcCharts": 0,
+    "ForceTables": 0,
+    "Hardware": 0,
+    "HmiDevices": 1,
+    "Networks": 0,
+    "OpcUaNodes": 0,
+    "ProDiag": 0,
+    "SafetyBlocks": 0,
+    "SafetyUnits": 0,
+    "TagTables": 0,
+    "TechnologyObjects": 0,
+    "WatchTables": 0
+  }
+}

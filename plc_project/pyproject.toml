@@ -27,6 +27,10 @@ storage = [
   "neo4j>=5.26.0",
   "qdrant-client>=1.12.0",
 ]
+agent = [
+    "langchain-core>=0.3.0",
+    "langgraph>=0.2.60",
+]
 
 [project.scripts]
 plc-cli = "agents.plc.tia_cli:main"

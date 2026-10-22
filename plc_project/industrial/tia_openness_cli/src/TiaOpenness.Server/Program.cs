@@ -70,6 +70,7 @@ public static class Program
                 "  serve [--host 127.0.0.1] [--port 8791] [--token secret]\n" +
                 "  archive-project --project <ap19> --out-dir <dir> [--name file.zap19]\n" +
                 "  create-device --project <ap19> --type-id <id> --name <name> [--device-name <dname>]\n" +
+                "  probe-device-types --project <ap19> --type-ids <id1|id2|...> (probe only, never saves)\n" +
                 "  open-library --path <al19> [--write]\n" +
                 "  copy-from-library --library <al19> --item <name> [--project <ap19>] [--target <group>]\n" +
                 "  get-tags --project <ap19> [--table <name>]");
@@ -396,10 +397,20 @@ public static class Program
                 var applied = HmiUnifiedApplyOps.Apply(projects, hmi, opsPath);
                 var appliedJson = JsonSerializer.Serialize(applied, JsonDefaults.Options);
                 Console.WriteLine(appliedJson);
+                var applyOk = false;
                 using (var appliedDoc = JsonDocument.Parse(appliedJson))
                 {
-                    return appliedDoc.RootElement.TryGetProperty("ok", out var okEl) && okEl.GetBoolean() ? 0 : 7;
+                    applyOk = appliedDoc.RootElement.TryGetProperty("ok", out var okEl) && okEl.GetBoolean();
                 }
+                if (applyOk)
+                {
+                    // Persist the applied ops: without SaveProject the writeback
+                    // lives only in the open session and is lost on close.
+                    var saved = projects.SaveProject();
+                    Console.WriteLine(JsonSerializer.Serialize(new { ok = saved.Ok, save = saved }, JsonDefaults.Options));
+                    return saved.Ok ? 0 : 5;
+                }
+                return 7;
             }
 
             if (command == "archive-project")
@@ -643,6 +654,96 @@ public static class Program
                 var saved = created.Ok ? projects.SaveProject() : null;
                 Console.WriteLine(JsonSerializer.Serialize(new { ok = created.Ok && (saved is null || saved.Ok), project = opened, create = created, save = saved }, JsonDefaults.Options));
                 return created.Ok ? 0 : 4;
+            }
+
+            if (command == "hmi-create-screen")
+            {
+                if (!opts.TryGetValue("project", out var project) || string.IsNullOrWhiteSpace(project))
+                {
+                    Console.Error.WriteLine("Missing --project");
+                    return 2;
+                }
+                if (!opts.TryGetValue("name", out var screenName) || string.IsNullOrWhiteSpace(screenName))
+                {
+                    Console.Error.WriteLine("Missing --name <screenName>");
+                    return 2;
+                }
+                opts.TryGetValue("hmi", out var hmi);
+                opts.TryGetValue("plc", out var plc);
+                var opened = projects.OpenProject(project, plc, withoutUi: true);
+                if (!opened.Ok)
+                {
+                    Console.WriteLine(JsonSerializer.Serialize(opened, JsonDefaults.Options));
+                    return 3;
+                }
+                var created = HmiScreenOps.CreateScreen(projects, hmi, screenName);
+                var createdJson = JsonSerializer.Serialize(created, JsonDefaults.Options);
+                Console.WriteLine(createdJson);
+                var ok = false;
+                using (var doc = JsonDocument.Parse(createdJson))
+                {
+                    ok = doc.RootElement.TryGetProperty("ok", out var okEl) && okEl.GetBoolean();
+                }
+                if (!ok) return 7;
+                var saved = projects.SaveProject();
+                Console.WriteLine(JsonSerializer.Serialize(new { ok = saved.Ok, save = saved }, JsonDefaults.Options));
+                return saved.Ok ? 0 : 5;
+            }
+
+            if (command == "probe-device-types")
+            {
+                if (!opts.TryGetValue("project", out var project) || string.IsNullOrWhiteSpace(project))
+                {
+                    Console.Error.WriteLine("Missing --project");
+                    return 2;
+                }
+                if (!opts.TryGetValue("type-ids", out var typeIdsRaw) || string.IsNullOrWhiteSpace(typeIdsRaw))
+                {
+                    Console.Error.WriteLine("Missing --type-ids <id1|id2|...> ('|'-separated, ids contain spaces/versions)");
+                    return 2;
+                }
+                opts.TryGetValue("plc", out var plc);
+                var typeIds = typeIdsRaw.Split('|').Select(s => s.Trim()).Where(s => s.Length > 0).ToArray();
+
+                var opened = projects.OpenProject(project, plc, withoutUi: true);
+                if (!opened.Ok && !(opened.Error is not null && opened.Error.Code == "not_found"))
+                {
+                    Console.WriteLine(JsonSerializer.Serialize(opened, JsonDefaults.Options));
+                    return 3;
+                }
+
+                // Probe only: DeviceComposition.CreateWithItem per candidate id,
+                // each raw error reported verbatim; CloseProject() never saves,
+                // so probe devices are discarded (never persisted).
+                var probed = new List<object>();
+                var devices = projects.Project?.GetType()
+                    .GetProperty("Devices", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase)
+                    ?.GetValue(projects.Project);
+                if (devices is null)
+                {
+                    probed.Add(new { typeId = (string?)"", ok = false, api = "", code = "dependency_unavailable", error = "Project.Devices composition not found" });
+                }
+                else
+                {
+                    var index = 0;
+                    foreach (var typeId in typeIds)
+                    {
+                        index++;
+                        var created = OpennessMutate.TryCreateDevice(devices, typeId, $"PROBE_{index}", $"PROBE_{index}");
+                        probed.Add(new
+                        {
+                            typeId,
+                            ok = created.Device is not null,
+                            api = created.Api,
+                            code = created.SkipReason,
+                            error = created.RawError,
+                        });
+                    }
+                }
+                var closed = projects.CloseProject();
+                var probeOk = probed.Any(p => p.GetType().GetProperty("ok")?.GetValue(p) is true);
+                Console.WriteLine(JsonSerializer.Serialize(new { ok = probeOk, project = opened, probe = probed, close = closed }, JsonDefaults.Options));
+                return 0;
             }
 
             if (command == "open-library")

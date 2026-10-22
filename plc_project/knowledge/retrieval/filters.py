@@ -16,7 +16,7 @@ Filter keys (union of legacy and documented metadata filters):
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -26,13 +26,13 @@ def parse_timestamp(value: Any) -> datetime | None:
         return None
     if isinstance(value, datetime):
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
+            return value.replace(tzinfo=UTC)
         return value
     if isinstance(value, (int, float)):
         try:
             if abs(value) > 1e12:  # milliseconds
-                return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
-            return datetime.fromtimestamp(value, tz=timezone.utc)
+                return datetime.fromtimestamp(value / 1000, tz=UTC)
+            return datetime.fromtimestamp(value, tz=UTC)
         except (OverflowError, OSError, ValueError):
             return None
     if isinstance(value, str):
@@ -44,7 +44,7 @@ def parse_timestamp(value: Any) -> datetime | None:
         except ValueError:
             return None
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
         return dt
     return None
 

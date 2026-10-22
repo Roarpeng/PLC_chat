@@ -1,4 +1,4 @@
-import type { PlcCitation } from "../../api";
+import type { PlcCitation } from "../lib/plcGateway";
 import { citationLocator, citationSnippet } from "./inspectModel";
 
 type Props = {

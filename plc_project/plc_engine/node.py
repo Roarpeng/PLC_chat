@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from agents.plc.tia import analyze_plc_project
@@ -288,7 +288,7 @@ def run(state: TaskState, *, connector: PlcDocsConnector | None = None) -> dict[
     ok = bool(hits)
     duration_ms = int((time.monotonic() - started) * 1000)
 
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     evidence = _evidence_from_hits(state, hits, now)
     task_id = state.get("task_id", "task")
     blocks = {

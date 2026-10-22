@@ -1,4 +1,4 @@
-import type { PlcProjectBrief } from "../api";
+import type { PlcProjectBrief } from "./lib/plcGateway";
 import type { CanvasJumpIntent } from "./canvas/jump";
 
 type ProjectBriefCardProps = {

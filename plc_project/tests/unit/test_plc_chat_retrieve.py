@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from agents.plc.tia.chat_retrieve import answer_query_pack, citations_for_retrieval, retrieve_kg_for_query
+from agents.plc.tia.chat_retrieve import (
+    answer_query_pack,
+    citations_for_retrieval,
+    retrieve_kg_for_query,
+)
 
 
 def _job() -> dict:

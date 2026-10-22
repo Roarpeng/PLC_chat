@@ -49,7 +49,7 @@ class MCPClient:
                 "result": result,
                 "duration_ms": duration_ms,
             }
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             duration_ms = int((time.perf_counter() - started) * 1000)
             logger.exception("MCP tool %s failed", name)
             return {

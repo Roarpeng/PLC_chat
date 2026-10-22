@@ -11,15 +11,21 @@ import shutil
 import tempfile
 import time
 import zipfile
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import Iterator
+from typing import Any
 
 import httpx
 
-
 DEFAULT_TIMEOUT_S = 600
+DEFAULT_RETRIES = 2
+RETRY_BACKOFF_S = 0.5
+RETRY_BACKOFF_MAX_S = 8.0
 _UPLOAD_CHUNK = 1024 * 1024
+
+#: Failures where the request never reached the worker, so a retry cannot duplicate work.
+_CONNECT_FAILURES = (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout)
 
 
 def worker_base_url() -> str:
@@ -29,6 +35,81 @@ def worker_base_url() -> str:
 
 def _worker_token() -> str:
     return os.getenv("RESEARCHOS_OPENNESS_WORKER_TOKEN", "").strip()
+
+
+def _retries() -> int:
+    raw = os.getenv("RESEARCHOS_OPENNESS_WORKER_RETRIES", "").strip()
+    if not raw:
+        return DEFAULT_RETRIES
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError("RESEARCHOS_OPENNESS_WORKER_RETRIES must be an integer") from exc
+    if value < 0:
+        raise ValueError("RESEARCHOS_OPENNESS_WORKER_RETRIES must be zero or positive")
+    return value
+
+
+def _backoff_s(attempt: int) -> float:
+    raw = os.getenv("RESEARCHOS_OPENNESS_WORKER_RETRY_BACKOFF_S", "").strip()
+    base = RETRY_BACKOFF_S
+    if raw:
+        try:
+            base = float(raw)
+        except ValueError as exc:
+            raise ValueError(
+                "RESEARCHOS_OPENNESS_WORKER_RETRY_BACKOFF_S must be a number"
+            ) from exc
+    return min(max(base, 0.0) * (2**attempt), RETRY_BACKOFF_MAX_S)
+
+
+def _retryable_status(status_code: int) -> bool:
+    return status_code == 429 or 500 <= status_code < 600
+
+
+def _post_with_retry(
+    client: httpx.Client,
+    url: str,
+    *,
+    idempotent: bool,
+    headers: dict[str, str],
+    params: dict[str, str] | None = None,
+    files: dict[str, tuple[str, object, str]] | None = None,
+    rewind: Callable[[], None] | None = None,
+) -> httpx.Response:
+    """POST with bounded exponential backoff.
+
+    ``idempotent`` gates the retry envelope. Read-only calls (``/export``) retry on
+    connect failures, 429 and 5xx. Mutating calls (``/import``, which can really
+    import blocks into the TIA project) retry only when the request provably never
+    reached the worker — connect failures — or when the worker explicitly asked to
+    back off (429). Read/Write timeouts and 5xx are surfaced instead of retried,
+    because the import may already have been applied.
+    """
+    retries = _retries()
+    for attempt in range(retries + 1):
+        if rewind is not None:
+            rewind()
+        try:
+            response = client.post(url, params=params, files=files, headers=headers)
+        except _CONNECT_FAILURES:
+            if attempt >= retries:
+                raise
+            time.sleep(_backoff_s(attempt))
+            continue
+        except httpx.TimeoutException:
+            if not idempotent or attempt >= retries:
+                raise
+            time.sleep(_backoff_s(attempt))
+            continue
+        can_retry = _retryable_status(response.status_code) and (
+            idempotent or response.status_code == 429
+        )
+        if can_retry and attempt < retries:
+            time.sleep(_backoff_s(attempt))
+            continue
+        return response
+    raise AssertionError("unreachable: retry loop always returns or raises")
 
 
 def _timeout_s(timeout_s: int | None) -> int:
@@ -96,7 +177,7 @@ def _safe_member_name(member: zipfile.ZipInfo) -> bool:
     if not parts or any(part == ".." for part in parts):
         return False
     mode = member.external_attr >> 16
-    return not (mode & 0o170000 == 0o120000)
+    return (mode & 0o170000) != 0o120000
 
 
 def _validate_export_zip(payload: bytes) -> None:
@@ -143,14 +224,19 @@ def export_project_via_worker(
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
-    with _archived_project(source) as (archive, filename):
-        with httpx.Client(timeout=_timeout_s(timeout_s), transport=transport) as client:
-            with archive.open("rb") as upload:
-                response = client.post(
-                    f"{base_url}/export",
-                    files={"project": (filename, upload, "application/zip")},
-                    headers=headers,
-                )
+    with (
+        _archived_project(source) as (archive, filename),
+        httpx.Client(timeout=_timeout_s(timeout_s), transport=transport) as client,
+        archive.open("rb") as upload,
+    ):
+        response = _post_with_retry(
+            client,
+            f"{base_url}/export",
+            idempotent=True,
+            headers=headers,
+            files={"project": (filename, upload, "application/zip")},
+            rewind=lambda: upload.seek(0),
+        )
 
     if not 200 <= response.status_code < 300:
         detail = response.text.strip()
@@ -264,17 +350,22 @@ def import_bundle_via_worker(
     archive = Path(tmp_name)
     try:
         filename, _count = _writeback_bundle_zip(source, bundle, fd)
-        with httpx.Client(timeout=_timeout_s(timeout_s), transport=transport) as client:
-            with archive.open("rb") as upload:
-                response = client.post(
-                    f"{base_url}/import",
-                    params={
-                        "plc_name": plc_name,
-                        "compile_after": "true" if compile_after else "false",
-                    },
-                    files={"bundle": (filename, upload, "application/zip")},
-                    headers=headers,
-                )
+        with (
+            httpx.Client(timeout=_timeout_s(timeout_s), transport=transport) as client,
+            archive.open("rb") as upload,
+        ):
+            response = _post_with_retry(
+                client,
+                f"{base_url}/import",
+                idempotent=False,
+                params={
+                    "plc_name": plc_name,
+                    "compile_after": "true" if compile_after else "false",
+                },
+                files={"bundle": (filename, upload, "application/zip")},
+                headers=headers,
+                rewind=lambda: upload.seek(0),
+            )
     finally:
         archive.unlink(missing_ok=True)
 
@@ -294,7 +385,7 @@ def import_bundle_via_worker(
     except ValueError as exc:
         raise RuntimeError("Openness worker returned an unreadable import report") from exc
     if not isinstance(report, dict):
-        raise RuntimeError("Openness worker import report is not a JSON object")
+        raise TypeError("Openness worker import report is not a JSON object")
 
     elapsed_ms = int((time.monotonic() - started) * 1000)
     timings = report.get("worker") if isinstance(report.get("worker"), dict) else {}

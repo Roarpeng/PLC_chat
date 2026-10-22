@@ -121,8 +121,7 @@ def _try_llm_plan(raw_query: str, *, version: int) -> Plan | None:
             text = content.strip()
             if text.startswith("```"):
                 text = text.strip("`")
-                if text.startswith("json"):
-                    text = text[4:]
+                text = text.removeprefix("json")
                 text = text.strip()
             data = json.loads(text)
             steps_in = data.get("steps") or []

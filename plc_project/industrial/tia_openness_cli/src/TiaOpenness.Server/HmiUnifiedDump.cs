@@ -54,6 +54,11 @@ public static class HmiUnifiedDump
                         ["height"] = GetInt(item, "Height"),
                         ["text"] = GetString(item, "Text") ?? GetString(item, "Caption") ?? "",
                         ["tag"] = GetString(item, "ProcessTag") ?? GetNestedTag(item),
+                        // colour channels mirror HmiUnifiedApplyOps.ColorChannels probe names
+                        ["backColor"] = GetString(item, "BackColor") ?? GetString(item, "BgColor")
+                            ?? GetString(item, "BackgroundColor") ?? GetString(item, "FillColor") ?? "",
+                        ["foreColor"] = GetString(item, "ForeColor") ?? GetString(item, "FgColor")
+                            ?? GetString(item, "ForegroundColor") ?? GetString(item, "FontColor") ?? "",
                     });
                 }
                 screenObj["items"] = itemsArr;

@@ -68,7 +68,7 @@ def graph_network_to_scl(network: Network, state_var: str) -> list[str] | None:
 
     lines: list[str] = []
     lines.append("    // GRAPH 步序 → CASE 状态机（规则重建；转换条件需人工复核）")
-    lines.append(f"    // 步号映射: " + ", ".join(f"{num}={name}" for name, num in sorted(numbers.items(), key=lambda kv: kv[1])))
+    lines.append("    // 步号映射: " + ", ".join(f"{num}={name}" for name, num in sorted(numbers.items(), key=lambda kv: kv[1])))
     first_number = numbers.get(steps[0].name, 1)
     lines.append(f"    IF #{ref} = 0 THEN")
     lines.append(f"        #{ref} := {first_number};  // init → {steps[0].name}")
@@ -78,7 +78,6 @@ def graph_network_to_scl(network: Network, state_var: str) -> list[str] | None:
     unresolved: list[str] = []
     for step in steps:
         branch = numbers.get(step.name, 1)
-        label = f"Step{step.number}" if step.number else step.name
         head = f"        {branch}:  // {step.name}"
         if step.comment:
             head += f" — {step.comment}"
@@ -133,8 +132,6 @@ def graph_unresolved_count(network: Network) -> int:
     numbers = _step_numbers(steps)
     count = 0
     for transition in transitions:
-        if not (transition.condition or "").strip():
-            count += 1
-        elif transition.source_step not in numbers or numbers.get(transition.target_step) is None:
+        if not (transition.condition or "").strip() or transition.source_step not in numbers or numbers.get(transition.target_step) is None:
             count += 1
     return count

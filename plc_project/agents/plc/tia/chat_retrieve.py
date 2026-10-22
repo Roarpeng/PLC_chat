@@ -388,8 +388,8 @@ def _try_llm_answer(retrieval: dict[str, Any], query: str, history: list[dict[st
 
     bindings = llm.load_agent_bindings()
     slot_id = bindings.plc
-    configs = llm._load_slot_configs()  # noqa: SLF001 — shared slot store
-    keys = llm._migrate_legacy_keys(llm._load_json(llm._keys_path()))  # noqa: SLF001
+    configs = llm._load_slot_configs()
+    keys = llm._migrate_legacy_keys(llm._load_json(llm._keys_path()))
     key = (keys.get(slot_id) or "").strip()
     cfg = configs.get(slot_id) or {}
     model = str(cfg.get("model") or "").strip()
@@ -439,10 +439,10 @@ def _try_llm_answer(retrieval: dict[str, Any], query: str, history: list[dict[st
         headers = {"Content-Type": "application/json"}
         if key:
             headers["Authorization"] = f"Bearer {key}"
-        urls = llm._chat_completion_urls(base)  # noqa: SLF001
+        urls = llm._chat_completion_urls(base)
         res = None
         for url in urls:
-            res = llm._request_with_dns_retry("POST", url, headers=headers, json_body=payload)  # noqa: SLF001
+            res = llm._request_with_dns_retry("POST", url, headers=headers, json_body=payload)
             if getattr(res, "status_code", 500) != 404:
                 break
         if res is None or getattr(res, "status_code", 500) >= 400:

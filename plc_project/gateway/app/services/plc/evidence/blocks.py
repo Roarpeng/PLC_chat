@@ -10,13 +10,13 @@ from .shared import _network_titles_from_scl
 
 __all__ = [
     "_block_assoc_lines",
-    "_block_meta",
     "_block_io_lists",
+    "_block_meta",
+    "_block_network_titles",
+    "_call_relation_names",
     "_match_block_query",
     "_resolve_block_focus",
     "_tag_io_for_block",
-    "_block_network_titles",
-    "_call_relation_names",
 ]
 
 

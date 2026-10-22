@@ -208,7 +208,7 @@ class PlcKnowledgeGraph:
         }
 
     @classmethod
-    def from_json(cls, data: dict[str, Any]) -> "PlcKnowledgeGraph":
+    def from_json(cls, data: dict[str, Any]) -> PlcKnowledgeGraph:
         graph = cls()
         for node in data.get("nodes") or []:
             props = node.get("props") if isinstance(node.get("props"), dict) else {}

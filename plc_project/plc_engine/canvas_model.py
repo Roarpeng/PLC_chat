@@ -219,7 +219,7 @@ class CanvasState:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "CanvasState":
+    def from_dict(cls, data: dict[str, Any]) -> CanvasState:
         proj_name = data.get("project_name", "UntitledPLC")
         state = cls(project_name=proj_name)
 
@@ -348,7 +348,7 @@ def create_empty_canvas(project_name: str = "PlcDemoProject") -> CanvasState:
             CanvasVariable(name="ActualSpeed", data_type="Real", section="VAR", comment="Speed RPM"),
             CanvasVariable(name="AlarmActive", data_type="Bool", section="VAR", comment="Alarm status"),
         ],
-        status="synced",
+        status="draft",
     )
     state.blocks["MainDB"] = main_db
 
@@ -371,10 +371,10 @@ def create_empty_canvas(project_name: str = "PlcDemoProject") -> CanvasState:
                 id=1,
                 title="Start/Stop Interlock",
                 scl_text='IF #Start AND NOT #Stop THEN\n    #RunningState := TRUE;\nELSIF #Stop THEN\n    #RunningState := FALSE;\nEND_IF;\n#RunOut := #RunningState;',
-                status="synced",
+                status="draft",
             )
         ],
-        status="synced",
+        status="draft",
     )
     state.blocks["MotorCtrl"] = motor_fb
 
@@ -390,7 +390,7 @@ def create_empty_canvas(project_name: str = "PlcDemoProject") -> CanvasState:
         plc_tag="MainDB.StartCmd",
         data_type="Bool",
         properties={"color": "emerald", "action": "set_momentary"},
-        status="synced",
+        status="draft",
     )
     state.hmi_widgets["btn_stop"] = CanvasHmiWidget(
         id="btn_stop",
@@ -403,7 +403,7 @@ def create_empty_canvas(project_name: str = "PlcDemoProject") -> CanvasState:
         plc_tag="MainDB.StopCmd",
         data_type="Bool",
         properties={"color": "rose", "action": "set_momentary"},
-        status="synced",
+        status="draft",
     )
     state.hmi_widgets["lamp_run"] = CanvasHmiWidget(
         id="lamp_run",
@@ -416,7 +416,7 @@ def create_empty_canvas(project_name: str = "PlcDemoProject") -> CanvasState:
         plc_tag="MainDB.MotorRunning",
         data_type="Bool",
         properties={"color": "green", "shape": "circle"},
-        status="synced",
+        status="draft",
     )
     state.hmi_widgets["gauge_speed"] = CanvasHmiWidget(
         id="gauge_speed",
@@ -429,7 +429,7 @@ def create_empty_canvas(project_name: str = "PlcDemoProject") -> CanvasState:
         plc_tag="MainDB.ActualSpeed",
         data_type="Real",
         properties={"min": 0, "max": 3000, "unit": "RPM"},
-        status="synced",
+        status="draft",
     )
 
     # Initial Physical Tags
@@ -653,6 +653,46 @@ def attribute_compiler_errors(canvas: CanvasState, compile_result: dict[str, Any
     """
     canvas.last_compile_result = compile_result
     attributions: list[dict[str, Any]] = []
+
+    # 0. SCL 外部源生成失败：TIA 在 GenerateBlocksFromSource 阶段就直接报错。
+    #    必须最先处理——此时编译被跳过（inconsistent_blocks 为空、message 只有
+    #    "Compile skipped because import failed."），漏掉这段用户就只能看到
+    #    「编译失败」四个字，不知道是哪个块、错在哪一行。
+    for entry in compile_result.get("scl_results") or []:
+        if not isinstance(entry, dict):
+            continue
+        res = entry.get("result") or {}
+        if res.get("ok"):
+            continue
+        scl_path = str(entry.get("scl") or "")
+        blk = scl_path.replace("\\", "/").rsplit("/", 1)[-1]
+        if blk.lower().endswith(".scl"):
+            blk = blk[: -len(".scl")]
+        detail = str(res.get("error") or res.get("message") or "").strip()
+        # TIA 输出形如：… 行 000014: 语法错误：设定值"FUNCTION_BLOCK"无效。   行 000017: …
+        issues = [
+            (ln.strip(), txt.strip())
+            for ln, txt in re.findall(r"行\s*0*(\d+)[:：]\s*(.*?)(?=行\s*0*\d+[:：]|$)", detail)
+        ]
+        if issues:
+            shown = "；".join(f"行 {ln}：{txt}" for ln, txt in issues[:3])
+            more = f"（共 {len(issues)} 条）" if len(issues) > 3 else ""
+        else:
+            shown, more = detail[:300], ""
+        msg = f"博图生成失败：块 [{blk or '?'}] {shown}{more}".strip()
+        if blk and blk in canvas.blocks:
+            canvas.blocks[blk].status = "error"
+            if msg not in canvas.blocks[blk].errors:
+                canvas.blocks[blk].errors.append(msg)
+        attributions.append(
+            {
+                "target_type": "block",
+                "target_id": blk,
+                "severity": "error",
+                "message": msg,
+                "detail": detail[:1000],
+            }
+        )
 
     # 1. Inconsistent blocks reported directly by TIA Portal
     inconsistent = compile_result.get("inconsistent") or compile_result.get("inconsistent_blocks") or []

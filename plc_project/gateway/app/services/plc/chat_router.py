@@ -5,19 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from gateway.app.services.plc.evidence.blocks import _resolve_block_focus
-from gateway.app.services.plc.evidence.cards import (
-    _describe_block_function,
-    _focused_optimize_advice,
-    _format_block_runtime_explain,
-)
-from gateway.app.services.plc.evidence.scl import _expr_dict_to_scl
-from gateway.app.services.plc.evidence.instances import (
-    _describe_instance_from_kg,
-    _lookup_instance_entity,
-)
-from gateway.app.services.plc.evidence.nested import _format_typed_as_nest_lines
-from gateway.app.services.plc.evidence.signal import _format_signal_trace
+from gateway.app.services.plc.chat_evidence import _folded_logic_lines
 from gateway.app.services.plc.chat_intents import (
     _strip_at_hint,
     _wants_block_explain,
@@ -32,7 +20,19 @@ from gateway.app.services.plc.chat_intents import (
     _wants_signal_trace,
     _wants_understand_logic,
 )
-from gateway.app.services.plc.chat_evidence import _folded_logic_lines
+from gateway.app.services.plc.evidence.blocks import _resolve_block_focus
+from gateway.app.services.plc.evidence.cards import (
+    _describe_block_function,
+    _focused_optimize_advice,
+    _format_block_runtime_explain,
+)
+from gateway.app.services.plc.evidence.instances import (
+    _describe_instance_from_kg,
+    _lookup_instance_entity,
+)
+from gateway.app.services.plc.evidence.nested import _format_typed_as_nest_lines
+from gateway.app.services.plc.evidence.scl import _expr_dict_to_scl
+from gateway.app.services.plc.evidence.signal import _format_signal_trace
 from gateway.app.services.plc.handover import (
     format_hitl_adjust_answer,
     wants_handover_hardware,
@@ -43,6 +43,7 @@ from gateway.app.services.plc.writeback_views import (
     _format_confirm_writeback_chat,
     _format_optimize_scl_chat,
 )
+
 
 def answer_block_chat(
     job: dict[str, Any],

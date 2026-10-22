@@ -121,7 +121,7 @@ def build_ops_from_rules(prompt: str, canvas: CanvasState) -> list[dict[str, Any
     m2 = re.search(
         r"(?:添加|新建)\s*(?:一个)?\s*(?:按钮|button).{0,20}?(?:绑定|绑定到|bind)?\s*[「\"']?([A-Za-z_][A-Za-z0-9_\.]*)",
         text,
-        flags=re.I,
+        flags=re.IGNORECASE,
     )
     if m2:
         tag = m2.group(1)

@@ -5,8 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
+from agents.plc.tia.hmi_screens import parse_classic_screen_xml, parse_unified_screens_json
 from plc_engine.canvas_model import (
     CanvasState,
     apply_canvas_patch,
@@ -14,9 +13,8 @@ from plc_engine.canvas_model import (
     create_empty_canvas,
     generate_canvas_autofix_patch,
 )
+from plc_engine.lad_migrate import validate_migration
 from plc_engine.scl_precheck import precheck_canvas
-from plc_engine.lad_migrate import migrate_block_to_scl, validate_migration
-from plc_engine.tia.hmi_screens import parse_classic_screen_xml, parse_unified_screens_json
 
 
 def test_canvas_model_source_revision_roundtrip():

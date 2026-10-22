@@ -39,10 +39,18 @@ public static class HmiCompile
                 if (compileMethod is null)
                 {
                     allOk = false;
+                    // Diagnostics: what Compile-like members does this software
+                    // object actually expose (type + inherited interfaces)?
+                    var members = software.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy)
+                        .Where(m => m.Name.IndexOf("Compil", StringComparison.OrdinalIgnoreCase) >= 0)
+                        .Select(m => m.Name + "(" + string.Join(",", m.GetParameters().Select(p => p.ParameterType.Name + " " + p.Name)) + ")")
+                        .ToList();
                     messages.Add(new JsonObject
                     {
                         ["path"] = t.SoftwareName,
-                        ["description"] = "ICompilable.Compile not available",
+                        ["description"] = "ICompilable.Compile not available; Compile-like methods: "
+                            + (members.Count > 0 ? string.Join(" | ", members) : "(none)")
+                            + "; softwareType=" + software.GetType().FullName,
                         ["severity"] = "error",
                     });
                     continue;

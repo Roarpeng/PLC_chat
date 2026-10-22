@@ -235,31 +235,54 @@ def _parse_absolute_address(access_el: ET.Element) -> str:
 # Interface parsing
 # ---------------------------------------------------------------------------
 
+def _member_comment(member_el: ET.Element) -> str:
+    """取 <Comment> 的文本：兼容 <Text> 与 <MultiLanguageText> 两种写法。
+
+    V19 导出对中文工程普遍用 <MultiLanguageText Lang="zh-CN">，旧实现只认 <Text>，
+    导致真实工程里变量注释全部丢失。
+    """
+    for child in member_el:
+        if _strip_ns(child.tag) != "Comment":
+            continue
+        for text_el in child.iter():
+            tag = _strip_ns(text_el.tag)
+            if tag == "Text" and (text_el.text or "").strip():
+                return (text_el.text or "").strip()
+        for text_el in child.iter():
+            if _strip_ns(text_el.tag) == "MultiLanguageText" and (text_el.text or "").strip():
+                return (text_el.text or "").strip()
+    return ""
+
+
 def _parse_member(member_el: ET.Element, section: InterfaceSection) -> Variable:
     name = _attr(member_el, "Name")
     data_type = _attr(member_el, "Datatype")
     start_value = ""
-    comment = ""
     is_retain = False
-    for node in member_el.iter():
-        tag = _strip_ns(node.tag)
+    # 只遍历直接子节点：旧实现用 iter() 会走进嵌套 <Member>，把子成员的
+    # StartValue/Comment 覆盖到父变量上（STRUCT 变量注释被最后一个成员顶替）。
+    for child in member_el:
+        tag = _strip_ns(child.tag)
         if tag == "StartValue":
-            start_value = (node.text or "").strip()
-        elif tag == "Comment":
-            for text_el in node.iter():
-                if _strip_ns(text_el.tag) == "Text":
-                    comment = (text_el.text or "").strip()
-                    break
-        elif tag == "Attribute":
-            if _attr(node, "Name") == "SetpointAddress" and _attr(node, "Value") == "true":
-                is_retain = True
+            start_value = (child.text or "").strip()
+        elif tag == "AttributeList":
+            for node in child.iter():
+                if _strip_ns(node.tag) == "Attribute":
+                    if _attr(node, "Name") == "SetpointAddress" and _attr(node, "Value") == "true":
+                        is_retain = True
+    members = [
+        _parse_member(child, section)
+        for child in member_el
+        if _strip_ns(child.tag) == "Member"
+    ]
     return Variable(
         name=name,
         section=section,
         data_type=data_type,
         start_value=start_value,
-        comment=comment,
+        comment=_member_comment(member_el),
         is_retain=is_retain,
+        members=members,
     )
 
 

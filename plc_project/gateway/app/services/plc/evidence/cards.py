@@ -21,10 +21,10 @@ from .scl import (
 from .shared import _join_capped
 
 __all__ = [
-    "_explain_block_understanding",
     "_describe_block_function",
-    "_format_block_runtime_explain",
+    "_explain_block_understanding",
     "_focused_optimize_advice",
+    "_format_block_runtime_explain",
 ]
 
 

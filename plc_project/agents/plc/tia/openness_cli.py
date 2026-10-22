@@ -405,13 +405,9 @@ def export_project_via_openness_cli(
         export_flag = "--canvas"
     elif env_mode == "full":
         export_flag = "--full"
-    elif env_mode == "blocks-only" or env_mode == "blocks_only":
+    elif env_mode == "blocks-only" or env_mode == "blocks_only" or blocks_only is True:
         export_flag = "--blocks-only"
-    elif blocks_only is True:
-        export_flag = "--blocks-only"
-    elif blocks_only is False:
-        export_flag = "--full"
-    elif env_blocks in {"0", "false", "no", "off"}:
+    elif blocks_only is False or env_blocks in {"0", "false", "no", "off"}:
         export_flag = "--full"
     else:
         export_flag = "--blocks-only"

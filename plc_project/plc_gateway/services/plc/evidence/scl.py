@@ -12,14 +12,14 @@ from .shared import logger
 __all__ = [
     "_expr_dict_to_scl",
     "_folded_logic_lines",
-    "_purpose_from_fold",
+    "_folded_scl_dump",
+    "_format_block_scl_markdown",
     "_format_scl_logic_block",
     "_program_body_unavailable_reason",
-    "_folded_scl_dump",
-    "_scl_from_ir_translator",
-    "_scl_from_export_package",
+    "_purpose_from_fold",
     "_resolve_block_scl_text",
-    "_format_block_scl_markdown",
+    "_scl_from_export_package",
+    "_scl_from_ir_translator",
 ]
 
 

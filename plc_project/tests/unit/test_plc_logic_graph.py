@@ -60,7 +60,6 @@ def test_knowledge_canvas_edges_include_calls_uses_instance():
     }
     plc_nodes = nodes_from_plc_job(job, task_id="t1", turn_id="u1")
     edges = edges_from_plc_logic(job, plc_nodes)
-    labels = {(e["label"], ) for e in edges}
     kinds = {e["label"] for e in edges}
     assert "CALLS" in kinds
     assert "USES" in kinds

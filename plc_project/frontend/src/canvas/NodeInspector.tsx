@@ -1,13 +1,12 @@
-import type { KnowledgeNode } from "../../KnowledgeCanvas";
-import { inspectNode, type InspectContext } from "./inspectModel";
+import { inspectNode, type InspectableNode, type InspectContext } from "./inspectModel";
 
 type Props = {
-  node: KnowledgeNode;
+  node: InspectableNode;
   ctx?: InspectContext;
   busy?: boolean;
-  onAsk: (node: KnowledgeNode) => void;
-  onViewSources: (node: KnowledgeNode) => void;
-  onMarkNote: (node: KnowledgeNode) => void;
+  onAsk: (node: InspectableNode) => void;
+  onViewSources: (node: InspectableNode) => void;
+  onMarkNote: (node: InspectableNode) => void;
   onClose: () => void;
 };
 

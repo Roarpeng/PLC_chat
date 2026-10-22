@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 from gateway.app.config import get_settings
-
 from gateway.app.services.plc.chat_intents import (
     _wants_confirm_writeback,
     _wants_optimize_scl,
@@ -234,7 +233,7 @@ def confirm_job_writeback(
                 zap_file = archive_project_via_openness_cli(target, out=out_dir)
                 result["zap_path"] = str(zap_file)
                 result["zap_archive"] = {"ok": True, "path": str(zap_file)}
-            except Exception as exc:  # noqa: BLE001 — import succeeded; surface archive separately
+            except Exception as exc:
                 logger.exception("PLC zap archive failed job_id=%s", job.get("id"))
                 result["zap_archive"] = {"ok": False, "error": str(exc)}
     else:

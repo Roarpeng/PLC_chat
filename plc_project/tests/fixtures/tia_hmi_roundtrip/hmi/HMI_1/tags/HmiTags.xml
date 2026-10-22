@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Hmi.TagTable Name="HmiTags">
+    <Hmi.Tag Name="HmiStartCmd" DataType="Bool">
+      <AttributeList>
+        <Name>HmiStartCmd</Name>
+        <PlcTag>"PLC_1"\MainDB.StartCmd</PlcTag>
+      </AttributeList>
+    </Hmi.Tag>
+    <Hmi.Tag Name="HmiRunLamp" DataType="Bool">
+      <AttributeList>
+        <Name>HmiRunLamp</Name>
+        <PlcTag>PLC_1/MainDB.MotorRunning</PlcTag>
+      </AttributeList>
+    </Hmi.Tag>
+    <Hmi.Tag Name="HmiSpeed" DataType="Real">
+      <AttributeList>
+        <Name>HmiSpeed</Name>
+        <PlcTag>PLC_1.MainDB.ActualSpeed</PlcTag>
+      </AttributeList>
+    </Hmi.Tag>
+    <Hmi.Tag Name="HmiAlarm" DataType="Bool">
+      <AttributeList>
+        <Name>HmiAlarm</Name>
+        <PlcTag>PLC_1\MainDB.AlarmActive</PlcTag>
+      </AttributeList>
+    </Hmi.Tag>
+    <Hmi.Tag Name="HmiRelative" DataType="Bool">
+      <AttributeList>
+        <Name>HmiRelative</Name>
+        <Connection>PLC_Conn</Connection>
+        <PlcTag>MainDB.StopCmd</PlcTag>
+      </AttributeList>
+    </Hmi.Tag>
+  </Hmi.TagTable>
+</Document>

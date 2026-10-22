@@ -4,18 +4,27 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from langgraph.checkpoint.memory import MemorySaver
+import pytest
 
-from agents.planner import build_rule_based_plan
-from agents.plc.node import run as plc_run
-from agents.registry import get_agent_registry
-from agents.supervisor import AGENT_TO_NODE, decide_route
-from industrial.connectors.plc_docs import FakePlcDocsConnector, PlcDocEntry
-from runtime.researchos_runtime.graph import WORKER_AGENTS, build_graph
-from runtime.researchos_runtime.mcp_client import MCPClient
-from runtime.researchos_runtime.settings import RuntimeSettings
-from runtime.researchos_runtime.state import TaskStatus, initial_state
-from tools.plc import server as plc_server
+# The PLC agent graph and its task-state schema are built on LangGraph/LangChain.
+# Both are optional runtime extras that may be absent from a slim/offline venv; when
+# they are missing this module is *skipped* (never a collection error). Install
+# `langgraph` + `langchain-core` and every test below runs for real.
+try:
+    from langgraph.checkpoint.memory import MemorySaver
+
+    from agents.planner import build_rule_based_plan
+    from agents.plc.node import run as plc_run
+    from agents.registry import get_agent_registry
+    from agents.supervisor import AGENT_TO_NODE, decide_route
+    from industrial.connectors.plc_docs import FakePlcDocsConnector, PlcDocEntry
+    from runtime.researchos_runtime.graph import WORKER_AGENTS, build_graph
+    from runtime.researchos_runtime.mcp_client import MCPClient
+    from runtime.researchos_runtime.settings import RuntimeSettings
+    from runtime.researchos_runtime.state import TaskStatus, initial_state
+    from tools.plc import server as plc_server
+except ModuleNotFoundError as exc:  # langgraph / langchain_core not installed
+    pytest.skip(f"PLC agent graph requires optional extras: {exc}", allow_module_level=True)
 
 TIA_FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "tia_exports"
 

@@ -15,6 +15,28 @@ from agents.plc.tia.writeback import execute_writeback
 from plc_engine.canvas_model import CanvasState, attribute_compiler_errors
 
 
+def precheck_canvas_for_writeback(canvas: CanvasState) -> dict[str, Any]:
+    """写回前的本地 SCL 预检门禁（复用 plc_engine.scl_precheck 的规则）。
+
+    归一化返回 {ok, errors, warnings, findings, summary}：
+    - ok=False（存在 error 级问题）→ 调用方必须 fail-closed，不得写 TIA；
+    - 仅 warning 不阻断，但要带进结果供前端展示。
+    """
+    from plc_engine.scl_precheck import precheck_canvas
+
+    report = precheck_canvas(canvas)
+    findings = list(report.get("findings") or [])
+    errors = [f for f in findings if f.get("severity") == "error"]
+    warnings = [f for f in findings if f.get("severity") == "warning"]
+    return {
+        "ok": not errors,
+        "errors": errors,
+        "warnings": warnings,
+        "findings": findings,
+        "summary": f"本地预检：{len(errors)} 个错误 / {len(warnings)} 个警告",
+    }
+
+
 def preview_canvas_scl(canvas: CanvasState) -> dict[str, str]:
     """Render full SCL source code for all blocks in Canvas."""
     scl_map: dict[str, str] = {}
@@ -87,6 +109,13 @@ def canvas_to_tia_bundle(canvas: CanvasState, output_dir: str | Path) -> Path:
     staged_scls: list[str] = []
     scl_map = preview_canvas_scl(canvas)
     for block_name, scl_content in scl_map.items():
+        # 只重写真正被改动过的块。画布刚从工程导入时所有块都是 synced，
+        # 此时若全量重写，会把 89 个块全部用规则翻译结果覆盖原工程
+        # （真实工程 HR001 实测：编译错误从 0 涨到 1007）。未改动的块
+        # 必须保持 TIA 里的原样，这是最小破坏原则。
+        block = canvas.blocks.get(block_name)
+        if block is not None and str(getattr(block, "status", "")) == "synced":
+            continue
         scl_file = ext_dir / f"{block_name}.scl"
         scl_file.write_text(scl_content, encoding="utf-8")
         staged_scls.append(str(scl_file))

@@ -7,7 +7,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from gateway.app.config import Settings, get_settings
 from gateway.app.schemas.llm import (
@@ -18,6 +18,9 @@ from gateway.app.schemas.llm import (
     LlmSlotStatus,
     LlmSlotUpdate,
 )
+
+if TYPE_CHECKING:
+    import httpx
 
 logger = logging.getLogger("researchos.gateway.llm")
 
@@ -275,9 +278,7 @@ def _write_runtime_artifacts(keys: dict[str, str], configs: dict[str, dict[str, 
         meta = _SLOT_META[sid]
         model = cfg.get("model") or meta["default_model"]
         kind = meta["kind"]
-        if kind == "chat":
-            litellm_model = model if "/" in model else f"openai/{model}"
-        elif kind == "embed":
+        if kind == "chat" or kind == "embed":
             litellm_model = model if "/" in model else f"openai/{model}"
         else:
             # rerank — prefer openai-compatible or jina/
@@ -635,7 +636,7 @@ def _chat_completion_urls(base: str) -> list[str]:
     return urls
 
 
-def _ipv4_http_client() -> "httpx.Client":
+def _ipv4_http_client() -> httpx.Client:
     import httpx
 
     # Prefer IPv4 on Windows where IPv6 getaddrinfo often fails for CDN CNAMEs
@@ -798,7 +799,7 @@ def _request_via_ipv4_ip(
         hdrs["Content-Length"] = str(len(body))
 
     class _HTTPS(http.client.HTTPSConnection):
-        def connect(self) -> None:  # noqa: ANN202
+        def connect(self) -> None:
             sock = socket.create_connection((ip, port), self.timeout)
             context = self._context or ssl.create_default_context()
             self.sock = context.wrap_socket(sock, server_hostname=host)
@@ -868,7 +869,6 @@ def test_llm_slot(
     """Probe a slot with a minimal chat/embed request (does not require LiteLLM)."""
     import time
 
-    import httpx
 
     sid = (slot_id or "").strip()
     if sid not in VALID_SLOT_IDS:
@@ -976,7 +976,7 @@ def test_llm_slot(
         if res.status_code < 400:
             try:
                 _persist_tested_slot(sid, api_key=api_key, model=model, base_url=base_url)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception("failed to persist successful llm slot test slot=%s", sid)
             return {
                 "ok": True,

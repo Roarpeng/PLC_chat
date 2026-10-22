@@ -30,7 +30,7 @@ def test_resolve_node_exact_and_tail_match() -> None:
     assert resolve_kg_node(kg, "Main") == "Block::Main"
     assert resolve_kg_node(kg, "DoorClosed") == 'Tag::"DoorClosed"'
     # full reference and quoted tail both resolve
-    assert resolve_kg_node(kg, '"PLCTable"."DoorClosed"'.split(".")[-1]) == 'Tag::"DoorClosed"'
+    assert resolve_kg_node(kg, ['"PLCTable"', '"DoorClosed"'][-1]) == 'Tag::"DoorClosed"'
     assert resolve_kg_node(kg, "Missing") is None
 
 

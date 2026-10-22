@@ -585,7 +585,7 @@ async def writeback_plc_job(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "PLC_WRITEBACK_INVALID", "message": str(exc)},
         ) from exc
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("PLC writeback failed job_id=%s", job_id)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

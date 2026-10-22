@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from runtime.researchos_runtime.state import TaskState
@@ -35,7 +35,7 @@ def run(state: TaskState) -> dict[str, Any]:
     citations = list(state.get("citations") or [])
     analysis = dict(state.get("analysis_results") or {})
     plan = state.get("plan") or {}
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     title = f"ResearchOS Report — {query[:80]}"
     lines: list[str] = [

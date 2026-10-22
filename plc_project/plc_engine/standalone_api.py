@@ -9,14 +9,12 @@ or licenses.
 from __future__ import annotations
 
 import tempfile
-import xml.etree.ElementTree as ET
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 from agents.plc.tia.flgnet_fold import attach_folded, fold_project
-from agents.plc.tia.ir import Block, BlockType, PlcProject, TagTable
-from agents.plc.tia.kg import PlcKnowledgeGraph, build_knowledge_graph
+from agents.plc.tia.ir import PlcProject
+from agents.plc.tia.kg import build_knowledge_graph
 from agents.plc.tia.review import run_review
 from agents.plc.tia.scl import convert_project_to_scl, translate_block_to_scl
 from agents.plc.tia.simaticml import extract_project, parse_block_xml, parse_tag_table_xml

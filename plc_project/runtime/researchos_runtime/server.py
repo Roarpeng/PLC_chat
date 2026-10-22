@@ -96,7 +96,6 @@ def health() -> dict[str, Any]:
 
 @app.post("/runs")
 def start_run(body: StartRunRequest) -> dict[str, Any]:
-    settings = get_settings()
     task_id = body.task_id or f"tsk_{uuid.uuid4().hex[:16]}"
     if body.auto_approve is not None:
         # Per-request override via process env for supervisor helper
@@ -119,7 +118,7 @@ def start_run(body: StartRunRequest) -> dict[str, Any]:
     config = _thread_config(task_id)
     try:
         result = graph.invoke(state, config)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("run failed task_id=%s", task_id)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -178,7 +177,7 @@ def resume_run(task_id: str, body: ResumeRequest) -> dict[str, Any]:
 
     try:
         result = graph.invoke(Command(resume=resume_value), config)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("resume failed task_id=%s", task_id)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

@@ -8,8 +8,8 @@ from typing import Any
 logger = logging.getLogger("researchos.gateway.plc")
 
 __all__ = [
-    "_format_optimize_hints",
     "_block_risk_notes",
+    "_format_optimize_hints",
 ]
 
 

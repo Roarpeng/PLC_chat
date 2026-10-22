@@ -31,10 +31,118 @@ import {
 import { useResizablePanes } from "./state/useResizablePanes";
 import type { CanvasStateData, CompileJobData, CompilerAttribution } from "./canvas/types";
 import { CompileDrawer } from "./shell/CompileDrawer";
+import {
+  GatewayError,
+  pollUntil,
+  requestPlc,
+  type PlcJobDetail,
+  type PlcJobSummary,
+} from "./lib/plcGateway";
 
-const API_BASE = "http://localhost:8000";
+/** 一条解析降级告警（coverage.py `warnings[]` 的元素，或 review 截断提示） */
+type DegradationWarning = {
+  level?: string;
+  code?: string;
+  message?: string;
+  affected_blocks?: string[];
+  count?: number;
+};
+
+type DegradationState = {
+  jobId: string;
+  projectName: string;
+  /** todo_rate 反过来表达的"已翻译比例"，0-100 的整数 */
+  translatedPct: number;
+  warnings: DegradationWarning[];
+};
 
 const msgId = () => "m-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/* —— 编译作业：canvas/types.ts 的 CompileJobData 尚未登记后端近期新增的三个字段 —— */
+type PrecheckFinding = {
+  target_type?: string;
+  target_id?: string;
+  severity?: string;
+  message?: string;
+};
+
+type PrecheckReport = {
+  ok?: boolean;
+  errors?: PrecheckFinding[];
+  warnings?: PrecheckFinding[];
+  findings?: PrecheckFinding[];
+};
+
+/** 7 阶段状态机之外，网关 compile_jobs 还会回报 degraded / timed_out / precheck */
+type CompileJobPayload = CompileJobData & {
+  degraded?: boolean;
+  timed_out?: boolean;
+  precheck?: PrecheckReport | null;
+};
+
+/** 网关侧作业硬超时默认 900s（COMPILE_JOB_TIMEOUT_S）；前端多给 60s 让 timeout 结论先落地 */
+const COMPILE_POLL_TIMEOUT_MS = 960_000;
+const COMPILE_POLL_INTERVAL_MS = 1000;
+const COMPILE_PROBE_TIMEOUT_MS = 15_000;
+
+/** 网关错误码 → 人话提示；未登记的 code 仍退回网关 message */
+const GATEWAY_ERROR_HINTS: Record<string, string> = {
+  LLM_NOT_CONFIGURED:
+    "深度解释需要 LLM：请在网关进程配置 PLC_LLM_BASE_URL / PLC_LLM_API_KEY / PLC_LLM_MODEL 后重启网关",
+  PLC_ZAP_NOT_READY: "工程归档尚未就绪（Openness 导出未完成或产物缺失），请稍后重试导入",
+  PLC_DOWNLOAD_NOT_IMPLEMENTED: "本产品不提供 PLC 下载功能，仅支持回写博图与编译校验",
+  compile_api_unavailable: "TIA Openness 编译接口不可用：请确认本机已安装博图且 Openness 授权可用",
+  JOB_NOT_FOUND: "编译作业已不存在（网关作业只保留 1 小时），请重新触发回写",
+  PATH_REQUIRED: "缺少目标博图工程路径：请先导入工程，或在画布上设置工程来源",
+  BLOCK_REQUIRED: "缺少块数据，无法解释",
+  precheck_failed: "本地预检未通过，已中止回写（fail-closed，未写入 TIA）",
+};
+
+const errorName = (err: unknown): string =>
+  err && typeof err === "object" ? String((err as { name?: string }).name ?? "") : "";
+
+/** 我们主动中止（AbortController / sleep 抛出） */
+const isAbortError = (err: unknown): boolean => errorName(err) === "AbortError";
+
+/** AbortSignal.timeout() 到点是 TimeoutError，不是 AbortError —— 两者都不是网关业务错误 */
+const isTimeoutError = (err: unknown): boolean => errorName(err) === "TimeoutError";
+
+/** GatewayError.code 优先翻译成人话；未登记的 code / 普通 Error 退回原始 message */
+function explainGatewayError(err: unknown, fallback: string): string {
+  if (isAbortError(err) || isTimeoutError(err)) {
+    return "请求超时：网关未在限定时间内响应";
+  }
+  if (!(err instanceof GatewayError)) {
+    return err instanceof Error && err.message ? err.message : fallback;
+  }
+  const hint = err.code ? GATEWAY_ERROR_HINTS[err.code] : null;
+  const raw = err.message || "";
+  if (!hint) return raw || fallback;
+  return raw && !hint.includes(raw) ? `${hint}（${raw}）` : hint;
+}
+
+/** degraded / timed_out / precheck → 人话（目前挂在通知条 + 会话消息 + 抽屉 error 行上） */
+function compileJobNotes(job: CompileJobPayload): string[] {
+  const notes: string[] = [];
+  if (job.timed_out) {
+    notes.push(
+      "作业触发网关硬超时（默认 900s）：未完成的阶段已标记跳过，TIA 侧线程可能仍在写工程，请确认工程状态后再操作",
+    );
+  }
+  if (job.degraded) {
+    notes.push(
+      "降级完成：Openness 常驻会话不可用，已回退一次性写回（open_project 阶段为 skipped），结果完整性不如常驻会话",
+    );
+  }
+  const pre = job.precheck;
+  if (pre && pre.ok === false) {
+    const errs = (pre.errors || []).map((e) =>
+      `[${e.target_type ?? "?"}:${e.target_id ?? "?"}] ${e.message ?? ""}`.trim(),
+    );
+    notes.push(`本地预检未通过，已 fail-closed 不写入 TIA：${errs.join("；") || "见诊断面板"}`);
+  }
+  return notes;
+}
 
 const BrandMark: React.FC = () => (
   <svg width="20" height="20" viewBox="0 0 100 100" aria-hidden="true">
@@ -80,8 +188,20 @@ const App: React.FC = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attributions, setAttributions] = useState<CompilerAttribution[]>([]);
-  const [compileJob, setCompileJob] = useState<CompileJobData | null>(null);
+  const [compileJob, setCompileJob] = useState<CompileJobPayload | null>(null);
+
+  /** 在飞的编译轮询：切换会话 / 卸载页面时中止，避免残留定时器和过期结果覆盖新画布 */
+  const compileAbortRef = React.useRef<AbortController | null>(null);
+  const abortCompilePoll = React.useCallback(() => {
+    compileAbortRef.current?.abort();
+    compileAbortRef.current = null;
+  }, []);
+  useEffect(() => abortCompilePoll, [abortCompilePoll]);
   const [writebackNotice, setWritebackNotice] = useState<string | null>(null);
+
+  /* 解析降级告警：只有真的存在降级时才铺开 */
+  const [degradation, setDegradation] = useState<DegradationState | null>(null);
+  const [degradationOpen, setDegradationOpen] = useState(false);
 
   const panes = useResizablePanes("plc-copilot.panes.v1");
   const { leftOpen, rightOpen, leftWidth, rightWidth } = panes.state;
@@ -105,13 +225,85 @@ const App: React.FC = () => {
 
   const activeSession = activeSessionId ? sessions.find((s) => s.id === activeSessionId) ?? null : null;
 
+  /* 降级告警：读最近一次 PLC 解析作业的 coverage.warnings / review 截断标记 */
+  const projectNameRef = React.useRef<string>(canvas.project_name);
+  useEffect(() => {
+    projectNameRef.current = canvas.project_name;
+  }, [canvas.project_name]);
+
+  const refreshDegradations = React.useCallback(async () => {
+    try {
+      const res = await requestPlc<PlcJobSummary[] | null>(`/api/v1/plc/jobs?limit=10`, {
+        signal: AbortSignal.timeout?.(8000),
+      });
+      const jobs = Array.isArray(res) ? res : [];
+      const ready = jobs.filter(
+        (job) => job?.status === "ready" && job?.coverage && typeof job.coverage === "object",
+      );
+      if (!ready.length) {
+        setDegradation(null);
+        return;
+      }
+      const wanted = projectNameRef.current;
+      const picked =
+        ready.find((job) => wanted && String(job?.project_name || "") === wanted) ?? ready[0];
+
+      let coverage: any = picked?.coverage || {};
+      let review: any = null;
+      try {
+        // detail 里才有 review（截断提示），summary 只带 coverage
+        const detail = await requestPlc<
+          PlcJobDetail & { review?: { truncated?: boolean; total_count?: number } | null }
+        >(`/api/v1/plc/jobs/${encodeURIComponent(String(picked?.id || ""))}`, {
+          signal: AbortSignal.timeout?.(8000),
+        });
+        if (detail) {
+          coverage = detail.coverage || coverage;
+          review = detail.review || null;
+        }
+      } catch {
+        /* detail 拉不到就只用 summary 的 coverage */
+      }
+
+      const warnings: DegradationWarning[] = Array.isArray(coverage?.warnings)
+        ? [...coverage.warnings]
+        : [];
+      if (review?.truncated) {
+        const total = Math.round(Number(review.total_count) || 0);
+        warnings.push({
+          level: "info",
+          code: "review.truncated",
+          message: `确定性审查报告已截断：实际命中 ${total} 处，报告只展示每条规则的前若干条，别把条数当成问题总数。`,
+          affected_blocks: [],
+          count: total,
+        });
+      }
+      if (!warnings.length) {
+        setDegradation(null);
+        return;
+      }
+      const todoRate = Number(coverage?.todo_rate) || 0;
+      setDegradation({
+        jobId: String(picked?.id || ""),
+        projectName: String(picked?.project_name || ""),
+        translatedPct: Math.round(Math.min(1, Math.max(0, 1 - todoRate)) * 100),
+        warnings,
+      });
+    } catch {
+      /* 网关不可用：保持静默，不打扰离线沙箱用户 */
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshDegradations();
+  }, [refreshDegradations]);
+
   // 拉取后端默认画布
   useEffect(() => {
-    fetch(`${API_BASE}/api/v1/plc/canvas/default`)
-      .then((res) => res.json())
+    requestPlc<CanvasStateData>(`/api/v1/plc/canvas/default`)
       .then((data) => {
-        if (data && data.ok && data.data) {
-          setCanvas(data.data);
+        if (data && typeof data === "object") {
+          setCanvas(data);
           setBackendConnected(true);
         }
       })
@@ -176,17 +368,15 @@ const App: React.FC = () => {
     const sessionId = commitSession(next, msgs, userText ?? undefined);
 
     // 后端尽力同步：成功且期间无新编辑时，用权威结果和解（同时刷新会话快照）
-    fetch(`${API_BASE}/api/v1/plc/canvas/patch`, {
+    requestPlc<CanvasStateData>(`/api/v1/plc/canvas/patch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ operations: ops, canvas }),
       signal: AbortSignal.timeout?.(4000),
     })
-      .then((res) => res.json())
-      .then((json) => {
-        if (!json || !json.ok || !json.data) return;
+      .then((remote) => {
+        if (!remote || typeof remote !== "object") return;
         if (editSeqRef.current !== seq) return; // 期间已有新编辑，放弃过期结果
-        const remote = json.data as CanvasStateData;
         setCanvas(remote);
         setSessions((prev) => {
           const list = prev.map((s) => (s.id === sessionId ? { ...s, canvas: remote } : s));
@@ -211,22 +401,24 @@ const App: React.FC = () => {
       let ops: any[] = [];
       let previewNote = "";
       try {
-        const res = await fetch(`${API_BASE}/api/v1/plc/canvas/chat-ops`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            canvas,
-            prompt,
-            apply: false,
-            use_llm: true,
-            context: { selected_block: selectedBlockName, focus },
-          }),
-          signal: AbortSignal.timeout?.(60000),
-        });
-        const json = await res.json();
-        if (json?.ok && Array.isArray(json.data?.ops) && json.data.ops.length) {
-          ops = json.data.ops;
-          previewNote = `（${json.data.source || "chat-ops"}）`;
+        const data = await requestPlc<{ ops?: any[]; source?: string }>(
+          `/api/v1/plc/canvas/chat-ops`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              canvas,
+              prompt,
+              apply: false,
+              use_llm: true,
+              context: { selected_block: selectedBlockName, focus },
+            }),
+            signal: AbortSignal.timeout?.(60000),
+          },
+        );
+        if (Array.isArray(data?.ops) && data.ops.length) {
+          ops = data.ops;
+          previewNote = `（${data.source || "chat-ops"}）`;
         }
       } catch {
         /* fall through to local rules */
@@ -248,15 +440,17 @@ const App: React.FC = () => {
       }
       // Local precheck when ops touch SCL
       try {
-        const pre = await fetch(`${API_BASE}/api/v1/plc/canvas/precheck`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ canvas: applyOpsLocally(canvas, ops) }),
-          signal: AbortSignal.timeout?.(10000),
-        });
-        const preJson = await pre.json();
-        if (preJson?.data && preJson.data.ok === false) {
-          const errs = (preJson.data.errors || []).map((e: any) => e.message).join("；");
+        const pre = await requestPlc<{ ok?: boolean; errors?: Array<{ message?: string }> }>(
+          `/api/v1/plc/canvas/precheck`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ canvas: applyOpsLocally(canvas, ops) }),
+            signal: AbortSignal.timeout?.(10000),
+          },
+        );
+        if (pre && pre.ok === false) {
+          const errs = (pre.errors || []).map((e: any) => e.message).join("；");
           commitSession(canvas, [
             { id: msgId(), role: "user", text: prompt, ts: Date.now() },
             {
@@ -281,6 +475,7 @@ const App: React.FC = () => {
   const handleSelectSession = (id: string) => {
     const s = sessions.find((x) => x.id === id);
     if (!s) return;
+    abortCompilePoll(); // 别让上一个会话的编译结果盖掉这份画布
     setActiveSessionId(id);
     setCanvas(s.canvas);
     setSelectedBlockName(
@@ -290,6 +485,7 @@ const App: React.FC = () => {
   };
 
   const handleNewSession = () => {
+    abortCompilePoll();
     setActiveSessionId(null);
     setCanvas(defaultCanvas);
     setSelectedBlockName("MotorCtrl");
@@ -303,6 +499,7 @@ const App: React.FC = () => {
     setSessions(list);
     persistSessions(list);
     if (activeSessionId === id) {
+      abortCompilePoll();
       setActiveSessionId(null);
       setCanvas(defaultCanvas);
       setSelectedBlockName("MotorCtrl");
@@ -341,6 +538,8 @@ const App: React.FC = () => {
     persistSessions(list);
 
     setCanvas(imported);
+    projectNameRef.current = imported.project_name;
+    void refreshDegradations();
     setSelectedBlockName(
       Object.values(imported.blocks).find((b) => b.block_type !== "DB")?.name ?? null
     );
@@ -355,11 +554,11 @@ const App: React.FC = () => {
   ) => {
     const tick = async () => {
       try {
-        const res = await fetch(
-          `${API_BASE}/api/v1/plc/canvas/import/progress/${encodeURIComponent(progressId)}`,
+        const p = await requestPlc<{ message?: string }>(
+          `/api/v1/plc/canvas/import/progress/${encodeURIComponent(progressId)}`,
+          { signal: AbortSignal.timeout?.(5000) },
         );
-        const json = await res.json().catch(() => null);
-        const msg = json?.data?.message;
+        const msg = p?.message;
         if (typeof msg === "string" && msg.trim()) onStage(msg.trim());
       } catch {
         /* poll is best-effort */
@@ -382,7 +581,8 @@ const App: React.FC = () => {
     const stopPoll = onStage ? pollImportProgress(progressId, onStage) : () => {};
     onStage?.("正在连接网关…");
     try {
-      const res = await fetch(`${API_BASE}/api/v1/plc/canvas/import`, {
+      // 大型 .zap（如 HR002 15MB/72 块）网关解包+解析实测约 45s：30s 会先超时
+      const data = await requestPlc<{ canvas: CanvasStateData }>(`/api/v1/plc/canvas/import`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -390,24 +590,13 @@ const App: React.FC = () => {
           project_name: projectName,
           progress_id: progressId,
         }),
-        // 大型 .zap（如 HR002 15MB/72 块）网关解包+解析实测约 45s：30s 会先超时
         signal: AbortSignal.timeout?.(180000),
       });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json || !json.ok) {
-        const detail = json?.detail;
-        const message =
-          detail && typeof detail === "object" && detail.message
-            ? detail.message
-            : detail && typeof detail === "string"
-            ? detail
-            : `导入失败（HTTP ${res.status}）`;
-        throw new Error(message);
-      }
-      const data = json.data;
       const imported: CanvasStateData = data.canvas;
       const name = imported.project_name || projectName || "ImportedProject";
       handleImportCanvas(imported, name);
+    } catch (err) {
+      throw new Error(explainGatewayError(err, "导入失败"));
     } finally {
       stopPoll();
     }
@@ -430,28 +619,22 @@ const App: React.FC = () => {
       form.append("file", file);
       if (projectName.trim()) form.append("project_name", projectName.trim());
       form.append("progress_id", progressId);
-      const res = await fetch(`${API_BASE}/api/v1/plc/canvas/import/upload`, {
-        method: "POST",
-        body: form,
-        signal: AbortSignal.timeout?.(180000),
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json || !json.ok) {
-        const detail = json?.detail;
-        const message =
-          detail && typeof detail === "object" && detail.message
-            ? detail.message
-            : detail && typeof detail === "string"
-            ? detail
-            : `导入失败（HTTP ${res.status}）`;
-        throw new Error(message);
-      }
-      const imported: CanvasStateData = json.data.canvas;
+      const data = await requestPlc<{ canvas: CanvasStateData }>(
+        `/api/v1/plc/canvas/import/upload`,
+        {
+          method: "POST",
+          body: form,
+          signal: AbortSignal.timeout?.(180000),
+        },
+      );
+      const imported: CanvasStateData = data.canvas;
       const name =
-        json.data.canvas.project_name ||
+        data.canvas.project_name ||
         projectName.trim() ||
         file.name.replace(/\.(zap\d*|ap1\d|zip)$/i, "");
       handleImportCanvas(imported, name);
+    } catch (err) {
+      throw new Error(explainGatewayError(err, "导入失败"));
     } finally {
       stopPoll();
     }
@@ -597,20 +780,55 @@ const App: React.FC = () => {
   /* LLM 深度解释：块 + 规则引擎预分析 → 网关 → OpenAI 兼容端点 */
   const handleDeepExplain = async (block: CanvasStateData["blocks"][string]): Promise<string> => {
     const scaffold = explainBlock(block, { edges: report.blockEdges, widgets: widgetList });
-    const res = await fetch(`${API_BASE}/api/v1/plc/canvas/explain-block`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ block, scaffold }),
-      signal: AbortSignal.timeout?.(90000),
-    });
-    const json = await res.json().catch(() => null);
-    const detail = json?.detail;
-    const message =
-      detail && typeof detail === "object" && detail.message ? detail.message : detail && typeof detail === "string" ? detail : null;
-    if (!res.ok || !json?.ok) {
-      throw new Error(message ?? `深度解释失败（HTTP ${res.status}）`);
+    try {
+      const data = await requestPlc<{ explanation?: string }>(
+        `/api/v1/plc/canvas/explain-block`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ block, scaffold }),
+          signal: AbortSignal.timeout?.(90000),
+        },
+      );
+      return data.explanation as string;
+    } catch (err) {
+      // LLM_NOT_CONFIGURED 等 code 在这里变成人话提示，UI 直接展示
+      throw new Error(explainGatewayError(err, "深度解释失败"));
     }
-    return json.data.explanation as string;
+  };
+
+  /**
+   * 轮询编译作业直到 7 阶段状态机收敛。
+   * 替代原来的 `for (let i = 0; i < 600; i++)` 死循环：
+   * - `signal`：切换会话 / 卸载页面可中止，不留残留定时器；
+   * - `timeoutMs`：960s 上限（网关硬超时 900s + 60s 让 timeout 结论先落地）；
+   * - `onProgress`：每次探测都写 `compileJob`，阶段状态实时上屏；
+   * - 终止条件：status ∈ {ok, error, cancelled}（含网关侧 timed_out 落成的 error）。
+   */
+  const pollCompileJob = async (jobId: string): Promise<CompileJobPayload> => {
+    const controller = new AbortController();
+    compileAbortRef.current = controller;
+    try {
+      const job = await pollUntil<CompileJobPayload>(
+        () =>
+          requestPlc<CompileJobPayload>(
+            `/api/v1/plc/canvas/compile-jobs/${encodeURIComponent(jobId)}`,
+            { signal: AbortSignal.timeout?.(COMPILE_PROBE_TIMEOUT_MS) },
+          ),
+        (j) => j.status === "ok" || j.status === "error" || j.status === "cancelled",
+        {
+          intervalMs: COMPILE_POLL_INTERVAL_MS,
+          timeoutMs: COMPILE_POLL_TIMEOUT_MS,
+          signal: controller.signal,
+          onProgress: (j) => setCompileJob(j),
+        },
+      );
+      // 中止可能落在最后一次探测与收敛之间：这时结果已过期，按中止处理
+      if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+      return job;
+    } finally {
+      if (compileAbortRef.current === controller) compileAbortRef.current = null;
+    }
   };
 
   /* 人工确认门禁回写：异步编译作业 + 轮询；路径取自 canvas.source */
@@ -620,7 +838,13 @@ const App: React.FC = () => {
     try {
       const projectPath = canvas.source?.project_path || `${canvas.project_name}.ap19`;
       const plcName = canvas.source?.plc_name || "PLC_1";
-      const res = await fetch(`${API_BASE}/api/v1/plc/canvas/confirm-writeback`, {
+      const data = await requestPlc<{
+        async?: boolean;
+        job?: CompileJobPayload | null;
+        writeback?: { ok?: boolean } | null;
+        attributions?: CompilerAttribution[];
+        canvas?: CanvasStateData;
+      }>(`/api/v1/plc/canvas/confirm-writeback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -632,46 +856,64 @@ const App: React.FC = () => {
         }),
         signal: AbortSignal.timeout?.(30000),
       });
-      const json = await res.json();
-      if (!json?.ok || !json.data) {
-        const detail = json?.detail;
-        const msg =
-          detail && typeof detail === "object" && detail.message
-            ? String(detail.message)
-            : detail && typeof detail === "string"
-            ? detail
-            : "writeback failed";
-        throw new Error(msg);
-      }
 
-      if (json.data.async && json.data.job?.id) {
-        let job: CompileJobData = json.data.job;
+      if (data?.async && data.job?.id) {
+        let job: CompileJobPayload = data.job;
         setCompileJob(job);
         setWritebackNotice("编译作业已启动…");
-        for (let i = 0; i < 600; i++) {
-          await new Promise((r) => setTimeout(r, 1000));
-          const jr = await fetch(`${API_BASE}/api/v1/plc/canvas/compile-jobs/${job.id}`);
-          const jjson = await jr.json();
-          if (jjson?.ok && jjson.data) {
-            job = jjson.data;
-            setCompileJob(job);
-            if (job.status === "ok" || job.status === "error" || job.status === "cancelled") break;
+        try {
+          job = await pollCompileJob(job.id);
+        } catch (err) {
+          if (isAbortError(err)) {
+            setWritebackNotice("已停止等待编译结果（切换会话或离开页面）；网关侧作业可能仍在运行");
+            setTimeout(() => setWritebackNotice(null), 8000);
+            return;
           }
+          const detail =
+            err instanceof GatewayError
+              ? `读取编译作业状态失败：${explainGatewayError(err, "网关未返回错误详情")}`
+              : `等待编译结果超时（总上限 ${COMPILE_POLL_TIMEOUT_MS / 1000}s / 单次探测 ${
+                  COMPILE_PROBE_TIMEOUT_MS / 1000
+                }s）：网关未在预期时间内结束作业，请检查博图是否弹窗阻塞`;
+          setWritebackNotice(detail);
+          setTimeout(() => setWritebackNotice(null), 10000);
+          return;
         }
+
+        // degraded / timed_out / precheck 没有专属 UI 位置：合并进既有的 error 行、通知条和会话消息
+        const notes = compileJobNotes(job);
+        const detail = notes.join("；");
+        const headline = job.error && job.error !== "precheck_failed" ? job.error : null;
+        setCompileJob({
+          ...job,
+          error: [headline, ...notes].filter(Boolean).join("；") || null,
+        });
+
         if (job.canvas) {
           setCanvas(job.canvas);
           commitSession(job.canvas, [
-            { id: msgId(), role: "system", text: `编译作业 ${job.status}`, ts: Date.now() },
+            {
+              id: msgId(),
+              role: "system",
+              text: [`编译作业 ${job.status}`, ...notes].join("："),
+              ts: Date.now(),
+            },
           ]);
         }
         setAttributions((job.attributions || []) as CompilerAttribution[]);
         let notice =
           job.status === "ok"
             ? "博图回写并编译通过，工程已保存"
-            : `编译未通过：${job.error || "见诊断面板"}`;
+            : `编译未通过：${headline || detail || "见诊断面板"}`;
+        if (detail && (job.status === "ok" || headline)) notice += `（${detail}）`;
         if (job.status === "error" && (job.attributions || []).length) {
           try {
-            const fr = await fetch(`${API_BASE}/api/v1/plc/canvas/fix-loop`, {
+            const fdata = await requestPlc<{
+              ok?: boolean;
+              canvas?: CanvasStateData;
+              attributions?: CompilerAttribution[];
+              rounds?: unknown[];
+            }>(`/api/v1/plc/canvas/fix-loop`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -684,13 +926,12 @@ const App: React.FC = () => {
               }),
               signal: AbortSignal.timeout?.(600000),
             });
-            const fjson = await fr.json();
-            if (fjson?.ok && fjson.data?.canvas) {
-              setCanvas(fjson.data.canvas);
-              setAttributions((fjson.data.attributions || []) as CompilerAttribution[]);
-              notice = fjson.data.ok
-                ? `自动修正后编译通过（${(fjson.data.rounds || []).length} 轮）`
-                : `自动修正未完全成功（${(fjson.data.rounds || []).length} 轮）`;
+            if (fdata?.canvas) {
+              setCanvas(fdata.canvas);
+              setAttributions((fdata.attributions || []) as CompilerAttribution[]);
+              notice = fdata.ok
+                ? `自动修正后编译通过（${(fdata.rounds || []).length} 轮）`
+                : `自动修正未完全成功（${(fdata.rounds || []).length} 轮）`;
             }
           } catch {
             /* optional */
@@ -701,13 +942,13 @@ const App: React.FC = () => {
         return;
       }
 
-      const result = json.data;
+      const result = data;
       if (result.canvas) setCanvas(result.canvas);
       setAttributions(result.attributions || []);
       setWritebackNotice(result.writeback?.ok ? "回写成功" : `回写失败`);
       setTimeout(() => setWritebackNotice(null), 6000);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = explainGatewayError(err, "未知错误");
       setWritebackNotice(`回写/编译失败：${msg}`);
       setTimeout(() => setWritebackNotice(null), 8000);
     } finally {
@@ -720,14 +961,13 @@ const App: React.FC = () => {
     if (!attributions.length) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/plc/canvas/auto-fix`, {
+      const data = await requestPlc<{ canvas?: CanvasStateData }>(`/api/v1/plc/canvas/auto-fix`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ canvas, attributions }),
       });
-      const json = await res.json();
-      if (json && json.ok && json.data?.canvas) {
-        setCanvas(json.data.canvas);
+      if (data?.canvas) {
+        setCanvas(data.canvas);
         setAttributions([]);
       }
     } catch {
@@ -822,6 +1062,71 @@ const App: React.FC = () => {
           <ChevronsRight />
         </button>
       </header>
+
+      {/* —— 解析降级告警条：只在真的存在降级时出现 —— */}
+      {degradation && (
+        <div
+          role="status"
+          aria-label="解析降级告警"
+          style={{
+            flex: "none",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 10,
+            padding: "6px 14px",
+            background: "var(--surface-2)",
+            borderBottom: "1px solid var(--line-2)",
+            borderLeft: "3px solid var(--standby)",
+            fontSize: 13,
+            color: "var(--ink-2)",
+          }}
+        >
+          <i className="led led--standby" />
+          <strong style={{ color: "var(--ink)" }}>解析降级</strong>
+          <span className="tagchip">已翻译 {degradation.translatedPct}%</span>
+          <span className="tagchip">{degradation.warnings.length} 条告警</span>
+          {degradation.warnings.some((w) => w.code === "coverage.graph_not_executable") && (
+            <span style={{ color: "var(--fault)" }}>
+              GRAPH 已降级为 CASE 状态机（语义不等价、不可直接回写）
+            </span>
+          )}
+          {degradation.warnings.some((w) => w.code === "coverage.stl_fallback") && (
+            <span>STL 指令未全覆盖</span>
+          )}
+          {degradation.warnings.some((w) => w.code === "coverage.fbd_fallback") && (
+            <span>FBD 部件未全覆盖</span>
+          )}
+          {degradation.projectName && degradation.projectName !== canvas.project_name && (
+            <span>来源工程 {degradation.projectName}</span>
+          )}
+          <button
+            className="btn btn--ghost"
+            style={{ padding: "2px 10px", fontSize: 12 }}
+            onClick={() => setDegradationOpen((open) => !open)}
+          >
+            {degradationOpen ? "收起受影响块" : "查看受影响块"}
+          </button>
+          {degradationOpen && (
+            <div style={{ flexBasis: "100%", display: "grid", gap: 6, paddingTop: 2 }}>
+              {degradation.warnings.map((w, index) => (
+                <div key={`${w.code || "warning"}-${index}`}>
+                  <div>{w.message}</div>
+                  {(w.affected_blocks || []).length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                      {(w.affected_blocks || []).map((name) => (
+                        <span key={`${w.code || "warning"}-${name}`} className="tagchip">
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* —— 三栏面板区 —— */}
       <div className={`panes ${panes.isDragging ? "panes--dragging" : ""}`}>
@@ -943,9 +1248,14 @@ const App: React.FC = () => {
         }}
         onCancel={async () => {
           if (!compileJob?.id) return;
-          await fetch(`${API_BASE}/api/v1/plc/canvas/compile-jobs/${compileJob.id}/cancel`, {
-            method: "POST",
-          });
+          try {
+            await requestPlc(
+              `/api/v1/plc/canvas/compile-jobs/${encodeURIComponent(compileJob.id)}/cancel`,
+              { method: "POST" },
+            );
+          } catch {
+            /* 取消是尽力而为：网关可能已收敛或作业已过期 */
+          }
         }}
         onClose={() => setCompileJob(null)}
       />

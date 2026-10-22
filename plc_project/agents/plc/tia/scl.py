@@ -10,6 +10,12 @@ from __future__ import annotations
 
 import re
 
+from agents.plc.tia.flgnet_fold import stmt_to_scl
+from agents.plc.tia.graph_scl import (
+    graph_network_to_scl,
+    graph_state_var_name,
+    has_graph_sequence,
+)
 from agents.plc.tia.ir import (
     Access,
     AccessScope,
@@ -20,12 +26,6 @@ from agents.plc.tia.ir import (
     Part,
     PlcProject,
     Variable,
-)
-from agents.plc.tia.flgnet_fold import stmt_to_scl
-from agents.plc.tia.graph_scl import (
-    graph_network_to_scl,
-    graph_state_var_name,
-    has_graph_sequence,
 )
 from agents.plc.tia.parts import (
     BOX_PARTS,
@@ -362,7 +362,7 @@ _SECTION_KEYWORDS: dict[InterfaceSection, str] = {
     InterfaceSection.IN_OUT: "VAR_IN_OUT",
     InterfaceSection.STATIC: "VAR",
     InterfaceSection.TEMP: "VAR_TEMP",
-    InterfaceSection.CONSTANT: "VAR_CONSTANT",
+    InterfaceSection.CONSTANT: "VAR CONSTANT",
 }
 
 #: Block type → (open keyword, close keyword)
@@ -417,13 +417,22 @@ def explain_scl_statement(stmt: str) -> str:
             return f"上升沿检测 {callee}（CLK 上升时 Q 为 TRUE）"
         if "F_TRIG" in callee.upper():
             return f"下降沿检测 {callee}"
-        if "PT" in params.upper() or "ET" in params.upper() or re.search(r"\bIN\s*:=", params, re.I):
+        if "PT" in params.upper() or "ET" in params.upper() or re.search(r"\bIN\s*:=", params, re.IGNORECASE):
             return f"调用定时器实例 {callee}"
         return f"调用块/实例 {callee}" + (f"，参数：{params}" if params else "")
     if ":=" in s:
         left, right = s.split(":=", 1)
         return f"将 {right.strip()} 赋给 {left.strip()}"
     return "执行该语句"
+
+def _comment_lines(indent: str, label: str, text: str) -> list[str]:
+    """把可能多行的注释拆成每行都带 // 前缀的注释行。"""
+    parts = str(text or "").splitlines() or [""]
+    out = [f"{indent}// {label}{parts[0].strip()}" if parts[0].strip() else f"{indent}// {label}".rstrip()]
+    for extra in parts[1:]:
+        out.append(f"{indent}// {extra.strip()}" if extra.strip() else f"{indent}//")
+    return out
+
 
 def _header(block: Block) -> str:
     bt = block.block_type
@@ -448,13 +457,19 @@ def _header(block: Block) -> str:
     if block.programming_language:
         sub.append(f"// 原始语言：{block.programming_language}（规则翻译为 SCL）")
     if block.header_comment:
-        sub.append(f"// 含义：{block.header_comment}")
+        # 块注释可能是多行（真实工程里有整段 ASCII 横幅）。必须逐行加 //
+        # 前缀，否则只有首行被注释、其余裸文本会被当成代码，导致
+        # 「设定值"VAR_OUTPUT"无效」这类错位报错（HR001 的 FB1081 就是这样崩的）。
+        head_lines = str(block.header_comment).splitlines() or [""]
+        sub.append(f"// 含义：{head_lines[0].strip()}")
+        for extra in head_lines[1:]:
+            sub.append(f"// {extra.strip()}" if extra.strip() else "//")
     else:
         sub.append("// 含义：由 LAD/FBD 网络折叠生成的等效 SCL，导入前请人工复核")
     return header + ("\n" + "\n".join(sub) if sub else "")
 
 
-def _var_line(var, *, constant: bool = False) -> str:
+def _var_comment(var, *, constant: bool = False) -> str:
     dtype = var.data_type or "Bool"
     comment_bits: list[str] = []
     if var.comment:
@@ -469,12 +484,92 @@ def _var_line(var, *, constant: bool = False) -> str:
         comment_bits.append("临时变量")
     elif var.section == InterfaceSection.STATIC and not var.comment:
         comment_bits.append("静态变量")
-    comment = f"  // {'；'.join(comment_bits)}" if comment_bits else ""
+    _ = dtype
+    return f"  // {'；'.join(comment_bits)}" if comment_bits else ""
+
+
+def _is_struct_type(dtype: str) -> bool:
+    d = (dtype or "").strip().lower()
+    return d == "struct" or d.endswith(" of struct") or d.endswith(" of \"struct\"")
+
+
+#: SCL 保留字/内部类型名：这些不能直接当标识符用，否则 TIA 报「设定值无效」
+#: 或「数据类型 Undef 未知」（真实工程 HR001 的 UDT_TypePara 用了 ``String : String[5]``）。
+_SCL_RESERVED = {
+    "IF", "THEN", "ELSE", "ELSIF", "END_IF", "CASE", "OF", "END_CASE", "FOR",
+    "TO", "BY", "DO", "END_FOR", "WHILE", "END_WHILE", "REPEAT", "UNTIL",
+    "END_REPEAT", "RETURN", "CONTINUE", "EXIT", "GOTO", "AND", "OR", "XOR",
+    "NOT", "MOD", "TRUE", "FALSE", "BEGIN", "END", "VAR", "END_VAR",
+    "STRUCT", "END_STRUCT", "ARRAY", "TYPE", "END_TYPE", "CONSTANT",
+    "BOOL", "BYTE", "WORD", "DWORD", "LWORD", "SINT", "INT", "DINT", "LINT",
+    "USINT", "UINT", "UDINT", "ULINT", "REAL", "LREAL", "TIME", "LTIME",
+    "DATE", "CHAR", "WCHAR", "STRING", "WSTRING", "VOID", "ANY", "VARIANT",
+    "POINTER", "AT", "REGION", "END_REGION", "TITLE", "VERSION",
+    # S7 遗留/系统类型名：真实工程 HR001 的 UDT_TypePara 有成员叫 S5Time，
+    # 不加引号时 TIA 报「设定值"S5Time"无效」（它被当成类型而不是变量名）。
+    "S5TIME", "S5TIME_OR_DT", "TIME_OF_DAY", "TOD", "DATE_AND_TIME", "DT",
+    "IEC_TIMER", "IEC_COUNTER", "IEC_LTIMER", "IEC_LCOUNTER",
+    "TON_TIME", "TOF_TIME", "TP_TIME", "TONR_TIME",
+    "R_TRIG", "F_TRIG", "SFB", "SFC", "BLOCK_FB", "BLOCK_FC", "BLOCK_DB",
+}
+
+
+def _sc_ident(name: str) -> str:
+    """把变量名转成 SCL 里合法的标识符。
+
+    TIA 允许 ``"带空格的名称"`` 这种引号标识符；真实工程里 DB2100 就有
+    ``Reserved Word 18`` 这类成员，直接裸写会被判「设定值无效」。
+    """
+    n = (name or "").strip()
+    if not n:
+        return n
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", n) and n.upper() not in _SCL_RESERVED:
+        return n
+    if n.startswith('"') and n.endswith('"'):
+        return n
+    return '"%s"' % n.replace('"', "")
+
+
+def _render_var(var, indent: str = "    ", *, constant: bool = False) -> list[str]:
+    """渲染单条变量声明，返回若干行。
+
+    STRUCT 必须展开成 ``X : Struct <成员...> END_STRUCT;``。若只输出
+    ``X : Struct;``，TIA 会报「STRUCT 关键字后有不正确的 ';'」——真实工程
+    HR001 里 46 个块踩了这个坑，所以这里不做猜测式降级。
+    """
+    dtype = var.data_type or "Bool"
+    comment = _var_comment(var, constant=constant)
+    ident = _sc_ident(var.name)
+
+    if _is_struct_type(dtype):
+        members = list(getattr(var, "members", None) or [])
+        if not members:
+            # 无成员信息：生成空的 Struct 一定编译失败，直接不声明并留痕，
+            # 让错误退化为"变量未定义"（可定位），而不是晦涩的 STRUCT 语法错误。
+            return [f"{indent}// [未能展开] {ident} : {dtype}（导出中无成员定义）"]
+        head = f"{indent}{ident} : {dtype}"
+        if var.start_value and not constant:
+            head += f" := {var.start_value}"
+        lines = [head + comment]
+        seen_members: set[str] = set()
+        for member in members:
+            mkey = (member.name or "").strip().upper()
+            if not mkey or mkey in seen_members:
+                continue
+            seen_members.add(mkey)
+            lines.extend(_render_var(member, indent + "    "))
+        lines.append(f"{indent}END_STRUCT;")
+        return lines
+
     if constant:
         val = var.start_value or "0"
-        return f"    {var.name} : {dtype} := {val};{comment}"
+        return [f"{indent}{ident} : {dtype} := {val};{comment}"]
     value = f" := {var.start_value}" if var.start_value else ""
-    return f"    {var.name} : {dtype}{value};{comment}"
+    return [f"{indent}{ident} : {dtype}{value};{comment}"]
+
+
+def _var_line(var, *, constant: bool = False) -> str:
+    return "\n".join(_render_var(var, constant=constant))
 
 
 def _interface_text(block: Block, extra_static: list[Variable] | None = None) -> str:
@@ -488,18 +583,33 @@ def _interface_text(block: Block, extra_static: list[Variable] | None = None) ->
             else:
                 orphan.append(var)
         lines: list[str] = []
+        seen_db: set[str] = set()
         for section in _SECTION_ORDER:
             members = by_section.get(section) or []
             if not members:
                 continue
-            lines.append(f"    // ---- {section.value} ----")
+            unique = []
             for var in members:
+                key = (var.name or "").strip().upper()
+                if not key or key in seen_db:
+                    continue
+                seen_db.add(key)
+                unique.append(var)
+            if not unique:
+                continue
+            lines.append(f"    // ---- {section.value} ----")
+            for var in unique:
                 lines.append(_var_line(var))
         for var in orphan:
+            key = (var.name or "").strip().upper()
+            if key and key in seen_db:
+                continue
+            seen_db.add(key)
             lines.append(_var_line(var))
         return "\n".join(lines)
 
     lines: list[str] = []
+    seen_names: set[str] = set()
     for section in _SECTION_ORDER:
         members = block.interface_section(section)
         if section is InterfaceSection.STATIC and extra_static:
@@ -512,8 +622,19 @@ def _interface_text(block: Block, extra_static: list[Variable] | None = None) ->
         keyword = _SECTION_KEYWORDS.get(section)
         if not keyword:
             continue
-        lines.append(keyword)
+        # 同名变量只能声明一次（TIA 判重名错误）。多个 TON 实例被推断成同名的
+        # PT/ET/IN/Q 时保留第一份；interface 里的真实声明排在 extra_static 之前。
+        unique: list = []
         for var in members:
+            key = (var.name or "").strip().upper()
+            if not key or key in seen_names:
+                continue
+            seen_names.add(key)
+            unique.append(var)
+        if not unique:
+            continue
+        lines.append(keyword)
+        for var in unique:
             if section == InterfaceSection.CONSTANT:
                 lines.append(_var_line(var, constant=True))
             else:
@@ -599,9 +720,9 @@ def translate_block_to_scl(block: Block) -> str:
         lines.append("")
         lines.append(f"    // ---------- 网络 {idx} ----------")
         if title and not re.match(r"(?i)^network\s*\d*$", title):
-            lines.append(f"    // 标题：{title}")
+            lines.extend(_comment_lines("    ", "标题：", title))
         if network.comment:
-            lines.append(f"    // 注释：{network.comment}")
+            lines.extend(_comment_lines("    ", "注释：", network.comment))
         # S7-GRAPH: rebuild executable CASE state machine from parsed steps
         state_var = graph_state_vars.get(idx)
         if state_var is not None:
@@ -642,11 +763,26 @@ def translate_block_to_scl(block: Block) -> str:
     return "\n".join(lines)
 
 
+def _is_instance_db(block: Block) -> bool:
+    """实例 DB（InstanceDB）由 TIA 随 FB 自动创建，不该由我们重新生成。
+
+    真实工程 HR001 暴露：实例 DB 的 Static 里会镜像 FB 的多实例成员，形如
+    ``CycleTime : "FB5008_CycleTime";``。TIA 对实例 DB 里的这种成员判
+    「不允许使用数据类型 FBxxx」，必然编译失败。跳过它们既避免错误，
+    也不会破坏工程原有的实例 DB 结构。
+    """
+    if block.block_type != BlockType.DB:
+        return False
+    attrs = block.attributes or {}
+    return bool(attrs.get("InstanceOfName") or attrs.get("OfType") or attrs.get("OfBlock"))
+
+
 def convert_project_to_scl(project: PlcProject) -> dict[str, str]:
     """Map block name -> SCL for every *writable non-safety* translatable block.
 
     Know-how / password protected, interface-only (no body), and Safety/F-blocks
     are skipped (kept as original only). Never write F-block bodies.
+    Instance DBs are skipped too — TIA owns them.
     """
     out: dict[str, str] = {}
     items = [
@@ -656,6 +792,7 @@ def convert_project_to_scl(project: PlcProject) -> dict[str, str]:
             block.is_protected()
             or block.is_interface_only()
             or getattr(block, "is_safety", False)
+            or _is_instance_db(block)
         )
     ]
 

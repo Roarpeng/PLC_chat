@@ -8,7 +8,6 @@ from typing import Any
 from runtime.researchos_runtime.events import make_event, new_interrupt_id, node_end, node_start
 from runtime.researchos_runtime.state import TaskState, TaskStatus
 
-
 KNOWN_WORKER_ROUTES = {
     "planner",
     "research",

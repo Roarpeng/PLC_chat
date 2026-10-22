@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Hmi.Screen Name="Screen_Main">
+    <AttributeList>
+      <Name>Screen_Main</Name>
+      <Width>800</Width>
+      <Height>480</Height>
+    </AttributeList>
+    <ScreenItems>
+      <Hmi.ScreenItem.Button CompositionName="ScreenItems">
+        <AttributeList>
+          <Name>BtnStart</Name>
+          <Left>40</Left>
+          <Top>60</Top>
+          <Width>120</Width>
+          <Height>48</Height>
+          <Text>启动</Text>
+          <ProcessTag>HmiStartCmd</ProcessTag>
+          <BackColor>#00FF00</BackColor>
+          <ForeColor>0</ForeColor>
+          <BorderColor>255, 255, 255</BorderColor>
+        </AttributeList>
+      </Hmi.ScreenItem.Button>
+      <Hmi.ScreenItem.Button CompositionName="ScreenItems">
+        <AttributeList>
+          <Name>BtnStop</Name>
+          <Left>40</Left>
+          <Top>120</Top>
+          <Width>120</Width>
+          <Height>48</Height>
+          <Text>停止</Text>
+          <ProcessTag>HmiRelative</ProcessTag>
+          <BackColor>#FF0000</BackColor>
+          <ForeColor>#FFFFFF</ForeColor>
+        </AttributeList>
+      </Hmi.ScreenItem.Button>
+      <Hmi.ScreenItem.Circle CompositionName="ScreenItems">
+        <AttributeList>
+          <Name>LampRun</Name>
+          <Left>200</Left>
+          <Top>60</Top>
+          <Width>64</Width>
+          <Height>64</Height>
+          <ProcessTag>HmiRunLamp</ProcessTag>
+          <BackColor>0, 0, 0</BackColor>
+          <ForeColor>65280</ForeColor>
+        </AttributeList>
+      </Hmi.ScreenItem.Circle>
+      <Hmi.ScreenItem.Gauge CompositionName="ScreenItems">
+        <AttributeList>
+          <Name>GaugeSpeed</Name>
+          <Left>300</Left>
+          <Top>60</Top>
+          <Width>220</Width>
+          <Height>140</Height>
+          <Text>转速</Text>
+          <ProcessTag>HmiSpeed</ProcessTag>
+          <BackColor>3355443</BackColor>
+          <BorderColor>#94A3B8</BorderColor>
+        </AttributeList>
+      </Hmi.ScreenItem.Gauge>
+      <Hmi.ScreenItem.Text CompositionName="ScreenItems">
+        <AttributeList>
+          <Name>LabelTitle</Name>
+          <Left>40</Left>
+          <Top>12</Top>
+          <Width>300</Width>
+          <Height>28</Height>
+          <Text>系统状态</Text>
+          <BackColor>16777215</BackColor>
+          <ForeColor>#FFFFFF</ForeColor>
+        </AttributeList>
+      </Hmi.ScreenItem.Text>
+      <Hmi.ScreenItem.Rectangle CompositionName="ScreenItems">
+        <AttributeList>
+          <Name>RectPanel</Name>
+          <Left>560</Left>
+          <Top>60</Top>
+          <Width>200</Width>
+          <Height>160</Height>
+          <ProcessTag>HmiSpare</ProcessTag>
+          <BackColor>GradientBrush(1)</BackColor>
+          <BorderColor>255, 128, 0</BorderColor>
+        </AttributeList>
+      </Hmi.ScreenItem.Rectangle>
+      <Hmi.ScreenItem.AlarmView CompositionName="ScreenItems">
+        <AttributeList>
+          <Name>AlarmBanner</Name>
+          <Left>40</Left>
+          <Top>240</Top>
+          <Width>720</Width>
+          <Height>60</Height>
+          <Text>报警</Text>
+          <ProcessTag>HmiAlarm</ProcessTag>
+          <BackColor>#7F1D1D</BackColor>
+          <ForeColor>#FECACA</ForeColor>
+        </AttributeList>
+      </Hmi.ScreenItem.AlarmView>
+    </ScreenItems>
+  </Hmi.Screen>
+</Document>

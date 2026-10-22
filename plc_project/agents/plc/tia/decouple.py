@@ -374,7 +374,7 @@ def _helper_scl(
             lines.append(f"    {name} : {_member_type(meta, name)};")
         lines.append("END_VAR")
     lines.append("BEGIN")
-    lines.append(f"    // ---------- 网络 1 ----------")
+    lines.append("    // ---------- 网络 1 ----------")
     if title:
         lines.append(f"    // 标题：{title}")
     for stmt in statements:

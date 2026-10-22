@@ -22,8 +22,7 @@ def drain_export_journal(
     on_obj,
 ) -> int:
     """Read complete JSONL lines from ``offset``; leave a partial last line unread."""
-    if offset < 0:
-        offset = 0
+    offset = max(offset, 0)
     if not path.is_file():
         return offset
     with path.open("r", encoding="utf-8", errors="replace") as handle:

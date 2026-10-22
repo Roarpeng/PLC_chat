@@ -170,16 +170,16 @@ def xml_looks_like_safety(xml_path: Path | str) -> bool:
         text = path.read_text(encoding="utf-8", errors="ignore")
     except OSError:
         return False
-    if re.search(r"<(?:ProgrammingLanguage)>\s*F[-_]", text, re.I):
+    if re.search(r"<(?:ProgrammingLanguage)>\s*F[-_]", text, re.IGNORECASE):
         return True
-    for m in re.finditer(r"<Name>\s*([^<]+)\s*</Name>", text, re.I):
+    for m in re.finditer(r"<Name>\s*([^<]+)\s*</Name>", text, re.IGNORECASE):
         if is_safety_name(m.group(1).strip()):
             return True
     return bool(
         re.search(
             r"<(?:ProgrammingLanguage)>\s*(?:F-LAD|F-FBD|F-SCL|F-STL|FSCL|FLAD)\s*</",
             text,
-            re.I,
+            re.IGNORECASE,
         )
     )
 

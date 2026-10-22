@@ -78,15 +78,7 @@ def _logic_summary(job: dict[str, Any], block_name: str) -> dict[str, Any]:
 def _review_for_block(review: dict[str, Any] | None, block_name: str) -> list[dict[str, Any]]:
     findings = []
     for finding in (review or {}).get("findings") or []:
-        if finding.get("block") == block_name:
-            findings.append(
-                {
-                    "rule": finding.get("rule"),
-                    "severity": finding.get("severity"),
-                    "title": finding.get("title"),
-                }
-            )
-        elif finding.get("rule") == "multi_block_write" and block_name in (
+        if finding.get("block") == block_name or finding.get("rule") == "multi_block_write" and block_name in (
             finding.get("blocks") or []
         ):
             findings.append(

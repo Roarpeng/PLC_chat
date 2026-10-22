@@ -145,9 +145,20 @@ def test_scl_call_statement(result):
 
 
 def test_scl_db_instance(result):
-    scl = result["scl_sources"]["MotorInst"]
-    assert 'DATA_BLOCK "MotorInst"' in scl
-    assert "Start : Bool;" in scl and "END_DATA_BLOCK" in scl
+    """实例 DB 不由我们生成 —— 它在 TIA 里随 FB 自动创建。
+
+    真实工程 HR001 实测：实例 DB 的 Static 会镜像 FB 的多实例成员
+    （如 ``CycleTime : "FB5008_CycleTime"``），TIA 对实例 DB 里的这种
+    成员判「不允许使用数据类型 FBxxx」，必然编译失败。因此
+    ``convert_project_to_scl`` 跳过所有带 OfType/InstanceOfName 的 DB，
+    工程里原有的实例 DB 保持原样。
+    """
+    project = result["project"]
+    inst_db = project.blocks["MotorInst"]
+    assert (inst_db.attributes or {}).get("OfType") == "FB_Motor", "fixture 应是实例 DB"
+    assert "MotorInst" not in result["scl_sources"], "实例 DB 不该出现在 SCL 产物里"
+    # 对应的 FB 仍然要生成
+    assert "FB_Motor" in result["scl_sources"]
 
 
 def test_llm_fallback_prompt_has_full_context(result):
@@ -286,7 +297,6 @@ def test_pick_zap_junk_xml_prefers_apxx(tmp_path: Path):
         diagnose_extracted_tree,
         extract_tia_archive,
         has_simaticml_exports,
-        openness_unavailable_guidance,
         resolve_project_input,
     )
 
@@ -308,7 +318,7 @@ def test_pick_zap_junk_xml_prefers_apxx(tmp_path: Path):
     try:
         resolve_project_input(zap, auto_export=True)
         raise AssertionError("expected Openness failure guidance")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 (backend raises several guidance error types)
         text = str(exc)
         assert "Plant.ap19" in text or ".ap" in text
         # Incomplete sidecar tree (preferred) or classic Openness-unavailable guidance.
@@ -339,6 +349,9 @@ def test_ingest_single_xml_and_publish_graph():
 
 
 def test_mcp_client_dispatches_tia_ingest():
+    # Only this case needs the runtime agent stack: MCPClient imports the task state
+    # schema, which is built on langchain-core. Keep the rest of this file runnable.
+    pytest.importorskip("langchain_core", reason="runtime task state requires langchain-core")
     from runtime.researchos_runtime.mcp_client import MCPClient
     from runtime.researchos_runtime.settings import RuntimeSettings
 
@@ -386,10 +399,10 @@ def test_missing_export_dir_reports_note():
 def test_protected_block_skipped_from_scl(tmp_path):
     """Know-how protected blocks are kept original and never emitted as SCL."""
     from agents.plc.tia.ir import Block, BlockType, PlcProject
-    from agents.plc.tia.package import write_result_package
-    from agents.plc.tia.scl import convert_project_to_scl
     from agents.plc.tia.kg import build_knowledge_graph
+    from agents.plc.tia.package import write_result_package
     from agents.plc.tia.pipeline import interpretation_report
+    from agents.plc.tia.scl import convert_project_to_scl
 
     xml = tmp_path / "FB_Secret.xml"
     xml.write_text(

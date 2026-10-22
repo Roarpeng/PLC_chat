@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -14,5 +14,5 @@ def hello_echo(message: str = "hello", *, task_id: str | None = None) -> dict[st
         "message": message,
         "echo": f"echo:{message}",
         "task_id": task_id,
-        "ts": datetime.now(timezone.utc).isoformat(),
+        "ts": datetime.now(UTC).isoformat(),
     }
