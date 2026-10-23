@@ -35,6 +35,7 @@ def analyze_tia_exports(
     publish_graph: bool = False,
     project: PlcProject | None = None,
     on_structure: Any | None = None,
+    trace_out: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     """Offline path: parse Openness exports, build KG, convert to SCL.
 
@@ -46,6 +47,9 @@ def analyze_tia_exports(
 
     ``on_structure(project, kg)`` fires after the call graph exists and **before**
     full SCL/LAD body conversion, so a Project Brief can be served first.
+
+    ``trace_out`` (optional dict) collects per-block ast_trace lines during the
+    fold (contract docs/15 §4); None keeps the default no-trace behavior.
     """
     timings: dict[str, int] = {}
     if project is None:
@@ -58,7 +62,7 @@ def analyze_tia_exports(
 
     apply_safety_flags(project)
     with timed_step(timings, "fold_attach_ms"):
-        project = attach_folded(project)
+        project = attach_folded(project, trace_out=trace_out)
     with timed_step(timings, "kg_ms"):
         kg = build_knowledge_graph(project)
     if callable(on_structure):
@@ -70,7 +74,7 @@ def analyze_tia_exports(
         report = interpretation_report(project, kg)
         conversion = build_conversion_report(project, scl_sources)
     with timed_step(timings, "fold_serialize_ms"):
-        folded = fold_project(project)
+        folded = fold_project(project, trace_out=trace_out)
     from agents.plc.tia.coverage import build_coverage_report
     from agents.plc.tia.structure import build_structure_inventory, structure_summary
 

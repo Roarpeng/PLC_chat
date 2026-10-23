@@ -1339,7 +1339,11 @@ def extract_project(export_dir: str | Path, *, project_name: str = "") -> PlcPro
         project.extraction_notes.append(f"export directory not found: {export_path}")
         return project
 
-    xml_files = sorted(p for p in export_path.rglob("*.xml") if p.is_file())
+    xml_files = sorted(
+        p
+        for p in export_path.rglob("*.xml")
+        if p.is_file() and "_source_artifacts" not in p.relative_to(export_path).parts
+    )
     if not xml_files:
         project.extraction_notes.append("no XML exports found")
         _attach_export_manifest(project, export_path)

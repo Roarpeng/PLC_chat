@@ -4,6 +4,7 @@ import { GlobalGraph } from "../shell/GlobalGraph";
 import { SclPane } from "../shell/SclPane";
 import { HmiPane } from "../shell/HmiPane";
 import { DrillDownPanel } from "../shell/DrillDownPanel";
+import { SourceCompareDrawer } from "../shell/SourceCompareDrawer";
 import {
   SNAP_PX,
   expandedKeys,
@@ -151,6 +152,11 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
   /* 双击块下钻：块内网络流程图 */
   const [drillBlock, setDrillBlock] = useState<string | null>(null);
   const drillBlockData = drillBlock ? canvas.blocks[drillBlock] ?? null : null;
+  /* 块详情「查看原始源码」：对比抽屉打开才挂载（懒加载，契约 15 §5） */
+  const [sourceCompareName, setSourceCompareName] = useState<string | null>(null);
+  const sourceCompareBlock = sourceCompareName
+    ? canvas.blocks[sourceCompareName] ?? null
+    : null;
 
   const blockList = useMemo(() => Object.values(canvas.blocks), [canvas.blocks]);
   const widgetList = useMemo(() => Object.values(canvas.hmi_widgets), [canvas.hmi_widgets]);
@@ -448,6 +454,7 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
             onRemoveVariable={onRemoveVariable}
             onRemoveNetwork={onRemoveNetwork}
             onDeepExplain={onDeepExplain}
+            onViewSource={setSourceCompareName}
           />
         )}
         {!layout.collapsed.scl && gutter("scl")}
@@ -462,6 +469,15 @@ export const PlcInteractiveCanvas: React.FC<Props> = ({
           />
         )}
       </div>
+
+      {/* 原始源码对比抽屉：fixed 覆盖层，打开才挂载（内部按需取工件） */}
+      {sourceCompareBlock && (
+        <SourceCompareDrawer
+          block={sourceCompareBlock}
+          projectName={canvas.project_name}
+          onClose={() => setSourceCompareName(null)}
+        />
+      )}
     </div>
   );
 };

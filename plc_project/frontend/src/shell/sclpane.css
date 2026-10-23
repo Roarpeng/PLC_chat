@@ -133,6 +133,16 @@ font-family: var(--sans);
   color: var(--fault, #b3261e);
 }
 
+/* 次级图标入口（查看原始源码）：图标态、更低对比度，悬停才显形 */
+.sp-ghost--icon {
+  padding: 3px 6px;
+  color: var(--ink-3, #8a918b);
+}
+
+.sp-ghost--icon:hover {
+  color: var(--accent, #1e5f97);
+}
+
 /* ---- 2. 无块空态 ---- */
 
 .sp-empty {

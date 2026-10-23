@@ -105,6 +105,7 @@ from gateway.app.services.plc.job_store import (
     get_job,
     list_jobs,
     query_job_graph,
+    read_block_source,
 )
 from gateway.app.services.plc.logic_graph import (
     _is_ob_props,

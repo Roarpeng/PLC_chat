@@ -181,6 +181,56 @@ def _ready_job(job_id: str) -> dict[str, Any]:
     return job
 
 
+_BLOCK_SOURCE_KINDS = ("flgnet_xml", "literal_scl", "ast_trace")
+
+
+@router.get(
+    "/jobs/{job_id}/blocks/{block_name}/source",
+    response_model=ApiResponse[dict[str, Any]],
+)
+async def get_plc_block_source(
+    job_id: str,
+    block_name: str,
+    kind: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """On-demand raw block source (contract docs/15 §3) — server files only.
+
+    kind=flgnet_xml | literal_scl | ast_trace; the file is read per request and
+    never rides along in the regular job detail response.
+    """
+    _ = principal
+    if kind not in _BLOCK_SOURCE_KINDS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "PLC_BLOCK_SOURCE_KIND_INVALID",
+                "message": f"kind must be one of: {', '.join(_BLOCK_SOURCE_KINDS)}",
+            },
+        )
+    job = plc.get_job(job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "PLC_JOB_NOT_FOUND", "message": "PLC job not found"},
+        )
+    content = plc.read_block_source(job, block_name, kind)
+    if content is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PLC_BLOCK_SOURCE_NOT_FOUND",
+                "message": f"No {kind} artifact for block {block_name}",
+            },
+        )
+    return ApiResponse(
+        ok=True,
+        data={"job_id": job_id, "block_name": block_name, "kind": kind, "content": content},
+        request_id=request_id,
+    )
+
+
 @router.get("/jobs/{job_id}/device-cards", response_model=ApiResponse[DeviceCardListResponse])
 async def list_plc_device_cards(
     job_id: str,

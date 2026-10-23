@@ -130,6 +130,13 @@ class PlcJobDetail(PlcJobSummary):
     scl_diffs: list[dict[str, Any]] = Field(default_factory=list)
     scl_skipped: list[dict[str, Any]] = Field(default_factory=list)
     source_xmls: list[str] = Field(default_factory=list)
+    source_artifacts: dict[str, dict[str, str]] = Field(
+        default_factory=dict,
+        description=(
+            "Per-block raw-source artifact *paths* "
+            "(flgnet_xml / literal_scl / ast_trace); content is fetch-on-demand only"
+        ),
+    )
     timings: dict[str, int] = Field(
         default_factory=dict,
         description="Ingest stage wall-clock timings in milliseconds",

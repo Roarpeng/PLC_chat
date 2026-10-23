@@ -34,6 +34,8 @@ export interface SclPaneProps {
   onRemoveNetwork?: (blockName: string, networkId: number) => void;
   /** LLM 深度解释（App 发网关请求）；缺省时不显示按钮 */
   onDeepExplain?: (block: CanvasBlockData) => Promise<string>;
+  /** 查看原始源码（低显著度入口 → 懒加载对比抽屉，契约 15 §5）；缺省时不显示入口 */
+  onViewSource?: (blockName: string) => void;
 }
 
 /** 变量名合法性：字母或下划线开头，仅含字母、数字、下划线 */
@@ -70,6 +72,19 @@ function splitSignal(entry: string): { name: string; type: string } {
   return { name: entry.slice(0, i).trim(), type: entry.slice(i + 1).trim() };
 }
 
+/** 「查看原始源码」低显著度图标（</>） */
+const SourceCodeIcon: React.FC = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path
+      d="M6 4.5 2.5 8 6 11.5M10 4.5 13.5 8 10 11.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 /** 中栏：SCL 源码栏（块解释卡 + 源码清单 + 添加变量/网络工具） */
 export const SclPane: React.FC<SclPaneProps> = ({
   block,
@@ -84,6 +99,7 @@ export const SclPane: React.FC<SclPaneProps> = ({
   onRemoveVariable,
   onRemoveNetwork,
   onDeepExplain,
+  onViewSource,
 }) => {
   const [showExplain, setShowExplain] = useState(true);
   const [openTool, setOpenTool] = useState<"var" | "net" | null>(null);
@@ -291,6 +307,17 @@ export const SclPane: React.FC<SclPaneProps> = ({
             >
               解释
             </button>
+            {onViewSource && (
+              <button
+                type="button"
+                className="sp-ghost sp-ghost--icon"
+                title={`查看 ${block.name} 原始源码（FlgNet XML / 直译 SCL / 归约追踪，按需加载）`}
+                aria-label={`查看 ${block.name} 原始源码`}
+                onClick={() => onViewSource(block.name)}
+              >
+                <SourceCodeIcon />
+              </button>
+            )}
           </>
         ) : (
           <span className="sp-head__title">SCL 源码</span>

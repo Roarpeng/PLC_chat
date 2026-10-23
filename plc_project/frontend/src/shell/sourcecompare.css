@@ -1,0 +1,382 @@
+/* ==========================================================================
+   SourceCompareDrawer — 块详情「查看原始源码」对比抽屉（前缀 sc-）
+   依赖全局令牌：--surface/-2、--ink/-2/-3、--line/-2、--accent/-soft、
+   --mono/--sans、--ease、--shadow-sheet。与 DrillDownPanel 同款遮罩交互。
+   ========================================================================== */
+
+/* —— 覆盖层 —— */
+
+.sc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 92;
+  background: rgba(27, 30, 28, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: sc-fade 0.14s ease-out;
+}
+
+.sc-card {
+  width: 100%;
+  max-width: 1180px;
+  height: 80vh;
+  background: var(--surface);
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
+  box-shadow: var(--shadow-sheet); /* taste-skill-ignore: data-ui workbench interface */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: sc-card-in 0.16s var(--ease);
+}
+
+@keyframes sc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sc-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* —— 头部：标题 + 小型 kind 切换 + 关闭 —— */
+
+.sc-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 14px;
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.sc-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sc-title__type {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: var(--r-sm);
+  padding: 0 5px;
+  line-height: 1.6;
+  flex: none;
+}
+
+.sc-title__name {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.sc-title__suffix {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
+  flex: none;
+}
+
+/* 小型 kind 切换（学 SclDiffPreview 的 tab 组） */
+.sc-kindtabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  overflow-x: auto;
+}
+
+.sc-kindtabs button {
+  appearance: none;
+  flex: none;
+  padding: 3px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-3);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.12s var(--ease), border-color 0.12s var(--ease), background-color 0.12s var(--ease);
+}
+
+.sc-kindtabs button:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.sc-kindtabs button.is-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.sc-kindtabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.sc-close {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  flex: none;
+  transition: background-color 0.12s var(--ease), color 0.12s var(--ease);
+}
+
+.sc-close:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* —— 双栏主体 —— */
+
+.sc-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0;
+}
+
+.sc-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.sc-pane + .sc-pane {
+  border-left: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.sc-pane__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 8px;
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface-2);
+}
+
+.sc-pane__toggle {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 5px;
+  border: none;
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  min-width: 0;
+  text-align: left;
+  transition: color 0.12s var(--ease), background-color 0.12s var(--ease);
+}
+
+.sc-pane__toggle:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.sc-pane__toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.sc-chev {
+  flex: none;
+  display: inline-block;
+  width: 12px;
+  text-align: center;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 13px;
+  line-height: 1;
+  color: var(--ink-3);
+  transform: rotate(0deg);
+  transition: transform 0.12s var(--ease);
+}
+
+.sc-chev--open {
+  transform: rotate(90deg);
+}
+
+.sc-pane__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 右栏无折叠时的静态标题行也要对齐（左栏 label 前有 12px 折叠钮位） */
+.sc-pane__head .sc-pane__label:first-child {
+  padding-left: 21px;
+}
+
+.sc-pane__meta {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.sc-origin {
+  padding: 0 5px;
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+  line-height: 1.6;
+}
+
+.sc-origin--mock {
+  border-color: var(--standby);
+  color: var(--standby);
+}
+
+.sc-pane__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+
+.sc-pane__scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.sc-pane__scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sc-pane__scroll::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+}
+
+/* 只读等宽内容：不受控、不重排 */
+.sc-pre {
+  margin: 0;
+  padding: 10px 12px 14px;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre;
+  tab-size: 4;
+  user-select: text;
+}
+
+.sc-hint {
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
+/* —— 底部 —— */
+
+.sc-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 14px;
+  border-top: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.sc-foot__stats {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sc-foot__hint {
+  font-size: 13px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* —— 窄屏：上下堆叠 —— */
+
+@media (max-width: 900px) {
+  .sc-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .sc-pane + .sc-pane {
+    border-left: none;
+    border-top: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+  }
+}
+
+/* —— 降级：减少动态效果 —— */
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-overlay,
+  .sc-card {
+    animation: none;
+  }
+
+  .sc-kindtabs button,
+  .sc-close,
+  .sc-pane__toggle,
+  .sc-chev {
+    transition: none;
+  }
+}

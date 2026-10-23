@@ -60,6 +60,7 @@ def create_job_record(
         "scl_diffs": [],
         "scl_skipped": [],
         "source_xmls": [],
+        "source_artifacts": {},
         "progress": [],
         "timings": {},
         "coverage": {},
@@ -81,6 +82,22 @@ def create_job_record(
 
 def get_job(job_id: str) -> dict[str, Any] | None:
     return mem.store.plc_jobs.get(job_id)
+
+
+def read_block_source(job: dict[str, Any], block_name: str, kind: str) -> str | None:
+    """Read one persisted raw-source artifact file on demand (contract docs/15 §3).
+
+    Returns None when the block has no such artifact or the file is gone —
+    the router maps that to 404. Raw content never sits in the job record.
+    """
+    entry = (job.get("source_artifacts") or {}).get(block_name) or {}
+    path_str = str(entry.get(kind) or "")
+    if not path_str:
+        return None
+    try:
+        return Path(path_str).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
 
 
 def delete_job(job_id: str) -> bool:

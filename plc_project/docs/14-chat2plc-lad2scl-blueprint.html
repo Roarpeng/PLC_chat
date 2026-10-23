@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat2PLC 工业级全栈架构、LAD转SCL逆向算法与Openness桥接蓝图</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 自定义滚动条与工业风动画 */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #090d16; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #14b8a6; }
+    
+    @keyframes pulseGlow {
+      0%, 100% { filter: drop-shadow(0 0 4px rgba(20, 184, 166, 0.5)); }
+      50% { filter: drop-shadow(0 0 12px rgba(20, 184, 166, 0.95)); }
+    }
+    .glow-teal { animation: pulseGlow 2.5s infinite; }
+
+    @keyframes dataFlow {
+      to { stroke-dashoffset: -24; }
+    }
+    .flow-line {
+      stroke-dasharray: 6 6;
+      animation: dataFlow 1s linear infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col selection:bg-teal-500 selection:text-slate-950">
+
+  <!-- 顶部工业级导航头 -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/40 flex items-center justify-center glow-teal">
+        <svg class="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2.5">
+          <h1 class="text-base font-bold tracking-wide text-white">Chat2PLC 核心工程蓝图与算法工作台</h1>
+          <span class="px-2.5 py-0.5 text-[11px] font-mono font-semibold bg-teal-500/20 text-teal-300 rounded-full border border-teal-500/30">
+            V2.5 LAD2SCL & Openness Edition
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 mt-0.5">
+          涵盖：四层系统架构图 · 老项目梯形图 (SimaticML XML) 逆向转 SCL 拓扑算法 · LangGraph 多智能体框架 · C# Openness 桥接伪代码
+        </p>
+      </div>
+    </div>
+
+    <!-- 顶部主导航 Tab 切换按钮 -->
+    <nav class="flex flex-wrap items-center bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1">
+      <button onclick="switchMainTab('arch')" id="tab-btn-arch" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-teal-500 text-slate-950 shadow">
+        1. 全景系统架构图 (4-Tier)
+      </button>
+      <button onclick="switchMainTab('lad2scl')" id="tab-btn-lad2scl" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white">
+        2. 老项目梯形图转 SCL (算法与沙盒)
+      </button>
+      <button onclick="switchMainTab('agent')" id="tab-btn-agent" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white">
+        3. Agent 编排框架与核心算法
+      </button>
+      <button onclick="switchMainTab('openness')" id="tab-btn-openness" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white">
+        4. TIA Openness 桥接伪代码库
+      </button>
+    </nav>
+  </header>
+
+  <!-- 主体内容容器 -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto p-6 space-y-6">
+
+    <!-- ===================================================================== -->
+    <!-- 视图 1：全景系统架构图 (Interactive 4-Tier Architecture & Data Flow)   -->
+    <!-- ===================================================================== -->
+    <section id="view-arch" class="space-y-6">
+      <!-- 顶部概览说明栏 -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-start space-x-3">
+          <div class="p-2 rounded-lg bg-teal-500/10 text-teal-400 font-mono text-xs font-bold shrink-0">01</div>
+          <div>
+            <h3 class="text-xs font-bold text-white">新工艺正向生成链路</h3>
+            <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">自然语言需求 $\rightarrow$ Process-IR 中间表示 $\rightarrow$ 安全联锁织入 $\rightarrow$ SCL 源码 $\rightarrow$ Openness 编译自愈。</p>
+          </div>
+        </div>
+        <div class="bg-slate-900/80 border border-amber-500/30 rounded-xl p-4 flex items-start space-x-3">
+          <div class="p-2 rounded-lg bg-amber-500/10 text-amber-400 font-mono text-xs font-bold shrink-0">02</div>
+          <div>
+            <h3 class="text-xs font-bold text-amber-300">存量老项目 LAD 转 SCL 链路</h3>
+            <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">Openness 导出老项目 LAD 为 `SimaticML XML` $\rightarrow$ 解析 `FlgNet` 节点与能流线 $\rightarrow$ DAG 布尔归约 $\rightarrow$ 重构为结构化 SCL。</p>
+          </div>
+        </div>
+        <div class="bg-slate-900/80 border border-sky-500/30 rounded-xl p-4 flex items-start space-x-3">
+          <div class="p-2 rounded-lg bg-sky-500/10 text-sky-400 font-mono text-xs font-bold shrink-0">03</div>
+          <div>
+            <h3 class="text-xs font-bold text-sky-300">STA 单线程 COM 安全隔离</h3>
+            <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">所有针对 `Siemens.Engineering.dll` 的并发调用全部进入 `BlockingCollection` STA 单线程队列，彻底杜绝博途崩溃。</p>
+          </div>
+        </div>
+        <div class="bg-slate-900/80 border border-purple-500/30 rounded-xl p-4 flex items-start space-x-3">
+          <div class="p-2 rounded-lg bg-purple-500/10 text-purple-400 font-mono text-xs font-bold shrink-0">04</div>
+          <div>
+            <h3 class="text-xs font-bold text-purple-300">编译器报错零感自愈闭环</h3>
+            <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">精准提取博途 `CompilerResult` 报错路径、行号与描述，交由 `Self-Healer Agent` 自动重写并通过二次编译。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 交互式 SVG 全景系统架构图 + 右侧节点详情面板 -->
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        
+        <!-- 左侧：高分辨率可交互 SVG 架构拓扑图 (占 8 列) -->
+        <div class="xl:col-span-8 bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-teal-400 animate-ping"></span>
+              <h2 class="text-sm font-bold text-white">Chat2PLC 四层解耦工程架构与双向逆向数据流图 (点击模块查看技术细节)</h2>
+            </div>
+            <span class="text-[11px] font-mono text-slate-400">Architecture Schema v2.5</span>
+          </div>
+
+          <!-- 响应式 SVG 架构图 -->
+          <div class="w-full overflow-x-auto bg-slate-950 rounded-xl border border-slate-800/80 p-3">
+            <svg viewBox="0 0 960 680" class="w-full h-auto min-w-[760px] select-none">
+              <defs>
+                <linearGradient id="tier1Grad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#0f172a" />
+                  <stop offset="100%" stop-color="#1e293b" />
+                </linearGradient>
+                <marker id="arrowTeal" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="#14b8a6" />
+                </marker>
+                <marker id="arrowAmber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
+                </marker>
+                <marker id="arrowSky" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
+                </marker>
+              </defs>
+
+              <!-- ================= TIER 1: 前端工作台 ================= -->
+              <rect x="20" y="15" width="920" height="125" rx="12" fill="url(#tier1Grad)" stroke="#334155" stroke-width="1.5"/>
+              <text x="38" y="40" fill="#38bdf8" font-size="12" font-weight="bold" font-family="Inter">TIER 1 · 交互与数字孪生工作台 (Electron + React 18 + Monaco Editor)</text>
+
+              <!-- Tier 1 子模块 -->
+              <g onclick="selectArchNode('t1_chat')" class="cursor-pointer hover:opacity-90">
+                <rect x="38" y="55" width="275" height="68" rx="8" fill="#090d16" stroke="#0284c7" stroke-width="1.5"/>
+                <text x="52" y="78" fill="#e2e8f0" font-size="12" font-weight="bold">工艺自然语言对话 &amp; 安全追问卡片</text>
+                <text x="52" y="98" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">ChatProcessPanel / SafetyChecklist</text>
+                <text x="52" y="114" fill="#38bdf8" font-size="10">自动向用户确认急停、液位冲突与阀门超时</text>
+              </g>
+
+              <g onclick="selectArchNode('t1_ide')" class="cursor-pointer hover:opacity-90">
+                <rect x="338" y="55" width="285" height="68" rx="8" fill="#090d16" stroke="#14b8a6" stroke-width="1.5"/>
+                <text x="352" y="78" fill="#e2e8f0" font-size="12" font-weight="bold">LAD ↔ SCL 逆向对比 &amp; Monaco IDE</text>
+                <text x="352" y="98" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">LadRungViewer + SclDiffEditor</text>
+                <text x="352" y="114" fill="#2dd4bf" font-size="10">可视化呈现老项目梯形图与重构后的 SCL</text>
+              </g>
+
+              <g onclick="selectArchNode('t1_hmi')" class="cursor-pointer hover:opacity-90">
+                <rect x="648" y="55" width="272" height="68" rx="8" fill="#090d16" stroke="#0284c7" stroke-width="1.5"/>
+                <text x="662" y="78" fill="#e2e8f0" font-size="12" font-weight="bold">工艺数字孪生验证沙盒 (Micro-HMI)</text>
+                <text x="662" y="98" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">100ms Soft-PLC Scan Engine</text>
+                <text x="662" y="114" fill="#38bdf8" font-size="10">支持传感器粘连、阀门卡死等极端故障注入</text>
+              </g>
+
+              <!-- Tier 1 <-> Tier 2 通信连线 -->
+              <line x1="175" y1="140" x2="175" y2="178" stroke="#14b8a6" stroke-width="2" class="flow-line" marker-end="url(#arrowTeal)"/>
+              <text x="185" y="164" fill="#2dd4bf" font-size="10" font-family="JetBrains Mono">WebSocket (流式推理)</text>
+
+              <line x1="480" y1="140" x2="480" y2="178" stroke="#f59e0b" stroke-width="2" class="flow-line" marker-end="url(#arrowAmber)"/>
+              <text x="490" y="164" fill="#fbbf24" font-size="10" font-family="JetBrains Mono">REST /api/legacy/lad-to-scl</text>
+
+              <!-- ================= TIER 2: AI 多智能体与编译中枢 ================= -->
+              <rect x="20" y="180" width="920" height="190" rx="12" fill="url(#tier1Grad)" stroke="#14b8a6" stroke-width="1.5"/>
+              <text x="38" y="205" fill="#2dd4bf" font-size="12" font-weight="bold" font-family="Inter">TIER 2 · AI 多智能体编排与 AST 转换引擎 (Python FastAPI + LangGraph + NetworkX)</text>
+
+              <!-- 4 个核心 Agent + 1 个 LAD2SCL 引擎 -->
+              <g onclick="selectArchNode('t2_analyst')" class="cursor-pointer hover:opacity-90">
+                <rect x="38" y="220" width="165" height="78" rx="8" fill="#090d16" stroke="#334155" stroke-width="1.5"/>
+                <text x="50" y="242" fill="#2dd4bf" font-size="11" font-weight="bold">1. 工艺解析 Agent</text>
+                <text x="50" y="260" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">ProcessAnalyst</text>
+                <text x="50" y="278" fill="#cbd5e1" font-size="10">输出 Process-IR JSON</text>
+              </g>
+
+              <line x1="203" y1="259" x2="225" y2="259" stroke="#14b8a6" stroke-width="1.5" marker-end="url(#arrowTeal)"/>
+
+              <g onclick="selectArchNode('t2_safety')" class="cursor-pointer hover:opacity-90">
+                <rect x="228" y="220" width="165" height="78" rx="8" fill="#090d16" stroke="#334155" stroke-width="1.5"/>
+                <text x="240" y="242" fill="#2dd4bf" font-size="11" font-weight="bold">2. 安全联锁审计师</text>
+                <text x="240" y="260" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">SafetyAuditor</text>
+                <text x="240" y="278" fill="#cbd5e1" font-size="10">强制注入急停与防呆</text>
+              </g>
+
+              <line x1="393" y1="259" x2="415" y2="259" stroke="#14b8a6" stroke-width="1.5" marker-end="url(#arrowTeal)"/>
+
+              <g onclick="selectArchNode('t2_lad2scl')" class="cursor-pointer hover:opacity-90">
+                <rect x="418" y="220" width="295" height="78" rx="8" fill="#090d16" stroke="#f59e0b" stroke-width="2"/>
+                <text x="432" y="242" fill="#fbbf24" font-size="11" font-weight="bold">★ 老项目 LAD 转 SCL 逆向引擎 (核心)</text>
+                <text x="432" y="260" fill="#fde68a" font-size="10" font-family="JetBrains Mono">SimaticML FlgNet Parser + DAG Reducer</text>
+                <text x="432" y="278" fill="#cbd5e1" font-size="10">将串并联触点、线圈、功能块还原为结构化 SCL</text>
+              </g>
+
+              <line x1="713" y1="259" x2="735" y2="259" stroke="#14b8a6" stroke-width="1.5" marker-end="url(#arrowTeal)"/>
+
+              <g onclick="selectArchNode('t2_healer')" class="cursor-pointer hover:opacity-90">
+                <rect x="738" y="220" width="182" height="78" rx="8" fill="#090d16" stroke="#a855f7" stroke-width="1.5"/>
+                <text x="750" y="242" fill="#c084fc" font-size="11" font-weight="bold">4. 编译自愈 Agent</text>
+                <text x="750" y="260" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">CompilerSelfHealer</text>
+                <text x="750" y="278" fill="#cbd5e1" font-size="10">根据报错行号重写语法</text>
+              </g>
+
+              <!-- 企业标准库 RAG 横条 -->
+              <g onclick="selectArchNode('t2_rag')" class="cursor-pointer hover:opacity-90">
+                <rect x="38" y="312" width="882" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1"/>
+                <text x="55" y="337" fill="#94a3b8" font-size="11" font-family="JetBrains Mono">
+                  📚 企业级知识库挂载 (ChromaDB RAG): 《西门子 S7-1200/1500 编程风格指南 V17》 + 企业标准块库 (FB_Motor / FB_Valve / UDT)
+                </text>
+              </g>
+
+              <!-- Tier 2 <-> Tier 3 通信连线 -->
+              <line x1="310" y1="370" x2="310" y2="412" stroke="#14b8a6" stroke-width="2" class="flow-line" marker-end="url(#arrowTeal)"/>
+              <text x="125" y="395" fill="#2dd4bf" font-size="10" font-family="JetBrains Mono">POST /api/openness/compile-scl</text>
+
+              <line x1="640" y1="412" x2="640" y2="370" stroke="#f59e0b" stroke-width="2" class="flow-line" marker-end="url(#arrowAmber)"/>
+              <text x="652" y="395" fill="#fbbf24" font-size="10" font-family="JetBrains Mono">GET /api/openness/export-lad-xml</text>
+
+              <!-- ================= TIER 3: C# TIA Openness 本地守护进程 ================= -->
+              <rect x="20" y="415" width="920" height="135" rx="12" fill="url(#tier1Grad)" stroke="#f59e0b" stroke-width="1.5"/>
+              <text x="38" y="440" fill="#fbbf24" font-size="12" font-weight="bold" font-family="Inter">TIER 3 · TIA Openness 本地桥接守护进程 (C# .NET Framework 4.8 + STA Thread Dispatcher)</text>
+
+              <g onclick="selectArchNode('t3_sta')" class="cursor-pointer hover:opacity-90">
+                <rect x="38" y="452" width="280" height="82" rx="8" fill="#090d16" stroke="#f59e0b" stroke-width="1.5"/>
+                <text x="52" y="475" fill="#fbbf24" font-size="12" font-weight="bold">STA 单线程安全调度队列 (核心防崩)</text>
+                <text x="52" y="495" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">StaTaskScheduler : TaskScheduler</text>
+                <text x="52" y="515" fill="#cbd5e1" font-size="10">强制所有 Openness COM 调用排队在单一 STA 线程</text>
+              </g>
+
+              <g onclick="selectArchNode('t3_xml')" class="cursor-pointer hover:opacity-90">
+                <rect x="340" y="452" width="285" height="82" rx="8" fill="#090d16" stroke="#38bdf8" stroke-width="1.5"/>
+                <text x="354" y="475" fill="#38bdf8" font-size="12" font-weight="bold">SimaticML 导出与外部源注入器</text>
+                <text x="354" y="495" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">block.Export() / GenerateBlockFromSource()</text>
+                <text x="354" y="515" fill="#cbd5e1" font-size="10">导出老项目 LAD XML，并将重构后的 SCL 导回博途</text>
+              </g>
+
+              <g onclick="selectArchNode('t3_diag')" class="cursor-pointer hover:opacity-90">
+                <rect x="648" y="452" width="272" height="82" rx="8" fill="#090d16" stroke="#14b8a6" stroke-width="1.5"/>
+                <text x="662" y="475" fill="#2dd4bf" font-size="12" font-weight="bold">编译器树状诊断提取器</text>
+                <text x="662" y="495" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">ICompilable.Compile() Recursive Parser</text>
+                <text x="662" y="515" fill="#cbd5e1" font-size="10">递归遍历 CompilerResultMessage 抓取报错行号</text>
+              </g>
+
+              <!-- Tier 3 <-> Tier 4 连线 -->
+              <line x1="480" y1="550" x2="480" y2="585" stroke="#38bdf8" stroke-width="2" class="flow-line" marker-end="url(#arrowSky)"/>
+              <text x="492" y="572" fill="#38bdf8" font-size="10" font-family="JetBrains Mono">Siemens.Engineering.dll (IPC COM)</text>
+
+              <!-- ================= TIER 4: 西门子工业执行底座 ================= -->
+              <rect x="20" y="588" width="920" height="75" rx="12" fill="#090d16" stroke="#475569" stroke-width="1.5"/>
+              <text x="38" y="612" fill="#94a3b8" font-size="12" font-weight="bold" font-family="Inter">TIER 4 · 西门子工业控制与仿真底座 (Industrial Runtime Layer)</text>
+              <text x="38" y="640" fill="#e2e8f0" font-size="12" font-family="JetBrains Mono">
+                [ TIA Portal V16 / V17 / V18 / V19 ] ────── [ S7-PLCSIM Advanced V4.0 ] ────── [ SIMATIC S7-1200 / S7-1500 CPU ]
+              </text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- 右侧：选中架构节点的深度技术检视面板 (占 4 列) -->
+        <div class="xl:col-span-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <span id="node-badge" class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  TIER 2 CORE ENGINE
+                </span>
+                <h3 id="node-title" class="text-base font-bold text-white mt-1.5">
+                  老项目 LAD 转 SCL 逆向引擎
+                </h3>
+              </div>
+            </div>
+
+            <div class="mt-4 space-y-3 text-xs leading-relaxed text-slate-300">
+              <div>
+                <div class="text-slate-400 font-semibold mb-1">模块职责与设计初衷：</div>
+                <p id="node-desc" class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-200">
+                  现场存量老项目 80% 都是梯形图 (LAD)，且往往几百个网络缠绕在一起。由于大模型直接阅读西门子导出的几千行 SimaticML XML 极易产生幻觉，我们设计了“确定性图论算法 + AI 语义重命名”的混合逆向管线。
+                </p>
+              </div>
+
+              <div>
+                <div class="text-slate-400 font-semibold mb-1">输入 / 输出数据契约 (I/O Contract)：</div>
+                <pre id="node-contract" class="bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-[11px] text-teal-300 overflow-x-auto">
+Input : SimaticML XML (&lt;FlgNet&gt; Parts &amp; Wires)
+Stage1: 构建有向无环能流图 G = (V, E)
+Stage2: 串并联归约生成布尔表达式树 (AST)
+Stage3: LLM 结合符号表生成带注释的 CASE/IF SCL
+Output: 符合 Siemens Styleguide 的 .scl 源文件</pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+            <span class="text-[11px] text-slate-400">想亲自测试老项目梯形图转 SCL？</span>
+            <button onclick="switchMainTab('lad2scl')" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-all">
+              打开 LAD 转 SCL 实验室 →
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 视图 2：老项目梯形图 (LAD) 转 SCL 逆向重构实验室 (Interactive Sandbox) -->
+    <!-- ===================================================================== -->
+    <section id="view-lad2scl" class="hidden space-y-6">
+      <!-- 顶部场景切换器与说明 -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="px-2 py-0.5 text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 rounded border border-amber-500/40">LEGACY MIGRATION</span>
+            <h2 class="text-sm font-bold text-white">存量老项目梯形图 (LAD) 自动逆向转标准 SCL 实验室</h2>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">
+            通过 TIA Openness 将老项目中的 LAD 块导出为 `SimaticML XML`，经由 **能流图构建 (Wire Graph) → 串并联归约 (Series-Parallel Reduction) → LLM 工艺语义提炼** 三步转化为高质量 SCL。
+          </p>
+        </div>
+
+        <!-- 3 个典型老项目 LAD 样例切换 -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs text-slate-400 mr-1">选择老项目梯形图网络:</span>
+          <button onclick="loadLadExample(0)" id="lad-btn-0" class="lad-ex-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950">
+            案例 1：启保停自锁 + 电气互锁回路
+          </button>
+          <button onclick="loadLadExample(1)" id="lad-btn-1" class="lad-ex-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700">
+            案例 2：双液位并联触发 + TON 延时报警
+          </button>
+          <button onclick="loadLadExample(2)" id="lad-btn-2" class="lad-ex-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700">
+            案例 3：温度大于阈值比较 + MOVE 给定值
+          </button>
+        </div>
+      </div>
+
+      <!-- 核心转换四宫格视图：左上 LAD 图形，左下 SimaticML XML，右上 AST 归约树，右下 生成的标准 SCL -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 左侧栏 (6列)：老项目梯形图可视化画布 + SimaticML FlgNet XML 源数据 -->
+        <div class="lg:col-span-6 space-y-5">
+          <!-- 1. 梯形图 (LAD) 可视化能流画布 -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-white flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                步骤 1：老项目原始梯形图网络 (TIA Portal LAD View)
+              </span>
+              <span id="lad-network-title" class="text-[11px] font-mono text-amber-400">Network 1: Motor_Start_Stop_Latch</span>
+            </div>
+            <!-- 动态渲染的 SVG 梯形图 -->
+            <div id="lad-svg-container" class="bg-slate-950 border border-slate-800 rounded-xl p-3 overflow-x-auto">
+              <!-- 由 JS 动态注入 SVG -->
+            </div>
+          </div>
+
+          <!-- 2. Openness 导出的 SimaticML <FlgNet> XML 节选 -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-200">
+                步骤 2：C# Openness 导出的底层 SimaticML XML (`&lt;FlgNet&gt;`)
+              </span>
+              <span class="text-[10px] font-mono bg-slate-950 px-2 py-0.5 rounded text-sky-400 border border-slate-800">
+                block.Export(xmlPath, ExportOptions.WithDefaults)
+              </span>
+            </div>
+            <pre id="lad-xml-code" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] font-mono text-sky-300 overflow-x-auto max-h-64 leading-relaxed"></pre>
+          </div>
+        </div>
+
+        <!-- 右侧栏 (6列)：DAG 拓扑归约中间表达式 + 最终重构的西门子标准 SCL 代码 -->
+        <div class="lg:col-span-6 space-y-5">
+          <!-- 3. 确定性图论算法提取的 AST 与能流布尔表达式 -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-purple-300">
+                步骤 3：DAG 能流图串并联归约过程 (Deterministic AST Reduction)
+              </span>
+              <span class="text-[10px] font-mono bg-purple-500/10 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">
+                零幻觉确定性编译算法
+              </span>
+            </div>
+            <pre id="lad-ast-trace" class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] font-mono text-purple-300 overflow-x-auto leading-relaxed"></pre>
+          </div>
+
+          <!-- 4. 最终生成的符合《西门子风格指南》的 SCL 代码 (支持纯直译 vs AI 工艺重构切换) -->
+          <div class="bg-slate-900 border border-teal-500/40 rounded-2xl p-4 shadow-lg shadow-teal-950/30">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <span class="text-xs font-bold text-teal-300 flex items-center gap-1.5">
+                ✨ 步骤 4：转换生成的西门子标准 SCL 代码
+              </span>
+              <div class="flex items-center bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px]">
+                <button onclick="setSclMode('semantic')" id="scl-mode-semantic" class="px-2.5 py-1 rounded bg-teal-500 text-slate-950 font-bold">
+                  AI 工艺语义重构 (推荐)
+                </button>
+                <button onclick="setSclMode('literal')" id="scl-mode-literal" class="px-2.5 py-1 rounded text-slate-400 hover:text-white">
+                  1:1 布尔代数直译
+                </button>
+              </div>
+            </div>
+            <pre id="lad-scl-output" class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-xs font-mono text-emerald-300 overflow-x-auto leading-relaxed"></pre>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 视图 3：Agent 多智能体编排框架与 LAD->SCL 核心算法源码                  -->
+    <!-- ===================================================================== -->
+    <section id="view-agent" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 左栏 (6列)：老项目梯形图 (SimaticML FlgNet) 转 SCL 的完整核心算法 -->
+        <div class="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+            <div>
+              <span class="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">CORE ALGORITHM #1</span>
+              <h3 class="text-sm font-bold text-white mt-1">老项目梯形图 (SimaticML FlgNet) 转 SCL 图论归约算法</h3>
+            </div>
+            <button onclick="copyCode('code-algo-lad')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700">
+              复制算法代码
+            </button>
+          </div>
+          <p class="text-xs text-slate-400 mb-3 leading-relaxed">
+            西门子 TIA Portal 导出的梯形图 XML 由 <code>&lt;Parts&gt;</code>（触点 `Contact`、线圈 `Coil`、功能块 `Call`）与 <code>&lt;Wires&gt;</code>（包含 `Powerrail`、`IdentCon`、`NameCon`、`Openbranch`）组成。不能直接把几千行 XML 丢给 LLM，必须先通过以下 **有向无环图 (DAG) 递归上溯算法** 精确还原能流布尔逻辑：
+          </p>
+          <pre id="code-algo-lad" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-4 text-[11.5px] font-mono text-amber-200 overflow-x-auto leading-relaxed">
+# =============================================================================
+# 文件: apps/agent-core/compiler/lad_xml_to_scl.py
+# 核心算法: 西门子 SimaticML (FlgNet) 梯形图能流归约转 SCL 编译器
+# =============================================================================
+import xml.etree.ElementTree as ET
+from typing import Dict, List, Set
+
+class FlgNetNode:
+    def __init__(self, uid: str, part_name: str, negated: bool = False, operand: str = ""):
+        self.uid = uid
+        self.part_name = part_name  # 'Contact' | 'Coil' | 'Sr' | 'TON' | 'Gt' | 'Move'
+        self.negated = negated      # True 表示常闭触点 (NC: --|/|-- )
+        self.operand = operand      # 绑定的 PLC 变量符号名，如 '#i_bStart'
+        self.in_pins: Dict[str, List[tuple]] = {}  # pin_name -> [(source_uid, source_pin)]
+
+class SimaticLadToSclTranspiler:
+    """
+    将 TIA Openness 导出的梯形图 XML 确定性地编译为 SCL 抽象语法树 (AST)
+    """
+    def __init__(self, xml_content: str):
+        self.root = ET.fromstring(xml_content)
+        self.nodes: Dict[str, FlgNetNode] = {}
+        self.powerrail_Connected_pins: Set[tuple] = set() # (uid, pin) 直接连在左母线上
+
+    def parse_flgnet(self):
+        # 1. 解析所有 <Part> 元件 (触点、线圈、定时器、比较器)
+        for part in self.root.findall(".//Parts/Part"):
+            uid = part.attrib["UId"]
+            name = part.attrib["Name"]
+            negated = part.find("Negated") is not None
+            operand = self._resolve_access_symbol(uid)
+            self.nodes[uid] = FlgNetNode(uid, name, negated, operand)
+
+        # 2. 解析所有 <Wire> 能流连线，构建逆向依赖图 (从输出端往左母线回溯)
+        for wire in self.root.findall(".//Wires/Wire"):
+            children = list(wire)
+            source = children[0]
+            targets = children[1:]
+
+            if source.tag == "Powerrail":
+                # 该能流线直接源自左侧母线 (TRUE)
+                for tgt in targets:
+                    if tgt.tag == "NameCon":
+                        self.powerrail_Connected_pins.add((tgt.attrib["UId"], tgt.attrib["Name"]))
+            elif source.tag == "NameCon":
+                src_uid, src_pin = source.attrib["UId"], source.attrib["Name"]
+                for tgt in targets:
+                    if tgt.tag == "NameCon":
+                        t_uid, t_pin = tgt.attrib["UId"], tgt.attrib["Name"]
+                        self.nodes[t_uid].in_pins.setdefault(t_pin, []).append((src_uid, src_pin))
+
+    def resolve_rung_expression(self, uid: str, in_pin: str = "in") -> str:
+        """
+        【核心递归算法】从任意元件的输入管脚回溯到左母线，自动归约串并联逻辑：
+        - 同一管脚收到多条 Wire 汇入 (Openbranch) -> 并联 OR 关系
+        - 触点沿着 in -> out 级联传递 -> 串联 AND 关系
+        """
+        if (uid, in_pin) in self.powerrail_Connected_pins:
+            return "TRUE"
+
+        upstream_list = self.nodes[uid].in_pins.get(in_pin, [])
+        if not upstream_list:
+            return "FALSE"
+
+        branch_exprs = []
+        for src_uid, src_pin in upstream_list:
+            src_node = self.nodes[src_uid]
+            # 递归求取上游元件自身的输入能流表达式
+            prev_power = self.resolve_rung_expression(src_uid, "in")
+
+            if src_node.part_name == "Contact":
+                contact_sym = f"NOT {src_node.operand}" if src_node.negated else src_node.operand
+                expr = contact_sym if prev_power == "TRUE" else f"({prev_power} AND {contact_sym})"
+                branch_exprs.append(expr)
+            elif src_node.part_name in ("Gt", "Lt", "Eq"):
+                op_map = {"Gt": ">", "Lt": "<", "Eq": "="}
+                in1 = self._resolve_pin_operand(src_uid, "in1")
+                in2 = self._resolve_pin_operand(src_uid, "in2")
+                cmp_expr = f"({in1} {op_map[src_node.part_name]} {in2})"
+                expr = cmp_expr if prev_power == "TRUE" else f"({prev_power} AND {cmp_expr})"
+                branch_exprs.append(expr)
+
+        # 多条支路汇合即为并联 (OR)
+        if len(branch_exprs) == 1:
+            return branch_exprs[0]
+        return "(" + " OR ".join(branch_exprs) + ")"
+
+    def emit_scl_statements(self) -> List[str]:
+        """遍历所有末端执行元件 (Coil / TON / Move)，生成标准 SCL 语句"""
+        scl_lines = []
+        for uid, node in self.nodes.items():
+            if node.part_name == "Coil":
+                rung_cond = self.resolve_rung_expression(uid, "in")
+                scl_lines.append(f"{node.operand} := {rung_cond};")
+            elif node.part_name == "TON":
+                rung_cond = self.resolve_rung_expression(uid, "IN")
+                pt_val = self._resolve_pin_operand(uid, "PT")
+                scl_lines.append(f"{node.operand}(IN := {rung_cond}, PT := {pt_val});")
+            elif node.part_name == "Move":
+                en_cond = self.resolve_rung_expression(uid, "en")
+                in_val = self._resolve_pin_operand(uid, "in")
+                out_var = self._resolve_pin_operand(uid, "out1")
+                scl_lines.append(f"IF {en_cond} THEN\n    {out_var} := {in_val};\nEND_IF;")
+        return scl_lines</pre>
+        </div>
+
+        <!-- 右栏 (6列)：LangGraph 多智能体协同与编译自愈状态机框架 -->
+        <div class="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+            <div>
+              <span class="text-[10px] font-mono bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded">CORE ALGORITHM #2</span>
+              <h3 class="text-sm font-bold text-white mt-1">LangGraph 多智能体编排框架与编译自愈状态机</h3>
+            </div>
+            <button onclick="copyCode('code-algo-agent')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700">
+              复制框架代码
+            </button>
+          </div>
+          <p class="text-xs text-slate-400 mb-3 leading-relaxed">
+            无论是“新工艺正向生成”还是“老项目 LAD 逆向重构”，都在统一的 **LangGraph 状态图** 中运行。一旦 C# Openness Bridge 返回编译错误 (`error_count > 0`)，状态机自动路由至 `compiler_self_healer` 节点进行定位修复：
+          </p>
+          <pre id="code-algo-agent" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-4 text-[11.5px] font-mono text-teal-200 overflow-x-auto leading-relaxed">
+# =============================================================================
+# 文件: apps/agent-core/workflow/chat2plc_graph.py
+# 框架: LangGraph 工业级状态机 (支持正向工艺生成 + 老项目 LAD 转 SCL + 编译自愈)
+# =============================================================================
+from typing import TypedDict, List, Literal, Optional
+from langgraph.graph import StateGraph, END
+import httpx
+
+class Chat2PlcState(TypedDict):
+    mode: Literal["forward_process", "legacy_lad_to_scl"]
+    user_prompt: str                   # 用户的自然语言工艺描述
+    block_name: str                    # 目标 PLC 块名称，如 "FB_MixingTank_Ctrl"
+    legacy_lad_xml: Optional[str]      # 从老项目导出的 SimaticML XML
+    process_ir: Optional[dict]         # 工艺中间表示层 (I/O + 联锁 + 步序)
+    scl_code: str                      # 当前生成的符合西门子规范的 SCL 源码
+    compile_diagnostics: List[dict]    # 博途编译器返回的精确行号报错列表
+    heal_retry_count: int              # 自愈重试计数器 (上限 3 次)
+    status: str
+
+# ----------------- 核心智能体节点定义 -----------------
+
+async def legacy_lad_decompiler_node(state: Chat2PlcState) -> Chat2PlcState:
+    """节点 A1: 针对老项目，调用 C# Bridge 导出 LAD XML 并执行 DAG 归约 + 语义重构"""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(f"http://localhost:5005/api/openness/export-xml/{state['block_name']}")
+        xml_str = resp.json()["simaticMlXml"]
+
+    # 1. 使用确定性图算法提取布尔代数骨架 (100% 保证逻辑等价)
+    transpiler = SimaticLadToSclTranspiler(xml_str)
+    transpiler.parse_flgnet()
+    raw_scl_statements = transpiler.emit_scl_statements()
+
+    # 2. 调用 LLM 将分散的布尔自锁/步序标志位重写为清晰的结构化 SCL 并补齐中文工艺注释
+    refactored_scl = await llm_semantic_refactor(raw_scl_statements, state["user_prompt"])
+    return {**state, "legacy_lad_xml": xml_str, "scl_code": refactored_scl, "heal_retry_count": 0}
+
+async def process_and_safety_node(state: Chat2PlcState) -> Chat2PlcState:
+    """节点 A2: 针对新工艺，生成 Process-IR 并强制注入急停、传感器合理性与阀门超时联锁"""
+    ir = await generate_process_ir_with_safety_guardrails(state["user_prompt"])
+    scl = await generate_siemens_style_scl_from_ir(ir)
+    return {**state, "process_ir": ir, "scl_code": scl, "heal_retry_count": 0}
+
+async def openness_compile_verify_node(state: Chat2PlcState) -> Chat2PlcState:
+    """节点 B: 调用本地 C# STA 守护进程导入 .scl 源文件并触发 TIA Portal 真实编译"""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post("http://localhost:5005/api/openness/compile-scl", json={
+            "blockName": state["block_name"],
+            "sclContent": state["scl_code"]
+        })
+        diag = resp.json() # { "success": bool, "errorCount": int, "messages": [...] }
+
+    return {
+        **state,
+        "compile_diagnostics": diag["messages"],
+        "status": "compiled_ok" if diag["errorCount"] == 0 else "compile_failed"
+    }
+
+async def compiler_self_healer_node(state: Chat2PlcState) -> Chat2PlcState:
+    """节点 C: 编译自愈智能体 - 根据博途返回的精确行号与报错描述修复 SCL 语法/类型不匹配"""
+    fixed_scl = await llm_fix_scl_with_diagnostics(
+        original_scl=state["scl_code"],
+        compiler_errors=state["compile_diagnostics"]
+    )
+    return {**state, "scl_code": fixed_scl, "heal_retry_count": state["heal_retry_count"] + 1}
+
+# ----------------- 路由条件与状态图装配 -----------------
+
+def route_after_compile(state: Chat2PlcState) -> Literal["healer", "finish"]:
+    if state["status"] == "compiled_ok" or state["heal_retry_count"] >= 3:
+        return "finish"
+    return "healer"
+
+workflow = StateGraph(Chat2PlcState)
+workflow.add_node("legacy_decompiler", legacy_lad_decompiler_node)
+workflow.add_node("forward_generator", process_and_safety_node)
+workflow.add_node("tia_compiler", openness_compile_verify_node)
+workflow.add_node("self_healer", compiler_self_healer_node)
+
+workflow.set_conditional_entry_point(
+    lambda s: "legacy_decompiler" if s["mode"] == "legacy_lad_to_scl" else "forward_generator"
+)
+workflow.add_edge("legacy_decompiler", "tia_compiler")
+workflow.add_edge("forward_generator", "tia_compiler")
+workflow.add_conditional_edges("tia_compiler", route_after_compile, {
+    "healer": "self_healer",
+    "finish": END
+})
+workflow.add_edge("self_healer", "tia_compiler")
+chat2plc_app = workflow.compile()</pre>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- 视图 4：TIA Openness C# 桥接服务完整伪代码库                           -->
+    <!-- ===================================================================== -->
+    <section id="view-openness" class="hidden space-y-6">
+      <!-- 顶部桥接原理说明 -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5">
+        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+          <span class="px-2 py-0.5 text-[10px] font-mono bg-sky-500/20 text-sky-300 rounded border border-sky-500/30">C# .NET 4.8 NATIVE BRIDGE</span>
+          TIA Openness 本地桥接守护进程核心伪代码 (解决 STA 线程崩溃、LAD 导出 XML、SCL 注入与编译诊断)
+        </h2>
+        <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">
+          以下伪代码可直接用于改造你原有的 <code>TiaPortalOpennessDemo</code> 项目：剥离冗长的 WPF 界面，保留 <code>Resolver.cs</code>，并新增以下三个核心类即可构成完整的后台守护服务。
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- 伪代码模块 1：STA 单线程安全队列 + 动态程序集解析 -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+            <div>
+              <span class="text-[10px] font-mono text-amber-400">MODULE 1 · STA THREAD SAFETY</span>
+              <h3 class="text-sm font-bold text-white">1. 单线程单元 (STA) 调度器与博途进程挂载</h3>
+            </div>
+            <button onclick="copyCode('code-csharp-sta')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700">
+              复制 C# 代码
+            </button>
+          </div>
+          <pre id="code-csharp-sta" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-4 text-[11.5px] font-mono text-sky-300 overflow-x-auto leading-relaxed">
+// =============================================================================
+// 文件: services/TiaOpennessBridge.Host/Core/StaOpennessDispatcher.cs
+// 作用: 强制所有针对 Siemens.Engineering.dll 的 API 调用在同一个 STA 线程顺序执行
+// =============================================================================
+using System;
+using System.Collections.Concurrent;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Siemens.Engineering;
+using Siemens.Engineering.HW;
+using Siemens.Engineering.SW;
+
+public sealed class StaOpennessDispatcher : IDisposable
+{
+    private readonly BlockingCollection<Action> _workQueue = new BlockingCollection<Action>();
+    private readonly Thread _staThread;
+    public TiaPortal CurrentPortal { get; private set; }
+    public Project ActiveProject { get; private set; }
+    public PlcSoftware ActivePlc { get; private set; }
+
+    public StaOpennessDispatcher()
+    {
+        _staThread = new Thread(StaPumpLoop)
+        {
+            Name = "TIA_Openness_STA_Worker",
+            IsBackground = true
+        };
+        // 【关键】必须设置为 STA (Single-Threaded Apartment)，否则 Openness COM 接口直接抛异常
+        _staThread.SetApartmentState(ApartmentState.STA);
+        _staThread.Start();
+    }
+
+    private void StaPumpLoop()
+    {
+        foreach (var action in _workQueue.GetConsumingEnumerable())
+        {
+            action();
+        }
+    }
+
+    // 供 WebAPI Controller 异步调用的线程安全包装器
+    public Task<T> InvokeAsync<T>(Func<T> opennessFunc)
+    {
+        var tcs = new TaskCompletionSource<T>();
+        _workQueue.Add(() =>
+        {
+            try
+            {
+                T result = opennessFunc();
+                tcs.SetResult(result);
+            }
+            catch (EngineeringException ex)
+            {
+                tcs.SetException(new Exception($"[TIA Openness Error] {ex.Message}", ex));
+            }
+            catch (Exception ex)
+            {
+                tcs.SetException(ex);
+            }
+        });
+        return tcs.Task;
+    }
+
+    // 附加到当前正在运行的 TIA Portal 窗口并定位第一个 PLC_1
+    public Task<string> AttachToRunningTiaAsync() => InvokeAsync(() =>
+    {
+        var processes = TiaPortal.GetProcesses();
+        var targetProc = processes.FirstOrDefault()
+            ?? throw new InvalidOperationException("未检测到正在运行的 TIA Portal 进程！");
+
+        CurrentPortal = targetProc.Attach();
+        ActiveProject = CurrentPortal.Projects.FirstOrDefault()
+            ?? throw new InvalidOperationException("TIA Portal 中尚未打开任何工程项目！");
+
+        // 遍历硬件设备寻找 PlcSoftware 容器
+        foreach (Device device in ActiveProject.Devices)
+        {
+            foreach (DeviceItem item in device.DeviceItems)
+            {
+                var swContainer = item.GetService<SoftwareContainer>();
+                if (swContainer?.Software is PlcSoftware plc)
+                {
+                    ActivePlc = plc;
+                    return $"成功挂载项目 [{ActiveProject.Name}] -> 控制器 [{plc.Name}]";
+                }
+            }
+        }
+        throw new InvalidOperationException("工程中未找到 S7-1200/1500 PLC 软件容器！");
+    });
+
+    public void Dispose() => _workQueue.CompleteAdding();
+}</pre>
+        </div>
+
+        <!-- 伪代码模块 2：老项目 LAD 导出 XML + SCL 外部源注入 + 递归编译诊断 -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+            <div>
+              <span class="text-[10px] font-mono text-teal-400">MODULE 2 · LAD EXPORT &amp; SCL SELF-HEALING</span>
+              <h3 class="text-sm font-bold text-white">2. 老项目 LAD 导出 XML 与 SCL 编译诊断服务</h3>
+            </div>
+            <button onclick="copyCode('code-csharp-bridge')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700">
+              复制 C# 代码
+            </button>
+          </div>
+          <pre id="code-csharp-bridge" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-4 text-[11.5px] font-mono text-emerald-300 overflow-x-auto leading-relaxed">
+// =============================================================================
+// 文件: services/TiaOpennessBridge.Host/Services/PlcBlockBridgeService.cs
+// 作用: 1) 将存量老项目的 LAD 块导出为 SimaticML XML 供 Python 逆向转 SCL
+//       2) 将 AI 生成的 SCL 注入博途并提取精确到行号的编译错误树
+// =============================================================================
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
+using Siemens.Engineering;
+using Siemens.Engineering.Compiler;
+using Siemens.Engineering.SW.Blocks;
+using Siemens.Engineering.SW.ExternalSources;
+
+public class PlcBlockBridgeService
+{
+    private readonly StaOpennessDispatcher _sta;
+    public PlcBlockBridgeService(StaOpennessDispatcher sta) => _sta = sta;
+
+    // 【核心接口 1】导出老项目中的梯形图 (LAD) 块为 SimaticML XML
+    public Task<string> ExportLegacyLadBlockToXmlAsync(string blockName) => _sta.InvokeAsync(() =>
+    {
+        PlcBlock block = _sta.ActivePlc.BlockGroup.Blocks.Find(blockName)
+            ?? throw new FileNotFoundException($"在博途中未找到块: {blockName}");
+
+        // 确认编程语言 (ProgrammingLanguage.LAD / FBD / SCL)
+        string tempXmlPath = Path.Combine(Path.GetTempPath(), $"{blockName}_LadExport.xml");
+        if (File.Exists(tempXmlPath)) File.Delete(tempXmlPath);
+
+        // 调用 Openness Export 导出包含 <FlgNet> 拓扑结构的完整 XML
+        block.Export(new FileInfo(tempXmlPath), ExportOptions.WithDefaults);
+        return File.ReadAllText(tempXmlPath, Encoding.UTF8);
+    });
+
+    // 【核心接口 2】注入 SCL 源码 -> 生成块 -> 编译 -> 递归提取报错行号
+    public Task<CompileDiagnosticDto> InjectSclAndCompileAsync(string blockName, string sclCode) => _sta.InvokeAsync(() =>
+    {
+        var plc = _sta.ActivePlc;
+        string tempSclFile = Path.Combine(Path.GetTempPath(), $"{blockName}.scl");
+        File.WriteAllText(tempSclFile, sclCode, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+
+        // 1. 清理同名旧外部源文件并重新注册
+        PlcExternalSourceSystemGroup extGroup = plc.ExternalSourceGroup;
+        PlcExternalSource existingSrc = extGroup.ExternalSources.Find($"{blockName}.scl");
+        existingSrc?.Delete();
+
+        PlcExternalSource newSrc = extGroup.ExternalSources.CreateFromFile($"{blockName}.scl", tempSclFile);
+
+        // 2. 从 .scl 文本生成博途逻辑块 (KeepOnError 保证即便有小错也能进入编译器获取行号)
+        newSrc.GenerateBlockFromSource(GenerateBlockOption.KeepOnError);
+
+        // 3. 针对刚生成的块触发增量编译 (ICompilable)
+        PlcBlock generatedBlock = plc.BlockGroup.Blocks.Find(blockName);
+        ICompilable compiler = (generatedBlock as IEngineeringServiceProvider)?.GetService<ICompilable>()
+                               ?? plc.GetService<ICompilable>();
+        CompilerResult result = compiler.Compile();
+
+        // 4. 递归解析树状编译消息，回传给 Python Self-Healer Agent
+        var dto = new CompileDiagnosticDto
+        {
+            Success = result.State != CompilerResultState.Error,
+            ErrorCount = result.ErrorCount,
+            WarningCount = result.WarningCount,
+            Messages = new List<CompileMsgItem>()
+        };
+        ExtractMessagesRecursive(result.Messages, dto.Messages);
+        return dto;
+    });
+
+    // 递归遍历博途的多层 CompilerResultMessage 树
+    private void ExtractMessagesRecursive(CompilerResultMessageComposition messages, List<CompileMsgItem> output)
+    {
+        foreach (CompilerResultMessage msg in messages)
+        {
+            if (!string.IsNullOrWhiteSpace(msg.Description) &&
+                (msg.State == CompilerResultState.Error || msg.State == CompilerResultState.Warning))
+            {
+                output.Add(new CompileMsgItem
+                {
+                    Path = msg.Path,               // 例如: "FB_MixingTank_Ctrl / Line 48"
+                    State = msg.State.ToString(),  // "Error" | "Warning"
+                    Description = msg.Description  // 例如: "参数 'PT' 的数据类型不匹配"
+                });
+            }
+            if (msg.Messages != null && msg.Messages.Count > 0)
+            {
+                ExtractMessagesRecursive(msg.Messages, output);
+            }
+        }
+    }
+}</pre>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 全局复制成功提示 Toast (避免使用 alert) -->
+  <div id="toast" class="fixed bottom-5 right-5 transform translate-y-16 opacity-0 transition-all duration-300 bg-teal-500 text-slate-950 font-semibold text-xs px-4 py-2.5 rounded-xl shadow-lg pointer-events-none">
+    已复制到剪贴板！
+  </div>
+
+  <!-- 交互逻辑脚本 -->
+  <script>
+    // ==================== 1. 顶部主视图切换 ====================
+    function switchMainTab(tabId) {
+      const tabs = ['arch', 'lad2scl', 'agent', 'openness'];
+      tabs.forEach(t => {
+        const section = document.getElementById('view-' + t);
+        const btn = document.getElementById('tab-btn-' + t);
+        if (t === tabId) {
+          section.classList.remove('hidden');
+          btn.className = 'tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-teal-500 text-slate-950 shadow';
+        } else {
+          section.classList.add('hidden');
+          btn.className = 'tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white';
+        }
+      });
+    }
+
+    // ==================== 2. 架构图节点点击检视详情数据 ====================
+    const ARCH_NODE_DETAILS = {
+      t1_chat: {
+        badge: 'TIER 1 · PRESENTATION',
+        title: '工艺自然语言对话与安全防呆追问卡片',
+        desc: '面向现场工艺工程师的第一入口。当你输入“打开进料阀直到高液位”，系统不会直接生成脆弱的代码，而是弹出【安全联锁确认卡】，询问是否加入高/低液位逻辑冲突校验和阀门 5s 开到位超时监控。',
+        contract: 'Input : 自然语言工艺描述 + 勾选的安全联锁项\nOutput: WebSocket 请求 /ws/agent/stream'
+      },
+      t1_ide: {
+        badge: 'TIER 1 · MONACO & LAD VIEWER',
+        title: 'LAD ↔ SCL 逆向对比与 AST 代码工作区',
+        desc: '专为“存量老项目改造”与“新项目审查”打造的双栏视图。左侧渲染老项目梯形图 (LAD) 能流网络，右侧展示经过 DAG 归约与 AI 重构后的西门子标准 SCL 代码，支持一键比对差异。',
+        contract: 'Input : SimaticML FlgNet JSON + SCL 源码\nOutput: 人工确认后触发 /api/openness/compile-scl'
+      },
+      t1_hmi: {
+        badge: 'TIER 1 · MICRO-HMI SANDBOX',
+        title: '工艺数字孪生验证沙盒 (100ms 软 PLC)',
+        desc: '无需启动庞大的 WinCC，直接在前端内置 100ms 周期的软 PLC 状态机扫描引擎。支持一键注入“高液位计粘连”、“气动阀卡死无反馈”等极端工况，直观验证联锁保护是否跳入 Step 999。',
+        contract: 'Input : Process-IR 状态转移表\nOutput: 实时 I/O 波形与报警字 (q_wAlarmWord) 状态监控'
+      },
+      t2_analyst: {
+        badge: 'TIER 2 · AGENT NODE 1',
+        title: 'Process Analyst (工艺解析智能体)',
+        desc: '将非结构化的工业控制需求拆解为严格的《Process-IR 工艺中间表示层协议》，明确区分 Input / Output / InOut / Static 变量（遵循匈牙利命名法 i_b / q_b / stat_）以及 CASE 顺控步序图。',
+        contract: 'Input : 用户工艺文本\nOutput: Process-IR JSON (严格符合 JSON Schema)'
+      },
+      t2_safety: {
+        badge: 'TIER 2 · AGENT NODE 2',
+        title: 'Safety Auditor (安全联锁审计智能体)',
+        desc: '工业红线守门人。自动扫描 Process-IR 中的所有物理执行器（电机、阀门、加热管），强制织入急停最高优先级切断 (Step := 999)、断电恢复防自启以及传感器合理性校验。',
+        contract: 'Input : 原始 Process-IR\nOutput: 增强安全联锁后的 Process-IR'
+      },
+      t2_lad2scl: {
+        badge: 'TIER 2 · CORE COMPILER',
+        title: '老项目 LAD 转 SCL 逆向引擎 (SimaticML -> SCL)',
+        desc: '解决“接盘老项目梯形图”痛点的核心武器。先使用确定性图论算法解析 SimaticML XML 中的 <Parts> 和 <Wires>，通过串并联归约算法生成 100% 等价的布尔表达式树，再由 LLM 重构为结构化 SCL。',
+        contract: 'Input : TIA 导出的 SimaticML XML (<FlgNet>)\nStage1: 确定性 DAG 能流归约 (0 幻觉)\nStage2: AI 工艺语义化重构\nOutput: 标准 SCL 块 (.scl)'
+      },
+      t2_healer: {
+        badge: 'TIER 2 · AGENT NODE 4',
+        title: 'Compiler Self-Healer (编译自愈智能体)',
+        desc: '当 C# Bridge 传回博途编译器的报错行号与原因（例如 S7-1500 中定时器数据类型或变量未声明），Self-Healer 自动定位出错行并检索西门子语法规范库，重写代码后再次下发编译，最多循环 3 次。',
+        contract: 'Input : 原始 SCL + CompileDiagnosticDto (含报错行号)\nOutput: 修复后的零报错 SCL 源码'
+      },
+      t2_rag: {
+        badge: 'TIER 2 · KNOWLEDGE BASE',
+        title: '企业标准块库与西门子风格指南 RAG',
+        desc: '挂载《Siemens S7-1200/1500 Programming Styleguide》与企业自有全局库（如 FB_Motor_Std、FB_Valve_Intlk），确保生成或逆向出的 SCL 代码直接复用公司成熟标准块，绝不重复造轮子。',
+        contract: 'Vector DB: ChromaDB\nRetrieval: 标准块管脚定义 + 匈牙利命名约束'
+      },
+      t3_sta: {
+        badge: 'TIER 3 · C# STA DISPATCHER',
+        title: 'STA 单线程安全调度队列 (StaOpennessDispatcher)',
+        desc: '西门子 Siemens.Engineering.dll 底层基于 COM 单线程单元 (STA)。若直接在多线程 WebAPI 中并发调用会立即触发 COMException 崩溃。本模块通过 BlockingCollection 将所有请求排入唯一 STA 线程执行。',
+        contract: 'Thread ApartmentState: ApartmentState.STA\nQueue : BlockingCollection<Action> 单线程顺序消费'
+      },
+      t3_xml: {
+        badge: 'TIER 3 · SIMATICML & EXTERNAL SOURCE',
+        title: 'SimaticML 导出与外部源注入服务',
+        desc: '双向桥接核心：正向通过 ExternalSources.CreateFromFile() + GenerateBlockFromSource() 将 SCL 文本编译为博途块；逆向通过 block.Export() 将老项目的 LAD/FBD 导出为 SimaticML XML。',
+        contract: 'Forward : .scl 源文件 -> PlcBlock\nReverse : LAD PlcBlock -> SimaticML .xml'
+      },
+      t3_diag: {
+        badge: 'TIER 3 · COMPILER DIAGNOSTICS',
+        title: 'ICompilable 编译器树状诊断提取器',
+        desc: '调用博途官方编译器接口 ICompilable.Compile()，递归遍历多层 CompilerResultMessageComposition 树，精准抓取 ErrorCount、报错所在块路径、行号以及中文/英文错误详情。',
+        contract: 'API   : plc.GetService<ICompilable>().Compile()\nReturn: JSON { success, errorCount, messages[] }'
+      }
+    };
+
+    function selectArchNode(nodeKey) {
+      const info = ARCH_NODE_DETAILS[nodeKey];
+      if (!info) return;
+      document.getElementById('node-badge').textContent = info.badge;
+      document.getElementById('node-title').textContent = info.title;
+      document.getElementById('node-desc').textContent = info.desc;
+      document.getElementById('node-contract').textContent = info.contract;
+    }
+
+    // ==================== 3. 老项目梯形图 (LAD) 转 SCL 实验室数据 ====================
+    let currentLadIndex = 0;
+    let currentSclMode = 'semantic';
+
+    const LAD_EXAMPLES = [
+      {
+        title: 'Network 1: 电机启保停自锁 + 正反转电气互锁回路 (Classic Motor Latch)',
+        svg: `
+          <svg viewBox="0 0 760 190" class="w-full h-auto min-w-[620px] font-mono">
+            <!-- 左母线与右母线 -->
+            <line x1="25" y1="15" x2="25" y2="175" stroke="#14b8a6" stroke-width="4"/>
+            <line x1="735" y1="15" x2="735" y2="175" stroke="#475569" stroke-width="4"/>
+
+            <!-- 主支路能流线 -->
+            <line x1="25" y1="60" x2="90" y2="60" stroke="#14b8a6" stroke-width="2.5"/>
+            <!-- 常开触点: i_bStartFwd (UId=21) -->
+            <line x1="90" y1="42" x2="90" y2="78" stroke="#38bdf8" stroke-width="2.5"/>
+            <line x1="115" y1="42" x2="115" y2="78" stroke="#38bdf8" stroke-width="2.5"/>
+            <text x="68" y="32" fill="#38bdf8" font-size="11">#i_bStartFwd</text>
+            <text x="85" y="94" fill="#64748b" font-size="9">UId:21 (NO)</text>
+
+            <!-- 并联自锁支路 (Openbranch) -->
+            <line x1="55" y1="60" x2="55" y2="135" stroke="#14b8a6" stroke-width="2"/>
+            <line x1="55" y1="135" x2="90" y2="135" stroke="#14b8a6" stroke-width="2"/>
+            <!-- 自锁常开触点: q_bMotorFwd (UId=22) -->
+            <line x1="90" y1="117" x2="90" y2="153" stroke="#14b8a6" stroke-width="2.5"/>
+            <line x1="115" y1="117" x2="115" y2="153" stroke="#14b8a6" stroke-width="2.5"/>
+            <text x="68" y="110" fill="#2dd4bf" font-size="11">#q_bMotorFwd</text>
+            <text x="85" y="168" fill="#64748b" font-size="9">UId:22 (自锁)</text>
+            <line x1="115" y1="135" x2="155" y2="135" stroke="#14b8a6" stroke-width="2"/>
+            <line x1="155" y1="135" x2="155" y2="60" stroke="#14b8a6" stroke-width="2"/>
+
+            <!-- 汇合后串联常闭停止触点: i_bStop (UId=23) -->
+            <line x1="115" y1="60" x2="230" y2="60" stroke="#14b8a6" stroke-width="2.5"/>
+            <line x1="230" y1="42" x2="230" y2="78" stroke="#fbbf24" stroke-width="2.5"/>
+            <line x1="255" y1="42" x2="255" y2="78" stroke="#fbbf24" stroke-width="2.5"/>
+            <line x1="226" y1="74" x2="259" y2="46" stroke="#fbbf24" stroke-width="2"/>
+            <text x="218" y="32" fill="#fbbf24" font-size="11">#i_bStop</text>
+            <text x="220" y="94" fill="#64748b" font-size="9">UId:23 (NC)</text>
+
+            <!-- 串联反转互锁常闭触点: q_bMotorRev (UId=24) -->
+            <line x1="255" y1="60" x2="380" y2="60" stroke="#14b8a6" stroke-width="2.5"/>
+            <line x1="380" y1="42" x2="380" y2="78" stroke="#f43f5e" stroke-width="2.5"/>
+            <line x1="405" y1="42" x2="405" y2="78" stroke="#f43f5e" stroke-width="2.5"/>
+            <line x1="376" y1="74" x2="409" y2="46" stroke="#f43f5e" stroke-width="2"/>
+            <text x="355" y="32" fill="#fb7185" font-size="11">#q_bMotorRev</text>
+            <text x="368" y="94" fill="#64748b" font-size="9">UId:24 (互锁NC)</text>
+
+            <!-- 串联热继过载常闭: i_bOverload (UId=25) -->
+            <line x1="405" y1="60" x2="520" y2="60" stroke="#14b8a6" stroke-width="2.5"/>
+            <line x1="520" y1="42" x2="520" y2="78" stroke="#fbbf24" stroke-width="2.5"/>
+            <line x1="545" y1="42" x2="545" y2="78" stroke="#fbbf24" stroke-width="2.5"/>
+            <line x1="516" y1="74" x2="549" y2="46" stroke="#fbbf24" stroke-width="2"/>
+            <text x="498" y="32" fill="#fbbf24" font-size="11">#i_bOverload</text>
+            <text x="510" y="94" fill="#64748b" font-size="9">UId:25 (NC)</text>
+
+            <!-- 末端输出线圈: q_bMotorFwd (UId=26) -->
+            <line x1="545" y1="60" x2="640" y2="60" stroke="#14b8a6" stroke-width="2.5"/>
+            <path d="M 648 42 A 18 18 0 0 0 648 78" fill="none" stroke="#10b981" stroke-width="2.5"/>
+            <path d="M 672 42 A 18 18 0 0 1 672 78" fill="none" stroke="#10b981" stroke-width="2.5"/>
+            <text x="620" y="32" fill="#34d399" font-size="11" font-weight="bold">#q_bMotorFwd</text>
+            <text x="632" y="94" fill="#64748b" font-size="9">UId:26 (Coil)</text>
+            <line x1="680" y1="60" x2="735" y2="60" stroke="#475569" stroke-width="2.5"/>
+          </svg>
+        `,
+        xml: `<FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4">
+  <Parts>
+    <Access Scope="LocalVariable" UId="11"><Symbol><Component Name="i_bStartFwd"/></Symbol></Access>
+    <Access Scope="LocalVariable" UId="12"><Symbol><Component Name="q_bMotorFwd"/></Symbol></Access>
+    <Access Scope="LocalVariable" UId="13"><Symbol><Component Name="i_bStop"/></Symbol></Access>
+    <Access Scope="LocalVariable" UId="14"><Symbol><Component Name="q_bMotorRev"/></Symbol></Access>
+    <Access Scope="LocalVariable" UId="15"><Symbol><Component Name="i_bOverload"/></Symbol></Access>
+    <Part Name="Contact" UId="21" /> <!-- 常开: i_bStartFwd -->
+    <Part Name="Contact" UId="22" /> <!-- 常开: q_bMotorFwd (并联自锁) -->
+    <Part Name="Contact" UId="23"><Negated Name="operand"/></Part> <!-- 常闭: i_bStop -->
+    <Part Name="Contact" UId="24"><Negated Name="operand"/></Part> <!-- 常闭: q_bMotorRev -->
+    <Part Name="Contact" UId="25"><Negated Name="operand"/></Part> <!-- 常闭: i_bOverload -->
+    <Part Name="Coil" UId="26" />    <!-- 输出线圈: q_bMotorFwd -->
+  </Parts>
+  <Wires>
+    <Wire UId="31"><Powerrail/><NameCon UId="21" Name="in"/><NameCon UId="22" Name="in"/></Wire>
+    <Wire UId="32"><NameCon UId="21" Name="out"/><NameCon UId="23" Name="in"/></Wire>
+    <Wire UId="33"><NameCon UId="22" Name="out"/><NameCon UId="23" Name="in"/></Wire>
+    <Wire UId="34"><NameCon UId="23" Name="out"/><NameCon UId="24" Name="in"/></Wire>
+    <Wire UId="35"><NameCon UId="24" Name="out"/><NameCon UId="25" Name="in"/></Wire>
+    <Wire UId="36"><NameCon UId="25" Name="out"/><NameCon UId="26" Name="in"/></Wire>
+  </Wires>
+</FlgNet>`,
+        astTrace: `[Step 1] 扫描末端执行元件: 发现 Coil(UId=26, Symbol="#q_bMotorFwd")
+[Step 2] 回溯 UId=26.in  <- Contact(UId=25, Negated=True, "#i_bOverload") [串联 AND]
+[Step 3] 回溯 UId=25.in  <- Contact(UId=24, Negated=True, "#q_bMotorRev") [串联 AND]
+[Step 4] 回溯 UId=24.in  <- Contact(UId=23, Negated=True, "#i_bStop")     [串联 AND]
+[Step 5] 回溯 UId=23.in  <- 检测到 2 条汇入连线 (Wire 32 & Wire 33) -> 触发【并联 OR 归约】:
+         ├─ 支路 1: Contact(UId=21, "#i_bStartFwd") <- Powerrail (TRUE)
+         └─ 支路 2: Contact(UId=22, "#q_bMotorFwd") <- Powerrail (TRUE)
+[Step 6] 生成确定性 AST 表达式:
+         (#i_bStartFwd OR #q_bMotorFwd) AND NOT #i_bStop AND NOT #q_bMotorRev AND NOT #i_bOverload`,
+        sclSemantic: `// =============================================================================
+// [逆向自老项目 LAD Network 1] 正转电机启保停与安全互锁逻辑
+// AI 工艺语义诊断: 识别为典型的“自锁回路(Latch) + 正反转电气互锁 + 热过载保护”
+// =============================================================================
+IF #i_bStop OR #i_bOverload OR #q_bMotorRev THEN
+    // 停止、热继过载或反转运行时，最高优先级切断正转输出（复位优先）
+    #q_bMotorFwd := FALSE;
+ELSIF #i_bStartFwd THEN
+    // 满足安全互锁前提下，按下正转启动按钮自锁保持
+    #q_bMotorFwd := TRUE;
+END_IF;`,
+        sclLiteral: `// [1:1 布尔代数确定性直译 - 与原始梯形图能流完全等价]
+#q_bMotorFwd := (#i_bStartFwd OR #q_bMotorFwd)
+                AND NOT #i_bStop
+                AND NOT #q_bMotorRev
+                AND NOT #i_bOverload;`
+      },
+      {
+        title: 'Network 2: 阀门开命令未到位 + TON 定时器 5s 超时报警回路',
+        svg: `
+          <svg viewBox="0 0 760 190" class="w-full h-auto min-w-[620px] font-mono">
+            <line x1="25" y1="15" x2="25" y2="175" stroke="#14b8a6" stroke-width="4"/>
+            <line x1="735" y1="15" x2="735" y2="175" stroke="#475569" stroke-width="4"/>
+
+            <!-- 常开: q_bValveA_Cmd (UId=41) -->
+            <line x1="25" y1="75" x2="95" y2="75" stroke="#14b8a6" stroke-width="2.5"/>
+            <line x1="95" y1="57" x2="95" y2="93" stroke="#38bdf8" stroke-width="2.5"/>
+            <line x1="120" y1="57" x2="120" y2="93" stroke="#38bdf8" stroke-width="2.5"/>
+            <text x="65" y="47" fill="#38bdf8" font-size="11">#q_bValveA_Cmd</text>
+            <text x="88" y="110" fill="#64748b" font-size="9">UId:41 (NO)</text>
+
+            <!-- 串联常闭: i_bValveA_OpenFB (UId=42) -->
+            <line x1="120" y1="75" x2="235" y2="75" stroke="#14b8a6" stroke-width="2.5"/>
+            <line x1="235" y1="57" x2="235" y2="93" stroke="#fbbf24" stroke-width="2.5"/>
+            <line x1="260" y1="57" x2="260" y2="93" stroke="#fbbf24" stroke-width="2.5"/>
+            <line x1="231" y1="89" x2="264" y2="61" stroke="#fbbf24" stroke-width="2"/>
+            <text x="198" y="47" fill="#fbbf24" font-size="11">#i_bValveA_FB</text>
+            <text x="225" y="110" fill="#64748b" font-size="9">UId:42 (NC)</text>
+
+            <!-- TON 定时器功能块盒 (UId=43) -->
+            <line x1="260" y1="75" x2="365" y2="75" stroke="#14b8a6" stroke-width="2.5"/>
+            <rect x="365" y="38" width="160" height="98" rx="6" fill="#0f172a" stroke="#a855f7" stroke-width="2"/>
+            <text x="382" y="30" fill="#c084fc" font-size="11" font-weight="bold">#inst_tonValveA</text>
+            <text x="425" y="58" fill="#e2e8f0" font-size="11" font-weight="bold">TON</text>
+            <text x="375" y="80" fill="#94a3b8" font-size="10">IN</text>
+            <text x="502" y="80" fill="#94a3b8" font-size="10">Q</text>
+            <text x="375" y="115" fill="#94a3b8" font-size="10">PT</text>
+            <text x="495" y="115" fill="#94a3b8" font-size="10">ET</text>
+            <text x="305" y="115" fill="#2dd4bf" font-size="11">T#5S ──</text>
+
+            <!-- TON.Q 输出至故障线圈 q_bValveTimeoutAlm (UId=44) -->
+            <line x1="525" y1="75" x2="635" y2="75" stroke="#14b8a6" stroke-width="2.5"/>
+            <path d="M 643 57 A 18 18 0 0 0 643 93" fill="none" stroke="#f43f5e" stroke-width="2.5"/>
+            <path d="M 667 57 A 18 18 0 0 1 667 93" fill="none" stroke="#f43f5e" stroke-width="2.5"/>
+            <text x="595" y="47" fill="#fb7185" font-size="11" font-weight="bold">#q_bValveAlm</text>
+            <text x="625" y="110" fill="#64748b" font-size="9">UId:44 (Coil)</text>
+            <line x1="675" y1="75" x2="735" y2="75" stroke="#475569" stroke-width="2.5"/>
+          </svg>
+        `,
+        xml: `<FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4">
+  <Parts>
+    <Part Name="Contact" UId="41" /> <!-- #q_bValveA_Cmd -->
+    <Part Name="Contact" UId="42"><Negated Name="operand"/></Part> <!-- NOT #i_bValveA_FB -->
+    <Part Name="TON" Version="1.0" UId="43">
+      <Instance Scope="LocalVariable" UId="430"><Component Name="inst_tonValveA"/></Instance>
+      <TemplateValue Name="time_type" Type="Type">Time</TemplateValue>
+    </Part>
+    <Part Name="Coil" UId="44" /> <!-- #q_bValveAlm -->
+  </Parts>
+  <Wires>
+    <Wire UId="51"><Powerrail/><NameCon UId="41" Name="in"/></Wire>
+    <Wire UId="52"><NameCon UId="41" Name="out"/><NameCon UId="42" Name="in"/></Wire>
+    <Wire UId="53"><NameCon UId="42" Name="out"/><NameCon UId="43" Name="IN"/></Wire>
+    <Wire UId="54"><IdentCon UId="401"/><NameCon UId="43" Name="PT"/></Wire> <!-- T#5S -->
+    <Wire UId="55"><NameCon UId="43" Name="Q"/><NameCon UId="44" Name="in"/></Wire>
+  </Wires>
+</FlgNet>`,
+        astTrace: `[Step 1] 扫描到 IEC_TIMER 实例节点: Part(Name="TON", UId=43, Instance="#inst_tonValveA")
+[Step 2] 回溯 TON.IN 管脚能流:
+         UId=43.IN <- Contact(UId=42, Negated=True, "#i_bValveA_FB")
+                   <- Contact(UId=41, Negated=False, "#q_bValveA_Cmd") <- Powerrail
+         归约得到 IN := (#q_bValveA_Cmd AND NOT #i_bValveA_FB)
+[Step 3] 解析 TON.PT 管脚常量绑定: PT := T#5S
+[Step 4] 追踪 TON.Q 级联的下游线圈: Coil(UId=44, "#q_bValveAlm") := #inst_tonValveA.Q`,
+        sclSemantic: `// =============================================================================
+// [逆向自老项目 LAD Network 2] 气动进料阀A 开到位超时监控诊断
+// 遵循《西门子编程风格指南》：定时器统一调用，并将输出映射至故障字与安全停机步
+// =============================================================================
+#inst_tonValveA(IN := (#q_bValveA_Cmd AND NOT #i_bValveA_FB),
+                PT := T#5S);
+
+#q_bValveAlm := #inst_tonValveA.Q;
+
+// [Safety Auditor 自动增强建议] 若阀门超时，置位报警字 Bit2 并切入安全步 999
+IF #q_bValveAlm THEN
+    #stat_wAlarms.%X2 := TRUE;
+    #stat_iStep := 999;
+END_IF;`,
+        sclLiteral: `// [1:1 布尔与功能块直译]
+#inst_tonValveA(IN := (#q_bValveA_Cmd AND NOT #i_bValveA_FB),
+                PT := T#5S);
+#q_bValveAlm := #inst_tonValveA.Q;`
+      },
+      {
+        title: 'Network 3: 反应釜温度超限比较 (GT) + MOVE 强制关闭加热功率输出',
+        svg: `
+          <svg viewBox="0 0 760 190" class="w-full h-auto min-w-[620px] font-mono">
+            <line x1="25" y1="15" x2="25" y2="175" stroke="#14b8a6" stroke-width="4"/>
+            <line x1="735" y1="15" x2="735" y2="175" stroke="#475569" stroke-width="4"/>
+
+            <!-- 常开: i_bAutoMode (UId=61) -->
+            <line x1="25" y1="75" x2="95" y2="75" stroke="#14b8a6" stroke-width="2.5"/>
+            <line x1="95" y1="57" x2="95" y2="93" stroke="#38bdf8" stroke-width="2.5"/>
+            <line x1="120" y1="57" x2="120" y2="93" stroke="#38bdf8" stroke-width="2.5"/>
+            <text x="68" y="47" fill="#38bdf8" font-size="11">#i_bAutoMode</text>
+
+            <!-- GT 大于比较器 (UId=62) -->
+            <line x1="120" y1="75" x2="220" y2="75" stroke="#14b8a6" stroke-width="2.5"/>
+            <rect x="220" y="42" width="145" height="82" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
+            <text x="262" y="62" fill="#fbbf24" font-size="11" font-weight="bold">CMP &gt;</text>
+            <text x="232" y="88" fill="#e2e8f0" font-size="10">#i_rTempPV</text>
+            <text x="232" y="110" fill="#94a3b8" font-size="10">120.0 (Real)</text>
+
+            <!-- MOVE 指令盒 (UId=63) -->
+            <line x1="365" y1="75" x2="465" y2="75" stroke="#14b8a6" stroke-width="2.5"/>
+            <rect x="465" y="42" width="165" height="82" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="2"/>
+            <text x="525" y="62" fill="#34d399" font-size="11" font-weight="bold">MOVE</text>
+            <text x="475" y="85" fill="#94a3b8" font-size="10">EN</text>
+            <text x="595" y="85" fill="#94a3b8" font-size="10">ENO</text>
+            <text x="410" y="110" fill="#2dd4bf" font-size="11">0.0 ── IN</text>
+            <text x="555" y="110" fill="#38bdf8" font-size="10">OUT1 ── #q_rHeaterOut</text>
+            <line x1="630" y1="75" x2="735" y2="75" stroke="#475569" stroke-width="2.5"/>
+          </svg>
+        `,
+        xml: `<FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v4">
+  <Parts>
+    <Part Name="Contact" UId="61" /> <!-- #i_bAutoMode -->
+    <Part Name="Gt" UId="62">       <!-- #i_rTempPV > 120.0 -->
+      <TemplateValue Name="SrcType" Type="Type">Real</TemplateValue>
+    </Part>
+    <Part Name="Move" UId="63" DisabledENO="true" /> <!-- 0.0 -> #q_rHeaterOut -->
+  </Parts>
+  <Wires>
+    <Wire UId="71"><Powerrail/><NameCon UId="61" Name="in"/></Wire>
+    <Wire UId="72"><NameCon UId="61" Name="out"/><NameCon UId="62" Name="pre"/></Wire>
+    <Wire UId="73"><NameCon UId="62" Name="out"/><NameCon UId="63" Name="en"/></Wire>
+  </Wires>
+</FlgNet>`,
+        astTrace: `[Step 1] 扫描到条件执行块: Part(Name="Move", UId=63)
+[Step 2] 回溯 Move.en 使能端能流:
+         UId=63.en <- Part(Name="Gt", UId=62, Expr="#i_rTempPV > 120.0")
+                   <- Contact(UId=61, "#i_bAutoMode") <- Powerrail
+[Step 3] 归约 Move 触发条件: (#i_bAutoMode AND (#i_rTempPV > 120.0))
+[Step 4] 转换 EN 使能型盒指令为 SCL IF-THEN 语句块:
+         IF #i_bAutoMode AND (#i_rTempPV > 120.0) THEN #q_rHeaterOut := 0.0; END_IF;`,
+        sclSemantic: `// =============================================================================
+// [逆向自老项目 LAD Network 3] 反应釜超温联锁切断加热器输出
+// 将梯形图中的 CMP + MOVE 盒指令转化为可读性极高的 IF-THEN 保护分支
+// =============================================================================
+IF #i_bAutoMode AND (#i_rTempPV > 120.0) THEN
+    #q_rHeaterOut := 0.0;          // 强制将加热器模拟量给定清零
+    #q_bOverTempAlarm := TRUE;     // 触发超温联锁报警
+END_IF;`,
+        sclLiteral: `// [1:1 盒指令使能流直译]
+IF (#i_bAutoMode AND (#i_rTempPV > 120.0)) THEN
+    #q_rHeaterOut := 0.0;
+END_IF;`
+      }
+    ];
+
+    function loadLadExample(idx) {
+      currentLadIndex = idx;
+      const ex = LAD_EXAMPLES[idx];
+
+      // 更新按钮高亮
+      [0, 1, 2].forEach(i => {
+        const btn = document.getElementById('lad-btn-' + i);
+        if (i === idx) {
+          btn.className = 'lad-ex-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950';
+        } else {
+          btn.className = 'lad-ex-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700';
+        }
+      });
+
+      document.getElementById('lad-network-title').textContent = ex.title;
+      document.getElementById('lad-svg-container').innerHTML = ex.svg;
+      document.getElementById('lad-xml-code').textContent = ex.xml;
+      document.getElementById('lad-ast-trace').textContent = ex.astTrace;
+      renderSclOutput();
+    }
+
+    function setSclMode(mode) {
+      currentSclMode = mode;
+      const btnSem = document.getElementById('scl-mode-semantic');
+      const btnLit = document.getElementById('scl-mode-literal');
+      if (mode === 'semantic') {
+        btnSem.className = 'px-2.5 py-1 rounded bg-teal-500 text-slate-950 font-bold';
+        btnLit.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white';
+      } else {
+        btnLit.className = 'px-2.5 py-1 rounded bg-teal-500 text-slate-950 font-bold';
+        btnSem.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white';
+      }
+      renderSclOutput();
+    }
+
+    function renderSclOutput() {
+      const ex = LAD_EXAMPLES[currentLadIndex];
+      document.getElementById('lad-scl-output').textContent =
+        currentSclMode === 'semantic' ? ex.sclSemantic : ex.sclLiteral;
+    }
+
+    // 复制代码辅助函数 (兼容 iframe 环境)
+    function copyCode(elementId) {
+      const text = document.getElementById(elementId).textContent;
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+
+      const toast = document.getElementById('toast');
+      toast.classList.remove('translate-y-16', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-16', 'opacity-0');
+      }, 2000);
+    }
+
+    // 页面初始化加载第一个 LAD 转 SCL 案例
+    window.onload = function() {
+      loadLadExample(0);
+    };
+  </script>
+</body>
+</html>

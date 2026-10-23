@@ -257,6 +257,81 @@ def _degradation_summary(job: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _block_flgnet_xml(block: Any) -> str:
+    """原始 SimaticML 块 XML 文本;单文件多块时截取该块元素(契约 docs/15 §2)。"""
+    src = str(getattr(block, "source_file", "") or "")
+    if not src:
+        return ""
+    path = Path(src)
+    if not path.is_file():
+        return ""
+    text = path.read_text(encoding="utf-8", errors="replace")
+    try:
+        import xml.etree.ElementTree as ET
+
+        from agents.plc.tia.simaticml import _BLOCK_ROOT_TAGS, _strip_ns
+
+        roots = [
+            el for el in ET.fromstring(text).iter() if _strip_ns(el.tag) in _BLOCK_ROOT_TAGS
+        ]
+    except Exception:  # noqa: BLE001 — malformed XML: keep raw text as-is
+        return text
+    if len(roots) <= 1:
+        return text
+    for el in roots:
+        for node in el.iter():
+            if _strip_ns(node.tag) == "Attribute" and (node.get("Name") or "") == "Name":
+                if (node.text or "").strip() == str(block.name):
+                    return ET.tostring(el, encoding="unicode")
+                break  # first Name attribute decides this element
+    return text
+
+
+def _write_source_artifacts(
+    job: dict[str, Any],
+    project: Any,
+    *,
+    scl_sources: dict[str, str],
+    trace_out: dict[str, list[str]],
+    export_root: str,
+) -> dict[str, dict[str, str]]:
+    """Persist per-block raw LAD/SCL artifacts server-side (contract docs/15 §2).
+
+    Files live under ``_source_artifacts/<块名安全化>/`` inside the export dir;
+    only their *paths* are recorded on the job — raw LAD never inlines into
+    job responses and stays off the downloadable result package.
+    """
+    from agents.plc.tia.package import _safe_filename
+
+    anchor = Path(str(job.get("openness_export_dir") or export_root)) / "_source_artifacts"
+    artifacts: dict[str, dict[str, str]] = {}
+    for block in (getattr(project, "blocks", {}) or {}).values():
+        name = str(block.name or "")
+        if not name:
+            continue
+        target_dir = anchor / _safe_filename(name)
+        entry: dict[str, str] = {}
+        xml_text = _block_flgnet_xml(block)
+        if xml_text:
+            target_dir.mkdir(parents=True, exist_ok=True)
+            (target_dir / "flgnet.xml").write_text(xml_text, encoding="utf-8")
+            entry["flgnet_xml"] = str(target_dir / "flgnet.xml")
+        scl_text = str(scl_sources.get(name) or "")
+        if scl_text:
+            target_dir.mkdir(parents=True, exist_ok=True)
+            (target_dir / "literal.scl").write_text(scl_text, encoding="utf-8")
+            entry["literal_scl"] = str(target_dir / "literal.scl")
+        trace_lines = trace_out.get(name) or []
+        if trace_lines:
+            target_dir.mkdir(parents=True, exist_ok=True)
+            content = f"[block] {name}\n" + "\n".join(trace_lines) + "\n"
+            (target_dir / "ast_trace.txt").write_text(content, encoding="utf-8")
+            entry["ast_trace"] = str(target_dir / "ast_trace.txt")
+        if entry:
+            artifacts[name] = entry
+    return artifacts
+
+
 def run_ingest_job(
     job_id: str,
     *,
@@ -381,12 +456,14 @@ def run_ingest_job(
         from agents.plc.tia.ir import PlcProject
 
         pre_project = imported.project if isinstance(imported.project, PlcProject) else None
+        trace_out: dict[str, list[str]] = {}
         result = analyze_tia_exports(
             str(imported.export_dir),
             project_name=name,
             publish_graph=publish_graph,
             project=pre_project,
             on_structure=_on_structure,
+            trace_out=trace_out,
         )
         pipeline_timings = merge_timings(pipeline_timings, result.get("timings"))
         project = result["project"]
@@ -421,6 +498,16 @@ def run_ingest_job(
         job["knowledge_graph"] = kg
         job["scl_sources"] = result.get("scl_sources") or {}
         job["folded_logic"] = result.get("folded_logic") or {}
+        try:
+            job["source_artifacts"] = _write_source_artifacts(
+                job,
+                project,
+                scl_sources=job["scl_sources"],
+                trace_out=trace_out,
+                export_root=str(imported.export_dir),
+            )
+        except Exception as exc:  # noqa: BLE001 — artifacts must not sink ingest
+            logger.warning("PLC source artifacts skipped job_id=%s: %s", job_id, exc)
         job["report"] = interpretation_report(project, result["knowledge_graph"])
         job["graph_publish"] = result.get("graph_publish")
         job["structure"] = result.get("structure") or {}
@@ -610,7 +697,13 @@ def _collect_source_xmls(source_path: str) -> list[str]:
     if p.is_file() and p.suffix.lower() == ".xml":
         return [str(p.resolve())]
     if p.is_dir():
-        return [str(x.resolve()) for x in sorted(p.rglob("*.xml"))][:200]
+        # Skip the server-side raw-artifact copies (contract docs/15 §2) so
+        # retries / CallInfo enrichment only see the original export XMLs.
+        return [
+            str(x.resolve())
+            for x in sorted(p.rglob("*.xml"))
+            if "_source_artifacts" not in x.relative_to(p).parts
+        ][:200]
     return []
 
 

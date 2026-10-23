@@ -137,10 +137,21 @@ def stmt_to_scl(stmt: AssignStmt) -> str:
     return f"{target} := {condition};"
 
 
+def _trace_stmt_line(statement: AssignStmt) -> str:
+    """One-line ast_trace conclusion for a folded statement (contract docs/15 §4)."""
+    if statement.target is None:
+        text = (statement.target_scl or "(* call *)").strip()
+        return f"{statement.kind} {text}"
+    return f"{statement.kind} {statement.target.as_scl()} := {expr_to_scl(statement.value)}"
+
+
 class _NetworkFolder:
-    def __init__(self, network: Network) -> None:
+    def __init__(self, network: Network, trace: list[str] | None = None) -> None:
         self.network = network
         self._visited: set[str] = set()
+        # Optional ast_trace collection (contract docs/15 §4); None = no tracing.
+        self._trace = trace
+        self._steps: list[str] = []
 
     def _find_wire_to_pin(self, uuid: str, pin: str):
         for wire in self.network.wires:
@@ -228,6 +239,10 @@ class _NetworkFolder:
         ]
         if not expressions:
             return Lit(True)
+        if len(expressions) > 1 and self._trace is not None:
+            self._steps.append(
+                f"UId={uuid}.{pin} 汇入 {len(expressions)} 条 Wire -> 并联 OR 归约"
+            )
         return expressions[0] if len(expressions) == 1 else Or(tuple(expressions))
 
     def _part_out_expr(self, part: Part) -> Expr:
@@ -268,6 +283,11 @@ class _NetworkFolder:
         for i in range(1, card + 1):
             expr = self._value_at_pin(part.uuid, f"in{i}")
             inputs.append(expr)
+        if self._trace is not None and card > 1:
+            joiner = "串联 AND" if part.name in GATE_AND_PARTS else "并联 OR"
+            self._steps.append(
+                f"{part.name or 'Gate'} UId={part.uuid} Card={card} -> {joiner} 归约"
+            )
         return inputs
 
     def _value_expr(self, part: Part, pin: str) -> Expr | None:
@@ -328,6 +348,15 @@ class _NetworkFolder:
 
     def fold(self) -> FoldedNetwork:
         folded = FoldedNetwork(network_id=self.network.id, title=self.network.title)
+
+        def _emit(statement: AssignStmt) -> None:
+            folded.statements.append(statement)
+            if self._trace is None:
+                return
+            self._trace.append(f"[net {self.network.id}] {_trace_stmt_line(statement)}")
+            self._trace.extend(f"  step: {step}" for step in self._steps)
+            self._steps.clear()
+
         if self.network.source_text:
             # SCL / StructuredText network: keep statements for folded_logic / chat
             for line in self.network.source_text.splitlines():
@@ -336,12 +365,15 @@ class _NetworkFolder:
                     continue
                 if not text.endswith(";"):
                     text = f"{text};"
-                folded.statements.append(
-                    AssignStmt(None, Lit(True), kind="call", target_scl=text)
+                _emit(AssignStmt(None, Lit(True), kind="call", target_scl=text))
+            if self._trace is not None:
+                self._trace.append(
+                    f"[net {self.network.id}] SCL/ST 文本网络（source_text）"
                 )
             return folded
         for part in self.network.parts.values():
             self._visited.clear()
+            self._steps.clear()
             name = canon_part(part.name)
             if name in COIL_PARTS:
                 target = self._operand_access(part)
@@ -350,7 +382,7 @@ class _NetworkFolder:
                     "Set": "set",
                     "Reset": "reset",
                 }.get(name, "coil")
-                folded.statements.append(AssignStmt(target, self._value_at_pin(part.uuid, "in"), kind))
+                _emit(AssignStmt(target, self._value_at_pin(part.uuid, "in"), kind))
             elif name in MOVE_PARTS or (part.name or "").startswith("Move"):
                 src = self._pin_access(part, "in")
                 dst = self._pin_access(part, "out")
@@ -368,25 +400,25 @@ class _NetworkFolder:
                     # Ignore pure powerrail enable (unconditional Move)
                     if drivers and drivers != [Lit(True)]:
                         en_expr = drivers[0] if len(drivers) == 1 else Or(tuple(drivers))
-                folded.statements.append(
+                _emit(
                     AssignStmt(dst, src_expr, kind="move", enable=en_expr)
                 )
             elif name in CONVERT_PARTS:
-                folded.statements.append(self._fold_convert(part, name))
+                _emit(self._fold_convert(part, name))
             elif name in MUX_PARTS:
-                folded.statements.append(self._fold_mux(part, name))
+                _emit(self._fold_mux(part, name))
             elif name in JUMP_PARTS:
-                folded.statements.append(self._fold_jump(part, name))
+                _emit(self._fold_jump(part, name))
             elif name in COIL_TIMER_KINDS:
-                folded.statements.append(self._fold_coil_timer(part))
+                _emit(self._fold_coil_timer(part))
             elif name in SYS_TIME_PARTS:
-                folded.statements.append(self._fold_named_func_call(part))
+                _emit(self._fold_named_func_call(part))
             elif name in TIME_CONV_PARTS:
-                folded.statements.append(self._fold_time_conv(part))
+                _emit(self._fold_time_conv(part))
             elif (
                 name in MATH_BINARY_OPS or name in MATH_UNARY_FUNCS or name in CALC_PARTS
             ):
-                folded.statements.append(self._fold_math_assign(part))
+                _emit(self._fold_math_assign(part))
             elif (
                 name in GATE_AND_PARTS
                 or name in GATE_OR_PARTS
@@ -396,13 +428,13 @@ class _NetworkFolder:
                 # RLO join / negation / edge elements fold into downstream expressions.
                 continue
             elif name in BOX_PARTS:
-                folded.statements.append(self._fold_box_call(part))
+                _emit(self._fold_box_call(part))
             elif (
                 name in CALL_PARTS
                 or part.template_values.get("Call")
                 or part.template_values.get("calledBlock")
             ):
-                folded.statements.append(self._fold_block_call(part))
+                _emit(self._fold_block_call(part))
             elif name in BRANCH_PARTS or name in COMPARE_OPS:
                 continue
             else:
@@ -653,14 +685,17 @@ class _NetworkFolder:
         return AssignStmt(None, Lit(True), kind="call", target_scl=line)
 
 
-def fold_network(network: Network) -> FoldedNetwork:
-    """Fold one LAD/FBD network's FlgNet wires into expression statements."""
-    return _NetworkFolder(network).fold()
+def fold_network(network: Network, trace: list[str] | None = None) -> FoldedNetwork:
+    """Fold one LAD/FBD network's FlgNet wires into expression statements.
+
+    ``trace`` (optional) collects ast_trace lines for this network; None = off.
+    """
+    return _NetworkFolder(network, trace=trace).fold()
 
 
-def fold_block(block: Block) -> list[FoldedNetwork]:
+def fold_block(block: Block, trace: list[str] | None = None) -> list[FoldedNetwork]:
     """Fold every network in a block."""
-    return [fold_network(network) for network in block.networks]
+    return [fold_network(network, trace=trace) for network in block.networks]
 
 
 def _expr_to_dict(expr: Expr) -> dict:
@@ -721,8 +756,15 @@ def folded_to_dict(folded: FoldedNetwork) -> dict:
     }
 
 
-def attach_folded(project: PlcProject) -> PlcProject:
-    """Attach folded expressions to every project network and return the project."""
+def attach_folded(
+    project: PlcProject,
+    trace_out: dict[str, list[str]] | None = None,
+) -> PlcProject:
+    """Attach folded expressions to every project network and return the project.
+
+    ``trace_out`` (optional) receives ``{block_name: [ast_trace lines]}`` for the
+    fold (contract docs/15 §4); None keeps the default no-trace behavior.
+    """
     jobs: list[tuple[str, int]] = [
         (block.name, idx)
         for block in project.blocks.values()
@@ -731,18 +773,30 @@ def attach_folded(project: PlcProject) -> PlcProject:
 
     def _fold_job(item: tuple[str, int]):
         name, idx = item
-        return name, idx, fold_network(project.blocks[name].networks[idx])
+        block_trace: list[str] | None = None if trace_out is None else []
+        return name, idx, fold_network(project.blocks[name].networks[idx], trace=block_trace), block_trace
 
     from agents.plc.tia.parallel import map_parallel
 
-    for name, idx, folded in map_parallel(_fold_job, jobs, min_items=8):
+    for name, idx, folded, block_trace in map_parallel(_fold_job, jobs, min_items=8):
         project.blocks[name].networks[idx].folded = folded
+        if trace_out is not None and block_trace:
+            trace_out.setdefault(name, []).extend(block_trace)
     return project
 
 
-def fold_project(project: PlcProject) -> dict[str, list[dict]]:
+def fold_project(
+    project: PlcProject,
+    trace_out: dict[str, list[str]] | None = None,
+) -> dict[str, list[dict]]:
     """Return JSON-ready folded logic keyed by block name."""
-    return {
-        block.name: [folded_to_dict(network.folded or fold_network(network)) for network in block.networks]
-        for block in project.blocks.values()
-    }
+    result: dict[str, list[dict]] = {}
+    for block in project.blocks.values():
+        block_trace = trace_out.get(block.name) if trace_out is not None else None
+        networks: list[dict] = []
+        for network in block.networks:
+            if network.folded is None:
+                network.folded = fold_network(network, trace=block_trace)
+            networks.append(folded_to_dict(network.folded))
+        result[block.name] = networks
+    return result
