@@ -205,6 +205,9 @@ class Part:
     accesses: dict[str, Access] = field(default_factory=dict)
     template_values: dict[str, str] = field(default_factory=dict)
     negated: bool = False
+    # FlgNet per-pin negation: <Negated Name="operand"/> etc. "operand" also
+    # sets negated=True so RLO consumers keep working unchanged.
+    negated_pins: set[str] = field(default_factory=set)
     programming_language: str = ""
 
 

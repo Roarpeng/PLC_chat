@@ -3,7 +3,7 @@
   "fixture": "tia_parts",
   "folded": {
     "block_count": 14,
-    "digest": "aa489451d9bf4410"
+    "digest": "b92d8507475235a7"
   },
   "graph_step_networks": 2,
   "kg": {
@@ -14,7 +14,7 @@
   },
   "scl": {
     "block_count": 13,
-    "digest": "4f8e025b45a955f9",
+    "digest": "6c8b6348e1a49725",
     "todo_histogram": {
       "MysteriousBox": 1
     }

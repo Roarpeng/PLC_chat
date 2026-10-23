@@ -119,11 +119,15 @@ def _block_type_from_doc(doc_type: str, inferred: BlockType | None, is_udt: bool
 
 def parse_access(access_el: ET.Element) -> Access:
     scope_attr = _attr(access_el, "Scope")
-    if scope_attr == "LocalVariable":
+    if scope_attr in {"LocalVariable", "LocalConstant"}:
+        # LocalConstant: named block constant <Constant Name="STEP_EndScan"/>;
+        # value lives in the interface, and the generated SCL re-declares it
+        # in VAR CONSTANT, so a local #name reference is compilable.
         scope = AccessScope.LOCAL
     elif scope_attr in {"GlobalVariable", "TypedValue"}:
         scope = AccessScope.GLOBAL
-    elif scope_attr in {"Constant", "LiteralConstant"}:
+    elif scope_attr in {"Constant", "LiteralConstant", "TypedConstant"}:
+        # TypedConstant: TIA V19 timer PT etc. — <Constant><ConstantValue/>…</Constant>
         scope = AccessScope.LITERAL
     else:
         scope = AccessScope.UNKNOWN
@@ -138,7 +142,15 @@ def parse_access(access_el: ET.Element) -> Access:
     # Openness V19 Call Instance / some Access nodes: direct <Component Name=…/>
     if not symbols:
         for node in access_el:
-            if _strip_ns(node.tag) == "Component":
+            tag = _strip_ns(node.tag)
+            if tag == "Component":
+                name = _attr(node, "Name")
+                if name:
+                    symbols.append(name)
+            elif tag == "Constant":
+                # LocalConstant carries the constant name as an attribute;
+                # LiteralConstant/TypedConstant Constants have no Name attr
+                # (their payload is ConstantValue) and stay untouched here.
                 name = _attr(node, "Name")
                 if name:
                     symbols.append(name)
@@ -148,6 +160,19 @@ def parse_access(access_el: ET.Element) -> Access:
     raw = ".".join(symbols) or absolute
     root = ""
     path: tuple[str, ...] = ()
+
+    # TIA renders boolean constant contacts as a GlobalVariable symbol whose
+    # single component is literally "TRUE"/"FALSE" (hr001 V19 exports, 19 files).
+    # Map to a bool literal so it renders TRUE, never the quoted identifier
+    # "TRUE" (which SCL would read as a tag reference).
+    if (
+        scope == AccessScope.GLOBAL
+        and len(symbols) == 1
+        and symbols[0].upper() in {"TRUE", "FALSE"}
+    ):
+        scope = AccessScope.LITERAL
+        raw = symbols[0].upper()
+        symbols = []
 
     # LiteralConstant: <Constant><ConstantType/><ConstantValue/></Constant>
     if scope == AccessScope.LITERAL:
@@ -316,8 +341,21 @@ def _parse_part(part_el: ET.Element) -> Part:
         elif tag == "Equation":
             # CALCULATE box: <Equation>IN1 + IN2 * IN3</Equation>
             part.template_values["Equation"] = (node.text or "").strip()
+        elif tag == "Negated":
+            # FlgNet pin-level negation is a child element, e.g.
+            # <Negated Name="operand"/> (hr001 V19: 570 occurrences). Element
+            # presence means negated; an explicit "false" text would cancel.
+            pin = _attr(node, "Name") or "operand"
+            if (node.text or "").strip().lower() not in {"false", "0"}:
+                part.negated_pins.add(pin)
+                if pin == "operand":
+                    # operand negation == classic negated contact/coil; downstream
+                    # (flgnet_fold / scl) reads part.negated.
+                    part.negated = True
         elif tag == "Attribute" and _attr(node, "Name") == "Negated":
             part.negated = (node.text or "").strip().lower() == "true"
+            if part.negated:
+                part.negated_pins.add("operand")
         elif tag == "Access":
             # Nested access (some call parts embed their instance access)
             access_name = _attr(node, "Name") or f"acc{len(part.accesses)}"
@@ -486,6 +524,22 @@ def _structured_text_to_scl(st_el: ET.Element) -> str:
                 chunks.append(name)
             for child in el:
                 walk(child)
+            return
+        if tag == "Instance":
+            # Callee of a StructuredText CallInfo — <Instance Scope=…><Component
+            # Name="FC1003_CR"/></Instance>. Component alone is on the walk skip
+            # list (symbol accesses render via parse_access), so without this
+            # branch the called block name is swallowed and the call collapses
+            # to a bare "();".
+            comps = [
+                _attr(c, "Name")
+                for c in el.iter()
+                if _strip_ns(c.tag) == "Component" and _attr(c, "Name")
+            ]
+            if comps:
+                scope_attr = _attr(el, "Scope") or "GlobalVariable"
+                core = ".".join(comps)
+                chunks.append(f"#{core}" if scope_attr == "LocalVariable" else f'"{core}"')
             return
         if tag == "ConstantValue":
             chunks.append((el.text or "").strip())

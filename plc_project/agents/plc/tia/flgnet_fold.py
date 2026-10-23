@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, replace
+
 from agents.plc.tia.ir import (
     Access,
     AccessScope,
@@ -35,6 +37,7 @@ from agents.plc.tia.parts import (
     GATE_AND_PARTS,
     GATE_OR_PARTS,
     JUMP_PARTS,
+    LATCH_PARTS,
     MATH_BINARY_OPS,
     MATH_UNARY_FUNCS,
     MOVE_PARTS,
@@ -52,6 +55,40 @@ EDGE_TRIG_PARTS = {"R_TRIG", "F_TRIG", "P_TRIG"}
 _SKIP_CALL_PINS = {"in", "operand", "db", "instance", "en", "EN"}
 _OUTPUT_SECTIONS = {"Output", "Return"}
 _OUTPUT_PINS = {"Q", "QU", "QD", "OUT", "OUT1", "CV", "ET", "ENO", "RET_VAL"}
+# LAD coils relay the incoming RLO unchanged on their `out` pin.
+_COIL_PASSTHROUGH_KINDS = {"Coil", "NegCoil", "Set", "Reset"}
+# Box output pins usable as downstream RLO/value drivers (Q/ET/CV…).
+_BOX_OUT_PINS = {"Q", "QU", "QD", "CV", "ET"}
+# IEC box call parameter order (canonical uppercase pin names).
+# S before R/R1 matches the SR signature (S, R1); RS keeps (R, S1).
+_BOX_RLO_PINS = ("CU", "CD", "S", "R", "R1", "S1", "LD", "IN", "CLK")
+_BOX_VALUE_PINS = ("PV", "PT")
+_BOX_OUT_PIN_ORDER = ("CV", "Q", "QU", "QD", "ET")
+
+
+@dataclass(frozen=True)
+class FoldStmt(AssignStmt):
+    """AssignStmt extended with the originating FlgNet part (additive contract).
+
+    Field semantics of AssignStmt are unchanged; ``part_uuid`` / ``part_name``
+    let downstream consumers (SCL translation, KG) attribute a statement to its
+    exact part instead of relying on iteration order.
+    """
+
+    part_uuid: str = ""
+    part_name: str = ""
+
+
+def _same_pin(a: str, b: str) -> bool:
+    """FlgNet pin names are case-insensitive (SR boxes use s/r1/q, code S/R1/Q)."""
+    return (a or "").lower() == (b or "").lower()
+
+
+def _wrap_en(core: str, en: Expr | None) -> str:
+    """Condition a one-statement body on its EN: ``IF en THEN core END_IF;``."""
+    if en is None:
+        return core
+    return f"IF {expr_to_scl(en)} THEN {core} END_IF;"
 
 
 def _pin_assign_op(part: Part, pin: str) -> str:
@@ -148,7 +185,14 @@ def _trace_stmt_line(statement: AssignStmt) -> str:
 class _NetworkFolder:
     def __init__(self, network: Network, trace: list[str] | None = None) -> None:
         self.network = network
-        self._visited: set[str] = set()
+        # FlgNet flow graphs are acyclic DAGs: the same contact chain fanning
+        # out into several gate inputs is a *shared subgraph*, not a loop.
+        # ``_stack`` holds the active recursion path (true back-edge guard);
+        # ``_pin_memo`` / ``_part_memo`` reuse completed subgraph expressions so
+        # shared branches fold into the same expression (no loop-guard noise).
+        self._stack: set[tuple[str, str]] = set()
+        self._pin_memo: dict[tuple[str, str], Expr] = {}
+        self._part_memo: dict[str, Expr] = {}
         # Optional ast_trace collection (contract docs/15 §4); None = no tracing.
         self._trace = trace
         self._steps: list[str] = []
@@ -156,7 +200,11 @@ class _NetworkFolder:
     def _find_wire_to_pin(self, uuid: str, pin: str):
         for wire in self.network.wires:
             for endpoint in wire.targets:
-                if endpoint.kind == "namecon" and endpoint.uuid == uuid and endpoint.pin == pin:
+                if (
+                    endpoint.kind == "namecon"
+                    and endpoint.uuid == uuid
+                    and _same_pin(endpoint.pin, pin)
+                ):
                     return wire
         return None
 
@@ -165,7 +213,9 @@ class _NetworkFolder:
             wire
             for wire in self.network.wires
             for endpoint in wire.targets
-            if endpoint.kind == "namecon" and endpoint.uuid == uuid and endpoint.pin == pin
+            if endpoint.kind == "namecon"
+            and endpoint.uuid == uuid
+            and _same_pin(endpoint.pin, pin)
         ]
 
     def _operand_access(self, part: Part) -> Access | None:
@@ -190,7 +240,11 @@ class _NetworkFolder:
         """
         for wire in self.network.wires:
             for endpoint in wire.endpoints:
-                if endpoint.kind != "namecon" or endpoint.uuid != part.uuid or endpoint.pin != pin:
+                if (
+                    endpoint.kind != "namecon"
+                    or endpoint.uuid != part.uuid
+                    or not _same_pin(endpoint.pin, pin)
+                ):
                     continue
                 for other in wire.endpoints:
                     if other.kind == "identcon":
@@ -207,7 +261,9 @@ class _NetworkFolder:
     def _wire_driver_exprs(self, wire, sink: tuple[str, str] | None = None) -> list[Expr]:
         expressions: list[Expr] = []
         for endpoint in wire.endpoints:
-            if sink and endpoint.kind == "namecon" and (endpoint.uuid, endpoint.pin) == sink:
+            if sink and endpoint.kind == "namecon" and (
+                endpoint.uuid == sink[0] and _same_pin(endpoint.pin, sink[1])
+            ):
                 continue
             if endpoint.kind == "powerrail":
                 expressions.append(Lit(True))
@@ -215,37 +271,124 @@ class _NetworkFolder:
                 access = self.network.access_parts.get(endpoint.uuid)
                 if access is not None:
                     expressions.append(Ref(access))
-            elif endpoint.kind == "namecon" and endpoint.pin == "out":
-                part = self.network.parts.get(endpoint.uuid)
-                if part is not None and (
-                    part.name in RLO_OUTPUT_PARTS
-                    or part.name in GATE_AND_PARTS
-                    or part.name in GATE_OR_PARTS
-                    or part.name in RLO_NOT_PARTS
-                    or part.name in EDGE_CONTACT_PARTS
-                ):
-                    expressions.append(self._part_out_expr(part))
+            elif endpoint.kind == "namecon":
+                expr = self._namecon_driver_expr(endpoint)
+                if expr is not None:
+                    expressions.append(expr)
         return expressions
 
-    def _value_at_pin(self, uuid: str, pin: str) -> Expr:
-        key = f"{uuid}.{pin}"
-        if key in self._visited:
-            return Lit("(* loop guard *)")
-        self._visited.add(key)
-        expressions = [
-            expression
-            for wire in self._wires_to_pin(uuid, pin)
-            for expression in self._wire_driver_exprs(wire, sink=(uuid, pin))
-        ]
-        if not expressions:
-            return Lit(True)
-        if len(expressions) > 1 and self._trace is not None:
-            self._steps.append(
-                f"UId={uuid}.{pin} 汇入 {len(expressions)} 条 Wire -> 并联 OR 归约"
+    def _namecon_driver_expr(self, endpoint) -> Expr | None:
+        """Expression driven onto a wire by one part output pin.
+
+        Covers RLO contacts/gates, coil `out` RLO passthrough, and timer /
+        counter / latch box outputs (Q, ET, CV… referenced via their instance).
+        """
+        part = self.network.parts.get(endpoint.uuid)
+        if part is None:
+            return None
+        pin_up = (endpoint.pin or "").upper()
+        if pin_up == "OUT" and (
+            part.name in RLO_OUTPUT_PARTS
+            or part.name in GATE_AND_PARTS
+            or part.name in GATE_OR_PARTS
+            or part.name in RLO_NOT_PARTS
+            or part.name in EDGE_CONTACT_PARTS
+        ):
+            return self._part_out_expr(part)
+        cname = canon_part(part.name)
+        if pin_up == "OUT" and cname in _COIL_PASSTHROUGH_KINDS:
+            # Coils relay the incoming RLO: SCoil.out → Move.en chains etc.
+            incoming = self._value_at_pin(part.uuid, "in")
+            return Not(incoming) if cname == "NegCoil" else incoming
+        if pin_up == "OUT" and part.name in COIL_TIMER_KINDS:
+            return self._box_pin_ref(part, "Q")
+        if (
+            pin_up in _BOX_OUT_PINS
+            and (
+                cname in TIMER_PARTS
+                or cname in COUNTER_PARTS
+                or cname in EDGE_TRIG_PARTS
+                or cname in LATCH_PARTS
             )
-        return expressions[0] if len(expressions) == 1 else Or(tuple(expressions))
+        ):
+            return self._box_pin_ref(part, pin_up)
+        return None
+
+    def _box_instance_access(self, part: Part) -> Access | None:
+        """Instance of an IEC box: operand/instance pin wire, then InstanceDB."""
+        inst = (
+            self._access_bound_to_pin(part, "operand")
+            or part.accesses.get("operand")
+            or self._access_bound_to_pin(part, "instance")
+            or part.accesses.get("instance")
+            or part.accesses.get("Instance")
+        )
+        if inst is None:
+            db = str(part.template_values.get("InstanceDB") or "").strip().strip('"')
+            if db:
+                inst = Access(scope=AccessScope.GLOBAL, root=db)
+        return inst
+
+    def _box_pin_ref(self, part: Part, member: str) -> Expr | None:
+        """Reference to a box output member, e.g. ``#Timer.Q`` / ``"CTU_DB".CV``."""
+        inst = self._box_instance_access(part)
+        if inst is None or not inst.root:
+            return None
+        return Ref(replace(inst, path=tuple(inst.path) + (member,), negated=False))
+
+    def _value_at_pin(self, uuid: str, pin: str) -> Expr:
+        key = (uuid, pin.lower())
+        if key in self._stack:  # true back-edge (cannot happen in valid FlgNet)
+            if self._trace is not None:
+                self._steps.append(f"UId={uuid}.{pin} 真环回边 -> 按 FALSE 截断")
+            return Lit(False)
+        cached = self._pin_memo.get(key)
+        if cached is not None:
+            if self._trace is not None:
+                self._steps.append(f"UId={uuid}.{pin} 复用已折叠共享支路")
+            return cached
+        self._stack.add(key)
+        try:
+            expressions = [
+                expression
+                for wire in self._wires_to_pin(uuid, pin)
+                for expression in self._wire_driver_exprs(wire, sink=(uuid, pin))
+            ]
+        finally:
+            self._stack.discard(key)
+        if not expressions:
+            result: Expr = Lit(True)
+        elif len(expressions) == 1:
+            result = expressions[0]
+        else:
+            if self._trace is not None:
+                self._steps.append(
+                    f"UId={uuid}.{pin} 汇入 {len(expressions)} 条 Wire -> 并联 OR 归约"
+                )
+            result = Or(tuple(expressions))
+        self._pin_memo[key] = result
+        return result
 
     def _part_out_expr(self, part: Part) -> Expr:
+        cached = self._part_memo.get(part.uuid)
+        if cached is not None:
+            if self._trace is not None:
+                self._steps.append(
+                    f"{part.name or 'Part'} UId={part.uuid}.out 复用已折叠共享支路"
+                )
+            return cached
+        guard = (part.uuid, "(* out *)")
+        if guard in self._stack:  # value-path back-edge (invalid FlgNet)
+            return Lit(False)
+        self._stack.add(guard)
+        try:
+            result = self._compute_part_out_expr(part)
+        finally:
+            self._stack.discard(guard)
+        self._part_memo[part.uuid] = result
+        return result
+
+    def _compute_part_out_expr(self, part: Part) -> Expr:
         if part.name in {"Contact", "NegContact", "NotContact", "ContactNeg"}:
             incoming = self._value_at_pin(part.uuid, "in")
             operand = self._operand_access(part)
@@ -257,11 +400,18 @@ class _NetworkFolder:
         if cname in COMPARE_OPS:
             lhs = self._value_expr(part, "in1")
             rhs = self._value_expr(part, "in2")
-            return Compare(
+            compare = Compare(
                 COMPARE_OPS[cname],
                 lhs if lhs is not None else Lit("(* in1 *)"),
                 rhs if rhs is not None else Lit("(* in2 *)"),
             )
+            # `.pre` carries the upstream RLO into the comparison:
+            # ---|ClearHoleNoReq|---( Eq )  →  pre AND (a = b)
+            # A powerrail-driven .pre is unconditional (TRUE AND x ≡ x).
+            pre = self._value_at_pin(part.uuid, "pre") if self._wires_to_pin(part.uuid, "pre") else None
+            if pre is not None and pre != Lit(True):
+                return And((pre, compare))
+            return compare
         if part.name in GATE_AND_PARTS or part.name in GATE_OR_PARTS:
             inputs = self._gate_input_exprs(part)
             if not inputs:
@@ -297,17 +447,24 @@ class _NetworkFolder:
             return Ref(access)
         for wire in self._wires_to_pin(part.uuid, pin):
             for endpoint in wire.endpoints:
-                if endpoint.kind != "namecon" or (endpoint.uuid, endpoint.pin) == (part.uuid, pin):
+                if endpoint.kind != "namecon" or (
+                    endpoint.uuid == part.uuid and _same_pin(endpoint.pin, pin)
+                ):
                     continue
-                if (endpoint.pin or "") not in {"out", "out1"}:
-                    continue
+                pin_up = (endpoint.pin or "").upper()
                 driver = self.network.parts.get(endpoint.uuid)
                 if driver is None:
                     continue
-                expr = self._part_out_expr(driver)
-                if isinstance(expr, Lit) and isinstance(expr.value, str) and expr.value.startswith("(*"):
-                    continue
-                return expr
+                if pin_up in {"OUT", "OUT1"}:
+                    expr = self._part_out_expr(driver)
+                    if isinstance(expr, Lit) and isinstance(expr.value, str) and expr.value.startswith("(*"):
+                        continue
+                    return expr
+                if pin_up in _BOX_OUT_PINS:
+                    # Timer/counter/latch outputs drive value inputs by member ref.
+                    expr = self._namecon_driver_expr(endpoint)
+                    if expr is not None:
+                        return expr
         return None
 
     def _math_rhs_expr(self, part: Part) -> Expr | None:
@@ -349,7 +506,17 @@ class _NetworkFolder:
     def fold(self) -> FoldedNetwork:
         folded = FoldedNetwork(network_id=self.network.id, title=self.network.title)
 
-        def _emit(statement: AssignStmt) -> None:
+        def _emit(statement: AssignStmt, part: Part | None = None) -> None:
+            if part is not None and not isinstance(statement, FoldStmt):
+                statement = FoldStmt(
+                    target=statement.target,
+                    value=statement.value,
+                    kind=statement.kind,
+                    target_scl=statement.target_scl,
+                    enable=statement.enable,
+                    part_uuid=part.uuid or "",
+                    part_name=part.name or "",
+                )
             folded.statements.append(statement)
             if self._trace is None:
                 return
@@ -358,13 +525,13 @@ class _NetworkFolder:
             self._steps.clear()
 
         if self.network.source_text:
-            # SCL / StructuredText network: keep statements for folded_logic / chat
+            # SCL / StructuredText network: keep statements for folded_logic /
+            # chat. Lines are passed through verbatim — appending ';' would
+            # corrupt multi-line constructs (IF #Confirm; / THEN;).
             for line in self.network.source_text.splitlines():
                 text = line.strip()
                 if not text:
                     continue
-                if not text.endswith(";"):
-                    text = f"{text};"
                 _emit(AssignStmt(None, Lit(True), kind="call", target_scl=text))
             if self._trace is not None:
                 self._trace.append(
@@ -372,7 +539,6 @@ class _NetworkFolder:
                 )
             return folded
         for part in self.network.parts.values():
-            self._visited.clear()
             self._steps.clear()
             name = canon_part(part.name)
             if name in COIL_PARTS:
@@ -382,7 +548,9 @@ class _NetworkFolder:
                     "Set": "set",
                     "Reset": "reset",
                 }.get(name, "coil")
-                _emit(AssignStmt(target, self._value_at_pin(part.uuid, "in"), kind))
+                _emit(
+                    AssignStmt(target, self._value_at_pin(part.uuid, "in"), kind), part
+                )
             elif name in MOVE_PARTS or (part.name or "").startswith("Move"):
                 src = self._pin_access(part, "in")
                 dst = self._pin_access(part, "out")
@@ -401,24 +569,24 @@ class _NetworkFolder:
                     if drivers and drivers != [Lit(True)]:
                         en_expr = drivers[0] if len(drivers) == 1 else Or(tuple(drivers))
                 _emit(
-                    AssignStmt(dst, src_expr, kind="move", enable=en_expr)
+                    AssignStmt(dst, src_expr, kind="move", enable=en_expr), part
                 )
             elif name in CONVERT_PARTS:
-                _emit(self._fold_convert(part, name))
+                _emit(self._fold_convert(part, name), part)
             elif name in MUX_PARTS:
-                _emit(self._fold_mux(part, name))
+                _emit(self._fold_mux(part, name), part)
             elif name in JUMP_PARTS:
-                _emit(self._fold_jump(part, name))
+                _emit(self._fold_jump(part, name), part)
             elif name in COIL_TIMER_KINDS:
-                _emit(self._fold_coil_timer(part))
+                _emit(self._fold_coil_timer(part), part)
             elif name in SYS_TIME_PARTS:
-                _emit(self._fold_named_func_call(part))
+                _emit(self._fold_named_func_call(part), part)
             elif name in TIME_CONV_PARTS:
-                _emit(self._fold_time_conv(part))
+                _emit(self._fold_time_conv(part), part)
             elif (
                 name in MATH_BINARY_OPS or name in MATH_UNARY_FUNCS or name in CALC_PARTS
             ):
-                _emit(self._fold_math_assign(part))
+                _emit(self._fold_math_assign(part), part)
             elif (
                 name in GATE_AND_PARTS
                 or name in GATE_OR_PARTS
@@ -428,13 +596,13 @@ class _NetworkFolder:
                 # RLO join / negation / edge elements fold into downstream expressions.
                 continue
             elif name in BOX_PARTS:
-                _emit(self._fold_box_call(part))
+                _emit(self._fold_box_call(part), part)
             elif (
                 name in CALL_PARTS
                 or part.template_values.get("Call")
                 or part.template_values.get("calledBlock")
             ):
-                _emit(self._fold_block_call(part))
+                _emit(self._fold_block_call(part), part)
             elif name in BRANCH_PARTS or name in COMPARE_OPS:
                 continue
             else:
@@ -535,7 +703,11 @@ class _NetworkFolder:
         """True when pin wire has a non-OpenCon driver (skip dangling R/LD etc.)."""
         for wire in self._wires_to_pin(part.uuid, pin):
             for endpoint in wire.endpoints:
-                if endpoint.kind == "namecon" and endpoint.uuid == part.uuid and endpoint.pin == pin:
+                if (
+                    endpoint.kind == "namecon"
+                    and endpoint.uuid == part.uuid
+                    and _same_pin(endpoint.pin, pin)
+                ):
                     continue
                 if endpoint.kind == "opencon":
                     continue
@@ -598,35 +770,68 @@ class _NetworkFolder:
         return AssignStmt(None, Lit(True), kind="call", target_scl=call)
 
     def _fold_box_call(self, part: Part) -> AssignStmt:
-        """Fold IEC counter/timer/edge boxes into a call-like SCL statement."""
-        instance = part.accesses.get("instance")
-        inst = instance.as_scl() if instance is not None else (
-            f'"{part.template_values["InstanceDB"]}"'
-            if part.template_values.get("InstanceDB")
-            else part.name
+        """Fold IEC counter/timer/edge/latch boxes into a call-like SCL statement.
+
+        Siemens exports mix cases on box pins (SR uses s/r1/q, timers IN/PT/Q),
+        so pins are matched case-insensitively and emitted canonically. The
+        instance comes from the operand/instance pin or the InstanceDB
+        template. Timers and SR/RS latches call their typed member:
+        ``#Timer.TON(IN := …)`` / ``#Latch.SR(S := …)`` — downstream RLO reads
+        the instance output (``#Timer.Q``) instead.
+        """
+        name = canon_part(part.name)
+        inst = self._box_instance_access(part)
+        inst_txt = (
+            inst.as_scl()
+            if inst is not None and inst.root
+            else (
+                f'"{part.template_values["InstanceDB"]}"'
+                if part.template_values.get("InstanceDB")
+                else (part.name or "Box")
+            )
         )
+        wired_pins: dict[str, str] = {}  # canonical pin -> actual label on wires
+        for wire in self.network.wires:
+            for endpoint in wire.endpoints:
+                if endpoint.kind == "namecon" and endpoint.uuid == part.uuid and endpoint.pin:
+                    wired_pins.setdefault((endpoint.pin or "").upper(), endpoint.pin)
+        access_pins = {key.upper(): key for key in part.accesses}
+
         params: list[str] = []
         # Boolean / RLO inputs may be driven by contacts, not IdentCon Access.
-        for pin in ("CU", "CD", "R", "R1", "S", "S1", "LD", "IN", "CLK"):
-            if part.accesses.get(pin) is not None and not self._wires_to_pin(part.uuid, pin):
-                params.append(f"{pin} := {part.accesses[pin].as_scl()}")
+        for pin in _BOX_RLO_PINS:
+            actual = wired_pins.get(pin) or access_pins.get(pin)
+            if actual is None:
                 continue
-            if not self._pin_has_real_driver(part, pin):
-                # Still allow explicit Access-bound pins (StatementList / CallInfo)
-                access = part.accesses.get(pin)
-                if access is not None:
-                    params.append(f"{pin} := {access.as_scl()}")
+            access = part.accesses.get(actual) or part.accesses.get(pin)
+            if wired_pins.get(pin) and self._pin_has_real_driver(part, actual):
+                params.append(f"{pin} := {expr_to_scl(self._value_at_pin(part.uuid, actual))}")
+            elif access is not None:
+                params.append(f"{pin} := {access.as_scl()}")
+        for pin in _BOX_VALUE_PINS:
+            actual = wired_pins.get(pin) or access_pins.get(pin)
+            if actual is None:
                 continue
-            params.append(f"{pin} := {expr_to_scl(self._value_at_pin(part.uuid, pin))}")
-        for pin in ("PV", "PT"):
-            access = self._pin_access(part, pin) or part.accesses.get(pin)
+            access = (
+                self._pin_access(part, actual)
+                or part.accesses.get(actual)
+                or part.accesses.get(pin)
+            )
             if access is not None:
                 params.append(f"{pin} := {access.as_scl()}")
-        for pin in ("CV", "Q", "QU", "QD", "ET"):
-            access = self._pin_access(part, pin) or part.accesses.get(pin)
+        for pin in _BOX_OUT_PIN_ORDER:
+            actual = wired_pins.get(pin) or access_pins.get(pin)
+            if actual is None:
+                continue
+            access = (
+                self._pin_access(part, actual)
+                or part.accesses.get(actual)
+                or part.accesses.get(pin)
+            )
             if access is not None:
                 params.append(f"{pin} => {access.as_scl()}")
-        call = f"{inst}({', '.join(params)});"
+        callee = f"{inst_txt}.{name}" if name in TIMER_PARTS or name in LATCH_PARTS else inst_txt
+        call = f"{callee}({', '.join(params)});"
         return AssignStmt(None, Lit(True), kind="call", target_scl=call)
 
     def _fold_convert(self, part: Part, name: str) -> AssignStmt:
@@ -634,18 +839,19 @@ class _NetworkFolder:
         dst = self._pin_access(part, "out") or part.accesses.get("out")
         src_txt = src.as_scl() if src is not None else "(* in *)"
         dst_txt = dst.as_scl() if dst is not None else "(* out *)"
+        # EN input conditions the conversion (FB5009: IF Cmd.Read1 THEN …).
+        en = self._en_expr(part)
         if name == "Round":
-            line = f"{dst_txt} := ROUND({src_txt});"
+            line = _wrap_en(f"{dst_txt} := ROUND({src_txt});", en)
         else:
             to_type = (
-                part.template_values.get("Type")
+                part.template_values.get("DestType")
+                or part.template_values.get("Type")
                 or part.template_values.get("OutType")
                 or ""
             ).strip()
-            if to_type:
-                line = f"{dst_txt} := {src_txt}; (* Convert → {to_type} *)"
-            else:
-                line = f"{dst_txt} := {src_txt}; (* Convert *)"
+            comment = f" (* Convert → {to_type} *)" if to_type else " (* Convert *)"
+            line = _wrap_en(f"{dst_txt} := {src_txt};", en) + comment
         return AssignStmt(None, Lit(True), kind="call", target_scl=line)
 
     def _fold_mux(self, part: Part, name: str) -> AssignStmt:
@@ -653,10 +859,11 @@ class _NetworkFolder:
         out = self._pin_access(part, "out") or part.accesses.get("out")
         k_txt = k.as_scl() if k is not None else "#K"
         out_txt = out.as_scl() if out is not None else "(* out *)"
+        en = self._en_expr(part)
         if name == "Demux":
             ins = self._pin_access(part, "in") or part.accesses.get("in")
             in_txt = ins.as_scl() if ins is not None else "(* in *)"
-            line = f"(* Demux *) CASE {k_txt} OF (* {in_txt} → {out_txt} *); END_CASE;"
+            line = _wrap_en(f"(* Demux *) CASE {k_txt} OF (* {in_txt} → {out_txt} *); END_CASE;", en)
         else:
             ins = []
             for pin in ("in0", "in1", "in2", "in3", "IN0", "IN1"):
@@ -664,7 +871,7 @@ class _NetworkFolder:
                 if acc is not None:
                     ins.append(acc.as_scl())
             args = ", ".join([k_txt, *ins]) if ins else k_txt
-            line = f"{out_txt} := (* Mux *) {args};"
+            line = _wrap_en(f"{out_txt} := (* Mux *) {args};", en)
         return AssignStmt(None, Lit(True), kind="call", target_scl=line)
 
     def _fold_jump(self, part: Part, name: str) -> AssignStmt:
@@ -743,6 +950,9 @@ def folded_to_dict(folded: FoldedNetwork) -> dict:
                 "target": statement.target.as_scl() if statement.target is not None else statement.target_scl,
                 "kind": statement.kind,
                 "value": _expr_to_dict(statement.value),
+                # Additive provenance (FoldStmt): exact originating FlgNet part.
+                "part_uuid": getattr(statement, "part_uuid", ""),
+                "part_name": getattr(statement, "part_name", ""),
                 **(
                     {"enable": _expr_to_dict(statement.enable)}
                     if statement.enable is not None

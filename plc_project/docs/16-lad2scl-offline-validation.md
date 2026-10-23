@@ -128,3 +128,49 @@ MOVE_BLK_VARIANT(9)、InRange/OutRange(7)、Shr(3)、JmpList(1)、S_Move(1)、MB
 - 运行结果包:`plc_project\tmp_validate\hr001_result\`(manifest.json / reports/conversion_report.json / converted_scl/*.scl)
 - 网络级 diff 工具(一次性,未入正式目录):`plc_project\tmp_validate\dump_network.py`(块名 + 网络号 → FlgNet 结构 / fold 语句 / translate 语句三栏对照)
 - CLI 原始输出:`plc_project\tmp_validate\cli_hr001_out.txt`、`cli_hr001_err.txt`
+
+## 7. 修复后回归(2026-10-23 修复波)
+
+三线并行修复(S1–S10)+ 收口期两个新发现修复后,同一 hr001 数据复跑验证:
+
+### 7.1 指标前后对比
+
+| 指标 | 修复前(§2/§4) | 修复后 | 说明 |
+|---|---|---|---|
+| TODO 标记 | 581(约 63% 噪声) | **23** | 剩余全部为 S11 合理 TODO(MOVE_BLK_VARIANT 9、InRange 6、Shr 3 等)+ 1 个 Word 字逻辑 Or 门(双方未支持,建议归一到 *Word 算子) |
+| converted / parsed | 30 / 24 | **46 / 8** | 噪声 TODO 清零后的真实分层 |
+| `(* loop guard *)` | 17 文件 | **0 文件** | S2:记忆化复用替代伪环守卫 |
+| `PT := )` 空字面量 | 12 文件 | **0 文件** | S3:TypedConstant 映射 |
+| `"TRUE"` 引号标识符 | 19 文件 | **0 文件** | S3:布尔常量触点 → TRUE/FALSE 字面量 |
+| 取反触点解析 | 0 / 570 | **570 / 570** | S4:`<Negated>` 子元素 100% 捕获(24 文件) |
+| 裸 `();` 空调用 | 2(FB5715) | **0** | 新发现:CallInfo Instance 名被 walk 吞掉 |
+| SCL 原文空操作数 | 存在(FB5715) | **0** | 新发现:LocalConstant → `#名` 引用(VAR CONSTANT 已声明) |
+| FB1040 net7 语句 | 23→20(丢 4) | **23→23 零丢失** | S1:按身份消费 |
+
+### 7.2 §3.1 九个判定点复核(全部通过)
+
+- FB1040 net12:OR 归约正确,TODO[O] 噪声消失 ✓
+- OB1Main 1–15:FB 调用/参数无回归 ✓
+- FB5002 net4:Ne 比较器正确,`"TRUE"` 渲染修复 ✓
+- FB1060 net1(Eq+MOVE):Eq93/Eq98 的 `.pre` 前置 RLO 折入(`ClearHoleNoReq AND (#Aux.HoleNo = 0)`)✓
+- FB2009 net1:四条语句完整(`#Timer_StationToolOn.TON(IN:=…, PT:=T#2s)`、`#SR_StationTool.SR(S:=…, R1:=…)`、`IF #SR_StationTool.Q THEN #ToolAtPos…`、`#Timer_StationCoolingFan.TON(IN:=#SR_StationTool.Q, PT:=#CoolingTime)`)✓
+- FB5002 net1:`((#i_DoorOverRide AND NOT (#EMMode)) AND NOT (#i_AutoRunning)) AND #i_OpenDoorPmt`——极性恢复、无 loop guard ✓
+- FB1040 net7:三条 TON PT 值正确(T#5S/T#100mS/T#5S);`ProgNo := 255` 恢复 S2/NOT S6/NOT DrillMemory 门控;`#MainStep.S6` 自锁保持恢复 ✓
+- FB1060 net1(IEC TON):`IF "Timer_RecvEmmMode".Q THEN …Send.PowerOff := TRUE; END_IF;`——TON.Q 门控恢复 ✓
+- FC2300 net5:`IF #High THEN #Temp_PLC_Minute := (…"PLC Time.MINUTE" * 64); END_IF;` 数学链恢复 ✓
+
+**完全等价 9/9(修复前 2/9)。**
+
+### 7.3 修复实现落点
+
+- 解析层 `simaticml.py`/`ir.py`:S3(TypedConstant/TRUE 字面量)、S4(Negated 子元素 + negated_pins 字段)、LocalConstant 映射、CallInfo Instance 渲染
+- 折叠层 `flgnet_fold.py`:S2(栈式真环检测 + 记忆化)、S5/S6/S7(箱体 Q 直通/.pre/EN)、S9(原文透传)、S10(operand 实例 + 小写脚名);`FoldStmt` 增 `part_uuid/part_name` 溯源字段(ast_trace 契约不变)
+- 翻译层 `scl.py`:S1(按身份消费 + 全种类发射分支,禁止静默丢弃)、S2 字符串版、S5–S7 字符串版、S8(噪声 TODO 跳过)
+- 测试:`test_tia_parse_fixes.py`(12)、`test_tia_fold_fixes.py`(13)、`test_tia_translate_fixes.py`(12);全量 `tests/unit` **463 passed**;快照基线已按改善后输出刷新
+
+### 7.4 残留(不阻塞,记录待办)
+
+1. S12 可读性噪声:`(TRUE AND X)` 前缀未做布尔化简(语义正确,建议后续小任务)。
+2. Word 字逻辑 `Or` 门(SrcType=Word)1 处:fold/translate 均未支持,建议归一到 `*Word` 算子族。
+3. 真实 TIA 回灌编译验证(§5-1):语法非法文件已清零,具备开跑条件。
+4. `Move.eno → Move.en` 链(ENO≈EN 近似)未折,维持无条件。
