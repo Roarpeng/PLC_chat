@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PLC_chat｜项目理解与突破性演进方案</title>
+<style>
+:root{--bg:#eef2f5;--paper:#fff;--ink:#192733;--muted:#5c6c78;--line:#d9e1e7;--navy:#132839;--navy2:#203b4f;--teal:#087e83;--teal2:#dff4f2;--amber:#a35b00;--amber2:#fff1d6;--red:#a53c42;--red2:#ffeaeb;--blue:#2c628a;--blue2:#e6f2fa;--green:#287047;--green2:#e5f5eb;--shadow:0 12px 32px rgba(21,43,58,.08);--radius:16px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,"Microsoft YaHei","Noto Sans CJK SC",system-ui,sans-serif;line-height:1.65}a{color:var(--teal);text-decoration:none}a:hover{text-decoration:underline}.shell{max-width:1240px;margin:auto;padding:24px}.hero{background:linear-gradient(120deg,#132839,#1b3b50 60%,#0d686a);color:#fff;border-radius:24px;padding:36px;position:relative;overflow:hidden;box-shadow:var(--shadow)}.hero:after{content:"PLC / IR / KG / TIA";position:absolute;right:-18px;bottom:-32px;font-size:clamp(34px,7vw,88px);font-weight:800;letter-spacing:-.06em;color:rgba(255,255,255,.05);white-space:nowrap}.eyebrow{font:700 12px/1.4 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:#94e2dc}.hero h1{font-size:clamp(28px,4vw,46px);line-height:1.18;margin:14px 0 16px;max-width:920px;letter-spacing:-.035em}.hero p{font-size:17px;max-width:850px;color:#d9e7ee;margin:0}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.chip{font-size:12px;padding:5px 10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);border-radius:999px;color:#ecf8f8}.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:22px;align-items:start;margin-top:22px}.nav{position:sticky;top:14px;background:var(--paper);padding:14px;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}.nav strong{display:block;padding:7px 9px 12px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.nav a{display:block;padding:8px 9px;border-radius:9px;font-size:13px;color:#344956}.nav a:hover{background:#edf6f6;text-decoration:none;color:var(--teal)}main{min-width:0}.section{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:27px;margin-bottom:18px;box-shadow:var(--shadow);scroll-margin-top:20px}.section h2{font-size:23px;line-height:1.3;letter-spacing:-.025em;margin:0 0 14px;color:var(--navy)}.section h3{font-size:16px;margin:22px 0 9px;color:var(--navy2)}.lead{font-size:17px;color:#334956}.muted{color:var(--muted)}.small{font-size:12px}.line{height:1px;background:var(--line);margin:20px 0}.verdict{padding:18px 20px;border-left:4px solid var(--teal);background:#f0f9f8;border-radius:0 12px 12px 0;font-size:17px}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.card{border:1px solid var(--line);border-radius:13px;padding:15px;background:#fff}.card h3{margin:0 0 7px;font-size:15px}.card p{margin:0;color:#4d606d;font-size:13px}.num{font:700 12px ui-monospace,monospace;color:var(--teal);letter-spacing:.08em}.tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;line-height:1.5;padding:3px 8px;border-radius:7px;margin:0 4px 4px 0;font-weight:700}.tag.green{background:var(--green2);color:var(--green)}.tag.blue{background:var(--blue2);color:var(--blue)}.tag.amber{background:var(--amber2);color:var(--amber)}.tag.red{background:var(--red2);color:var(--red)}.tag.gray{background:#edf1f4;color:#4c606c}.diagram{padding:16px;background:#102433;border-radius:14px;overflow:auto;color:#fff}.diagram svg{width:100%;height:auto;min-width:650px;display:block}.kpi{font-size:26px;font-weight:800;letter-spacing:-.04em;color:var(--navy)}.kpi-label{font-size:12px;color:var(--muted)}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}table{border-collapse:collapse;width:100%;min-width:680px;font-size:13px}th{background:#edf3f6;text-align:left;color:#304754;font-size:12px}th,td{padding:11px 12px;vertical-align:top;border-bottom:1px solid var(--line)}tr:last-child td{border-bottom:0}code,pre{font-family:"Cascadia Code","SFMono-Regular",Consolas,monospace}code{font-size:.9em;background:#edf2f4;border-radius:4px;padding:2px 4px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#102433;color:#d7e8ef;padding:15px;border-radius:12px;font-size:12px;line-height:1.65}.flow{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:9px;align-items:stretch}.flow .step{position:relative;border:1px solid var(--line);border-radius:12px;padding:13px;background:#f9fbfc;min-height:110px}.flow .step:not(:last-child):after{content:"→";position:absolute;right:-11px;top:36px;color:var(--teal);font-size:18px;font-weight:800;z-index:1}.step b{display:block;font-size:13px;margin:8px 0 4px}.step small{font-size:12px;color:var(--muted)}.callout{border:1px solid #f2d59c;background:#fff8e9;border-radius:12px;padding:14px 16px;color:#684716;font-size:13px}.danger{border-color:#f1c2c5;background:#fff2f3;color:#792d33}.good{border-color:#b5dfc5;background:#f0faf4;color:#245d3b}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}.quote{font-size:19px;color:#233c4a;font-weight:700;line-height:1.5;border-left:3px solid #75bab7;padding-left:15px}.phase{display:grid;grid-template-columns:88px 1fr;gap:15px;padding:16px 0;border-bottom:1px solid var(--line)}.phase:last-child{border-bottom:0}.phase-no{font:800 12px ui-monospace,monospace;color:var(--teal);padding-top:4px}.phase h3{margin:0 0 5px}.phase p{font-size:13px;color:#4d606d;margin:0 0 8px}.phase ul{margin:6px 0 0;padding-left:18px;font-size:13px}.checklist{list-style:none;margin:0;padding:0}.checklist li{display:flex;gap:9px;padding:8px 0;border-bottom:1px dashed #e0e7eb;font-size:13px}.checklist li:last-child{border-bottom:0}.boxcheck{width:17px;height:17px;border:1px solid #93aaa9;border-radius:4px;flex:none;margin-top:2px}.footer{font-size:12px;color:#647582;text-align:center;padding:18px 0 30px}.btn{border:1px solid var(--line);background:#fff;color:#27424f;border-radius:9px;padding:8px 11px;font-weight:700;font-size:12px;cursor:pointer}.btn:hover{background:#eff7f7}.bar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:13px}.callout strong{color:inherit}.source-list li{margin:7px 0;font-size:13px}.source-list a{overflow-wrap:anywhere}.highlight{background:#ecf7f6;border-radius:4px;padding:1px 4px}.pillrow{display:flex;flex-wrap:wrap;gap:6px}.mini-card{background:#f7fafb;border-radius:10px;padding:12px;border:1px solid #e0e7eb}.mini-card b{display:block;font-size:13px}.mini-card span{font-size:12px;color:#5b6c76}.risk-title{display:flex;gap:9px;align-items:center}
+@media(max-width:960px){.layout{grid-template-columns:1fr}.nav{position:relative;top:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px}.nav strong{grid-column:1/-1}.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.flow{grid-template-columns:repeat(2,minmax(0,1fr))}.flow .step:after{display:none}}@media(max-width:620px){.shell{padding:12px}.hero{padding:25px 20px}.section{padding:18px}.grid2,.grid3,.grid4,.two-col{grid-template-columns:1fr}.nav{grid-template-columns:1fr 1fr}.section h2{font-size:20px}.flow{grid-template-columns:1fr}.phase{grid-template-columns:58px 1fr}}
+@media print{body{background:#fff}.shell{max-width:none;padding:0}.hero,.section,.nav{box-shadow:none}.layout{display:block}.nav{display:none}.hero{border-radius:0;print-color-adjust:exact}.section{break-inside:avoid;margin-bottom:12px}.diagram{print-color-adjust:exact}.btn{display:none}a{color:inherit;text-decoration:underline}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="hero">
+  <div class="eyebrow">ENGINEERING REVIEW · PLC_CHAT · 2026.10.23</div>
+  <h1>从“AI 写 PLC 程序”<br>进化为“可验证的 PLC 工程系统”</h1>
+  <p>基于 Roarpeng/PLC_chat 当前 main 分支的目录、设计文档、关键实现与近期提交，并与 Chat2PLC V2.5 蓝图对照形成的理解和演进建议。</p>
+  <div class="chips"><span class="chip">TIA / SimaticML</span><span class="chip">PLC-IR + Knowledge Graph</span><span class="chip">数字孪生画布 + HMI</span><span class="chip">Openness 编译闭环</span><span class="chip">重点：可证明、可回滚、可追溯</span></div>
+</header>
+<div class="layout">
+<aside class="nav">
+  <strong>报告导航</strong>
+  <a href="#verdict">01 · 核心判断</a><a href="#reality">02 · 当前项目是什么</a><a href="#architecture">03 · 端到端架构</a><a href="#strengths">04 · 已有资产</a><a href="#gaps">05 · 真实短板</a><a href="#breakthrough">06 · 突破性方向</a><a href="#transaction">07 · 新核心：变更事务</a><a href="#safety">08 · 工业安全边界</a><a href="#roadmap">09 · 落地路线</a><a href="#metrics">10 · 验收指标</a><a href="#sources">11 · 依据与限制</a>
+  <button class="btn" onclick="window.print()" style="margin:12px 6px 3px;width:calc(100% - 12px)">打印 / 另存为 PDF</button>
+</aside>
+<main>
+<section class="section" id="verdict">
+  <div class="bar"><h2>01 · 核心判断</h2><span class="tag green">推荐方向：工程语义平台</span></div>
+  <div class="verdict"><b>PLC_chat 的长期壁垒不是更聪明的聊天模型，而是一个可追溯的 PLC 工程语义模型，以及围绕它建立的验证、变更、仿真和回滚机制。</b></div>
+  <p class="lead">仓库已经不是“聊天框 + 代码生成”这么简单。它把 TIA 工程导出、离线解析、统一中间表示（PLC-IR）、逻辑知识图谱、工程画布、HMI 结构与交互、Openness 写回和真实编译反馈连成了工作流。下一步不应只堆更多按钮或 Agent，而应提高整个工作流的可信度。</p>
+  <div class="grid3" style="margin-top:15px">
+    <div class="card"><div class="num">WHAT IT IS</div><h3>工业 PLC 工程工作台</h3><p>把已有工程读出来、解释清楚、展示依赖关系，并让工程师在受控条件下提出和验证修改。</p></div>
+    <div class="card"><div class="num">WHAT IT SHOULD BECOME</div><h3>可验证的工程变更系统</h3><p>每个修改都附带来源证据、影响分析、验证结果、批准记录和可恢复的前后快照。</p></div>
+    <div class="card"><div class="num">WHAT NOT TO CLAIM</div><h3>不是自动安全认证器</h3><p>编译成功不等于工艺正确，更不等于功能安全合规或可以直接下装生产 PLC。</p></div>
+  </div>
+  <div class="line"></div>
+  <div class="quote">最重要的问题不是“AI 能不能改”，而是“系统凭什么允许这次改动进入工程项目”。</div>
+</section>
+
+<section class="section" id="reality">
+  <h2>02 · 当前项目究竟在做什么</h2>
+  <p>从仓库中的 <code>plc_project/agents/plc/tia/</code>、<code>gateway/app/</code>、<code>frontend/src/</code> 与 <code>industrial/tia_openness_cli/</code> 看，项目已经形成多条工程能力，不只是概念文档。</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>能力层</th><th>从代码 / 文档看到的内容</th><th>我对价值的判断</th></tr></thead>
+    <tbody>
+      <tr><td><b>工程接入</b></td><td>支持导入 XML / 导出目录 / ZIP；完整 TIA 工程可通过 Windows Openness 导出 SimaticML。仅有孤立的 .apxx 二进制文件不足以独立打开。</td><td>明确分离离线分析与依赖 TIA 的工程操作，避免把所有事情绑定在 Windows/TIA。</td></tr>
+      <tr><td><b>语义解析</b></td><td>SimaticML 解析为 PLC-IR；IR 对访问变量、表达式、赋值、网络、块类型、GRAPH 步骤等有结构化表示。</td><td>这是 AI 之外最有积累价值的底座。IR 可以被图谱、审计、转换、测试共同复用。</td></tr>
+      <tr><td><b>图谱与证据</b></td><td>维护块调用、信号读写等关系；聊天检索可返回相关图谱边与 SCL 片段；覆盖报告记录未解析内容和跳过原因。</td><td>能降低“模型凭经验猜项目”的风险，应该进一步升级为每个回答和变更的证据契约。</td></tr>
+      <tr><td><b>工程工作台</b></td><td>React/TypeScript 前端包含全局关系图、画布、变量检查、SCL 面板、聊天、HMI 面板、导入和编译作业状态。</td><td>把程序理解从文本问答变成可以导航、筛选和操作的工程界面。</td></tr>
+      <tr><td><b>修改与编译</b></td><td>存在类型化画布操作、SCL 预检、工程师确认、写前备份、Openness 导入/生成、严格编译、错误归因以及自愈相关流程。</td><td>已经开始走向真实研发工作流。最需要补强的是“变更前后语义是否保持预期”，而不是只检查能否编译。</td></tr>
+      <tr><td><b>验证资产</b></td><td>含大量 SimaticML 夹具和 pytest / Vitest / C# 测试；最新提交说明新增问题回归测试，并报告 54 个 Vitest 测试通过。</td><td>回归测试方向正确；但仓库测试通过、真实 Openness 集成通过、真实设备安全验收，是三个不同等级的证据。</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout" style="margin-top:14px"><strong>范围边界：</strong>项目主要面向工程文件分析、可视化、生成/修改工程源内容和 TIA 编译验证。代码编译成功并不等于 PLC 实际行为已在真实机械设备上验证；仓库文档也明确描述了部分语言或对象仍是 best-effort / TODO，例如稀有 STL、可执行 GRAPH 语义和部分 HMI 还原能力。</div>
+</section>
+
+<section class="section" id="architecture">
+  <h2>03 · 我理解的端到端架构</h2>
+  <p class="muted">建议用“数据面”和“控制面”两条链路理解：数据面负责工程知识和证据；控制面负责修改授权与真实 TIA 操作。二者必须有关联，但不能混成一个让 LLM 自由决定的流程。</p>
+  <div class="diagram">
+  <svg viewBox="0 0 1000 570" role="img" aria-label="PLC_chat端到端架构图">
+    <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#64d3c9"/></marker><marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#ffc35c"/></marker></defs>
+    <rect x="14" y="14" width="972" height="542" rx="16" fill="#0b1b27" stroke="#385364"/>
+    <text x="36" y="42" fill="#9bc5d0" font-size="14" font-weight="700">ENGINEERING DATA PLANE</text>
+    <g font-size="13" text-anchor="middle">
+      <rect x="38" y="65" width="165" height="66" rx="10" fill="#1a394b" stroke="#578194"/><text x="120" y="91" fill="#fff" font-weight="700">TIA 工程 / XML</text><text x="120" y="112" fill="#bed5df" font-size="11">.zap / .apxx / Export</text>
+      <rect x="247" y="65" width="165" height="66" rx="10" fill="#1a394b" stroke="#578194"/><text x="329" y="91" fill="#fff" font-weight="700">导入与解析</text><text x="329" y="112" fill="#bed5df" font-size="11">SimaticML / Parser</text>
+      <rect x="456" y="65" width="165" height="66" rx="10" fill="#15504f" stroke="#64d3c9"/><text x="538" y="91" fill="#fff" font-weight="700">PLC-IR + 源证据</text><text x="538" y="112" fill="#c5f4ed" font-size="11">保留语义与来源</text>
+      <rect x="665" y="65" width="295" height="66" rx="10" fill="#15504f" stroke="#64d3c9"/><text x="812" y="91" fill="#fff" font-weight="700">关系图谱 + 覆盖率 / 未知项</text><text x="812" y="112" fill="#c5f4ed" font-size="11">CALLS · READS · WRITES · HMI · IO</text>
+      <path d="M203 98 H243" stroke="#64d3c9" stroke-width="2" marker-end="url(#arr)"/><path d="M412 98 H452" stroke="#64d3c9" stroke-width="2" marker-end="url(#arr)"/><path d="M621 98 H661" stroke="#64d3c9" stroke-width="2" marker-end="url(#arr)"/>
+      <rect x="247" y="171" width="330" height="76" rx="10" fill="#243b4c" stroke="#7593a6"/><text x="412" y="196" fill="#fff" font-weight="700">工程理解工作台</text><text x="412" y="217" fill="#d3e1e9" font-size="11">关系图 / 代码片段 / HMI / 对话 / 人工判断</text><text x="412" y="234" fill="#d3e1e9" font-size="11">回答带引用，不知道就显示未知和降级原因</text>
+      <path d="M812 131 V151 H578 V198" fill="none" stroke="#64d3c9" stroke-width="2" marker-end="url(#arr)"/>
+      <path d="M412 247 V283" stroke="#ffc35c" stroke-width="2" marker-end="url(#arr2)"/>
+      <rect x="160" y="286" width="505" height="78" rx="10" fill="#503b20" stroke="#ffc35c"/><text x="412" y="312" fill="#fff" font-weight="700">类型化 ChangeSet（唯一改动意图）</text><text x="412" y="333" fill="#ffebc5" font-size="11">目标 / 前置条件 / 变更差异 / 影响范围 / 验收不变量</text><text x="412" y="350" fill="#ffebc5" font-size="11">版本基线 + 工程师批准 + 可撤销计划</text>
+      <text x="36" y="400" fill="#f3c771" font-size="14" font-weight="700">CONTROL PLANE · MUST BE GATED</text>
+      <rect x="38" y="421" width="170" height="83" rx="10" fill="#333d46" stroke="#91a3af"/><text x="123" y="448" fill="#fff" font-weight="700">预检 / 影响分析</text><text x="123" y="469" fill="#d7e2e9" font-size="11">变量 / 类型 / 安全块 / 覆盖</text><text x="123" y="485" fill="#d7e2e9" font-size="11">静态不变量 / 场景测试</text>
+      <rect x="246" y="421" width="170" height="83" rx="10" fill="#503b20" stroke="#ffc35c"/><text x="331" y="448" fill="#fff" font-weight="700">人工审核门禁</text><text x="331" y="469" fill="#ffebc5" font-size="11">审阅语义差异和证据</text><text x="331" y="485" fill="#ffebc5" font-size="11">批准范围 / 明确拒绝</text>
+      <rect x="454" y="421" width="210" height="83" rx="10" fill="#1b4058" stroke="#83c3e7"/><text x="559" y="448" fill="#fff" font-weight="700">Windows Openness 侧车</text><text x="559" y="469" fill="#d7eefa" font-size="11">进程隔离 / 限时 / 写前备份</text><text x="559" y="485" fill="#d7eefa" font-size="11">导入源文件 / TIA 严格编译</text>
+      <rect x="702" y="421" width="258" height="83" rx="10" fill="#173e2d" stroke="#72c99a"/><text x="831" y="448" fill="#fff" font-weight="700">结果账本 / 失败恢复</text><text x="831" y="469" fill="#d0f1dc" font-size="11">编译诊断 / 文件哈希 / 版本快照</text><text x="831" y="485" fill="#d0f1dc" font-size="11">回滚记录 / 语义回归报告</text>
+      <path d="M665 325 H681 V411 H123 V417" fill="none" stroke="#ffc35c" stroke-width="2" marker-end="url(#arr2)"/><path d="M208 462 H242" stroke="#ffc35c" stroke-width="2" marker-end="url(#arr2)"/><path d="M416 462 H450" stroke="#ffc35c" stroke-width="2" marker-end="url(#arr2)"/><path d="M664 462 H698" stroke="#ffc35c" stroke-width="2" marker-end="url(#arr2)"/>
+      <text x="38" y="535" fill="#a6bdc9" font-size="11">注意：TIA 工程写回 / PLC 下载 / 生产运行是不同权限级别；此图中的编译闭环不代表自动下装设备。</text>
+    </g>
+  </svg>
+  </div>
+  <h3>核心工程数据流</h3>
+  <div class="flow">
+    <div class="step"><span class="tag gray">01 · Import</span><b>输入与版本固定</b><small>归档、项目文件、SimaticML；记录工程版本和哈希。</small></div>
+    <div class="step"><span class="tag blue">02 · Parse</span><b>构建工程语义</b><small>结构、信号访问、网络、调用、HMI、硬件及未解析项。</small></div>
+    <div class="step"><span class="tag green">03 · Understand</span><b>证据化理解</b><small>可引用到块、网络、原始节点；未知处明确标记。</small></div>
+    <div class="step"><span class="tag amber">04 · Change</span><b>变更集与验证</b><small>做最小修改，分析影响，生成可复现验证。</small></div>
+    <div class="step"><span class="tag red">05 · Commit</span><b>批准后写回</b><small>备份、编译、回报、对照差异；失败关闭并允许恢复。</small></div>
+  </div>
+</section>
+
+<section class="section" id="strengths">
+  <h2>04 · 已经值得保护和继续投资的资产</h2>
+  <div class="grid2">
+    <div class="card"><div class="num">ASSET A</div><h3>PLC-IR，而不是把 XML 直接喂给 LLM</h3><p>IR 已把表达式、变量访问、类型、赋值等建模为对象。应继续让它成为解析、关系图、SCL 生成、测试和差异比较的共同底座。</p></div>
+    <div class="card"><div class="num">ASSET B</div><h3>未解析项与覆盖率被显式记录</h3><p><code>coverage.py</code> 不只给“成功/失败”，还记录导出、解析、跳过、原因和 TODO。这种诚实的降级能力是工业级系统比演示型 AI 更重要的特性。</p></div>
+    <div class="card"><div class="num">ASSET C</div><h3>离线解析与 Windows Openness 分离</h3><p>Linux / CI 可以进行 XML 分析与回归测试；真实 TIA 工程操作放在 Windows 侧车。避免为了 Openness 把所有服务做成一个不可控的巨进程。</p></div>
+    <div class="card"><div class="num">ASSET D</div><h3>写回护栏已经超越“直接覆盖文件”</h3><p>写前备份、备份超限时 fail-closed、dry-run、哈希幂等、编译诊断和限时作业等，是下一步设计事务化变更的现成基础。</p></div>
+  </div>
+  <div class="callout good" style="margin-top:14px"><strong>我不会推倒重来：</strong>优先复用现有 IR、KG、覆盖率、ChangeSet、Canvas、TIA CLI 和测试夹具。最优的突破方式是在现有资产上加一层统一的工程变更协议和验证证据，而不是另起一个全新 Agent 框架。</div>
+</section>
+
+<section class="section" id="gaps">
+  <h2>05 · 我看到的真实短板与风险</h2>
+  <p class="muted">以下分成两类：第一类是从仓库结构和实现直接观察到的问题；第二类是若要进入真实工程流程必须解决的系统性风险。</p>
+  <h3>仓库本身的治理问题</h3>
+  <div class="table-wrap"><table><thead><tr><th>发现</th><th>为什么重要</th><th>建议</th></tr></thead><tbody>
+    <tr><td><span class="tag amber">文档漂移</span><br>顶层 README 的目录说明把解析核心描述在 <code>plc_engine/tia/</code>，但当前核心实现实际主要在 <code>agents/plc/tia/</code>；前者基本只有包初始化文件。</td><td>新开发者或代码 Agent 会在错误位置加功能、重复实现或者误判模块边界。</td><td>指定唯一权威路径；README 生成实际目录图；对外接口层保留兼容 facade，禁止重复实现。</td></tr>
+    <tr><td><span class="tag amber">双实现并存</span><br>同时存在 <code>gateway/app/</code> 与 <code>plc_gateway/</code>，以及多个 CLI / tool 入口。</td><td>容易出现路由、配置、业务逻辑和文档在不同版本分叉。</td><td>写清“当前入口 / 兼容层 / 已废弃”矩阵；把架构图与包清单加入自动检查。</td></tr>
+    <tr><td><span class="tag amber">Openness 命名与路径不一致</span><br>部分旧文档仍提到 <code>tia_openness_mcp</code>，当前代码目录则有 <code>tia_openness_cli</code>。</td><td>照着旧文档执行会得到错误命令和路径。</td><td>文档加版本标记和最后验证日期；启动脚本、README、测试使用同一权威配置。</td></tr>
+    <tr><td><span class="tag blue">多种测试证据层级混合</span><br>部分安全测试使用 mock 替换真实 Openness 调用；仓库提交信息另有真实 TIA 验证描述。</td><td>单元测试只能证明被测逻辑；mock 不证明实际 TIA 版本、许可证、工程锁、写回兼容性都正常。</td><td>把测试明确分为单元、离线夹具、Windows/TIA 集成、仿真行为、现场验收，并保留各自结果。</td></tr>
+  </tbody></table></div>
+  <h3>产品与技术上的系统性风险</h3>
+  <div class="grid2">
+    <div class="card"><div class="risk-title"><span class="tag red">高风险</span><h3 style="margin:0">“可编译”容易被误解为“行为正确”</h3></div><p>严格编译可以验证语法、类型及一部分工程一致性，但不验证工艺意图、时序、状态机边界、传感器故障响应或设备实际动作。</p></div>
+    <div class="card"><div class="risk-title"><span class="tag red">高风险</span><h3 style="margin:0">逆向转换不能默认等价</h3></div><p>LAD/FBD/STL/GRAPH 的所有结构并不都能被简单布尔公式表示。未知指令、保持语义、边沿、定时器状态、ENO、跳转与扫描周期影响都必须保留和报告。</p></div>
+    <div class="card"><div class="risk-title"><span class="tag amber">中高风险</span><h3 style="margin:0">自然语言意图有歧义</h3></div><p>2026-10-22 的最新提交修复了纯询问“当前功能块作用”可能误触发默认新增变量的问题。意图识别必须先分清解释、建议、修改和写回。</p></div>
+    <div class="card"><div class="risk-title"><span class="tag amber">中高风险</span><h3 style="margin:0">“AI 自愈”可能把编译错误修成逻辑错误</h3></div><p>如果让模型自由重写整块代码，即使编译通过，也可能改变保持位、复位优先级或执行时序。修复范围应被限制在错误及其可证明影响内。</p></div>
+  </div>
+</section>
+
+<section class="section" id="breakthrough">
+  <h2>06 · 突破性思路：给工程变更“携带证明”</h2>
+  <p class="lead">我建议把差异化能力定义为 <b>Proof-Carrying Engineering Change（带验证证据的工程变更，简称 PCEC）</b>。不是仅仅生成一个代码文件，而是任何建议修改都带着“为什么、改哪里、影响谁、怎么验证、如何恢复”的完整凭证。</p>
+  <div class="grid3" style="margin-top:16px">
+    <div class="card"><span class="tag blue">突破 1</span><h3>从源代码视角到多层工程语义</h3><p>同时维护源代码忠实层、控制语义层、工艺/设备关系层。三层互相关联但不能互相冒充；未知语义不能被“漂亮的重构代码”覆盖掉。</p></div>
+    <div class="card"><span class="tag green">突破 2</span><h3>从文本补丁到类型化变更事务</h3><p>LLM 产出的是结构化意图和候选 ChangeSet；确定性引擎验证操作、前置条件与影响；提交必须针对明确版本基线。</p></div>
+    <div class="card"><span class="tag amber">突破 3</span><h3>从编译检查到行为证据</h3><p>编译只是一个门。还要有工艺不变量、故障场景、边界条件和仿真结果；对不能验证的点，明确显示“未验证”。</p></div>
+  </div>
+  <h3>三层模型：每一层回答不同的问题</h3>
+  <div class="table-wrap"><table><thead><tr><th>模型层</th><th>核心问题</th><th>数据示例</th><th>不可做的事</th></tr></thead><tbody>
+    <tr><td><b>1. 来源忠实层</b><br><span class="muted">Source-faithful Model</span></td><td>原始工程到底是什么？哪些部分被完整解析？</td><td>原始 XML、UId、Part/Wire、语言、块接口、版本、文件哈希、未解析节点。</td><td>不得悄悄丢掉不支持的元件或将不确定语义当作确定事实。</td></tr>
+    <tr><td><b>2. 控制语义层</b><br><span class="muted">Control Semantics</span></td><td>信号如何影响状态与输出？依赖关系是什么？</td><td>PLC-IR、调用图、READS/WRITES、置位复位、定时器/边沿/步骤语义、变量作用域。</td><td>不能把编译通过直接推导为工艺逻辑正确。</td></tr>
+    <tr><td><b>3. 工艺与验证层</b><br><span class="muted">Process & Verification</span></td><td>设备为什么这么动作？修改后仍满足哪些要求？</td><td>动作状态机、I/O 含义、互锁、允许条件、故障模式、HMI 绑定、测试场景、验收不变量。</td><td>不应让模型自行虚构工艺要求或把未经确认的推断作为事实。</td></tr>
+  </tbody></table></div>
+  <h3>让知识图谱从“关系展示”升级为“影响分析引擎”</h3>
+  <p>当前已有 <code>CALLS</code>、<code>READS</code>、<code>WRITES</code> 等关系。建议按可追溯原则扩展：<code>SOURCE_OF</code>、<code>BINDS_TO</code>、<code>REQUIRES</code>、<code>INHIBITS</code>、<code>TESTS</code>、<code>CHANGED_BY</code>、<code>SAFETY_BOUNDARY</code>。例如修改一个 DB 字段时，系统不只找交叉引用，还能列出：哪些 FB 读取它、哪些 HMI 控件绑定它、哪些测试依赖它、哪些告警/安全检查可能受影响。</p>
+  <div class="callout good"><strong>真正的创新组合：</strong>确定性解析与校验负责“边界可信”；LLM 负责“语义解释、候选方案与测试建议”；TIA 编译器负责“工程编译证据”；仿真/测试负责“行为证据”；工程师负责“最终授权”。没有某项证据，就不允许界面把状态渲染成已验证。</div>
+</section>
+
+<section class="section" id="transaction">
+  <h2>07 · 建议的新核心：工程变更事务协议</h2>
+  <p>建议把现有 Canvas Ops、PlcChangeSet、预检、备份、编译作业、自愈补丁统一到一个显式事务对象上。这个对象应当在 UI、API、后端执行器和审计报告中共用，而不是每条工作流各自维护状态。</p>
+  <pre>{
+  "change_id": "chg-...",
+  "project_baseline": {
+    "project_hash": "sha256:...",
+    "tia_version": "V19",
+    "parser_version": "..."
+  },
+  "intent": { "kind": "modify", "request": "...", "confirmed": true },
+  "ops": [ { "op": "add_variable", "target": "MainDB", "...": "..." } ],
+  "preconditions": [ "目标块存在", "基线哈希未变化", "非 F 程序写入路径" ],
+  "impact": { "blocks": [], "signals": [], "hmi_bindings": [], "tests": [] },
+  "verification": { "static": "pending", "simulation": "pending", "tia_compile": "pending" },
+  "approval": { "reviewer": null, "approved_scope": null },
+  "rollback": { "backup_hash": null, "restore_verified": false },
+  "status": "proposed"
+}</pre>
+  <h3>推荐状态机：失败不是成功，未知也不是成功</h3>
+  <div class="flow">
+    <div class="step"><span class="tag gray">PROPOSED</span><b>提出意图</b><small>问答和修改是不同类别；不确定时先追问，不生成默认操作。</small></div>
+    <div class="step"><span class="tag blue">ANALYZED</span><b>分析影响</b><small>锁定项目基线、依赖范围、证据覆盖和潜在冲突。</small></div>
+    <div class="step"><span class="tag amber">VALIDATED</span><b>验证候选</b><small>静态预检、语义约束、场景仿真与真实 TIA 编译。</small></div>
+    <div class="step"><span class="tag amber">APPROVED</span><b>人工确认</b><small>批准某个具体差异和目标工程，不是笼统批准“让 AI 改”。</small></div>
+    <div class="step"><span class="tag green">APPLIED</span><b>落地并留账</b><small>写回、编译、生成报告；失败则回滚或保留明确的未完成状态。</small></div>
+  </div>
+  <h3>一个修改的“证据包”应包含</h3>
+  <div class="grid2">
+    <div class="mini-card"><b>变更证据</b><span>修改前后 IR 差异、原始源位置、生成补丁、项目版本与哈希。</span></div>
+    <div class="mini-card"><b>影响证据</b><span>受影响块、变量、调用链、HMI 绑定、相关 I/O 与安全边界。</span></div>
+    <div class="mini-card"><b>验证证据</b><span>静态审查、覆盖率变化、测试场景结果、TIA 版本与编译诊断。</span></div>
+    <div class="mini-card"><b>审批 / 回滚证据</b><span>批准者、批准范围、时间、备份位置、备份哈希和恢复测试结果。</span></div>
+  </div>
+  <p class="small muted" style="margin-top:12px">关键细节：当目标工程基线已经变化，事务应因“过期”自动拒绝，而不是把旧补丁应用到新版工程。写回与编译也应保持同一个 Change ID 和相关日志 ID，以支持事后复盘。</p>
+</section>
+
+<section class="section" id="safety">
+  <h2>08 · 工业安全边界：哪些自动化必须被禁止</h2>
+  <div class="callout danger"><strong>必须说清楚：</strong>在普通 DB 中添加一个名为 EmergencyStop 的 BOOL，或者让 AI“补上急停逻辑”，绝不等同于构建了合规的急停功能。功能安全取决于硬件、F-CPU / F 程序、风险评估、验证流程和现场实现；AI 不能通过命名或编译结果为其背书。</div>
+  <div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>动作级别</th><th>默认权限建议</th><th>必须有的门禁</th></tr></thead><tbody>
+    <tr><td><span class="tag green">L0 只读</span><br>导入、分析、解释、覆盖报告</td><td>可自动执行</td><td>路径白名单、文件大小 / 类型约束、证据引用、不支持项显式披露。</td></tr>
+    <tr><td><span class="tag blue">L1 草稿</span><br>画布草稿、IR 变更候选、生成代码预览</td><td>可自动提出，不可静默应用</td><td>明确标记 draft，显示差异与影响范围；修改不得改变原始工程。</td></tr>
+    <tr><td><span class="tag amber">L2 工程文件写回</span><br>导入外部源、改动 TIA 工程并编译</td><td>显式人工审批</td><td>基线检查、备份成功、F 程序保护、目标工程隔离、超时可控、严格编译、结果记录与恢复手段。</td></tr>
+    <tr><td><span class="tag red">L3 下载 / 在线控制</span><br>下载至 PLC、在线改值、触发设备动作</td><td>与当前 AI 自动写回链路彻底隔离；默认禁止</td><td>独立权限系统、现场授权、变更窗口、LOTO / 安全流程、工程师双重确认与设备级联锁。</td></tr>
+  </tbody></table></div>
+  <h3>对“自愈”设硬边界</h3>
+  <ul class="checklist">
+    <li><span class="boxcheck"></span><span><b>只修被诊断覆盖的局部问题。</b> 编译器报出某行类型不匹配，不应因此自由重构整个 FB 的控制逻辑。</span></li>
+    <li><span class="boxcheck"></span><span><b>修复前后都跑相同的不变量和回归场景。</b> 如果缺少行为测试，界面必须显示“语法修复完成，行为尚未验证”。</span></li>
+    <li><span class="boxcheck"></span><span><b>任何安全相关对象默认只读。</b> F-块、F-标签、安全相关硬件和边界信息不允许常规生成器自动改写；漏检也不能等同于安全对象不存在。</span></li>
+    <li><span class="boxcheck"></span><span><b>未知结构必须保留。</b> 不支持的指令、GRAPH 或保护块应以原始内容和可见告警保留，不得悄悄删除或虚构行为。</span></li>
+    <li><span class="boxcheck"></span><span><b>超时必须真正结束执行。</b> 现有编译作业对“线程超时但 Openness 仍卡住”的风险已有说明；一次性 CLI 的进程树隔离应保留，远程 Worker 的取消边界必须继续清晰暴露。</span></li>
+  </ul>
+</section>
+
+<section class="section" id="roadmap">
+  <h2>09 · 落地路线：不推倒重来，先补“可信闭环”</h2>
+  <p class="muted">建议按能逐步验收的能力来推进。先稳定边界与证据，再增加更聪明的模型；不要一开始就引入更复杂的多智能体编排。</p>
+  <div class="phase"><div class="phase-no">PHASE 0</div><div><h3>梳理唯一权威入口</h3><p>目标：让开发者和代码 Agent 清楚哪里是正式实现，哪里是兼容入口，哪里是历史文档。</p><div class="pillrow"><span class="tag blue">修正文档路径</span><span class="tag blue">确定唯一 Gateway</span><span class="tag blue">确定 TIA CLI / Worker 边界</span></div><ul><li>列出模块 owner、入口、被调用方向和废弃候选。</li><li>统一 README、devctl、services.toml、路由和 Openness 命令路径。</li><li>新增“架构文档与目录自动对照”检查，减少持续漂移。</li></ul></div></div>
+  <div class="phase"><div class="phase-no">PHASE 1</div><div><h3>给现有 IR / 图谱加来源与可信等级</h3><p>目标：所有展示的结论都能回到原始工程；所有未支持项都不会被伪装成完整理解。</p><div class="pillrow"><span class="tag green">Source UID</span><span class="tag green">project hash</span><span class="tag green">parser version</span><span class="tag green">coverage contract</span></div><ul><li>每个 IR 节点记录源文件、块名、网络 / 元件 UID、原始片段哈希、解析器版本。</li><li>每个块有状态：完整解析、部分解析、仅接口、受保护、未知；状态不能只靠一个布尔值表示。</li><li>统一覆盖率报告、对话引用和图谱中的节点 ID；无来源证据的回答标为推断。</li></ul></div></div>
+  <div class="phase"><div class="phase-no">PHASE 2</div><div><h3>把改动统一成 PCEC 变更事务</h3><p>目标：让聊天、画布、优化提案、自愈修复最终都产出同一种可审计对象。</p><div class="pillrow"><span class="tag amber">Change ID</span><span class="tag amber">基线版本</span><span class="tag amber">影响范围</span><span class="tag amber">审批与回滚</span></div><ul><li>把现有 ops 与 PlcChangeSet 映射到统一 schema，包含前置条件、目标、差异和失败状态。</li><li>增加 read-only / draft / writeback 权限级别；提问类输入永远不能隐式触发修改。</li><li>写回前强制进行版本基线比对、备份、范围检查；写回后保存完整审计包。</li></ul></div></div>
+  <div class="phase"><div class="phase-no">PHASE 3</div><div><h3>从“编译验证”升级到“行为验证”</h3><p>目标：至少对关键工艺约束证明修改没有破坏已知行为；区分无法验证和验证失败。</p><div class="pillrow"><span class="tag red">测试不变量</span><span class="tag red">故障场景</span><span class="tag red">HMI 绑定一致性</span><span class="tag red">仿真 / PLCSIM</span></div><ul><li>先为一个真实代表项目构建用例：启动/停止、互锁、复位优先级、定时器、传感器断线/粘连、HMI 绑定与告警。</li><li>测试可由 AI 提议，但不变量需由工程师确认后成为验收基准。</li><li>有条件时让同一测试在离线 IR 模型和 PLCSIM Advanced / 真实测试台复用；明确两种运行时的差异。</li></ul></div></div>
+  <div class="phase"><div class="phase-no">PHASE 4</div><div><h3>将“现场知识”沉淀为跨项目能力</h3><p>目标：把工程理解变成团队可以复用的故障定位和风险识别资产。</p><div class="pillrow"><span class="tag gray">跨项目模式</span><span class="tag gray">变更影响查询</span><span class="tag gray">工程报告</span><span class="tag gray">经验反馈</span></div><ul><li>利用历史故障、变更结果和验证记录，建立“症状 → 相关信号/块 → 可能原因 → 检查步骤”的证据型诊断。</li><li>比较不同设备项目的相似控制结构，给出差异和迁移风险，不直接复制未经审查的逻辑。</li><li>持续将未解析 Part、编译失败、自愈失败和人工驳回反馈到解析器/测试优先级。</li></ul></div></div>
+  <div class="callout good"><strong>最值得先做的下一项具体工作：</strong>不要先增加新 Agent。建立一份能自动产出的 <b>Project Manifest + Coverage Report + PCEC Change Report</b>，让任意工程和任意变更都有统一的身份、基线、证据、风险、验证与回滚记录。这会先把已有功能真正粘合成一个系统。</div>
+</section>
+
+<section class="section" id="metrics">
+  <h2>10 · 如何判断改进真的有效</h2>
+  <p>不要只用“模型回答更像专家”或“页面更完整”来验收。用工程结果衡量。</p>
+  <div class="table-wrap"><table><thead><tr><th>指标</th><th>建议的验收口径</th><th>为何重要</th></tr></thead><tbody>
+    <tr><td><b>解析覆盖率</b></td><td>每个输入块都落入已定义状态；导出/解析/跳过数量能够对账；每个未解析 Part 有明确名称与原因。</td><td>杜绝“只解析了大部分，却报告分析完成”的错觉。</td></tr>
+    <tr><td><b>证据可追溯率</b></td><td>工程理解类回答与变更理由能够回到具体块/网络/源片段；无引用事实明确标记为推断。</td><td>让工程师可以复核 AI 的说法。</td></tr>
+    <tr><td><b>行为回归通过率</b></td><td>被修改区域和其影响邻域的关键不变量、边界场景通过；未运行的场景显示为未验证而非通过。</td><td>编译仅验证工程可构建，不证明工艺不变。</td></tr>
+    <tr><td><b>写回完整性</b></td><td>写前备份成功率、基线冲突拒绝率、严格编译结果、失败回滚演练结果都可统计。</td><td>目标是可恢复，而不是假定每次写入都成功。</td></tr>
+    <tr><td><b>意图误触发率</b></td><td>问答 / 解释 / 总结任务导致零修改操作；模糊意图优先追问；提交动作都有明确审核与日志。</td><td>最近真实回归问题表明这是必须单独衡量的工业 UX 安全属性。</td></tr>
+    <tr><td><b>跨环境复现性</b></td><td>离线夹具在 CI 稳定通过；Windows/TIA 集成测试注明 TIA 版本、许可证、样例工程与结果。</td><td>可区分算法回归、平台依赖问题和真实工程差异。</td></tr>
+  </tbody></table></div>
+  <h3>“已验证”需要拆成不同等级</h3>
+  <div class="grid4">
+    <div class="card"><span class="tag gray">V0</span><h3>结构已解析</h3><p>确认源文件可读取，并记录支持率与未解析内容。</p></div>
+    <div class="card"><span class="tag blue">V1</span><h3>静态校验通过</h3><p>接口、引用、规则和局部不变量通过。</p></div>
+    <div class="card"><span class="tag amber">V2</span><h3>TIA 编译通过</h3><p>指定版本、指定工程副本中的编译器给出明确结果。</p></div>
+    <div class="card"><span class="tag green">V3</span><h3>行为验证通过</h3><p>指定测试场景 / 仿真 / 测试台满足已批准的要求。</p></div>
+  </div>
+  <p class="small muted">建议 UI 不显示一个笼统的绿色“成功”，而显示分级验证状态与证据链接。例如“V2 TIA 编译通过；V3 尚未运行”。</p>
+</section>
+
+<section class="section" id="sources">
+  <h2>11 · 本报告依据与限制</h2>
+  <p>以下是本次重点核对的仓库材料。链接指向项目实际源文件 / 提交，方便后续按需继续深入。</p>
+  <ul class="source-list">
+    <li><a href="https://github.com/Roarpeng/PLC_chat/tree/main/plc_project" target="_blank" rel="noopener">PLC_chat / plc_project</a> — 当前主要工程子目录。</li>
+    <li><a href="https://github.com/Roarpeng/PLC_chat/blob/main/plc_project/README.md" target="_blank" rel="noopener">项目 README</a> — 项目定位、快速启动、支持范围与测试说明。</li>
+    <li><a href="https://github.com/Roarpeng/PLC_chat/blob/main/plc_project/agents/plc/tia/ir.py" target="_blank" rel="noopener">PLC-IR 模型</a>、<a href="https://github.com/Roarpeng/PLC_chat/blob/main/plc_project/agents/plc/tia/simaticml.py" target="_blank" rel="noopener">SimaticML Parser</a>、<a href="https://github.com/Roarpeng/PLC_chat/blob/main/plc_project/agents/plc/tia/flgnet_fold.py" target="_blank" rel="noopener">FlgNet Fold</a> — 语义层的主要代码资产。</li>
+    <li><a href="https://github.com/Roarpeng/PLC_chat/blob/main/plc_project/agents/plc/tia/coverage.py" target="_blank" rel="noopener">覆盖率报告</a>、<a href="https://github.com/Roarpeng/PLC_chat/blob/main/plc_project/agents/plc/tia/writeback_safety.py" target="_blank" rel="noopener">写回安全护栏</a>、<a href="https://github.com/Roarpeng/PLC_chat/blob/main/plc_project/gateway/app/services/plc/compile_jobs.py" target="_blank" rel="noopener">编译作业</a> — 未知项披露、备份、作业超时与恢复边界。</li>
+    <li><a href="https://github.com/Roarpeng/PLC_chat/blob/main/plc_project/docs/09-digital-twin-canvas-and-closed-loop.md" target="_blank" rel="noopener">数字孪生画布与闭环文档</a>、<a href="https://github.com/Roarpeng/PLC_chat/blob/main/plc_project/docs/07-openness-worker.md" target="_blank" rel="noopener">Windows Openness Worker 文档</a> — 现有设计目标与运行边界。</li>
+    <li><a href="https://github.com/Roarpeng/PLC_chat/commit/38c9d9b304c70936c3ba4a818126e92a30dfb7cb" target="_blank" rel="noopener">2026-10-22 最新提交</a> — 修复问答类输入可能触发默认新增变量的意图误判。</li>
+    <li><a href="https://github.com/Roarpeng/PLC_chat/commit/2fed247c48" target="_blank" rel="noopener">HMI 写回 / 可终止编译作业相关提交</a> — 提交描述中记录了真实 TIA 写回验证和作业隔离方面的改进。</li>
+  </ul>
+  <div class="line"></div>
+  <div class="callout"><strong>诚实边界：</strong>本报告基于截至 2026-10-23 可见的仓库文件、文档和提交信息做架构分析，没有在本轮连接你的 Windows/TIA 环境重新执行完整集成测试，也没有把 PLC 下载到实际设备。因此文中的“已有能力”表示从仓库实现 / 文档中确认存在相应代码或设计，不能替代现场验收报告。</div>
+  <p class="small muted" style="margin-top:14px">与上传的 Chat2PLC V2.5 蓝图相比：我保留了四层解耦、确定性解析、Openness 编译反馈这些好思路；同时把“零幻觉 / 100% 逻辑等价 / 编译后自动自愈”等过强表述降为可度量的覆盖率、语义差异和分级验证。尤其不建议简单地把持久 STA 队列当成解决所有 Openness 稳定性问题的答案；当前仓库关于一次性 CLI、进程树终止、工程锁与 Worker 取消边界的处理，应该作为当前设计依据。</p>
+</section>
+<div class="footer">PLC_chat · 工程架构理解与演进建议 · 单文件离线 HTML · 2026-10-23</div>
+</main>
+</div>
+</div>
+<script>
+(function(){
+  const links=[...document.querySelectorAll('.nav a')];
+  const sections=links.map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  if('IntersectionObserver' in window){
+    const observer=new IntersectionObserver(entries=>{
+      entries.forEach(entry=>{if(entry.isIntersecting){links.forEach(a=>a.style.background=a.getAttribute('href')==='#'+entry.target.id?'#eaf5f4':'');links.forEach(a=>a.style.color=a.getAttribute('href')==='#'+entry.target.id?'#087e83':'');}}),{rootMargin:'-15% 0px -72% 0px'});
+    sections.forEach(s=>observer.observe(s));
+  }
+})();
+</script>
+</body>
+</html>

@@ -14,3 +14,6 @@ build/
 node_modules/
 *.log
 .DS_Store
+
+# 一次性验证产物(docs/16 复现材料,可由 CLI 重跑生成,体积大不入库)
+tmp_validate/
