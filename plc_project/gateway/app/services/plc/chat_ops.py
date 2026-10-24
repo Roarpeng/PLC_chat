@@ -353,6 +353,21 @@ def select_relevant_blocks(
         for ref in _block_refs(canvas.blocks[focus_block]):
             if ref in canvas.blocks:
                 scores[ref] = scores.get(ref, 0) + 25
+    if len(scores) < k:
+        # 泛化提问（“该项目的运行逻辑”类，无块名/变量命中）时补结构锚点：
+        # OB 调度块优先，再按网络规模取主要 FB/FC，保证回答有真实逻辑可依据。
+        anchors = sorted(
+            canvas.blocks,
+            key=lambda n: (
+                not (canvas.blocks[n].name or "").upper().startswith("OB"),
+                -len(canvas.blocks[n].networks or []),
+                n,
+            ),
+        )
+        for n in anchors:
+            if len(scores) >= k:
+                break
+            scores.setdefault(n, 1)
     return sorted(scores, key=lambda n: (-scores[n], n))[:k]
 
 
@@ -368,6 +383,7 @@ def build_question_messages(
     focus_block = str(ctx.get("selected_block") or "").strip()
 
     relevant = []
+    scl_budget = 24000  # 相关块 SCL 预览总预算（字符），防止 prompt 失控
     for name in select_relevant_blocks(prompt, canvas, focus_block, k=8):
         b = canvas.blocks[name]
         row: dict[str, Any] = {
@@ -379,8 +395,13 @@ def build_question_messages(
             "networks": [n.title or f"Net{n.id}" for n in b.networks[:4]],
             "refs": sorted(_block_refs(b)),
         }
-        if name == focus_block:
-            row["scl_preview"] = b.get_full_scl()[:1200]
+        # 每个相关块都带 SCL 预览（此前只有选中块才带，导入工程的问答只剩
+        # 骨架级“猜架构”）；选中块给更长窗口，其余块从预算内截取。
+        cap = 4000 if name == focus_block else 1500
+        take = min(cap, scl_budget)
+        if take > 0:
+            row["scl_preview"] = b.get_full_scl()[:take]
+            scl_budget -= take
         relevant.append(row)
 
     widgets = [
