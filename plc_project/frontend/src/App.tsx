@@ -29,6 +29,12 @@ import {
   type ChatMessage,
   type ChatSession,
 } from "./state/sessions";
+import {
+  bootstrapRemoteMerge,
+  hydrateRemoteSession,
+  persistAndSync,
+  syncSessionDelete,
+} from "./state/sessionSync";
 import { useResizablePanes } from "./state/useResizablePanes";
 import type { CanvasStateData, CompileJobData, CompilerAttribution } from "./canvas/types";
 import { CompileDrawer } from "./shell/CompileDrawer";
@@ -320,6 +326,31 @@ const App: React.FC = () => {
       .catch(() => setBackendConnected(false));
   }, []);
 
+  // 启动时合并服务端会话历史(历史跟服务走):服务端独有/更新的会话以占位
+  // 形式进列表(点选时拉全量);本地独有/更新的老历史迁移上传。网关不可达
+  // 时静默保持纯本地模式。
+  useEffect(() => {
+    let cancelled = false;
+    void bootstrapRemoteMerge(loadSessions())
+      .then((merged) => {
+        if (cancelled || merged.length === 0) return;
+        setSessions((prev) => {
+          // 只在确有差异时替换,避免覆盖挂载后用户已产生的本地变更
+          const same =
+            prev.length === merged.length &&
+            prev.every((s, i) => s.id === merged[i].id && s.updatedAt === merged[i].updatedAt);
+          return same ? prev : merged;
+        });
+      })
+      .catch(() => {
+        /* 离线降级 */
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Esc 关闭确认弹窗
   useEffect(() => {
     if (!showConfirmModal) return;
@@ -355,7 +386,7 @@ const App: React.FC = () => {
         s.messages = msgs;
         list = [s, ...prev];
       }
-      persistSessions(list);
+      persistAndSync(list);
       return list;
     });
     if (!activeSessionIdRef.current) {
@@ -369,11 +400,16 @@ const App: React.FC = () => {
      流结束再落 localStorage，避免逐 token 写盘 */
   const updateMessageText = (id: string, text: string, persist = true) => {
     setSessions((prev) => {
-      const list = prev.map((s) => ({
-        ...s,
-        messages: s.messages.map((m) => (m.id === id ? { ...m, text } : m)),
-      }));
-      if (persist) persistSessions(list);
+      const list = prev.map((s) => {
+        const has = s.messages.some((m) => m.id === id);
+        return {
+          ...s,
+          messages: s.messages.map((m) => (m.id === id ? { ...m, text } : m)),
+          // 落盘即视为该会话有变化:更新 updatedAt,服务端同步的差量判断依赖它
+          ...(has && persist ? { updatedAt: Date.now() } : {}),
+        };
+      });
+      if (persist) persistAndSync(list);
       return list;
     });
   };
@@ -417,7 +453,7 @@ const App: React.FC = () => {
         setCanvas(remote);
         setSessions((prev) => {
           const list = prev.map((s) => (s.id === sessionId ? { ...s, canvas: remote } : s));
-          persistSessions(list);
+          persistAndSync(list);
           return list;
         });
       })
@@ -630,6 +666,26 @@ const App: React.FC = () => {
     if (!s) return;
     abortCompilePoll(); // 别让上一个会话的编译结果盖掉这份画布
     setActiveSession(id);
+    if (s.pendingRemote) {
+      // 占位会话:正文还在服务端,拉全量后再进画布(失败保留占位并提示)
+      void hydrateRemoteSession(s).then((full) => {
+        if (!full) {
+          setDockCollapsed(false);
+          return;
+        }
+        setSessions((prev) => {
+          const list = prev.map((x) => (x.id === id ? full : x));
+          persistAndSync(list);
+          return list;
+        });
+        setCanvas(full.canvas);
+        setSelectedBlockName(
+          Object.values(full.canvas.blocks).find((b) => b.block_type !== "DB")?.name ?? null
+        );
+      });
+      setFocus(null);
+      return;
+    }
     setCanvas(s.canvas);
     setSelectedBlockName(
       Object.values(s.canvas.blocks).find((b) => b.block_type !== "DB")?.name ?? null
@@ -650,7 +706,8 @@ const App: React.FC = () => {
   const handleDeleteSession = (id: string) => {
     const list = sessions.filter((s) => s.id !== id);
     setSessions(list);
-    persistSessions(list);
+    persistAndSync(list);
+    syncSessionDelete(id); // 服务端历史同步删除
     if (activeSessionId === id) {
       abortCompilePoll();
       setActiveSession(null);
@@ -688,7 +745,7 @@ const App: React.FC = () => {
     const list = [s, ...sessions];
     setSessions(list);
     setActiveSession(s.id);
-    persistSessions(list);
+    persistAndSync(list);
 
     setCanvas(imported);
     projectNameRef.current = imported.project_name;
@@ -811,7 +868,7 @@ const App: React.FC = () => {
     const list = [s, ...sessions];
     setSessions(list);
     setActiveSession(s.id);
-    persistSessions(list);
+    persistAndSync(list);
     setSelectedBlockName(null);
     setFocus(null);
   };

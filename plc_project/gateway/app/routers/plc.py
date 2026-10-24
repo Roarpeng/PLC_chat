@@ -886,6 +886,76 @@ async def canvas_to_scl_preview_endpoint(
     )
 
 
+@router.get("/canvas/sessions", response_model=ApiResponse[list[dict[str, Any]]])
+async def list_canvas_sessions(
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[list[dict[str, Any]]]:
+    """服务端会话历史(轻量 meta 列表):历史跟服务走,不跟浏览器走。"""
+    _ = principal
+    from gateway.app.services.plc import session_store
+
+    return ApiResponse(ok=True, data=session_store.list_sessions(), request_id=request_id)
+
+
+@router.get("/canvas/sessions/{session_id}", response_model=ApiResponse[dict[str, Any]])
+async def get_canvas_session(
+    session_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    _ = principal
+    from gateway.app.services.plc import session_store
+
+    data = session_store.get_session(session_id)
+    if data is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "PLC_SESSION_NOT_FOUND", "message": f"session {session_id} not found"},
+        )
+    return ApiResponse(ok=True, data=data, request_id=request_id)
+
+
+@router.put("/canvas/sessions/{session_id}", response_model=ApiResponse[dict[str, Any]])
+async def put_canvas_session(
+    session_id: str,
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """整会话 upsert(前端变更后防抖推送)。body 即完整会话对象。"""
+    _ = principal
+    from gateway.app.services.plc import session_store
+
+    session = dict(body or {})
+    session["id"] = session_id
+    try:
+        meta = session_store.put_session(session)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "PLC_SESSION_INVALID", "message": str(exc)},
+        ) from exc
+    return ApiResponse(ok=True, data=meta, request_id=request_id)
+
+
+@router.delete("/canvas/sessions/{session_id}", response_model=ApiResponse[dict[str, Any]])
+async def delete_canvas_session(
+    session_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    from gateway.app.services.plc import session_store
+
+    removed = session_store.delete_session(session_id)
+    if not removed:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "PLC_SESSION_NOT_FOUND", "message": f"session {session_id} not found"},
+        )
+    return ApiResponse(ok=True, data={"removed": session_id}, request_id=request_id)
+
+
 @router.post("/canvas/confirm-writeback", response_model=ApiResponse[dict[str, Any]])
 async def confirm_canvas_writeback_endpoint(
     body: dict[str, Any],
