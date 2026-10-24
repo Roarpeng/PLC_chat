@@ -339,7 +339,10 @@ const App: React.FC = () => {
           const same =
             prev.length === merged.length &&
             prev.every((s, i) => s.id === merged[i].id && s.updatedAt === merged[i].updatedAt);
-          return same ? prev : merged;
+          if (same) return prev;
+          // 回写本地:让墓碑命中的陈旧副本也从 localStorage 清掉
+          persistSessions(merged);
+          return merged;
         });
       })
       .catch(() => {
@@ -707,7 +710,13 @@ const App: React.FC = () => {
     const list = sessions.filter((s) => s.id !== id);
     setSessions(list);
     persistAndSync(list);
-    syncSessionDelete(id); // 服务端历史同步删除
+    // 服务端删除失败必须可见(否则刷新即复活);本地已删,仅提示
+    void syncSessionDelete(id).then((ok) => {
+      if (!ok) {
+        setWritebackNotice("历史会话在服务端删除失败(网关不可达),刷新后该会话可能重新出现");
+        setTimeout(() => setWritebackNotice(null), 8000);
+      }
+    });
     if (activeSessionId === id) {
       abortCompilePoll();
       setActiveSession(null);

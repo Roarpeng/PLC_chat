@@ -77,6 +77,36 @@ def list_sessions(settings: Any | None = None) -> list[dict[str, Any]]:
     return metas
 
 
+def _tombstones_path(settings: Any | None = None) -> Path:
+    return sessions_root(settings) / "_deleted.json"
+
+
+def list_tombstones(settings: Any | None = None) -> dict[str, float]:
+    """删除墓碑 {session_id: deleted_at}。同步方据此刻意丢弃本地副本且不再上传,
+    解决"删除后从其他设备的陈旧本地副本复活"的问题。"""
+    try:
+        data = json.loads(_tombstones_path(settings).read_text(encoding="utf-8"))
+        return {k: float(v) for k, v in data.items()} if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def record_tombstone(session_id: str, settings: Any | None = None) -> None:
+    if not _valid_id(session_id):
+        return
+    tombstones = list_tombstones(settings)
+    tombstones[session_id] = _now_ts()
+    _atomic_write(_tombstones_path(settings), json.dumps(tombstones, ensure_ascii=False))
+
+
+def clear_tombstone(session_id: str, settings: Any | None = None) -> None:
+    """会话被重新创建(同 id 复活)时清除墓碑。"""
+    tombstones = list_tombstones(settings)
+    if session_id in tombstones:
+        tombstones.pop(session_id)
+        _atomic_write(_tombstones_path(settings), json.dumps(tombstones, ensure_ascii=False))
+
+
 def get_session(session_id: str, settings: Any | None = None) -> dict[str, Any] | None:
     if not _valid_id(session_id):
         return None
@@ -102,16 +132,27 @@ def put_session(session: dict[str, Any], settings: Any | None = None) -> dict[st
     _atomic_write(root / "session.json", payload)
     meta = _meta_from_session(session)
     _atomic_write(root / "meta.json", json.dumps(meta, ensure_ascii=False))
+    # 同 id 重新创建 = 合法复活,清除墓碑
+    clear_tombstone(sid, settings)
     return meta
+
+
+def _now_ts() -> float:
+    import time
+
+    return time.time()
 
 
 def delete_session(session_id: str, settings: Any | None = None) -> bool:
     if not _valid_id(session_id):
         return False
+    # 先写墓碑再删目录:即使目录不存在(已在别处删过),墓碑也持续阻止
+    # 陈旧副本重新上传。
+    record_tombstone(session_id, settings)
     import shutil
 
     path = sessions_root(settings) / session_id
     if not path.is_dir():
-        return False
+        return True
     shutil.rmtree(path, ignore_errors=True)
     return True

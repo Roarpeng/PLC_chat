@@ -898,6 +898,20 @@ async def list_canvas_sessions(
     return ApiResponse(ok=True, data=session_store.list_sessions(), request_id=request_id)
 
 
+@router.get("/canvas/sessions/deleted", response_model=ApiResponse[dict[str, Any]])
+async def list_deleted_canvas_sessions(
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """删除墓碑表 {session_id: deleted_at}:同步方据此丢弃本地陈旧副本,防止删除复活。"""
+    _ = principal
+    from gateway.app.services.plc import session_store
+
+    return ApiResponse(
+        ok=True, data={"deleted": session_store.list_tombstones()}, request_id=request_id
+    )
+
+
 @router.get("/canvas/sessions/{session_id}", response_model=ApiResponse[dict[str, Any]])
 async def get_canvas_session(
     session_id: str,

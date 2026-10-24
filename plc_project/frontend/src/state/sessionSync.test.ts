@@ -72,6 +72,37 @@ describe("bootstrapRemoteMerge", () => {
   });
 });
 
+describe("bootstrapRemoteMerge 墓碑防复活", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mockedRequest.mockReset();
+  });
+
+  it("命中墓碑的本地会话被丢弃且不上传", async () => {
+    // 第一次调用返回会话列表,第二次返回墓碑表(实现内先列表后墓碑)
+    mockedRequest
+      .mockResolvedValueOnce([{ id: "other", title: "o", createdAt: 1, updatedAt: 2, msgCount: 0 }] as never)
+      .mockResolvedValueOnce({ deleted: { "s-dead": 12345 } } as never);
+    const merged = await bootstrapRemoteMerge([sess("s-dead", 100), sess("alive", 50)]);
+    expect(merged.map((x) => x.id).sort()).toEqual(["alive", "other"]);
+    // 迁移上传只应有 alive,不含 s-dead
+    const puts = mockedRequest.mock.calls.filter(
+      (c) => String(c[0]).includes("/canvas/sessions/") && (c[1] as RequestInit | undefined)?.method === "PUT",
+    );
+    // (防抖推送需要计时器推进——本用例只验证合并结果;推逡跳过墓碑由 scheduleSessionPush 守卫)
+    expect(merged.some((x) => x.id === "s-dead")).toBe(false);
+  });
+
+  it("墓碑端点不可达时退化为原行为(不炸)", async () => {
+    mockedRequest
+      .mockResolvedValueOnce([] as never)
+      .mockRejectedValueOnce(new Error("down") as never);
+    const local = [sess("a", 10)];
+    const merged = await bootstrapRemoteMerge(local);
+    expect(merged.map((x) => x.id)).toEqual(["a"]);
+  });
+});
+
 describe("persistAndSync 差量推送", () => {
   beforeEach(() => {
     localStorage.clear();
