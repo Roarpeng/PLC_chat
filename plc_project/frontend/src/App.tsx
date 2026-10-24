@@ -541,6 +541,15 @@ const App: React.FC = () => {
       const question = looksLikeQuestion(prompt);
       let answerTried = false;
       if (!localOps.length && question) {
+        if (Object.keys(canvas.blocks).length === 0) {
+          // 空白画布上问项目问题——LLM 只会收到空上下文答非所问，
+          // 直接引导用户进入导入的会话（打开即空白是新默认，历史需主动选）。
+          settle(
+            "当前是空白画布，还没有项目上下文。请先在左侧「历史对话」中点选你导入的工程会话" +
+              "（或点「导入项目」）,再问我项目问题,我就能基于真实块和逻辑来分析。",
+          );
+          return;
+        }
         answerTried = true;
         if (await tryChatAnswerStream(prompt, phId)) return;
       }
