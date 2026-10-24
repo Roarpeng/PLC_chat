@@ -144,10 +144,35 @@ def ops_touched_blocks(ops: list[dict[str, Any]]) -> list[str]:
     return list(dict.fromkeys(names))
 
 
+_QUESTION_MARKERS = (
+    "？", "?", "什么是", "是什么", "为什么", "怎么", "怎样", "如何", "哪些", "哪个",
+    "介绍", "解释", "说明", "描述", "分析", "评价", "总结", "梳理", "运行逻辑",
+    "控制逻辑", "工作原理", "原理", "作用", "用途", "含义", "功能", "干嘛", "干什么",
+)
+
+
+def _looks_like_question(text: str) -> bool:
+    t = (text or "").strip()
+    return t.endswith(("？", "?")) or any(m in t for m in _QUESTION_MARKERS)
+
+
+def _question_without_edit_intent(text: str) -> bool:
+    """问句且不含编辑动词——才视为纯提问（「怎么创建 FB X?」是带问号的编辑指令）。"""
+    return _looks_like_question(text) and not re.search(
+        r"(新建|添加|创建|删除|移除|重命名|改名|绑定|增加)", text or ""
+    )
+
+
 def build_ops_from_rules(prompt: str, canvas: CanvasState) -> list[dict[str, Any]]:
     text = (prompt or "").strip()
     low = text.lower()
     ops: list[dict[str, Any]] = []
+
+    # 提问/分析类输入不当编辑处理——守卫在关键词规则之前（与前端
+    # canvasOps.buildOpsFromPrompt 同款；否则问「分析报警逻辑」会误建急停变量）。
+    # 带编辑动词的问句（「怎么创建 FB X?」）仍走结构化意图。
+    if _question_without_edit_intent(text):
+        return []
 
     # Emergency stop / alarm button
     if any(k in text for k in ("急停", "紧急停止", "e-stop", "estop", "alarm")):
@@ -561,6 +586,11 @@ def build_chat_ops(
 ) -> dict[str, Any]:
     """Build validated ops from natural language."""
     ctx = context or {}
+    # 纯提问永不出编辑 ops——LLM 对问句偶尔幻觉出 add_variable，这条
+    # 守卫是最后防线（前端 canvasOps 与 rules 路径有同款守卫；带编辑
+    # 动词的问句仍放行给结构化意图/LLM）。
+    if _question_without_edit_intent(prompt):
+        return {"ops": [], "errors": [], "source": "question", "preview": []}
     ops: list[dict[str, Any]] = []
     source = "rules"
     if use_llm:

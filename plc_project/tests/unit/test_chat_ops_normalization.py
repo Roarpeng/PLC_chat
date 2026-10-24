@@ -101,3 +101,33 @@ def test_update_block_with_patch_and_vars_add_keeps_both() -> None:
         "block": "FB_A",
         "variable": {"name": "V2", "data_type": "Real", "comment": "x"},
     }
+
+
+def test_question_prompts_never_produce_ops() -> None:
+    """「分析项目的报警逻辑」曾是重灾区：报警关键词误建急停变量。"""
+    from gateway.app.services.plc.chat_ops import build_chat_ops, build_ops_from_rules
+    from plc_engine.canvas_model import CanvasBlock
+
+    c = _canvas_with_block()
+    c.blocks["FB_A"].interface = []
+    for p in ("分析项目的报警逻辑", "这个项目的报警怎么处理?", "解释一下急停回路", "分析项目"):
+        assert build_ops_from_rules(p, c) == [], p
+        assert build_chat_ops(p, c, use_llm=False)["ops"] == [], p
+
+
+def test_edit_prompts_still_produce_ops() -> None:
+    from gateway.app.services.plc.chat_ops import build_ops_from_rules
+
+    c = _canvas_with_block()
+    c.blocks["FB_A"].interface = []
+    ops = build_ops_from_rules("加一个急停按钮", c)
+    assert any(op.get("op") == "add_variable" for op in ops)
+
+
+def test_question_phrazed_edit_intent_still_works() -> None:
+    """「怎么创建 FB X?」带问号但是明确编辑指令,必须仍然出 ops。"""
+    from gateway.app.services.plc.chat_ops import build_ops_from_rules
+
+    c = _canvas_with_block()
+    ops = build_ops_from_rules("怎么创建 FB Sorter?", c)
+    assert any(op.get("op") == "add_block" for op in ops)

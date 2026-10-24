@@ -650,6 +650,11 @@ export function buildOpsFromPrompt(prompt: string, canvas: CanvasStateData): any
   const variableIntent = matchVariableIntent(prompt, canvas);
   if (variableIntent) return variableIntent;
 
+  // 提问/分析类输入不当编辑——守卫放在关键词规则之前、结构化编辑意图之后：
+  // 「怎么创建 FB X?」这类明确编辑意图仍执行（意图优先），
+  // 而「分析项目的报警逻辑」不会再被 急停/报警 关键词误建成变量+按钮。
+  if (looksLikeQuestion(prompt)) return [];
+
   const lower = prompt.toLowerCase();
   if (prompt.includes("急停") || prompt.includes("报警") || lower.includes("estop")) {
     return buildEstopOps(canvas);
@@ -658,7 +663,6 @@ export function buildOpsFromPrompt(prompt: string, canvas: CanvasStateData): any
     const pumpOps = buildPumpOps(canvas);
     if (pumpOps) return pumpOps;
   }
-  if (looksLikeQuestion(prompt)) return [];
   return buildDefaultOps(prompt, canvas);
 }
 
