@@ -553,6 +553,7 @@ const App: React.FC = () => {
         answerTried = true;
         if (await tryChatAnswerStream(prompt, phId)) return;
       }
+      let llmSaidNoEdit = false;
       try {
         const data = await requestPlc<{ ops?: any[]; source?: string }>(
           `/api/v1/plc/canvas/chat-ops`,
@@ -572,6 +573,10 @@ const App: React.FC = () => {
         if (Array.isArray(data?.ops) && data.ops.length) {
           ops = data.ops;
           previewNote = `（${data.source || "chat-ops"}）`;
+        } else {
+          // LLM 明确判定不是编辑指令（或问句守卫拦截）→ 按成熟 Chat 的
+          // 行为交给问答，而不是甩"暂未识别"兜底
+          llmSaidNoEdit = true;
         }
       } catch {
         /* fall through to local rules */
@@ -580,8 +585,9 @@ const App: React.FC = () => {
         ops = localOps;
       }
       if (ops.length === 0) {
-        // LLM 对提问正确返回空 ops 时也走问答（此前只兜本地意图）
-        if (question && !answerTried) {
+        // 本地问句判定 或 LLM 判定非编辑 → 都走问答（此前只兜本地意图）
+        if ((question || llmSaidNoEdit) && !answerTried) {
+          answerTried = true;
           if (await tryChatAnswerStream(prompt, phId)) return;
         }
         settle("暂未识别出可执行的画布操作。分析类问题（如运行逻辑/原理）请选中画布中的块后查看深度解释；编辑指令示例：创建 FB ConveyorCtrl / 在 ConveyorCtrl 中添加变量 Speed Real / 添加急停按钮。");

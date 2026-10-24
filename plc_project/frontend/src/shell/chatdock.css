@@ -221,3 +221,123 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* —— 成熟 Chat 体验：时间标签 + 复制按钮 + Markdown 正文（2026-10-24）—— */
+.dock-time {
+  font-size: 10.5px;
+  color: var(--ink-3, #8a9099);
+  font-family: var(--mono, monospace);
+  letter-spacing: 0.02em;
+}
+
+.dock-time--user {
+  margin-left: 8px;
+  opacity: 0.75;
+}
+
+.dock-msgmeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.dock-copy {
+  border: none;
+  background: transparent;
+  color: var(--ink-3, #8a9099);
+  font-size: 10.5px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.dock-msg:hover .dock-copy,
+.dock-copy.is-copied,
+.dock-copy:focus-visible {
+  opacity: 1;
+}
+
+.dock-copy:hover {
+  color: var(--accent, #087e83);
+  background: var(--surface-2, #eef0f4);
+}
+
+.dock-copy.is-copied {
+  color: var(--accent, #087e83);
+  font-weight: 600;
+}
+
+/* 系统消息改为 Markdown 渲染后的窄栏适配 */
+.dock-md {
+  max-width: 88%;
+  padding: 6px 11px;
+  background: var(--surface-2, #f1f2ed);
+  color: var(--ink-2);
+  border-radius: 0 10px 10px 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.dock-md .markdown-body :first-child {
+  margin-top: 0;
+}
+
+.dock-md .markdown-body :last-child {
+  margin-bottom: 0;
+}
+
+.dock-md .markdown-body h1,
+.dock-md .markdown-body h2,
+.dock-md .markdown-body h3,
+.dock-md .markdown-body h4 {
+  font-size: 13.5px;
+  margin: 10px 0 4px;
+}
+
+.dock-md .markdown-body p {
+  margin: 4px 0;
+}
+
+.dock-md .markdown-body table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+
+.dock-md .markdown-body th,
+.dock-md .markdown-body td {
+  border: 1px solid var(--line, #d9e1e7);
+  padding: 3px 7px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dock-md .markdown-body pre,
+.dock-md .markdown-body .md-pre {
+  max-width: 100%;
+  overflow-x: auto;
+  font-size: 11.5px;
+  padding: 6px 8px;
+}
+
+.dock-md .markdown-body ul,
+.dock-md .markdown-body ol {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.dock-md .markdown-body code,
+.dock-md .markdown-body .md-code-inline {
+  font-size: 12px;
+}
+
+.dock-bubble {
+  user-select: text;
+}

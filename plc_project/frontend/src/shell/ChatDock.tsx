@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "../state/sessions";
+import MarkdownBody from "../MarkdownBody";
 import "./chatdock.css";
 
 export interface ChatDockProps {
@@ -11,6 +12,83 @@ export interface ChatDockProps {
   collapsed: boolean;
   onToggleCollapse(): void;
 }
+
+/** HH:MM 时间标签（无时间戳的旧消息显示 "—"） */
+function timeLabel(ts: number | undefined): string {
+  if (!ts) return "";
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // http/权限受限时的兜底（与 SclPane 复制同款）
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try {
+      ok = document.execCommand("copy");
+    } catch {
+      ok = false;
+    }
+    document.body.removeChild(ta);
+    return ok;
+  }
+}
+
+/** 单条消息：时间标签 + 正文（系统消息渲染 Markdown）+ 悬停复制按钮 */
+const DockMessage: React.FC<{ m: ChatMessage }> = ({ m }) => {
+  const [copied, setCopied] = useState(false);
+  const label = timeLabel(m.ts);
+  const onCopy = async () => {
+    if (await copyText(m.text)) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    }
+  };
+  if (m.role === "user") {
+    return (
+      <div className="dock-msg dock-msg--user">
+        <div className="dock-bubble">
+          {m.text}
+          {label && <span className="dock-time dock-time--user">{label}</span>}
+        </div>
+        <button
+          type="button"
+          className={"dock-copy" + (copied ? " is-copied" : "")}
+          aria-label={copied ? "已复制" : "复制这条消息"}
+          title={copied ? "已复制" : "复制"}
+          onClick={() => void onCopy()}
+        >
+          {copied ? "已复制" : "复制"}
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="dock-msg dock-msg--system">
+      <div className="dock-msgmeta">
+        {label && <span className="dock-time">{label}</span>}
+        <button
+          type="button"
+          className={"dock-copy" + (copied ? " is-copied" : "")}
+          aria-label={copied ? "已复制" : "复制这条回答"}
+          title={copied ? "已复制" : "复制"}
+          onClick={() => void onCopy()}
+        >
+          {copied ? "已复制" : "复制"}
+        </button>
+      </div>
+      <MarkdownBody className="dock-md" content={m.text} />
+    </div>
+  );
+};
 
 export const ChatDock: React.FC<ChatDockProps> = ({
   messages,
@@ -67,17 +145,7 @@ export const ChatDock: React.FC<ChatDockProps> = ({
             {messages.length === 0 ? (
               <p className="dock-empty">输入指令，画布会实时更新，可随时在历史中找回。</p>
             ) : (
-              messages.map((m) =>
-                m.role === "user" ? (
-                  <div className="dock-msg dock-msg--user" key={m.id}>
-                    <div className="dock-bubble">{m.text}</div>
-                  </div>
-                ) : (
-                  <div className="dock-msg dock-msg--system" key={m.id}>
-                    <div className="dock-sysline">{m.text}</div>
-                  </div>
-                )
-              )
+              messages.map((m) => <DockMessage key={m.id} m={m} />)
             )}
           </div>
           <form

@@ -168,6 +168,10 @@ describe("buildOpsFromPrompt", () => {
     expect(buildOpsFromPrompt("如何优化启动逻辑", fixture())).toEqual([]);
     expect(buildOpsFromPrompt("当前功能块作用", fixture())).toEqual([]);
     expect(buildOpsFromPrompt("FB1063 的用途", fixture())).toEqual([]);
+    expect(buildOpsFromPrompt("给我讲讲这个项目", fixture())).toEqual([]);
+    expect(buildOpsFromPrompt("看看报警怎么处理", fixture())).toEqual([]);
+    expect(buildOpsFromPrompt("这个块是干嘛的吗", fixture())).toEqual([]);
+    expect(buildOpsFromPrompt("说说回原点流程", fixture())).toEqual([]);
   });
   it("无编辑信号的杂项输入不再兜底塞 UserVar（回归：'当前功能块作用'曾新增 UserVar_949）", () => {
     expect(buildOpsFromPrompt("看看这个", fixture())).toEqual([]);

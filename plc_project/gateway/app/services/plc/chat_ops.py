@@ -146,14 +146,21 @@ def ops_touched_blocks(ops: list[dict[str, Any]]) -> list[str]:
 
 _QUESTION_MARKERS = (
     "？", "?", "什么是", "是什么", "为什么", "怎么", "怎样", "如何", "哪些", "哪个",
-    "介绍", "解释", "说明", "描述", "分析", "评价", "总结", "梳理", "运行逻辑",
-    "控制逻辑", "工作原理", "原理", "作用", "用途", "含义", "功能", "干嘛", "干什么",
+    "哪条", "几个", "多少", "介绍", "解释", "说明", "描述", "分析", "评价", "评估",
+    "总结", "梳理", "审查", "检查", "排查", "对比", "区别", "关系", "列出", "列举",
+    "讲讲", "讲一下", "说一下", "说说", "聊聊", "了解", "看看", "有没有", "是不是",
+    "能不能", "可不可以", "干嘛", "干什么", "啥意思", "含义", "作用", "用途",
+    "运行逻辑", "控制逻辑", "工作原理", "原理", "功能",
 )
 
 
 def _looks_like_question(text: str) -> bool:
     t = (text or "").strip()
-    return t.endswith(("？", "?")) or any(m in t for m in _QUESTION_MARKERS)
+    if t.endswith(("？", "?")):
+        return True
+    if re.search(r"[吗嘛么]\s*[？?]?\s*$", t):
+        return True
+    return any(m in t for m in _QUESTION_MARKERS)
 
 
 def _question_without_edit_intent(text: str) -> bool:
