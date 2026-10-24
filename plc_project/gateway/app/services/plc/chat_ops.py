@@ -26,6 +26,87 @@ ALLOWED_OPS = {
 }
 
 
+def _normalize_llm_op(op_item: dict[str, Any]) -> tuple[list[dict[str, Any]], str | None]:
+    """Normalize common LLM op variants to the canonical patch schema.
+
+    LLM 有时自创载荷（实测 DeepSeek：``update_block`` + ``vars_add`` + ``type``），
+    未归一直接放行会出现“已执行”但 apply 静默无效的假成功。返回
+    (normalized_ops, error)；error 非空表示该 op 无有效载荷，应剔除并报错。
+    """
+    op = str(op_item.get("op") or "")
+    if op in {"update_block", "update_block_scl"}:
+        out: list[dict[str, Any]] = []
+        has_payload = any(
+            k in op_item for k in ("patch", "scl_body", "comment", "interface", "networks")
+        )
+        if has_payload:
+            out.append(op_item)
+        for key in ("vars_add", "add_vars", "vars", "variables_add"):
+            for v in op_item.get(key) or []:
+                if not isinstance(v, dict) or not str(v.get("name") or "").strip():
+                    continue
+                var = {
+                    "name": str(v["name"]).strip(),
+                    "data_type": str(
+                        v.get("data_type") or v.get("type") or v.get("datatype") or "Bool"
+                    ),
+                }
+                if v.get("section"):
+                    var["section"] = v["section"]
+                if v.get("comment"):
+                    var["comment"] = v["comment"]
+                out.append(
+                    {
+                        "op": "add_variable",
+                        "block": op_item.get("name") or op_item.get("block") or "",
+                        "variable": var,
+                    }
+                )
+        if out:
+            return out, None
+        return [], f"update_block without payload: {op_item.get('name') or '?'}"
+    if op == "add_variable":
+        var = dict(op_item.get("variable") or {})
+        if not var and op_item.get("name") and op_item.get("type"):
+            # 变体：把块名/变量名平铺在 op 顶层
+            var = {"name": op_item["name"], "data_type": op_item.get("type")}
+        if var.get("type") and not var.get("data_type"):
+            var["data_type"] = var.pop("type")
+        if not str(var.get("name") or "").strip():
+            return [], "add_variable missing variable.name"
+        block = op_item.get("block") or op_item.get("block_name") or ""
+        return [{**op_item, "block": block, "variable": var}], None
+    return [op_item], None
+
+
+def _validate_one(
+    canvas: CanvasState, op_item: dict[str, Any], cleaned: list[dict[str, Any]], errors: list[str]
+) -> None:
+    op = str(op_item.get("op") or "")
+    if op not in ALLOWED_OPS:
+        errors.append(f"op unsupported: {op}")
+        return
+    if op in {"update_block", "update_block_scl", "add_network", "update_network", "add_variable", "remove_variable"}:
+        name = op_item.get("name") or op_item.get("block")
+        if name and name not in canvas.blocks:
+            errors.append(f"op {op} unknown block: {name}")
+            return
+    if op in {"update_hmi_widget", "remove_hmi_widget"}:
+        wid = op_item.get("id")
+        if wid and wid not in canvas.hmi_widgets:
+            errors.append(f"op {op} unknown hmi widget: {wid}")
+            return
+    if op == "add_block":
+        # LLM 生成的 add_block 可能缺 name/块体——放行会导致前端"已执行"
+        # 但 applyOpsLocally 静默忽略，块根本没建。缺关键字段直接剔除。
+        blk = op_item.get("block")
+        name = str(blk.get("name") or "").strip() if isinstance(blk, dict) else ""
+        if not name:
+            errors.append("op add_block missing block.name")
+            return
+    cleaned.append(op_item)
+
+
 def validate_ops(canvas: CanvasState, ops: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
     """Filter/validate ops against whitelist and canvas references."""
     cleaned: list[dict[str, Any]] = []
@@ -34,32 +115,13 @@ def validate_ops(canvas: CanvasState, ops: list[dict[str, Any]]) -> tuple[list[d
         if not isinstance(op_item, dict):
             errors.append(f"op[{i}] not an object")
             continue
-        op = str(op_item.get("op") or "")
-        if op not in ALLOWED_OPS:
-            errors.append(f"op[{i}] unsupported: {op}")
+        normalized, norm_err = _normalize_llm_op(op_item)
+        if norm_err:
+            errors.append(f"op[{i}] {norm_err}")
             continue
-        if op in {"update_block", "update_block_scl", "remove_block", "add_network", "update_network", "add_variable"}:
-            name = op_item.get("name") or op_item.get("block")
-            if op != "add_block" and name and name not in canvas.blocks and op.startswith("update"):
-                # update_block_scl / update_block require existing block
-                if op in {"update_block", "update_block_scl", "update_network", "add_network", "add_variable"}:
-                    if name not in canvas.blocks:
-                        errors.append(f"op[{i}] unknown block: {name}")
-                        continue
-        if op in {"update_hmi_widget", "remove_hmi_widget"}:
-            wid = op_item.get("id")
-            if wid and wid not in canvas.hmi_widgets:
-                errors.append(f"op[{i}] unknown hmi widget: {wid}")
-                continue
-        if op == "add_block":
-            # LLM 生成的 add_block 可能缺 name/块体——放行会导致前端"已执行"
-            # 但 applyOpsLocally 静默忽略，块根本没建。缺关键字段直接剔除。
-            blk = op_item.get("block")
-            name = str(blk.get("name") or "").strip() if isinstance(blk, dict) else ""
-            if not name:
-                errors.append(f"op[{i}] add_block missing block.name")
-                continue
-        cleaned.append(op_item)
+        # 归一化可能一拆多（update_block+vars_add → update_block + N×add_variable）
+        for item in normalized:
+            _validate_one(canvas, item, cleaned, errors)
     return cleaned, errors
 
 
@@ -205,6 +267,11 @@ _LLM_OPS_SYSTEM = (
     "You are a PLC/HMI editor that outputs ONLY a json object "
     '{{"ops": [...]}} with canvas ops. '
     "Allowed op names: {allowed}. "
+    "Payload schemas (follow EXACTLY, do not invent fields like vars_add): "
+    '{{"op":"add_variable","block":"<existing block>","variable":{{"name":"...","data_type":"Bool|Int|Real|...","section":"VAR_INPUT|VAR_OUTPUT|VAR|VAR_STAT","comment":"..."}}}}; '
+    '{{"op":"update_block","name":"<existing block>","patch":{{"comment":"..."| "scl_body":"..." | "interface":[...] | "networks":[...]}}}}; '
+    '{{"op":"add_network","block":"<existing block>","network":{{"title":"...","scl_text":"..."}}}}; '
+    '{{"op":"add_block","block":{{"name":"...","block_type":"FB|FC|DB","language":"SCL","interface":[...],"networks":[...]}}}}. '
     "For block body changes prefer update_block_scl with full SCL statements between BEGIN/END. "
     "Only reference blocks present in the context unless op is add_block. "
     "If the request is a question, analysis, or meta request (e.g. read/analyze/explain/"

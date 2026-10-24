@@ -102,7 +102,9 @@ def test_1to1_scl_transpiler_and_bundle(tmp_path: Path) -> None:
     assert "Start_PB" in tags_xml
     assert "%I0.0" in tags_xml
 
-    # 3. Build bundle
+    # 3. Build bundle — 标签表只在有 draft 标签时打包（最小破坏原则），
+    #    模拟用户改过一个标签
+    next(iter(canvas.tags.values())).status = "draft"
     bundle_dir = canvas_to_tia_bundle(canvas, tmp_path / "bundle")
     assert bundle_dir.is_dir()
     assert (bundle_dir / "external_sources" / "MainDB.scl").is_file()
@@ -110,6 +112,10 @@ def test_1to1_scl_transpiler_and_bundle(tmp_path: Path) -> None:
     assert (bundle_dir / "CanvasTags.xml").is_file()
     assert (bundle_dir / "staged_scls.json").is_file()
     assert (bundle_dir / "staged_xmls.json").is_file()
+    # 全 synced 标签 → 不打包标签表
+    next(iter(canvas.tags.values())).status = "synced"
+    bundle_dir2 = canvas_to_tia_bundle(canvas, tmp_path / "bundle2")
+    assert not (bundle_dir2 / "CanvasTags.xml").is_file()
 
 
 def test_compiler_error_attribution_and_autofix() -> None:
@@ -202,11 +208,15 @@ def test_gateway_rest_canvas_endpoints(monkeypatch: pytest.MonkeyPatch) -> None:
     app = create_app()
     client = TestClient(app)
 
-    # 1. GET /canvas/default
+    # 1. GET /canvas/default — 打开即空白画布（2026-10-24 起不再预置演示块）
     resp1 = client.get("/api/v1/plc/canvas/default")
     assert resp1.status_code == 200
-    canvas_dict = resp1.json()["data"]
-    assert "MainDB" in canvas_dict["blocks"]
+    assert resp1.json()["data"]["blocks"] == {}
+
+    # 后续流程用种子画布（与旧默认等价）驱动
+    from plc_engine.canvas_model import create_empty_canvas
+
+    canvas_dict = create_empty_canvas("Demo").to_dict()
 
     # 2. POST /canvas/patch
     resp2 = client.post(

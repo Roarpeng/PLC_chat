@@ -117,12 +117,15 @@ def canvas_to_tia_bundle(canvas: CanvasState, output_dir: str | Path) -> Path:
         if block is not None and str(getattr(block, "status", "")) == "synced":
             continue
         scl_file = ext_dir / f"{block_name}.scl"
-        scl_file.write_text(scl_content, encoding="utf-8")
+        # TIA External Source 只认 UTF-8 带 BOM(无 BOM 且含非 ASCII 中文注释时
+        # CreateFromFile 直接报 Unable to open the file —— 真机 HR001 复现)
+        scl_file.write_text(scl_content, encoding="utf-8-sig")
         staged_scls.append(str(scl_file))
 
-    # 2. Tag Table XML
+    # 2. Tag Table XML — 只有存在 draft 标签才回写（导入的 synced 标签不动，
+    #    与块的最小破坏原则一致）
     staged_xmls: list[str] = []
-    if canvas.tags:
+    if any(getattr(t, "status", "") == "draft" for t in canvas.tags.values()):
         tags_xml_file = bundle_path / "CanvasTags.xml"
         tags_xml_file.write_text(preview_canvas_tags_xml(canvas), encoding="utf-8")
         staged_xmls.append(str(tags_xml_file))
@@ -174,5 +177,7 @@ def execute_canvas_writeback(
         for widget in canvas.hmi_widgets.values():
             widget.status = "synced"
             widget.errors = []
+        for tag in canvas.tags.values():
+            tag.status = "synced"
 
     return writeback_result, attributions

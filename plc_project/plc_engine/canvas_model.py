@@ -75,13 +75,22 @@ class CanvasBlock:
                 if btype == "FC"
                 else "ORGANIZATION_BLOCK"
             )
-            lines.append(f'{kw} "{self.name}"')
+            # TIA 外部源方言：FUNCTION 必须带返回类型（真机编译反馈
+            # Row 000001: The specified value "VAR_INPUT" is invalid）。
+            # canvas 把 Return 段并入 VAR_OUTPUT，故统一 Void（无返回）。
+            ret = " : Void" if btype == "FC" else ""
+            lines.append(f'{kw} "{self.name}"{ret}')
 
             sections: dict[str, list[CanvasVariable]] = {}
             for v in self.interface:
                 sections.setdefault(v.section.upper(), []).append(v)
 
             for sec, vars_list in sections.items():
+                # Void 无值不可声明（hr001 FC_BlockMove.Ret_Val 系统形态），
+                # TIA External Source 解析会直接拒绝 —— 发射层丢弃。
+                vars_list = [v for v in vars_list if str(v.data_type or "").strip().upper() != "VOID"]
+                if not vars_list:
+                    continue
                 keyword = self._SCL_SECTION_KEYWORD.get(sec, "VAR")
                 lines.append(keyword)
                 for v in vars_list:
@@ -182,6 +191,10 @@ class CanvasTag:
     data_type: str
     logical_address: str  # %I0.0, %Q0.0, %M10.0
     comment: str = ""
+    # 与块同样的最小破坏原则：导入的标签 synced 不回写，只有 draft 标签
+    # 触发标签表重写（TIA 对手工生成的标签 XML 导入挑剔，整表重写未改动
+    # 数据只会平添失败面——真机 HR001 复现）。
+    status: str = "synced"
 
 
 @dataclass
@@ -627,6 +640,7 @@ def apply_canvas_patch(canvas: CanvasState, operations: list[dict[str, Any]]) ->
                 canvas.tags[name] = CanvasTag(
                     **{k: v for k, v in t_dict.items() if k in CanvasTag.__dataclass_fields__}
                 )
+                canvas.tags[name].status = "draft"
 
         elif op == "clear_errors":
             for b in canvas.blocks.values():

@@ -828,13 +828,17 @@ async def standalone_audit_block(
 async def get_default_canvas(
     principal: PrincipalDep,
     request_id: RequestIdDep,
-    project_name: str = "PlcDemoProject",
+    project_name: str = "",
 ) -> ApiResponse[dict[str, Any]]:
-    """Return default starting interactive Canvas state with dual-view PLC/HMI elements."""
-    _ = principal
-    from plc_engine.canvas_model import create_empty_canvas
+    """Return a blank starting canvas.
 
-    canvas = create_empty_canvas(project_name=project_name)
+    演示种子块已移除：打开即是空白画面，用户通过导入工程或主动选择历史
+    会话进入具体项目（产品决策 2026-10-24）。
+    """
+    _ = principal
+    from plc_engine.canvas_model import CanvasState
+
+    canvas = CanvasState(project_name=project_name)
     return ApiResponse(ok=True, data=canvas.to_dict(), request_id=request_id)
 
 

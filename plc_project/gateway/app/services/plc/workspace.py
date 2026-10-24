@@ -80,6 +80,21 @@ def persist_imported_project(
         sibling = source.parent / source.stem
         if sibling.is_dir():
             shutil.copytree(sibling, original / sibling.name, dirs_exist_ok=True)
+        else:
+            # Sidecar 布局（zap 解包常见）：工程数据不在同名子目录，而是
+            # System/IM/TMP 等边车目录与 .apxx 描述文件同级 —— 工程根就是
+            # 描述文件的父目录。只拷描述文件会让 TIA Open 报「指定的路径
+            # 无效」（真机 HR001 zap19 复现），必须整树拷贝。
+            # 判定必须严格：只认 TIA 工程根专有目录，防止把恰好同级的无关
+            # 文件夹（含本函数创建的 workspace 子树）误判成工程根而自拷贝。
+            _TIA_ROOT_DIRS = ("System", "IM", "TMP", "bin", "pe")
+            if any((source.parent / n).is_dir() for n in _TIA_ROOT_DIRS):
+                shutil.copytree(
+                    source.parent,
+                    original,
+                    dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns("_researchos*"),
+                )
     else:
         shutil.copytree(source, original, dirs_exist_ok=True)
 

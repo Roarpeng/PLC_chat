@@ -5,7 +5,7 @@ import { ChatDock } from "./shell/ChatDock";
 import { VariableInspector } from "./shell/VariableInspector";
 import { ImportDialog } from "./shell/ImportDialog";
 import { CreateBlockDialog } from "./shell/CreateBlockDialog";
-import { defaultCanvas } from "./state/defaultCanvas";
+import { blankCanvas } from "./state/tiaXmlImport";
 import {
   applyOpsLocally,
   buildOpsFromPrompt,
@@ -19,7 +19,6 @@ import {
   touchedBlockNames,
   looksLikeQuestion,
 } from "./state/canvasOps";
-import { blankCanvas } from "./state/tiaXmlImport";
 import { analyzeCanvas, type VarRef } from "./state/crossRef";
 import { explainBlock } from "./state/blockExplainer";
 import {
@@ -170,7 +169,7 @@ const ChevronsRight: React.FC = () => (
 
 const App: React.FC = () => {
   /* 画布与会话 */
-  const [canvas, setCanvas] = useState<CanvasStateData>(defaultCanvas);
+  const [canvas, setCanvas] = useState<CanvasStateData>(() => blankCanvas(""));
   const [backendConnected, setBackendConnected] = useState<boolean | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>(() => loadSessions());
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -188,7 +187,7 @@ const App: React.FC = () => {
   const [dockCollapsed, setDockCollapsed] = useState(false);
 
   /* 中栏：选中块驱动（三栏并存，无标签页） */
-  const [selectedBlockName, setSelectedBlockName] = useState<string | null>("MotorCtrl");
+  const [selectedBlockName, setSelectedBlockName] = useState<string | null>(null);
   const [focus, setFocus] = useState<FocusTarget | null>(null);
 
   /* 导入 / 从零构建 */
@@ -626,8 +625,8 @@ const App: React.FC = () => {
   const handleNewSession = () => {
     abortCompilePoll();
     setActiveSession(null);
-    setCanvas(defaultCanvas);
-    setSelectedBlockName("MotorCtrl");
+    setCanvas(blankCanvas(""));
+    setSelectedBlockName(null);
     setFocus(null);
     setChatInput("");
     setDockCollapsed(false);
@@ -640,8 +639,8 @@ const App: React.FC = () => {
     if (activeSessionId === id) {
       abortCompilePoll();
       setActiveSession(null);
-      setCanvas(defaultCanvas);
-      setSelectedBlockName("MotorCtrl");
+      setCanvas(blankCanvas(""));
+      setSelectedBlockName(null);
     }
   };
 

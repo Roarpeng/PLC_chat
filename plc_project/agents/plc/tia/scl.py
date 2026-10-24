@@ -1103,6 +1103,10 @@ def _interface_text(block: Block, extra_static: list[Variable] | None = None) ->
             key = (var.name or "").strip().upper()
             if not key or key in seen_names:
                 continue
+            if str(var.data_type or "").strip().upper() == "VOID":
+                # Void 无值不可声明（hr001 FC_BlockMove.Ret_Val 系统形态），
+                # TIA External Source 解析直接拒绝 → 发射层丢弃（IR 保留）
+                continue
             seen_names.add(key)
             unique.append(var)
         if not unique:
