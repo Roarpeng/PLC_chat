@@ -1174,6 +1174,7 @@ async def canvas_chat_answer_endpoint(
         data={
             "answer": result.get("answer") or "",
             "usage": result.get("usage") or {},
+            "mode": result.get("mode") or "direct",
             "llm": True,
         },
         request_id=request_id,

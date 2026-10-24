@@ -472,6 +472,7 @@ const App: React.FC = () => {
   const tryChatAnswerStream = async (prompt: string, phId: string): Promise<boolean> => {
     let sysText = "";
     let usage: Record<string, number> | null = null;
+    let modeHint = "";
     try {
       const res = await fetch(`${GATEWAY_BASE}/api/v1/plc/canvas/chat-answer/stream`, {
         method: "POST",
@@ -522,8 +523,11 @@ const App: React.FC = () => {
     }
     if (!sysText) {
       try {
-        const data = await requestPlc<{ answer?: string; usage?: Record<string, number> }>(
-          `/api/v1/plc/canvas/chat-answer`,
+        const data = await requestPlc<{
+          answer?: string;
+          usage?: Record<string, number>;
+          mode?: string;
+        }>(`/api/v1/plc/canvas/chat-answer`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -538,6 +542,7 @@ const App: React.FC = () => {
         if (data?.answer) {
           sysText = data.answer;
           usage = data.usage || null;
+          modeHint = data.mode || "";
         }
       } catch {
         return false;
@@ -545,12 +550,14 @@ const App: React.FC = () => {
     }
     if (!sysText) return false;
     const u = usage || {};
+    const reasoning = (u as any).completion_tokens_details?.reasoning_tokens as number | undefined;
+    const thinkUsed = (reasoning !== undefined && reasoning > 0) || modeHint === "think";
     const hitRate = u.prompt_tokens
       ? Math.round(((u.prompt_cache_hit_tokens || 0) / u.prompt_tokens) * 100)
       : null;
     const footer =
       u.prompt_tokens || u.completion_tokens
-        ? `\n\n（DeepSeek · 输入 ${u.prompt_tokens ?? "?"} tok${
+        ? `\n\n（DeepSeek${thinkUsed ? " · 深度思考" : ""} · 输入 ${u.prompt_tokens ?? "?"} tok${
             hitRate !== null ? ` · 缓存命中 ${hitRate}%` : ""
           } · 输出 ${u.completion_tokens ?? "?"} tok）`
         : "";

@@ -170,6 +170,29 @@ def _question_without_edit_intent(text: str) -> bool:
     )
 
 
+# 复杂任务信号:命中即走 thinking 深想(工业可靠优先;默认简单直答)
+_THINK_MARKERS = (
+    "为什么", "分析", "架构", "重构", "优化", "改进", "排查", "诊断", "风险",
+    "评估", "对比", "区别", "设计", "联锁", "状态机", "时序", "步序", "安全",
+    "AF", "Automation Framework", "多块", "整个项目", "全线", "改造",
+)
+
+
+def needs_think(prompt: str, canvas: CanvasState | None = None) -> bool:
+    """简单任务直答,复杂任务 think。判定从保守:长输入或命中复杂信号才深想。"""
+    t = (prompt or "").strip()
+    if len(t) >= 80:
+        return True
+    if any(m.lower() in t.lower() for m in _THINK_MARKERS):
+        return True
+    if canvas is not None:
+        # 引用 >=2 个真实块名 = 跨块任务
+        hits = sum(1 for name in canvas.blocks if name and name in t)
+        if hits >= 2:
+            return True
+    return False
+
+
 def build_ops_from_rules(prompt: str, canvas: CanvasState) -> list[dict[str, Any]]:
     text = (prompt or "").strip()
     low = text.lower()
@@ -313,7 +336,9 @@ _LLM_OPS_SYSTEM = (
 )
 
 
-def _llm_ops(prompt: str, canvas: CanvasState, context: dict[str, Any]) -> list[dict[str, Any]]:
+def _llm_ops(
+    prompt: str, canvas: CanvasState, context: dict[str, Any], *, think: bool = False
+) -> list[dict[str, Any]]:
     from gateway.app.services.plc.llm_explain import chat_completion_raw, llm_settings
 
     settings = llm_settings()
@@ -354,9 +379,10 @@ def _llm_ops(prompt: str, canvas: CanvasState, context: dict[str, Any]) -> list[
             {"role": "user", "content": user},
         ],
         settings,
-        timeout_s=60.0,
-        max_tokens=1024,
+        timeout_s=90.0 if think else 60.0,
+        max_tokens=2048 if think else 1024,
         json_mode=True,
+        think=think,
     )
     text = (text or "").strip()
     if text.startswith("```"):
@@ -554,13 +580,15 @@ def answer_project_question(
     settings = llm_settings()
     if settings is None:
         raise LlmNotConfigured("未配置 LLM（PLC_LLM_* 或 DEEPSEEK_API_KEY）")
+    think = needs_think(prompt, canvas)
     text, usage = chat_completion_raw(
         build_question_messages(prompt, canvas, context),
         settings,
-        timeout_s=90.0,
-        max_tokens=3072,
+        timeout_s=150.0 if think else 90.0,
+        max_tokens=6144 if think else 3072,
+        think=think,
     )
-    return {"answer": text, "usage": usage}
+    return {"answer": text, "usage": usage, "mode": "think" if think else "direct"}
 
 
 def stream_project_answer(
@@ -576,11 +604,13 @@ def stream_project_answer(
     settings = llm_settings()
     if settings is None:
         raise LlmNotConfigured("未配置 LLM（PLC_LLM_* 或 DEEPSEEK_API_KEY）")
+    think = needs_think(prompt, canvas)
     yield from chat_completion_stream(
         build_question_messages(prompt, canvas, context),
         settings,
-        timeout_s=90.0,
-        max_tokens=3072,
+        timeout_s=150.0 if think else 90.0,
+        max_tokens=6144 if think else 3072,
+        think=think,
     )
 
 

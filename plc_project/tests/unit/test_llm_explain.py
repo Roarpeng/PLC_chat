@@ -398,3 +398,35 @@ def test_endpoint_block_required(client):
     res = client.post("/api/v1/plc/canvas/explain-block", json={})
     assert res.status_code == 400
     assert res.json()["detail"]["code"] == "BLOCK_REQUIRED"
+
+
+def test_thinking_flag_toggled_by_mode(monkeypatch):
+    """think=True 时 payload 显式开启 thinking;默认关闭(直答)。"""
+    import json as _json
+    import urllib.request
+    from gateway.app.services.plc import llm_explain
+
+    captured = {}
+
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return _json.dumps(
+                {"choices": [{"message": {"content": "ok"}}], "usage": {}}
+            ).encode()
+
+    def _fake_urlopen(req, timeout=None):
+        captured["body"] = _json.loads(req.data.decode("utf-8"))
+        return _Resp()
+
+    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen)
+    settings = {"base_url": "https://api.deepseek.com", "api_key": "k", "model": "deepseek-flash"}
+    llm_explain.chat_completion_raw([{"role": "user", "content": "hi"}], settings)
+    assert captured["body"]["thinking"] == {"type": "disabled"}
+    llm_explain.chat_completion_raw([{"role": "user", "content": "hi"}], settings, think=True)
+    assert captured["body"]["thinking"] == {"type": "enabled"}

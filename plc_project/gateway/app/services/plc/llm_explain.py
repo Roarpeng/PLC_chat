@@ -24,6 +24,7 @@ _DEEPSEEK_DEFAULT_MODEL = "deepseek-flash"
 # V4 系列 thinking 默认开启会额外产出 reasoning tokens；问答/解释/ops 类任务
 # 不需要，显式关闭省钱（仅对 deepseek 端点发送，避免污染其他兼容端点）。
 _THINKING_OFF = {"type": "disabled"}
+_THINKING_ON = {"type": "enabled"}
 
 
 class LlmNotConfigured(RuntimeError):
@@ -124,6 +125,7 @@ def chat_completion_raw(
     timeout_s: float = 60.0,
     max_tokens: int | None = None,
     json_mode: bool = False,
+    think: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """POST {base_url}/chat/completions（OpenAI 兼容），返回 (首个 choice 文本, usage)。
 
@@ -146,7 +148,8 @@ def chat_completion_raw(
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
     if _is_deepseek_endpoint(settings):
-        payload["thinking"] = _THINKING_OFF
+        # 工业可靠优先:简单任务直答(快/省),复杂任务按需开启 thinking 深想
+        payload["thinking"] = _THINKING_ON if think else _THINKING_OFF
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
@@ -189,6 +192,7 @@ def chat_completion_stream(
     *,
     timeout_s: float = 90.0,
     max_tokens: int | None = None,
+    think: bool = False,
 ):
     """SSE 流式 POST {base_url}/chat/completions。
 
@@ -206,7 +210,7 @@ def chat_completion_stream(
     if max_tokens:
         payload["max_tokens"] = max_tokens
     if _is_deepseek_endpoint(settings):
-        payload["thinking"] = _THINKING_OFF
+        payload["thinking"] = _THINKING_ON if think else _THINKING_OFF
         payload["stream_options"] = {"include_usage": True}
     req = urllib.request.Request(
         url,
@@ -244,7 +248,10 @@ def chat_completion_stream(
                 usage = obj["usage"]
             choices = obj.get("choices") or []
             if choices:
-                delta = (choices[0].get("delta") or {}).get("content") or ""
+                d = choices[0].get("delta") or {}
+                # thinking 模式:reasoning_content 阶段静默(前端保持"正在思考…"),
+                # 只把正文 content 增量推给前端
+                delta = d.get("content") or ""
                 if delta:
                     yield delta, None
     finally:
