@@ -587,25 +587,14 @@ function buildPumpOps(canvas: CanvasStateData): any[] | null {
 
 /** 疑似编辑指令的信号：兜底意图只对"看起来想改东西"的输入生效，
  * 纯提问/名词短语（"该项目的运行逻辑"/"当前功能块作用"）一律不造操作 */
-const EDITISH_HINT = /(添加|增加|加|创建|新建|建|设|修改|改|配置|变量|信号|按钮|指示灯|控件|急停|网络|块)/;
-
-/** 意图 5：默认——向第一个 DB 块（无 DB 则第一个块）加变量；完全无块返回 [] */
-function buildDefaultOps(prompt: string, canvas: CanvasStateData): any[] {
-  if (!EDITISH_HINT.test(prompt)) return []; // 无编辑信号的输入绝不乱改画布
-  const target = firstBlockOfType(canvas, "DB") ?? firstBlockName(canvas);
-  if (!target) return [];
-  return [
-    {
-      op: "add_variable",
-      block: target,
-      variable: {
-        name: `UserVar_${Date.now() % 1000}`,
-        data_type: "Real",
-        section: "VAR",
-        comment: prompt,
-      },
-    },
-  ];
+/**
+ * 意图 5：默认兜底——**绝不捏造编辑**。
+ * 含编辑信号但无法解析出具体意图的输入(如「按步骤全部修改」这类指代性
+ * 指令),交给 LLM(带对话历史)解析或转入追问;此前此处会向第一个 DB 塞
+ * UserVar_<时间戳> 垃圾变量,既不遵循命名惯例也违背用户意图(真机复现)。
+ */
+function buildDefaultOps(_prompt: string, _canvas: CanvasStateData): any[] {
+  return [];
 }
 
 /** 提取 ops 触及的块名（与后端 ops_touched_blocks 同规则），供预检按需收窄范围 */

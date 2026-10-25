@@ -35,6 +35,7 @@ import {
   persistAndSync,
   syncSessionDelete,
 } from "./state/sessionSync";
+import { compressHistory } from "./state/historyContext";
 import { useResizablePanes } from "./state/useResizablePanes";
 import type { CanvasStateData, CompileJobData, CompilerAttribution } from "./canvas/types";
 import { CompileDrawer } from "./shell/CompileDrawer";
@@ -491,6 +492,13 @@ const App: React.FC = () => {
 
   /* 提问 → 后端 SSE 流式问答：delta 逐段刷进占位消息（打字机效果），
      结束附 token 成本脚注；流式不可用时回落非流式端点；都失败返回 false */
+  /** 最近对话(分级压缩:最后一条助手消息近乎全文,其余压到首句)——
+      让"按步骤全部修改"这类指代性指令可解析,存储层始终保真不压缩 */
+  const recentChatHistory = () => {
+    const cur = sessions.find((s) => s.id === activeSessionId);
+    return compressHistory(cur?.messages ?? []);
+  };
+
   const tryChatAnswerStream = async (prompt: string, phId: string): Promise<boolean> => {
     let sysText = "";
     let usage: Record<string, number> | null = null;
@@ -502,7 +510,7 @@ const App: React.FC = () => {
         body: JSON.stringify({
           canvas,
           prompt,
-          context: { selected_block: selectedBlockName, focus },
+          context: { selected_block: selectedBlockName, focus, history: recentChatHistory() },
         }),
         signal: AbortSignal.timeout?.(120000),
       });
@@ -556,7 +564,7 @@ const App: React.FC = () => {
             body: JSON.stringify({
               canvas,
               prompt,
-              context: { selected_block: selectedBlockName, focus },
+              context: { selected_block: selectedBlockName, focus, history: recentChatHistory() },
             }),
             signal: AbortSignal.timeout?.(120000),
           },
@@ -633,7 +641,7 @@ const App: React.FC = () => {
               prompt,
               apply: false,
               use_llm: true,
-              context: { selected_block: selectedBlockName, focus },
+              context: { selected_block: selectedBlockName, focus, history: recentChatHistory() },
             }),
             signal: AbortSignal.timeout?.(60000),
           },

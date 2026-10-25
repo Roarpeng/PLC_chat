@@ -182,12 +182,9 @@ describe("buildOpsFromPrompt", () => {
     expect(ops[0].op).toBe("add_block");
     expect(ops[0].block.name).toBe("Sorter");
   });
-  it("疑似编辑指令仍走默认意图", () => {
-    const ops = buildOpsFromPrompt("加一个变量", fixture());
-    expect(ops.length).toBe(1);
-    expect(ops[0].op).toBe("add_variable");
-    expect(ops[0].block).toBe("MainDB"); // 第一个 DB 块
-    expect(ops[0].variable.name).toMatch(/^UserVar_/);
+  it("疑似编辑但解析不出的指令不再捏造默认变量(回归:'按步骤全部修改'曾塞 UserVar_304)", () => {
+    expect(buildOpsFromPrompt("加一个变量", fixture())).toEqual([]);
+    expect(buildOpsFromPrompt("按步骤全部修改", fixture())).toEqual([]);
   });
   it("指定块加变量意图（类型推断 Real）", () => {
     const ops = buildOpsFromPrompt("在 MainDB 中添加变量 SpeedSet 实数", fixture());

@@ -150,3 +150,59 @@ def test_needs_think_routing() -> None:
     assert needs_think("把 FB_A 和 FB_B 的逻辑重构到新 EM 里,考虑时序与安全联锁", c) is True
     assert needs_think("FB_A FB_B", c) is True  # ≥2 块引用
     assert needs_think("哈" * 100, c) is True  # 长输入
+
+
+def test_history_reaches_llm_ops_prompt(monkeypatch):
+    """指代性指令依据 recent_conversation 解析——历史必须进 _llm_ops 的 prompt。"""
+    import gateway.app.services.plc.chat_ops as co
+
+    captured = {}
+
+    class _FakeSettings(dict):
+        pass
+
+    def fake_raw(messages, settings, **kw):
+        captured["user"] = messages[-1]["content"]
+        return '{"ops": []}', {}
+
+    import gateway.app.services.plc.llm_explain as le
+
+    monkeypatch.setattr(le, "llm_settings", lambda: {"base_url": "u", "api_key": "k", "model": "m"})
+    monkeypatch.setattr(le, "chat_completion_raw", fake_raw)
+
+    from plc_engine.canvas_model import create_empty_canvas
+
+    canvas = create_empty_canvas("T")
+    ctx = {"history": [{"role": "system", "text": "1. 在 MainDB 添加变量 i_bEnable Bool"}]}
+    co.build_chat_ops("按步骤全部修改", canvas, context=ctx, use_llm=True)
+    assert "recent_conversation" in captured["user"]
+    assert "i_bEnable" in captured["user"]
+
+
+def test_uservar_placeholder_renamed_by_convention():
+    from gateway.app.services.plc.chat_ops import validate_ops
+
+    c = _canvas_with_block()
+    cleaned, _ = validate_ops(
+        c,
+        [
+            {
+                "op": "add_variable",
+                "block": "FB_A",
+                "variable": {"name": "UserVar_304", "data_type": "Bool", "section": "VAR_INPUT"},
+            }
+        ],
+    )
+    assert cleaned[0]["variable"]["name"] == "i_UserVar_304"
+    # 用户显式命名绝不被改
+    cleaned2, _ = validate_ops(
+        c,
+        [
+            {
+                "op": "add_variable",
+                "block": "FB_A",
+                "variable": {"name": "MyEnable", "data_type": "Bool", "section": "VAR_INPUT"},
+            }
+        ],
+    )
+    assert cleaned2[0]["variable"]["name"] == "MyEnable"

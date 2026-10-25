@@ -72,6 +72,14 @@ def _normalize_llm_op(op_item: dict[str, Any]) -> tuple[list[dict[str, Any]], st
             var = {"name": op_item["name"], "data_type": op_item.get("type")}
         if var.get("type") and not var.get("data_type"):
             var["data_type"] = var.pop("type")
+        # 命名惯例防线：LLM 占位名 UserVar_N 且带明确 section → 按工程
+        # 惯例改名(输入 i_/输出 o_/静态 stat_)；用户显式命名的绝不改
+        _pname = str(var.get("name") or "")
+        if re.fullmatch(r"UserVar_\d+", _pname):
+            _sec = str(var.get("section") or "").upper()
+            _prefix = "i_" if "INPUT" in _sec else "o_" if "OUTPUT" in _sec else "stat_" if "STAT" in _sec else ""
+            if _prefix:
+                var["name"] = _prefix + _pname
         if not str(var.get("name") or "").strip():
             return [], "add_variable missing variable.name"
         block = op_item.get("block") or op_item.get("block_name") or ""
@@ -332,6 +340,12 @@ _LLM_OPS_SYSTEM = (
     "If the request is a question, analysis, or meta request (e.g. read/analyze/explain/"
     "compile the project) rather than a CONCRETE edit instruction, return "
     '{{"ops": []}} exactly — do not fabricate edits. '
+    "Referential instructions (e.g. 按步骤全部修改 / 照上面的方案改) MUST be resolved "
+    "against recent_conversation — expand them into the concrete ops those steps describe; "
+    "if the steps are absent or ambiguous, return {{\"ops\": []}} and state what is missing. "
+    "Never invent placeholder variables like UserVar_N. "
+    "Variable naming MUST follow the project convention: inputs i_<Name>, outputs o_<Name>, "
+    "statics stat_<Name> (match existing names in the target block). "
     "Reply with raw json object, no markdown."
 )
 
@@ -362,13 +376,17 @@ def _llm_ops(
         for w in sorted(canvas.hmi_widgets.values(), key=lambda w: w.id)[:40]
     ]
     system = _LLM_OPS_SYSTEM.format(allowed=sorted(ALLOWED_OPS))
+    history = (context.get("history") or [])[:6]
     user = json.dumps(
         {
             "project": canvas.project_name,
             "blocks": _block_skeleton(canvas),  # 稳定前缀（排序，缓存命中）
             "hmi_widgets": widgets,
             "relevant_blocks": relevant,
-            "selected": context,
+            # 指代性指令(「按步骤全部修改」)必须依据这里解析;
+            # 前端已分级压缩:最后一条助手消息近乎全文,其余为首句摘要
+            "recent_conversation": history,
+            "selected": {k: v for k, v in context.items() if k != "history"},
             "request": prompt,  # 变化内容放最后
         },
         ensure_ascii=False,
@@ -552,7 +570,8 @@ def build_question_messages(
             "blocks": _block_skeleton(canvas),  # 稳定前缀：全量骨架（排序）
             "hmi_widgets": widgets,  # 稳定（按 id 排序）
             "relevant_blocks": relevant,  # 随问题检索的详情
-            "selected": ctx,
+            "recent_conversation": (ctx.get("history") or [])[:6],  # 分级压缩过的近几轮
+            "selected": {k: v for k, v in ctx.items() if k != "history"},
             "question": prompt,  # 变化内容放最后，保住前缀缓存
         },
         ensure_ascii=False,
