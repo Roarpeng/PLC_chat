@@ -380,3 +380,44 @@ def test_put_change_still_too_large_after_truncation(work: Path) -> None:
     chg = pcec.new_change("writeback", "x" * (pcec._MAX_CHANGE_BYTES + 1024), [], [], _baseline())
     with pytest.raises(ValueError):
         pcec.put_change(chg)
+
+
+# --------------------------------------------- requirement_id 弱关联(线 B 追加) --
+# 契约 docs/22 §2:new_change 增可选参 requirement_id,非空写入 intent.requirement_id;
+# 缺省(含显式空串)**不写该字段**,既有输出字节完全一致(快照兼容,行为零变化)。
+
+
+def test_new_change_with_requirement_id() -> None:
+    chg = pcec.new_change(
+        "writeback", "给 FB_X 加使能", [{"op": "set"}], ["FB_X"], _baseline(),
+        requirement_id="req-abcdef123456",
+    )
+    assert chg["intent"]["requirement_id"] == "req-abcdef123456"
+    assert chg["intent"]["kind"] == "writeback"
+    assert chg["intent"]["request"] == "给 FB_X 加使能"
+    json.dumps(chg)  # 纯 dict、JSON 可序列化
+    # 其余字段与缺省形态一致(只有 intent 多一个键;时间戳/事件 ts 天然不同,剔除)
+    plain = pcec.new_change("writeback", "给 FB_X 加使能", [{"op": "set"}], ["FB_X"], _baseline())
+    chg["intent"].pop("requirement_id")
+    for key in ("change_id", "created_at", "updated_at", "events"):
+        chg.pop(key)
+        plain.pop(key)
+    assert chg == plain
+
+
+def test_new_change_default_intent_bytes_unchanged() -> None:
+    legacy = pcec.new_change("writeback", "给 FB_X 加使能", [{"op": "set"}], ["FB_X"], _baseline())
+    with_default = pcec.new_change(
+        "writeback", "给 FB_X 加使能", [{"op": "set"}], ["FB_X"], _baseline(),
+        requirement_id="",
+    )
+    expected_intent = {"kind": "writeback", "request": "给 FB_X 加使能", "summary": "给 FB_X 加使能"}
+    assert "requirement_id" not in legacy["intent"]
+    assert "requirement_id" not in with_default["intent"]
+    assert legacy["intent"] == with_default["intent"] == expected_intent
+    # 字段顺序与字节内容不变(既有快照语义)
+    assert (
+        json.dumps(legacy["intent"], ensure_ascii=False)
+        == json.dumps(with_default["intent"], ensure_ascii=False)
+        == json.dumps(expected_intent, ensure_ascii=False)
+    )

@@ -1,0 +1,1050 @@
+/* ==========================================================================
+   工作台 P0 · 工艺需求域三组件共用样式（契约 22 §3）
+   - TaskQuickBar          前缀 tqb-（任务快捷条，低显著度贴顶栏下沿）
+   - RequirementCardDrawer 前缀 rcd-（需求卡抽屉：分组 items + 来源徽章 + 待确认区）
+   - ChangeReviewDrawer    前缀 crd-（四层变更审查抽屉：工艺/逻辑/源码/验证）
+   依赖全局令牌：--surface/-2、--ink/-2/-3、--line/-2、--accent/-2/-soft、
+   --run/--standby/--fault、--mono/--sans、--ease、--shadow-sheet。
+   与 ChangeLogDrawer / SourceCompareDrawer 同款浅色工业纸感（方角、细分割线）。
+   ========================================================================== */
+
+/* ==========================================================================
+   TaskQuickBar — 任务快捷条（tqb-）
+   学 index.css 的 .tabstrip/.tab 低显著度：surface-2 托盘 + 透明按钮，
+   选中态仅提亮底色与墨色，钢蓝只做一根内侧标线。
+   ========================================================================== */
+
+.tqb {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.tqb__label {
+  flex: none;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.tqb__group {
+  display: flex;
+  gap: 2px;
+}
+
+.tqb-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: none;
+  border-left: 2px solid transparent; /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.7;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.12s var(--ease), background-color 0.12s var(--ease),
+    border-color 0.12s var(--ease);
+}
+
+.tqb-btn:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.tqb-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.tqb-btn--on {
+  color: var(--ink);
+  background: var(--surface);
+  border-left-color: var(--accent);
+}
+
+/* ==========================================================================
+   RequirementCardDrawer — 需求卡抽屉（rcd-）
+   ========================================================================== */
+
+.rcd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 93;
+  background: rgba(27, 30, 28, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: rcd-fade 0.14s ease-out;
+}
+
+.rcd-card {
+  width: 100%;
+  max-width: 780px;
+  height: 82vh;
+  background: var(--surface);
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
+  box-shadow: var(--shadow-sheet); /* taste-skill-ignore: data-ui workbench interface */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: rcd-card-in 0.16s var(--ease);
+}
+
+@keyframes rcd-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rcd-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* —— 头部：标题 | 短 id | 项目名 | 状态徽章 | 示例徽标 | × —— */
+
+.rcd-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 14px;
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.rcd-head__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.rcd-head__name {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.rcd-head__id {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent); /* taste-skill-ignore: data-ui workbench interface */
+  padding: 0 5px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.rcd-head__sub {
+  font-size: 13px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rcd-origin {
+  flex: none;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 0 5px;
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+  color: var(--ink-3);
+}
+
+.rcd-origin--mock {
+  border-color: var(--standby);
+  color: var(--standby);
+}
+
+/* 确认状态徽章：proposed=standby / confirmed=run / rejected=fault */
+.rcd-status {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 6px;
+  line-height: 1.7;
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+.rcd-status--proposed {
+  color: var(--standby);
+  border-color: var(--standby);
+}
+
+.rcd-status--confirmed {
+  color: var(--run);
+  border-color: var(--run);
+}
+
+.rcd-status--rejected {
+  color: var(--fault);
+  border-color: var(--fault);
+}
+
+/* 事务状态徽章分组（ChangeReviewDrawer 头部复用 rcd-status）：
+   ok=终态成功 / bad=终态失败族 / hold=流转中（对齐 changelog.css .cl-status--*） */
+.rcd-status--ok {
+  color: var(--run);
+  border-color: var(--run);
+}
+
+.rcd-status--bad {
+  color: var(--fault);
+  border-color: var(--fault);
+}
+
+.rcd-status--hold {
+  color: var(--standby);
+  border-color: var(--standby);
+}
+
+.rcd-close {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  flex: none;
+  transition: background-color 0.12s var(--ease), color 0.12s var(--ease);
+}
+
+.rcd-close:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.rcd-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* —— 主体滚动区 —— */
+
+.rcd-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+
+.rcd-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.rcd-body::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+}
+
+.rcd-hint {
+  padding: 18px 16px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--ink-3);
+}
+
+/* —— 意图摘要（可编辑） —— */
+
+.rcd-section {
+  padding: 10px 14px 4px;
+}
+
+.rcd-section__title {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+  letter-spacing: 0.04em;
+}
+
+.rcd-summary {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 9px;
+  border: 1px solid var(--line); /* taste-skill-ignore: data-ui form control */
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.rcd-summary:focus {
+  outline: none;
+  border-color: var(--accent); /* taste-skill-ignore: data-ui form control */
+  box-shadow: inset 0 0 0 1px var(--accent); /* taste-skill-ignore: data-ui form control */
+}
+
+/* —— items 分组（五类） —— */
+
+.rcd-group {
+  padding: 10px 14px 2px;
+}
+
+.rcd-group__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+  letter-spacing: 0.04em;
+}
+
+.rcd-group__count {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.rcd-group__empty {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.rcd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.rcd-item__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid transparent; /* taste-skill-ignore: data-ui form control */
+  border-radius: var(--r-sm);
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.rcd-item__text:hover {
+  border-color: var(--line); /* taste-skill-ignore: data-ui form control */
+  background: var(--surface);
+}
+
+.rcd-item__text:focus {
+  outline: none;
+  border-color: var(--accent); /* taste-skill-ignore: data-ui form control */
+  background: var(--surface);
+}
+
+/* 来源徽章三态：engineering=绿·工程证据 / user=蓝·用户输入 / inferred=琥珀·AI 推断 */
+.rcd-src {
+  flex: none;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.7;
+  padding: 0 6px;
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+.rcd-src--engineering {
+  color: var(--run);
+  border-color: var(--run);
+}
+
+.rcd-src--user {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.rcd-src--inferred {
+  color: var(--standby);
+  border-color: var(--standby);
+}
+
+/* 工程证据的证据定位文本（如 FB5002 NW1） */
+.rcd-ref {
+  flex: none;
+  max-width: 160px;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* —— 待工程师确认（红区） —— */
+
+.rcd-questions {
+  margin: 12px 14px 6px;
+  padding: 10px 12px 8px;
+  border: 1px solid var(--fault); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+}
+
+.rcd-questions__title {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fault);
+  letter-spacing: 0.04em;
+}
+
+.rcd-question {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--line); /* taste-skill-ignore: data-ui form control */
+  border-left: 3px solid var(--fault); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.rcd-question:focus {
+  outline: none;
+  border-color: var(--fault); /* taste-skill-ignore: data-ui form control */
+}
+
+.rcd-questions__empty {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* —— 底部：主按钮「确认工艺意图」+ 副文案 —— */
+
+.rcd-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border-top: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+}
+
+.rcd-confirm {
+  appearance: none;
+  flex: none;
+  padding: 7px 18px;
+  border: 1px solid var(--accent); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: var(--r-sm);
+  background: var(--accent);
+  color: #f9faf7;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.6;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.12s var(--ease), border-color 0.12s var(--ease);
+}
+
+.rcd-confirm:hover {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+}
+
+.rcd-confirm:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.rcd-confirm:disabled {
+  cursor: default;
+  background: var(--surface);
+  color: var(--run);
+  border-color: var(--run); /* taste-skill-ignore: data-ui workbench interface */
+  opacity: 1;
+}
+
+/* confirmed 徽章化：按钮位变成一枚实底已确认徽章 */
+.rcd-confirm--done {
+  background: var(--surface);
+  color: var(--run);
+  border-color: var(--run); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.rcd-foot__note {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+/* —— loading 骨架 —— */
+
+@keyframes rcd-skeleton {
+  0% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.45;
+  }
+}
+
+.rcd-skeleton {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rcd-skeleton__bar {
+  height: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+  animation: rcd-skeleton 1.2s var(--ease) infinite;
+}
+
+.rcd-skeleton__bar--w60 {
+  width: 60%;
+}
+
+.rcd-skeleton__bar--w40 {
+  width: 40%;
+}
+
+.rcd-skeleton__bar--w85 {
+  width: 85%;
+}
+
+/* ==========================================================================
+   ChangeReviewDrawer — 四层变更审查抽屉（crd-）
+   ========================================================================== */
+
+.crd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 93;
+  background: rgba(27, 30, 28, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: rcd-fade 0.14s ease-out;
+}
+
+.crd-card {
+  width: 100%;
+  max-width: 960px;
+  height: 80vh;
+  background: var(--surface);
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
+  box-shadow: var(--shadow-sheet); /* taste-skill-ignore: data-ui workbench interface */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: rcd-card-in 0.16s var(--ease);
+}
+
+/* —— 头部：标题 + 四 Tab + × —— */
+
+.crd-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 14px;
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.crd-head__title {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.crd-head__name {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.crd-head__id {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent); /* taste-skill-ignore: data-ui workbench interface */
+  padding: 0 5px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.crd-tabs {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: var(--r-lg);
+  padding: 2px;
+}
+
+.crd-tab {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.12s var(--ease), background-color 0.12s var(--ease);
+}
+
+.crd-tab:hover {
+  color: var(--ink);
+}
+
+.crd-tab--on {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.crd-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.crd-close {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  flex: none;
+  transition: background-color 0.12s var(--ease), color 0.12s var(--ease);
+}
+
+.crd-close:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.crd-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* —— 主体 —— */
+
+.crd-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+
+.crd-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.crd-body::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+}
+
+.crd-hint {
+  padding: 18px 16px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--ink-3);
+}
+
+.crd-panel {
+  padding: 12px 16px 8px;
+}
+
+/* Tab① 工艺差异：分组摘要（复用 rcd- 徽章） */
+.crd-req__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.crd-req__summary {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Tab② 逻辑差异：三组清单，行可点击 */
+.crd-list {
+  margin: 10px 0 6px;
+  border: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.crd-list__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 10px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.crd-list__title {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.crd-list__count {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.crd-row {
+  appearance: none;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: none;
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+  background: transparent;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 13px;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s var(--ease);
+}
+
+.crd-list .crd-row:last-child {
+  border-bottom: none;
+}
+
+.crd-row:hover {
+  background: var(--surface-2);
+}
+
+.crd-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* 静态行（HMI 元件等无定位目标） */
+.crd-row--plain {
+  cursor: default;
+}
+
+.crd-row--plain:hover {
+  background: transparent;
+}
+
+.crd-row__arrow {
+  flex: none;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+/* Tab③ 源码差异：左右两栏 */
+.crd-diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.crd-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.crd-pane__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.crd-pane__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crd-pane__meta {
+  margin-left: auto;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.crd-pane__scroll {
+  max-height: 46vh;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+
+.crd-pre {
+  margin: 0;
+  padding: 10px 12px;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+
+/* Tab④ 验证差异：四 V 等级行 + diagnostics */
+.crd-vrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.crd-vrow__level {
+  flex: none;
+  width: 88px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.crd-vrow__state {
+  flex: none;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 0 6px;
+  line-height: 1.7;
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+.crd-vrow__state--pass {
+  color: var(--run);
+  border-color: var(--run);
+}
+
+.crd-vrow__state--fail {
+  color: var(--fault);
+  border-color: var(--fault);
+}
+
+.crd-vrow__state--pending {
+  color: var(--standby);
+  border-color: var(--standby);
+}
+
+/* skipped / 未设：弱化——未知 ≠ 通过 */
+.crd-vrow__state--skipped {
+  color: var(--ink-3);
+  border-style: dashed;
+}
+
+.crd-vrow__note {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crd-diags {
+  margin-top: 12px;
+}
+
+.crd-diags__title {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.crd-diag {
+  margin-top: 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+  border-left: 3px solid var(--standby); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  word-break: break-word;
+  user-select: text;
+}
+
+.crd-diag--fail {
+  border-left-color: var(--fault);
+  color: var(--fault);
+}
+
+/* —— 底部 —— */
+
+.crd-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 14px;
+  border-top: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.crd-foot__stats {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crd-foot__hint {
+  font-size: 13px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* —— 窄屏：源码差异两栏改单栏 —— */
+
+@media (max-width: 860px) {
+  .crd-diff {
+    grid-template-columns: 1fr;
+  }
+
+  .crd-head {
+    flex-wrap: wrap;
+  }
+
+  .crd-tabs {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+}
+
+/* —— 降级：减少动态效果 —— */
+
+@media (prefers-reduced-motion: reduce) {
+  .rcd-overlay,
+  .rcd-card,
+  .crd-overlay,
+  .crd-card {
+    animation: none;
+  }
+
+  .rcd-skeleton__bar {
+    animation: none;
+    opacity: 0.7;
+  }
+
+  .tqb-btn,
+  .rcd-close,
+  .crd-close,
+  .crd-tab,
+  .crd-row {
+    transition: none;
+  }
+}

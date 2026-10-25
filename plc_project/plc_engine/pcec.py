@@ -91,20 +91,28 @@ def _valid_change_id(change_id: str | None) -> bool:
 
 
 def new_change(intent_kind: str, request: str, ops: list, touched_blocks: list,
-               baseline: dict) -> dict:
-    """创建变更事务(status=proposed,events=[created]),字段结构按契约 §1。"""
+               baseline: dict, requirement_id: str = "") -> dict:
+    """创建变更事务(status=proposed,events=[created]),字段结构按契约 §1。
+
+    ``requirement_id`` 是工艺需求卡的弱关联(契约 docs/22 §2):非空时写入
+    ``intent.requirement_id``;缺省(空串)**不写该字段**,既有输出字节保持
+    不变(快照测试兼容)。
+    """
     now = _now_ts()
     request = str(request or "")
+    intent = {
+        "kind": str(intent_kind or ""),
+        "request": request,
+        "summary": request.strip()[:80],
+    }
+    if requirement_id:
+        intent["requirement_id"] = str(requirement_id)
     return {
         "change_id": _new_change_id(),
         "created_at": now,
         "updated_at": now,
         "project_baseline": dict(baseline or {}),
-        "intent": {
-            "kind": str(intent_kind or ""),
-            "request": request,
-            "summary": request.strip()[:80],
-        },
+        "intent": intent,
         "ops": list(ops or []),
         "touched_blocks": [str(b) for b in (touched_blocks or [])],
         "preconditions": [],

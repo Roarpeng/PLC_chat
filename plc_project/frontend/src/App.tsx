@@ -40,10 +40,23 @@ import { useResizablePanes } from "./state/useResizablePanes";
 import type { CanvasStateData, CompileJobData, CompilerAttribution } from "./canvas/types";
 import { CompileDrawer } from "./shell/CompileDrawer";
 import { ChangeLogDrawer } from "./shell/ChangeLogDrawer";
+/* 工作台 P0(契约 22):F1 自建组件 + F2 三组件挂载 */
+import { ProjectLaunchScreen } from "./shell/ProjectLaunchScreen";
+import { WorkbenchHeader } from "./shell/WorkbenchHeader";
+import { TaskQuickBar, type TaskKind } from "./shell/TaskQuickBar";
+import { RequirementCardDrawer } from "./shell/RequirementCardDrawer";
+import { ChangeReviewDrawer } from "./shell/ChangeReviewDrawer";
+import {
+  putRequirement,
+  requestDraft,
+  type Requirement,
+} from "./state/requirements";
 import {
   CONFIRM_V_SNAPSHOT,
   V_LEVELS,
   baselineFingerprint,
+  fetchChange,
+  fetchChanges,
   vStatusMark,
   vStatusText,
 } from "./state/pcec";
@@ -170,6 +183,18 @@ const BrandMark: React.FC = () => (
   </svg>
 );
 
+/**
+ * 任务引导前缀(契约 22 §4「任务流接线」):understand/diagnose/refactor 点击后
+ * 预填进 ChatDock 输入框的引导词,仅是给 LLM 的任务语境提示,不改后端行为;
+ * improve 不在此列 —— 它走需求卡草稿流(openRequirementDraft)。
+ * 前缀词典集中在此,便于统一调整文案。
+ */
+const TASK_PROMPT_PREFIX: Partial<Record<TaskKind, string>> = {
+  understand: "解读工程:",
+  diagnose: "诊断问题:",
+  refactor: "重构程序:",
+};
+
 const ChevronsLeft: React.FC = () => (
   <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
     <path d="M8.5 3.5L4.5 8l4 4.5M12.5 3.5L8.5 8l4 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -238,6 +263,20 @@ const App: React.FC = () => {
   const [changesRefreshTick, setChangesRefreshTick] = useState(0);
   const bumpChangesRefresh = React.useCallback(() => setChangesRefreshTick((t) => t + 1), []);
 
+  /* —— 工作台 P0(契约 22 §4):任务入口 / 需求卡 / 变更审查 —— */
+  /** TaskQuickBar 的 active 任务态(纯前端语境,不派发后端) */
+  const [activeTask, setActiveTask] = useState<TaskKind | null>(null);
+  /** 需求卡抽屉(RequirementCardDrawer)三态:open / requirement / loading */
+  const [reqDrawerOpen, setReqDrawerOpen] = useState(false);
+  const [reqDraft, setReqDraft] = useState<Requirement | null>(null);
+  const [reqLoading, setReqLoading] = useState(false);
+  /** 最新已确认(confirmation_status==='confirmed')需求卡:
+      confirm-writeback 请求体附带 requirement_id 用(契约 §2/§4,后端缺省兼容) */
+  const [confirmedRequirement, setConfirmedRequirement] = useState<Requirement | null>(null);
+  /** ChangeReviewDrawer:非 null 即打开;changeReviewReq 为命中 intent.requirement_id 的需求卡 */
+  const [changeReviewId, setChangeReviewId] = useState<string | null>(null);
+  const [changeReviewReq, setChangeReviewReq] = useState<Requirement | null>(null);
+
   /* 解析降级告警：只有真的存在降级时才铺开 */
   const [degradation, setDegradation] = useState<DegradationState | null>(null);
   const [degradationOpen, setDegradationOpen] = useState(false);
@@ -263,6 +302,19 @@ const App: React.FC = () => {
     widgetList.filter((w) => w.status === "synced").length;
 
   const activeSession = activeSessionId ? sessions.find((s) => s.id === activeSessionId) ?? null : null;
+
+  /* —— 工作台 P0 派生标记与统计(契约 22 §4) —— */
+  const canvasEmpty = blockList.length === 0;
+  /** 块内接口变量总数(工程概览头即时统计) */
+  const variableTotal = useMemo(
+    () => blockList.reduce((a, b) => a + b.interface.length, 0),
+    [blockList],
+  );
+  const tagTotal = Object.keys(canvas.tags).length;
+  /** 启动态三入口:无活跃会话(无 activeSessionId 且画布为空)且历史为空 */
+  const showLaunchScreen = !activeSessionId && canvasEmpty && sessions.length === 0;
+  /** 工程概览头:活跃项目(有会话且画布有块)时常驻 */
+  const showWorkbenchHeader = !!activeSessionId && !canvasEmpty;
 
   /* 降级告警：读最近一次 PLC 解析作业的 coverage.warnings / review 截断标记 */
   const projectNameRef = React.useRef<string>(canvas.project_name);
@@ -1053,6 +1105,130 @@ const App: React.FC = () => {
     }
   };
 
+  /* —— 工作台 P0(契约 22 §4):任务入口 / 需求卡 / 变更审查 —— */
+
+  /** 聚焦 ChatDock 输入框。ChatDock 不在本线可改范围:经 DOM 定位其
+   *  .dock-input(带 aria-label 的指令输入框);若对话坞处于折叠态,
+   *  先展开再等一帧渲染完成后聚焦。 */
+  const focusChatInput = () => {
+    setDockCollapsed(false);
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLInputElement>(".dock-input")?.focus();
+    });
+  };
+
+  /** 打开需求卡抽屉草稿态:open=true / requirement=null / loading=true,
+   *  再调 requirements.requestDraft(prompt, canvas, "improve") 拉草稿
+   *  (mock-first:端点未上线回退示例卡;异常时静默停留空态)。 */
+  const openRequirementDraft = async (prompt: string) => {
+    setReqDrawerOpen(true);
+    setReqDraft(null);
+    setReqLoading(true);
+    try {
+      const res = await requestDraft(prompt, canvas, "improve");
+      setReqDraft(res.requirement);
+    } catch {
+      setReqDraft(null); // 静默:抽屉停留在空态,不打扰用户
+    } finally {
+      setReqLoading(false);
+    }
+  };
+
+  /** TaskQuickBar 任务接线(契约 §4「任务流接线」):
+   *  - understand/diagnose/refactor → 聚焦 ChatDock 输入框 + 预填任务引导前缀
+   *    (纯提示词,不改后端;仅输入框为空时预填,避免覆盖用户已输入的内容);
+   *  - improve → 打开需求卡草稿流,以当前输入框文本(可空)为草稿提示词。 */
+  const handleTask = (t: TaskKind) => {
+    setActiveTask(t);
+    if (t === "improve") {
+      const text = chatInput.trim();
+      if (!text) {
+        // 需求卡草稿需要工艺描述:空输入不调 draft(后端 400),先引导填写
+        setChatInput("工艺需求:");
+        focusChatInput();
+        return;
+      }
+      void openRequirementDraft(text);
+      return;
+    }
+    const prefix = TASK_PROMPT_PREFIX[t];
+    if (prefix && !chatInput.trim()) setChatInput(prefix);
+    focusChatInput();
+  };
+
+  /** 需求卡工程师编辑(items/open_questions/summary):本地 state 更新 */
+  const handleRequirementEdit = (r: Requirement) => setReqDraft(r);
+
+  /** 确认工艺意图:PUT confirmed(网关不可达由 requirements 层回显 = 本地更新),
+   *  记住最新已确认需求(confirm-writeback 附带 requirement_id 用),并在当前
+   *  对话 settle 一条留痕 —— 契约 §1 铁律:确认仅表示意图确认,绝不触发任何 ops/写回。 */
+  const handleConfirmIntent = async (r: Requirement) => {
+    const confirmed: Requirement = {
+      ...r,
+      confirmation_status: "confirmed",
+      updated_at: Date.now() / 1000,
+    };
+    setReqDraft(confirmed);
+    setConfirmedRequirement(confirmed);
+    try {
+      const res = await putRequirement(confirmed);
+      setReqDraft(res.requirement);
+      setConfirmedRequirement(res.requirement);
+    } catch {
+      /* 网关失败:本地已更新(占位语义),静默 */
+    }
+    commitSession(canvas, [
+      {
+        id: msgId(),
+        role: "system",
+        text: "工艺意图已确认(未产生任何修改)",
+        ts: Date.now(),
+      },
+    ]);
+  };
+
+  /** 打开最近一条变更的四层审查:经 state/pcec.ts fetchChanges 取
+   *  updated_at 最新的事务 id;若 change.intent.requirement_id 命中当前
+   *  已确认需求,则把需求卡一并传给 ChangeReviewDrawer(契约 §3)。 */
+  const handleReviewLatestChange = async () => {
+    try {
+      const { items } = await fetchChanges();
+      if (!items.length) return; // 真实空账本:无可审查项
+      const latest = items.reduce((a, b) => (b.updated_at > a.updated_at ? b : a));
+      setChangeReviewId(latest.change_id);
+      if (confirmedRequirement?.requirement_id) {
+        try {
+          const res = await fetchChange(latest.change_id);
+          const intent = res?.change.intent as unknown as
+            | { requirement_id?: string }
+            | null
+            | undefined;
+          setChangeReviewReq(
+            intent?.requirement_id === confirmedRequirement.requirement_id
+              ? confirmedRequirement
+              : null,
+          );
+          return;
+        } catch {
+          /* 命中判断失败 → 按未关联需求处理 */
+        }
+      }
+      setChangeReviewReq(null);
+    } catch {
+      /* fetchChanges 自带 mock 回退,正常不会到这里 */
+    }
+  };
+
+  /** 变更审查证据定位(ChangeReviewDrawer.onFocusTarget):块级
+   *  setSelectedBlockName + 画布聚焦;varName 无独立画布锚点(变量在右侧
+   *  面板),仅当附带 blockName 时定位其块。 */
+  const handleFocusChangeTarget = (t: { blockName?: string; varName?: string }) => {
+    if (t.blockName) {
+      setSelectedBlockName(t.blockName);
+      setFocus({ kind: "block", blockName: t.blockName });
+    }
+  };
+
   /**
    * 轮询编译作业直到 7 阶段状态机收敛。
    * 替代原来的 `for (let i = 0; i < 600; i++)` 死循环：
@@ -1109,6 +1285,11 @@ const App: React.FC = () => {
           plc_name: plcName,
           compile_after: true,
           sync: false,
+          // 契约 22 §2/§4:当前有已确认需求卡时附带 requirement_id,后端透传进
+          // 事务 intent(缺省行为零变化,无已确认需求时不带该字段)
+          ...(confirmedRequirement?.requirement_id
+            ? { requirement_id: confirmedRequirement.requirement_id }
+            : {}),
         }),
         signal: AbortSignal.timeout?.(30000),
       });
@@ -1335,6 +1516,22 @@ const App: React.FC = () => {
         </button>
       </header>
 
+      {/* —— 任务快捷条(契约 22 §3,F2 组件):低显著度贴顶栏下沿 —— */}
+      <TaskQuickBar active={activeTask} onTask={handleTask} />
+
+      {/* —— 工程概览头(契约 22 §4,F1 自建):活跃项目时顶栏下沿常驻 —— */}
+      {showWorkbenchHeader && (
+        <WorkbenchHeader
+          projectName={canvas.project_name}
+          plcName={canvas.source?.plc_name ?? null}
+          blockCount={blockList.length}
+          variableCount={variableTotal}
+          tagCount={tagTotal}
+          sessionUpdatedAt={activeSession?.updatedAt ?? null}
+          onReviewLatestChange={() => void handleReviewLatestChange()}
+        />
+      )}
+
       {/* —— 解析降级告警条：只在真的存在降级时出现 —— */}
       {degradation && (
         <div
@@ -1428,7 +1625,17 @@ const App: React.FC = () => {
         )}
 
         <div className="center">
-          <PlcInteractiveCanvas
+          {/* 启动态三入口(契约 22 §4):无活跃会话且历史为空时替换空白画布引导;
+              有历史会话时保持现状(空白画布+引导),历史侧栏照常可用 */}
+          {showLaunchScreen ? (
+            <ProjectLaunchScreen
+              sessions={sessions}
+              onImport={() => setImportOpen(true)}
+              onStartFromRequirement={() => void openRequirementDraft("")}
+              onSelectSession={handleSelectSession}
+            />
+          ) : (
+            <PlcInteractiveCanvas
             canvas={canvas}
             selectedBlockName={selectedBlockName}
             onSelectBlock={setSelectedBlockName}
@@ -1445,6 +1652,7 @@ const App: React.FC = () => {
             onRemoveNetwork={handleRemoveNetwork}
             onDeepExplain={handleDeepExplain}
           />
+          )}
           <ChatDock
             messages={activeSession?.messages ?? []}
             inputValue={chatInput}
@@ -1539,6 +1747,25 @@ const App: React.FC = () => {
           refreshTick={changesRefreshTick}
         />
       )}
+
+      {/* 需求卡抽屉(契约 22 §3,F2 组件):草稿/编辑/确认工艺意图(不产生任何修改) */}
+      <RequirementCardDrawer
+        open={reqDrawerOpen}
+        requirement={reqDraft}
+        loading={reqLoading}
+        onEdit={handleRequirementEdit}
+        onConfirmIntent={(r) => void handleConfirmIntent(r)}
+        onClose={() => setReqDrawerOpen(false)}
+      />
+
+      {/* 四层变更审查抽屉(契约 22 §3,F2 组件):从工程概览头「审查最近变更」打开 */}
+      <ChangeReviewDrawer
+        open={changeReviewId !== null}
+        changeId={changeReviewId}
+        requirement={changeReviewReq}
+        onFocusTarget={handleFocusChangeTarget}
+        onClose={() => setChangeReviewId(null)}
+      />
 
       {/* —— 人工确认门禁 —— */}
       {showConfirmModal && (

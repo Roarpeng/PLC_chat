@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>PLC_chat｜工艺驱动工程工作台：交互与开发实施规范</title>
+<style>
+:root{--bg:#0a0f17;--panel:#111a26;--panel2:#162231;--line:#2b394b;--text:#e9f0f7;--muted:#9aabba;--cyan:#62d7ed;--green:#70dfb0;--amber:#f4c36a;--red:#ff8e91;--blue:#8eb8ff;--shadow:0 16px 42px #0003;--radius:16px;--max:1240px}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:radial-gradient(ellipse at 85% 0%,#17334a66,transparent 36%),var(--bg);color:var(--text);font:15px/1.72 Inter,"Segoe UI","Microsoft YaHei",system-ui,sans-serif}a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}code,pre,.mono{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace}code{font-size:.92em;background:#ffffff0d;border:1px solid #ffffff15;border-radius:5px;padding:.08em .35em;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#080d14;border:1px solid var(--line);border-radius:12px;padding:16px;color:#cfe4f2;font-size:13px;line-height:1.65}h1,h2,h3,h4{line-height:1.25;letter-spacing:-.025em}h1{font-size:clamp(32px,4.2vw,54px);max-width:880px;margin:18px 0 18px}h2{font-size:28px;margin:0 0 18px}h3{font-size:19px;margin:0 0 10px}h4{font-size:15px;margin:0 0 8px}p{margin:8px 0 12px}.muted{color:var(--muted)}.small{font-size:12px;color:var(--muted)}.eyebrow{text-transform:uppercase;letter-spacing:.15em;font-size:11px;color:var(--cyan);font-weight:800}.wrap{width:min(var(--max),calc(100% - 44px));margin:auto}.hero{padding:60px 0 38px;border-bottom:1px solid var(--line)}.hero-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.8fr);gap:36px;align-items:center}.hero p{max-width:780px;font-size:17px;color:#c2d0dd}.hero-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.tag{display:inline-flex;gap:7px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:12px;color:#c7d7e4;background:#ffffff06}.hero-panel{border:1px solid #35556a;background:linear-gradient(145deg,#162b3a,#101822 75%);border-radius:22px;padding:24px;box-shadow:var(--shadow)}.hero-panel .formula{font-size:20px;font-weight:760;line-height:1.5}.accent{color:var(--cyan)}.formula-row{display:grid;grid-template-columns:1fr 30px 1fr 30px 1fr;gap:7px;align-items:center;margin-top:22px}.formula-node{background:#ffffff08;border:1px solid #426075;border-radius:10px;text-align:center;padding:10px 6px;font-size:12px}.formula-arrow{text-align:center;color:var(--cyan);font-size:18px}.section{padding:44px 0;border-bottom:1px solid #273342}.section-intro{max-width:850px;color:#b9c7d5;margin-top:-5px;margin-bottom:23px}.section-no{color:var(--cyan);font:700 12px ui-monospace,monospace;letter-spacing:.12em;margin-bottom:10px}.grid{display:grid;gap:14px}.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}.card{background:linear-gradient(180deg,#131f2c,#101822);border:1px solid var(--line);border-radius:var(--radius);padding:19px;min-width:0}.card p:last-child{margin-bottom:0}.card .icon{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;background:#64d9ed18;color:var(--cyan);font-size:19px;margin-bottom:13px}.card .kicker{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:8px}.callout{border-left:3px solid var(--cyan);background:#62d7ed0b;padding:15px 18px;border-radius:0 12px 12px 0;margin:18px 0}.callout.warn{border-color:var(--amber);background:#f4c36a0b}.callout.danger{border-color:var(--red);background:#ff8e910b}.callout strong{color:#f2f7fb}.pill{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:750;white-space:nowrap}.pill.done{color:var(--green);border-color:#70dfb055;background:#70dfb00d}.pill.plan{color:var(--blue);border-color:#8eb8ff55;background:#8eb8ff0d}.pill.warn{color:var(--amber);border-color:#f4c36a55;background:#f4c36a0d}.pill.stop{color:var(--red);border-color:#ff8e9155;background:#ff8e910d}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:18px 0}table{border-collapse:collapse;width:100%;min-width:740px;font-size:13px}th,td{padding:12px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}th{background:#ffffff07;color:#c8d7e5;font-weight:750}tr:last-child td{border-bottom:0}td{color:#d0dae4}td .muted{font-size:12px}.workflow{display:flex;flex-direction:column;gap:9px;max-width:900px}.step{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:14px;align-items:start;border:1px solid var(--line);border-radius:12px;background:#ffffff04;padding:15px}.stepnum{height:36px;width:36px;border-radius:10px;display:grid;place-items:center;background:#62d7ed18;color:var(--cyan);font-weight:800;font-family:ui-monospace,monospace}.step h3{font-size:16px;margin:2px 0 5px}.step p{color:#aebdcb;margin:0;font-size:13px}.step-state{font-size:11px;color:var(--muted);padding-top:6px}.cols{display:grid;grid-template-columns:240px minmax(0,1fr);gap:26px}.navbox{position:sticky;top:16px;align-self:start;background:#101924;border:1px solid var(--line);border-radius:14px;padding:16px}.navbox b{font-size:12px;letter-spacing:.08em;color:#b7c7d5}.navbox a{display:block;font-size:12px;color:#b4c4d2;padding:7px 3px;border-bottom:1px solid #ffffff09}.navbox a:last-child{border-bottom:0}.navbox a:hover{color:var(--cyan)}.content-main{min-width:0}.screen{border:1px solid #3a4b5c;border-radius:16px;overflow:hidden;background:#0c131c;box-shadow:var(--shadow)}.screen-top{display:flex;align-items:center;gap:8px;padding:11px 14px;background:#151f2b;border-bottom:1px solid var(--line);font-size:12px}.dot{width:7px;height:7px;border-radius:50%;background:#43576a}.screen-body{display:grid;grid-template-columns:165px minmax(0,1fr) 225px;min-height:370px}.screen-side{padding:14px 12px;border-right:1px solid var(--line);background:#0d151e}.screen-side.right{border-right:0;border-left:1px solid var(--line)}.screen-label{font-size:10px;color:#8ea3b6;letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}.screen-menu{padding:8px 9px;border-radius:7px;margin:4px 0;font-size:12px;color:#b2c3d1}.screen-menu.active{background:#62d7ed16;border:1px solid #62d7ed40;color:var(--cyan)}.screen-center{padding:18px;display:flex;flex-direction:column;gap:13px}.mini-card{border:1px solid #344454;background:#121d29;border-radius:10px;padding:12px;font-size:12px}.mini-card strong{display:block;margin-bottom:5px}.mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.mini-flow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.mini-node{border:1px solid #426075;background:#142a38;border-radius:7px;padding:8px 10px;font-size:11px}.mini-node.amber{border-color:#886a35;background:#302617;color:#f2cf88}.mini-node.green{border-color:#3c7e65;background:#143025;color:#a0e8c5}.bar{height:7px;background:#263746;border-radius:999px;overflow:hidden;margin:8px 0}.bar span{display:block;height:100%;width:78%;background:linear-gradient(90deg,#62d7ed,#70dfb0);border-radius:999px}.checklist{list-style:none;padding:0;margin:10px 0}.checklist li{position:relative;padding:7px 0 7px 27px;border-bottom:1px solid #ffffff0a}.checklist li:last-child{border-bottom:0}.checklist li:before{content:"□";position:absolute;left:3px;color:var(--cyan);font-size:16px;top:4px}.checklist li.done:before{content:"✓";color:var(--green)}.task-sample{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:11px;padding:12px;margin:9px 0;background:#ffffff03}.task-sample .task-icon{flex:none;width:32px;height:32px;border-radius:9px;background:#ffffff09;display:grid;place-items:center;color:var(--cyan)}.task-sample strong{display:block;font-size:13px}.task-sample span{display:block;font-size:12px;color:var(--muted)}.label-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0}.label-row b{font-size:13px}.mini-status{display:inline-flex;gap:6px;align-items:center;font-size:11px;color:var(--muted)}.mini-status i{width:7px;height:7px;border-radius:50%;background:var(--amber)}.mini-status.ok i{background:var(--green)}.mini-status.fail i{background:var(--red)}details{border:1px solid var(--line);border-radius:10px;margin:10px 0;background:#ffffff03}summary{cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px}details .detail-body{padding:0 14px 14px;color:#b7c6d4;font-size:13px}.roadmap-item{display:grid;grid-template-columns:78px 1fr;gap:14px;margin:13px 0}.roadmap-label{font:800 12px ui-monospace,monospace;color:var(--cyan);padding-top:2px}.roadmap-content{border-left:1px solid #3b5368;padding:0 0 14px 17px}.roadmap-content h3{font-size:16px}.footer{padding:30px 0 54px;color:var(--muted);font-size:12px}.actions{display:flex;gap:9px;flex-wrap:wrap;margin:18px 0}.btn{border:1px solid #426075;border-radius:8px;padding:9px 12px;color:var(--text);background:#ffffff07;font-size:12px;cursor:pointer}.btn:hover{border-color:var(--cyan);color:var(--cyan)}.copy-ok{font-size:12px;color:var(--green);display:none;margin-left:6px}.topline{height:3px;background:linear-gradient(90deg,var(--cyan),#70dfb0 55%,transparent)}
+@media(max-width:900px){.hero-grid{grid-template-columns:1fr}.cols{grid-template-columns:1fr}.navbox{position:static;display:grid;grid-template-columns:repeat(2,1fr);gap:0 12px}.navbox b{grid-column:1/-1}.grid.four{grid-template-columns:repeat(2,1fr)}.screen-body{grid-template-columns:130px minmax(0,1fr)}.screen-side.right{display:none}}
+@media(max-width:620px){.wrap{width:min(100% - 28px,var(--max))}.hero{padding-top:36px}.grid.two,.grid.three,.grid.four{grid-template-columns:1fr}.formula-row{grid-template-columns:1fr}.formula-arrow{transform:rotate(90deg)}.step{grid-template-columns:38px minmax(0,1fr)}.step-state{grid-column:2}.screen-body{grid-template-columns:1fr}.screen-side.left{display:none}.screen-center{padding:12px}.mini-grid{grid-template-columns:1fr}.navbox{grid-template-columns:1fr 1fr}h2{font-size:24px}}
+@media print{ :root{--bg:#fff;--panel:#fff;--panel2:#f6f8fa;--line:#cbd5df;--text:#111827;--muted:#526170}body{background:#fff;color:#111;font-size:11pt}.wrap{width:100%;max-width:none}.hero,.section{padding:22px 0;border-color:#cbd5df}.hero-grid,.grid.two,.grid.three,.grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-panel,.card,.navbox,.screen,.mini-card,details,pre{background:#fff;color:#111;box-shadow:none;border-color:#bac5cf}.hero p,.section-intro,.card p,.step p,.muted,.small,.footer{color:#334155}.cols{display:block}.navbox{position:static;margin-bottom:18px}.navbox a{color:#334155}.screen-body{background:#fff}.screen-side,.screen-center,.screen-top{background:#fff;color:#111}.screen-menu,.mini-card,.mini-node{color:#111;background:#fff}.formula-node{background:#fff;color:#111}.step{break-inside:avoid}.card,details,.callout,table,.screen{break-inside:avoid}.section{break-before:auto}.actions,.btn{display:none}a{color:#075985;text-decoration:none}h1{font-size:30pt}h2{font-size:20pt}.footer{padding:16px 0}}
+</style>
+</head>
+<body>
+<div class="topline"></div>
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">PLC_CHAT · PRODUCT & ENGINEERING SPEC</div>
+      <h1>从 PLC 聊天工具，升级为<strong class="accent">工艺驱动的工程工作台</strong></h1>
+      <p>工程师专注工艺和设备行为。AI 负责理解现有工程、完善控制逻辑、提出重构方案。系统负责展示依据、管理变更，并验证实际结果。</p>
+      <div class="hero-tags"><span class="tag">交互优化</span><span class="tag">工艺意图先行</span><span class="tag">变更可审查</span><span class="tag">证据驱动验证</span></div>
+    </div>
+    <div class="hero-panel">
+      <div class="eyebrow">NORTH STAR</div>
+      <div class="formula">工程师定义工艺<br><span class="accent">AI 完善逻辑</span><br>系统验证结果</div>
+      <div class="formula-row">
+        <div class="formula-node">工艺意图</div><div class="formula-arrow">→</div>
+        <div class="formula-node">PLC 实现</div><div class="formula-arrow">→</div>
+        <div class="formula-node">验证证据</div>
+      </div>
+      <p class="small" style="margin-top:18px">开发原则：优先演进现有架构，不为追求新架构而重写已有能力。</p>
+    </div>
+  </div>
+</header>
+<main class="wrap section">
+<div class="cols">
+  <aside class="navbox">
+    <b>实施规范目录</b>
+    <a href="#purpose">01 · 产品目标</a><a href="#baseline">02 · 现有基础</a><a href="#ia">03 · 工作台结构</a><a href="#flows">04 · 核心交互流程</a><a href="#intent">05 · 工艺意图卡</a><a href="#change-review">06 · 变更审查</a><a href="#refactor">07 · 重构任务模式</a><a href="#semantics">08 · 工艺语义关联</a><a href="#architecture">09 · 代码落点</a><a href="#roadmap">10 · 开发阶段</a><a href="#acceptance">11 · 验收标准</a><a href="#agent">12 · Agent 执行指令</a>
+  </aside>
+  <div class="content-main">
+  <section id="purpose" class="section" style="padding-top:0">
+    <div class="section-no">01 / PRODUCT INTENT</div><h2>先统一产品目标</h2>
+    <p class="section-intro">PLC_chat 不应以“AI 能生成多少代码”作为核心目标，而应降低工程师理解、完善和重构 PLC 工程的成本。工程师描述设备应怎样工作；AI 研究现有程序并提出实现；工程师审核后，系统执行允许范围内的工程变更与验证。</p>
+    <div class="grid three">
+      <div class="card"><div class="icon">⌕</div><h3>理解工程</h3><p>说明设备工艺、程序结构、信号关系、动作条件和调用路径。结论必须能追溯到程序块、网络、变量或工程资料。</p></div>
+      <div class="card"><div class="icon">⇄</div><h3>完善与重构</h3><p>从工艺需求出发分析差距，提出最小变更。重构必须说明行为约束、影响范围与回归验证方案。</p></div>
+      <div class="card"><div class="icon">✓</div><h3>验证结果</h3><p>区分结构、静态、TIA 编译和行为验证。没有执行的检查不能标记为通过；编译通过不等于设备行为正确。</p></div>
+    </div>
+    <div class="callout"><strong>产品原则：</strong>工程师负责工艺意图、设备约束和最终决策；AI 负责把已确认的意图转化为可追溯、可审查、可验证的控制逻辑。不要要求工程师先决定 FB、变量名或 SCL 写法。</div>
+  </section>
+
+  <section id="baseline" class="section">
+    <div class="section-no">02 / CURRENT BASELINE</div><h2>基于现有项目演进，不推倒重来</h2>
+    <p class="section-intro">以下是根据仓库 README、App.tsx 及架构文档识别到的能力基线。这里描述的是项目文档和代码中可见的能力入口，不代表本次已在本机执行过完整测试或真机验收。</p>
+    <div class="table-wrap"><table><thead><tr><th>现有能力/模块</th><th>可复用价值</th><th>本次优化方向</th></tr></thead><tbody>
+      <tr><td><code>frontend/src/App.tsx</code><br><span class="muted">主界面与会话流程</span></td><td>已有项目会话、对话、导入、新建、画布和回写入口。</td><td>减少空白起步；增加项目概览、任务型入口和明确的上下文状态。</td></tr>
+      <tr><td><code>frontend/src/canvas/</code><br><span class="muted">交互画布</span></td><td>展示逻辑块和可交互工程模型。</td><td>支持按工艺步骤高亮、从步骤追踪到块/变量/网络，并联动变更影响。</td></tr>
+      <tr><td><code>frontend/src/shell/</code><br><span class="muted">侧栏、对话、检查器、抽屉</span></td><td>已有 HistorySidebar、ChatDock、VariableInspector、ImportDialog、CompileDrawer、ChangeLogDrawer 等组件。</td><td>优先组合与扩展已有组件，不创建重复的平行工作流。</td></tr>
+      <tr><td><code>frontend/src/state/</code><br><span class="muted">解析、交叉引用、解释、历史上下文</span></td><td>包含导入、交叉引用和逻辑解释相关模块。</td><td>把分析结果变成可点击证据，并维护任务上下文与选中对象的一致性。</td></tr>
+      <tr><td><code>plc_engine/</code>、<code>agents/plc/tia/</code></td><td>已有画布模型、转译/回写、PLC 解析相关核心。</td><td>为工艺需求与现有逻辑建立关联；不要另造一个与 PLC-IR 竞争的逻辑模型。</td></tr>
+      <tr><td><code>plc_engine/pcec.py</code> 与变更记录</td><td>已有变更事务、基线和审计设计。</td><td>把工艺意图、预期结果、影响范围和验收条件关联到同一变更事务。</td></tr>
+      <tr><td><code>gateway/app/</code> 与 Openness CLI</td><td>已有网关、写回/编译任务和 TIA 集成路径。</td><td>复用现有 API；变更审查必须调用既有守卫，不得从前端绕过后端安全门禁。</td></tr>
+    </tbody></table></div>
+    <div class="callout warn"><strong>开发前强制检查：</strong>先读取当前分支的实现、组件 props、API 契约和测试。若当前代码已实现本规范某项，先验证实际行为，再补缺口；不要因本文件未列出实现细节就重复造轮子。</div>
+  </section>
+
+  <section id="ia" class="section">
+    <div class="section-no">03 / WORKBENCH INFORMATION ARCHITECTURE</div><h2>建议的工作台结构</h2>
+    <p class="section-intro">主界面应围绕一个明确的项目上下文组织。对话是交互方式，不是工程信息的唯一容器；画布、证据、变更和验证结果应相互联动。</p>
+    <div class="screen">
+      <div class="screen-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span style="margin-left:8px">PLC_chat / 工程工作台</span><span style="margin-left:auto;color:#8da4b8">示意布局 · 非现有 UI 截图</span></div>
+      <div class="screen-body">
+        <div class="screen-side left"><div class="screen-label">PROJECT</div><div class="screen-menu active">工程概览</div><div class="screen-menu">工艺步骤</div><div class="screen-menu">PLC 逻辑</div><div class="screen-menu">信号与 I/O</div><div class="screen-menu">HMI / 仿真</div><div class="screen-menu">变更与验证</div><div style="height:18px"></div><div class="screen-label">TASKS</div><div class="screen-menu">理解工程</div><div class="screen-menu">诊断问题</div><div class="screen-menu">完善逻辑</div><div class="screen-menu">重构程序</div></div>
+        <div class="screen-center">
+          <div class="mini-card"><strong>项目：装配工站控制</strong><span style="color:#a8bac9">PLC：CPU 型号 / TIA 版本 / 工程基线 / 最近解析时间</span><div class="bar"><span></span></div><span style="color:#8eddb8">工程上下文已加载 · 证据可追溯</span></div>
+          <div class="mini-card"><strong>工艺主线：夹紧 → 确认 → 加工</strong><div class="mini-flow"><span class="mini-node">工件到位</span><span style="color:#7f9aae">→</span><span class="mini-node">夹紧</span><span style="color:#7f9aae">→</span><span class="mini-node green">夹紧确认</span><span style="color:#7f9aae">→</span><span class="mini-node">允许加工</span></div></div>
+          <div class="mini-grid"><div class="mini-card"><strong>工程发现</strong><span>2 项待确认 · 1 条调用链未解析</span></div><div class="mini-card"><strong>变更工作区</strong><span>1 个草案 · 尚未写回</span></div></div>
+          <div class="mini-card"><strong>与工程对话</strong><span>“检查夹紧未到位时，是否仍存在启动加工的路径。”</span><div style="margin-top:10px;color:#62d7ed">基于工程证据分析　→</div></div>
+        </div>
+        <div class="screen-side right"><div class="screen-label">CONTEXT</div><div class="mini-card"><strong>当前选中</strong><span>工艺步骤：夹紧确认</span><div style="height:8px"></div><span>相关块：FB_Clamp / DB_Process</span></div><div class="screen-label" style="margin-top:14px">VALIDATION</div><div class="label-row"><b>V0 结构</b><span class="mini-status ok"><i></i>通过</span></div><div class="label-row"><b>V1 静态</b><span class="mini-status ok"><i></i>通过</span></div><div class="label-row"><b>V2 TIA</b><span class="mini-status"><i></i>待执行</span></div><div class="label-row"><b>V3 行为</b><span class="mini-status"><i></i>未验证</span></div></div>
+      </div>
+    </div>
+    <div class="grid three" style="margin-top:15px">
+      <div class="card"><h3>左侧：工程导航</h3><p>项目概览、工艺步骤、PLC 逻辑、信号/I/O、HMI/仿真、变更与验证。保留会话历史作为项目恢复能力，不把历史聊天当作唯一项目导航。</p></div>
+      <div class="card"><h3>中间：工作主区</h3><p>按当前任务展示工程概览、工艺流程、PLC 画布、源码或差异。用户切换任务时保留同一个项目上下文。</p></div>
+      <div class="card"><h3>右侧：上下文与证据</h3><p>显示选中步骤/块/变量、来源证据、影响范围、验证状态。窄屏或小窗口可以改为抽屉，不强制三栏。</p></div>
+    </div>
+    <p class="small">布局是交互目标，不要求照图像素级重建。实现时优先利用现有可拖拽侧栏、画布和抽屉。</p>
+  </section>
+
+  <section id="flows" class="section">
+    <div class="section-no">04 / USER FLOWS</div><h2>四种任务模式，共享同一份工程上下文</h2>
+    <p class="section-intro">快捷任务用于减少表达成本。自然语言输入继续保留，不能把用户限制在固定表单或固定指令。</p>
+    <div class="grid two">
+      <div class="card"><div class="kicker">TASK 01</div><h3>理解工程</h3><div class="task-sample"><div class="task-icon">⌕</div><div><strong>“这个设备的自动循环是怎么运行的？”</strong><span>生成工艺主线、启动条件、动作顺序、停止/复位与相关程序证据。</span></div></div><ul><li>先确认当前工程和解析覆盖度。</li><li>用白话解释；术语可点击查看原始变量、网络或代码。</li><li>明确说明未知、未解析或证据不足的部分。</li></ul></div>
+      <div class="card"><div class="kicker">TASK 02</div><h3>诊断问题</h3><div class="task-sample"><div class="task-icon">⌕</div><div><strong>“气缸没有伸出，但 PLC 已经发出动作命令。”</strong><span>输出候选原因、证据、排查顺序和需要读取的现场信号。</span></div></div><ul><li>从命令位向前追踪允许条件、模式、互锁、报警和状态条件。</li><li>按证据强弱排序假设，不把推测写成根因。</li><li>区分静态代码分析与真机实时信号诊断。</li></ul></div>
+      <div class="card"><div class="kicker">TASK 03</div><h3>完善工艺逻辑</h3><div class="task-sample"><div class="task-icon">⇄</div><div><strong>“夹紧不到位不能启动加工；超时要报警。”</strong><span>先形成需求卡，再对照现有工程，最后提出最小变更。</span></div></div><ul><li>提取前置条件、正常序列、异常分支、复位和验收条件。</li><li>检查现有逻辑是否已经满足需求，避免重复添加。</li><li>有关键歧义时只追问真正影响实现的问题。</li></ul></div>
+      <div class="card"><div class="kicker">TASK 04</div><h3>重构程序</h3><div class="task-sample"><div class="task-icon">⤨</div><div><strong>“把重复的夹紧逻辑抽成公共 FB，但行为不变。”</strong><span>展示重构范围、行为约束、调用影响、代码差异与回归计划。</span></div></div><ul><li>默认保持外部行为、接口语义和既有安全约束不变。</li><li>先分析依赖，再生成重构草案。</li><li>验证不充分时明确标注风险和未覆盖项。</li></ul></div>
+    </div>
+    <div class="callout"><strong>交互规范：</strong>任务入口是快捷方式，不是不同的 AI 后端或独立上下文。所有任务都使用相同项目基线、解析状态、变量引用、历史意图和变更事务。</div>
+  </section>
+
+  <section id="intent" class="section">
+    <div class="section-no">05 / PROCESS INTENT CARD</div><h2>先确认工艺意图，再生成程序修改</h2>
+    <p class="section-intro">这是 P0 的关键交互。AI 不应把一句口头工艺要求直接转成未经审查的写回操作。先生成工程师能理解的结构化需求卡，再做工程差距分析和修改草案。</p>
+    <div class="card">
+      <div class="label-row"><h3>工艺需求草案 · 示例</h3><span class="pill warn">待工程师确认</span></div>
+      <div class="grid two">
+        <div><div class="kicker">01 / 前置条件</div><p>工件到位、自动模式有效，且项目定义的安全许可成立。</p></div>
+        <div><div class="kicker">02 / 正常序列</div><p>发出夹紧命令 → 等待夹紧到位 → 允许加工。</p></div>
+        <div><div class="kicker">03 / 异常分支</div><p>夹紧超时 → 报警 → 禁止加工；复位条件由工艺需求定义。</p></div>
+        <div><div class="kicker">04 / 验收条件</div><p>未夹紧时所有相关加工启动路径均被阻断；超时时按要求报警；正常夹紧后流程可继续。</p></div>
+      </div>
+      <div class="callout warn"><strong>参数说明：</strong>超时时间必须来源于工程已有参数、工艺文件或工程师确认。本规范不指定实际设备时间值，也不允许 AI 将示例数值直接写入生产工程。</div>
+      <div class="label-row"><b>需求来源与置信状态</b><span class="small">每项都可标记</span></div>
+      <div class="grid three"><div class="mini-card"><strong style="color:var(--green)">工程证据</strong><span>已从工程或文件确认，显示来源。</span></div><div class="mini-card"><strong style="color:var(--amber)">AI 推断</strong><span>推测或建议，不能伪装成已确认要求。</span></div><div class="mini-card"><strong style="color:var(--blue)">待工程师确认</strong><span>缺失的工艺参数、异常处理或边界条件。</span></div></div>
+    </div>
+    <h3 style="margin-top:22px">需求卡字段契约</h3>
+    <div class="table-wrap"><table><thead><tr><th>字段</th><th>内容</th><th>交互要求</th></tr></thead><tbody>
+      <tr><td><code>intent_summary</code></td><td>一句话说明用户希望设备实现什么。</td><td>允许工程师直接编辑。</td></tr>
+      <tr><td><code>preconditions</code></td><td>前置条件、模式和已有互锁。</td><td>标明来源：工程证据 / 用户输入 / AI 推断。</td></tr>
+      <tr><td><code>normal_sequence</code></td><td>动作顺序与状态转移。</td><td>可按步骤检查、排序和修订。</td></tr>
+      <tr><td><code>exceptions</code></td><td>超时、传感器矛盾、取消、复位等异常分支。</td><td>未知项显示待确认，不自动编造设备行为。</td></tr>
+      <tr><td><code>constraints</code></td><td>必须保留的接口、命名、动作和安全约束。</td><td>为修改计划生成不可静默违反的约束。</td></tr>
+      <tr><td><code>acceptance_criteria</code></td><td>如何判断工艺要求已实现。</td><td>每条标准尽量能关联静态检查或测试场景。</td></tr>
+      <tr><td><code>open_questions</code></td><td>对实现有实质影响的未知信息。</td><td>优先一次问一个关键问题；允许在不影响安全的前提下继续做只读分析。</td></tr>
+    </tbody></table></div>
+    <div class="callout"><strong>实施规则：</strong>需求卡确认只表示“工艺意图已确认”，不等于批准修改或批准写回。两种确认必须分开。</div>
+  </section>
+
+  <section id="change-review" class="section">
+    <div class="section-no">06 / CHANGE REVIEW</div><h2>变更审查：同时看工艺、逻辑、代码与验证</h2>
+    <p class="section-intro">工程师需要理解变更产生的设备行为，而不只是阅读代码 diff。所有视图应由同一份 change set 生成，并共享选中对象和定位信息。</p>
+    <div class="grid two">
+      <div class="card"><div class="icon">01</div><h3>工艺差异</h3><p>新增或改变了什么设备行为？哪些异常流程得到处理？原有工艺约束是否保留？</p><p class="small">显示关联的需求条目和验收条件。</p></div>
+      <div class="card"><div class="icon">02</div><h3>逻辑差异</h3><p>哪些条件、状态、动作、调用关系、变量、HMI 绑定被新增、修改或删除？</p><p class="small">点击任意项，高亮画布中的对应块或信号。</p></div>
+      <div class="card"><div class="icon">03</div><h3>源码差异</h3><p>展示修改前后 SCL / SimaticML 或适用的逻辑表示。显示变更区块、命名和接口变化。</p><p class="small">保留原始工程源、转换结果和解析限制等证据。</p></div>
+      <div class="card"><div class="icon">04</div><h3>验证差异</h3><p>展示结构解析、静态预检、TIA 编译和行为验证的独立状态、日志、错误归因及覆盖范围。</p><p class="small">状态未知、跳过或未执行时，不能显示为通过。</p></div>
+    </div>
+    <h3 style="margin-top:22px">变更状态与权限边界</h3>
+    <div class="workflow">
+      <div class="step"><div class="stepnum">01</div><div><h3>草案</h3><p>生成变更计划和候选 ops；尚未触碰 TIA 工程。允许继续编辑、放弃或重新生成。</p></div><div class="step-state"><span class="pill plan">Draft</span></div></div>
+      <div class="step"><div class="stepnum">02</div><div><h3>分析与预检</h3><p>计算触及块、变量、HMI 和调用路径；检查前置条件、项目基线与静态规则。</p></div><div class="step-state"><span class="pill plan">Analyze</span></div></div>
+      <div class="step"><div class="stepnum">03</div><div><h3>工程师审查与批准</h3><p>清楚展示变更清单、风险、基线指纹、备份方式和验证计划。批准范围必须与实际执行范围一致。</p></div><div class="step-state"><span class="pill warn">Approval</span></div></div>
+      <div class="step"><div class="stepnum">04</div><div><h3>执行已有写回/编译流程</h3><p>复用后端守卫、备份、Openness 和 PCEC。基线改变时必须 fail-closed，拒绝过期变更。</p></div><div class="step-state"><span class="pill warn">Writeback</span></div></div>
+      <div class="step"><div class="stepnum">05</div><div><h3>呈现真实验证结果</h3><p>成功时显示证据；失败时定位错误并可提出新的修复草案。修复仍需遵守既有安全和审批边界。</p></div><div class="step-state"><span class="pill done">Evidence</span></div></div>
+    </div>
+    <div class="callout danger"><strong>安全边界：</strong>不在本次功能中增加 PLC 下载到 CPU 的能力。仓库现有说明明确产品支持回写博图和编译校验，不提供 PLC 下载。任何未来下载功能都需要单独的需求、安全审查和授权设计。AI 不得绕过用户审批直接回写、改变项目基线或执行现场动作。</div>
+  </section>
+
+  <section id="refactor" class="section">
+    <div class="section-no">07 / REFACTOR WORKFLOW</div><h2>重构必须有明确的行为约束</h2>
+    <p class="section-intro">“优化程序”是一个风险很高的模糊请求。系统应先明确优化目标，再分析影响，并将重构范围和行为保持要求纳入变更事务。</p>
+    <div class="table-wrap"><table><thead><tr><th>重构目标</th><th>系统应检查</th><th>必须展示</th></tr></thead><tbody>
+      <tr><td>消除重复逻辑</td><td>重复网络是否真正等价；实例状态、定时器、边沿和保持行为是否相同。</td><td>重复候选、抽取后接口、实例数据差异与回归场景。</td></tr>
+      <tr><td>拆分复杂功能块</td><td>输入/输出接口、静态状态、调用顺序和数据依赖。</td><td>拆分边界、调用图变化、接口迁移清单。</td></tr>
+      <tr><td>改善命名与结构</td><td>所有读写引用、HMI 标签、外部接口和跨块依赖。</td><td>重命名映射、受影响项、原引用是否完整更新。</td></tr>
+      <tr><td>改善执行顺序或状态机</td><td>周期执行语义、扫描顺序、状态保持、超时、复位和异常路径。</td><td>行为变化声明、原/新状态转移对比、未验证风险。</td></tr>
+      <tr><td>性能或可维护性优化</td><td>现有基准、真实瓶颈、可测量的目标。</td><td>优化前后指标。没有基准时先提出测量，不声称性能提升。</td></tr>
+    </tbody></table></div>
+    <div class="callout warn"><strong>默认约束：</strong>重构默认要求“外部工艺行为和接口语义不变”。若系统判断必须改变行为，必须把它作为显式工艺变更单独列出，不能藏在重构操作中。</div>
+    <h3>重构任务的最低输出</h3>
+    <ul class="checklist"><li>重构目的和范围。</li><li>基线行为与必须保留的约束。</li><li>受影响的块、接口、变量、HMI 绑定和调用关系。</li><li>修改前后逻辑与源码差异。</li><li>回归测试清单及覆盖度。</li><li>已验证内容、未验证内容和剩余风险。</li></ul>
+  </section>
+
+  <section id="semantics" class="section">
+    <div class="section-no">08 / PROCESS SEMANTICS</div><h2>建立最小工艺语义关联，不要另造一套 PLC-IR</h2>
+    <p class="section-intro">工艺步骤与 PLC 代码是两种不同的描述。要让 AI 真正理解工程，需要把“设备应该如何工作”关联到“现有 PLC 如何实现”。但这一层必须复用现有 PLC-IR、知识图谱和画布模型，避免多套事实源冲突。</p>
+    <div class="workflow">
+      <div class="step"><div class="stepnum">A</div><div><h3>工艺语义层</h3><p>工艺步骤、前置条件、动作、互锁、异常分支、复位规则和验收条件。</p></div><div class="step-state">Intent</div></div>
+      <div class="step"><div class="stepnum">B</div><div><h3>现有 PLC 语义模型</h3><p>PLC-IR、块、网络、变量、表达式、调用图、HMI 绑定与来源位置。</p></div><div class="step-state">Implementation</div></div>
+      <div class="step"><div class="stepnum">C</div><div><h3>实现与验证证据</h3><p>源工程、SCL/SimaticML、编译日志、静态检查、行为测试及验证覆盖度。</p></div><div class="step-state">Evidence</div></div>
+    </div>
+    <h3 style="margin-top:22px">最小关联对象建议</h3>
+    <pre>ProcessRequirement
+  requirement_id
+  summary
+  source                  # user | engineering_document | inferred
+  confirmation_status     # proposed | confirmed | rejected
+  preconditions[]
+  sequence_steps[]
+  exception_paths[]
+  constraints[]
+  acceptance_criteria[]
+  linked_blocks[]
+  linked_signals[]
+  verification_refs[]
+  project_baseline_hash</pre>
+    <p class="small">这是概念契约，不是要求立即照此新建数据库或替换现有对象。开发 Agent 必须先对照当前 PCEC、画布模型、PLC-IR 和 API，确定最小增量字段与兼容方式。</p>
+    <div class="grid two">
+      <div class="card"><h3>从工艺到代码</h3><p>用户点选某个工艺步骤，即可看到对应的块、网络和变量。发现逻辑缺口时，系统能列出证据和受影响范围。</p></div>
+      <div class="card"><h3>从代码到工艺</h3><p>用户选中某变量或网络，可以查看它服务于哪些工艺要求。没有建立关联时明确显示“尚未关联”，不能让模型编造关系。</p></div>
+    </div>
+  </section>
+
+  <section id="architecture" class="section">
+    <div class="section-no">09 / IMPLEMENTATION MAP</div><h2>建议代码落点与边界</h2>
+    <p class="section-intro">只给出初始定位。路径和现有实现以 Agent 实际 checkout 的当前分支为准；如已存在等价模块，先复用。</p>
+    <div class="table-wrap"><table><thead><tr><th>关注点</th><th>优先检查的位置</th><th>修改边界</th></tr></thead><tbody>
+      <tr><td>主工作台 / 项目上下文</td><td><code>frontend/src/App.tsx</code><br><code>frontend/src/shell/</code></td><td>梳理页面状态和组件职责；将大状态管理拆分为小组件/Hook 时应保持现有事件行为。</td></tr>
+      <tr><td>工艺入口与需求卡</td><td><code>frontend/src/shell/</code>、<code>frontend/src/state/</code></td><td>新增轻量需求视图与状态契约；需求确认与变更批准分离。</td></tr>
+      <tr><td>工程证据与交叉引用</td><td><code>frontend/src/state/crossRef.ts</code>、<code>frontend/src/state/blockExplainer.ts</code>、画布组件</td><td>复用现有引用分析和选中机制；点击证据必须定位到真实对象。</td></tr>
+      <tr><td>画布/重构差异</td><td><code>frontend/src/canvas/</code>、已有源码差异与变更抽屉组件</td><td>共享一个变更集合；不在前端私自维护第二份“真实工程状态”。</td></tr>
+      <tr><td>变更生命周期</td><td><code>plc_engine/pcec.py</code>、<code>gateway/app/routers/plc.py</code>、相关 services</td><td>优先扩展现有 PCEC 契约；保证基线检查、审批、备份和 fail-closed 行为不退化。</td></tr>
+      <tr><td>PLC 解析与模型</td><td><code>agents/plc/tia/</code>、<code>plc_engine/canvas_model.py</code></td><td>先检查现有 PLC-IR 和来源定位能力。不要复制解析器，也不要用 LLM 输出替代真实解析结果。</td></tr>
+      <tr><td>工业端写回/编译</td><td><code>industrial/tia_openness_cli/</code>、相关 worker/adapter、编译任务服务</td><td>复用现有入口。前端新交互不能绕过后端确认和编译守卫。</td></tr>
+      <tr><td>回归测试</td><td><code>tests/unit/</code>、<code>frontend/src/</code> 内既有测试位置</td><td>同步新增交互和后端契约测试；真实工业验证需单独说明环境、版本、输入工程和日志。</td></tr>
+    </tbody></table></div>
+    <h3>建议的状态职责</h3>
+    <div class="grid three">
+      <div class="card"><h4>项目状态</h4><p>当前项目、解析覆盖、基线 hash、TIA 版本、会话 ID、选中对象。</p></div>
+      <div class="card"><h4>工艺意图状态</h4><p>需求内容、来源、确认状态、开放问题和验收条件；不等同于修改操作。</p></div>
+      <div class="card"><h4>变更事务状态</h4><p>ops、受影响块、审批、验证等级、回写/编译结果和回滚证据。由后端事务为权威。</p></div>
+    </div>
+  </section>
+
+  <section id="roadmap" class="section">
+    <div class="section-no">10 / DELIVERY ROADMAP</div><h2>按阶段实施，每一阶段都能单独验收</h2>
+    <p class="section-intro">建议先解决体验主线和工艺需求表达，再补充更深的工艺语义追踪。避免一次性重写前端、Agent 和后端。</p>
+    <div class="roadmap-item"><div class="roadmap-label">PHASE 0</div><div class="roadmap-content"><h3>仓库盘点与基线验证 <span class="pill done">必做</span></h3><p>检查当前分支、README、AGENTS.md、组件树、API 契约和测试；启动前后端；运行已有测试；记录基线失败项和截图/主要 UI 状态。</p><p><strong>交付：</strong>简短盘点记录、确认的复用组件、测试基线。不要在此阶段做大规模重构。</p></div></div>
+    <div class="roadmap-item"><div class="roadmap-label">PHASE 1</div><div class="roadmap-content"><h3>项目入口与工作台上下文 <span class="pill plan">P0</span></h3><p>在进入空白画布前提供“继续项目 / 导入工程 / 从工艺需求开始”；选中项目后展示工程概览、解析状态、设备/块数量和当前基线状态。保留现有历史会话和导入功能。</p><p><strong>交付：</strong>可操作的项目入口、上下文明确的工作台、加载/空状态/错误状态。</p></div></div>
+    <div class="roadmap-item"><div class="roadmap-label">PHASE 2</div><div class="roadmap-content"><h3>任务入口与工艺需求卡 <span class="pill plan">P0</span></h3><p>加入理解工程、诊断问题、完善工艺逻辑、重构程序四种任务入口；自然语言仍可直接输入。工艺变更先生成需求卡，显示来源、前置条件、正常序列、异常分支、约束、验收标准和待确认问题。</p><p><strong>交付：</strong>需求卡状态流、编辑/确认操作、需求确认与变更批准分离。</p></div></div>
+    <div class="roadmap-item"><div class="roadmap-label">PHASE 3</div><div class="roadmap-content"><h3>影响分析与四层变更审查 <span class="pill plan">P0</span></h3><p>在现有变更流程上显示工艺差异、逻辑差异、源码差异和验证差异；将证据链接到真实画布对象。复用 PCEC 状态机、基线门禁、变更记录和编译抽屉。</p><p><strong>交付：</strong>可审查的修改草案、影响对象清单、验证状态和失败诊断。</p></div></div>
+    <div class="roadmap-item"><div class="roadmap-label">PHASE 4</div><div class="roadmap-content"><h3>重构任务与行为保持验证 <span class="pill plan">P1</span></h3><p>支持“保持行为不变”等约束；显示调用影响、接口变化、回归测试清单和验证覆盖度。先做分析和草案，避免直接自动重写。</p><p><strong>交付：</strong>重构计划、风险边界、前后对比和真实测试结果。</p></div></div>
+    <div class="roadmap-item"><div class="roadmap-label">PHASE 5</div><div class="roadmap-content"><h3>工艺语义与 PLC-IR 双向追踪 <span class="pill plan">P1/P2</span></h3><p>在现有工程模型之上建立最小工艺要求对象，关联工艺步骤、块、变量与验证证据；通过真实案例验证映射准确度后再扩展知识图谱。</p><p><strong>交付：</strong>需求到实现、实现到工艺的双向导航，未映射项可见且不伪造关系。</p></div></div>
+  </section>
+
+  <section id="acceptance" class="section">
+    <div class="section-no">11 / ACCEPTANCE CRITERIA</div><h2>验收标准：可观察、可测试、不可模糊</h2>
+    <p class="section-intro">每个验收项都应有对应的自动化测试或可复现的手动步骤。以下清单可以作为 Agent 的完成门槛。</p>
+    <div class="card">
+      <h3>产品与交互</h3>
+      <ul class="checklist">
+        <li>打开应用时，工程师能继续最近项目或直接导入工程；不会无提示地落入没有上下文的画布。</li>
+        <li>项目未加载时，AI 会明确提示当前没有工程上下文，不会假装分析真实 PLC 逻辑。</li>
+        <li>四类任务入口都有清晰说明，并且仍可使用自由文本输入。</li>
+        <li>工艺需求卡能区分工程证据、用户输入、AI 推断和待确认内容。</li>
+        <li>需求确认不会自动等价为批准代码修改或批准回写。</li>
+        <li>点击变量、逻辑块或工艺步骤，可以定位相应工程对象；定位失败时显示原因。</li>
+        <li>变更审查同时展示工艺、逻辑、源码、验证四类信息，并且都对应同一个变更集合。</li>
+        <li>窄屏、加载中、解析失败、网关离线、无变更和编译失败状态都有清楚反馈。</li>
+      </ul>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>工程正确性与安全边界</h3>
+      <ul class="checklist">
+        <li>每条关键结论尽可能链接到真实工程证据；无证据的推断有明确标识。</li>
+        <li>写回继续使用现有后端权限、审批、备份、基线检查与 PCEC 流程。</li>
+        <li>工程基线发生变化时，过期变更不能被应用。</li>
+        <li>任何失败或未执行的验证都不能显示为通过；V3 未执行时明确显示未验证。</li>
+        <li>AI 不能默认创建占位变量来掩盖未知信号，也不能静默改变接口或安全相关行为。</li>
+        <li>不引入绕过人工批准的自动写回或 PLC 下载路径。</li>
+        <li>重构任务默认保留外部工艺行为；行为改变必须明示并得到单独确认。</li>
+      </ul>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>测试与交付证据</h3>
+      <ul class="checklist">
+        <li>前端单元测试通过；失败项逐个分类，不能用跳过测试宣称成功。</li>
+        <li>后端单元测试通过，或清楚列出与本次变更无关的基线失败及证据。</li>
+        <li>新增测试覆盖需求状态、批准分离、证据定位、变更摘要和验证状态显示。</li>
+        <li>手动验证至少覆盖导入工程 → 选择任务 → 生成需求卡 → 生成草案 → 审查 → 编译结果呈现。</li>
+        <li>若没有可用的 TIA V19 / Openness 环境，明确说明未完成真实编译验证，不得声称真机闭环已验证。</li>
+        <li>提交变更清单、测试命令及真实输出、遗留问题、截图或操作记录。</li>
+      </ul>
+    </div>
+    <h3 style="margin-top:22px">测试命令参考</h3>
+    <pre>cd plc_project
+python -m pytest tests/unit -q
+
+cd frontend
+npm run test</pre>
+    <p class="small">以上命令来自仓库 README。执行前先检查当前项目约定、依赖和脚本；按真实输出报告结果。不要只根据 README 中的测试数量推断全部通过。</p>
+  </section>
+
+  <section id="agent" class="section">
+    <div class="section-no">12 / AGENT WORK ORDER</div><h2>可以直接交给开发 Agent 的执行指令</h2>
+    <p class="section-intro">将以下内容作为本规范的执行约束。Agent 应边检查、边实施、边测试；遇到复杂任务时分小步提交可审查结果，不要一次性生成大量未经验证的改动。</p>
+    <pre id="agent-instructions">任务：依据《PLC_chat｜工艺驱动工程工作台：交互与开发实施规范》完善仓库。目标是让工程师专注工艺，AI 理解现有 PLC 工程并完善/重构控制逻辑，系统提供可追溯证据与验证闭环。
+
+执行要求：
+1. 先检查当前分支、AGENTS.md、README、前端组件、后端 API 契约、PCEC 和相关测试。确认当前实现与本规范的差距。不要仅凭文档推断代码已实现。
+2. 先运行现有前后端测试并记录真实基线。不得把未执行的测试写成通过；遇到既有失败，保存命令、关键日志与归因。
+3. 遵循“复用优先、最小改动、逐阶段交付”。不要重写整个 App，不要创建与现有组件/PLC-IR/PCEC 重复的平行系统。若已有能力满足要求，优先增加测试和修复实际缺口。
+4. 按 Phase 1 → Phase 2 → Phase 3 实施 P0。每个阶段结束时运行相关测试并总结：改动文件、行为变化、测试命令与真实结果、未完成项。
+5. 首先实现：项目入口/上下文、四类任务快捷入口、工艺需求卡、需求确认与变更批准分离、工艺/逻辑/源码/验证四层审查。不得只做静态 UI；交互应接入真实 state/API，或清楚标注尚未接通的能力。
+6. 需求卡必须标注证据来源、AI 推断和待确认项。未知参数不得默认写入 PLC；关键不确定项要请求工程师确认。只读分析可以在不确定时继续，并说明边界。
+7. 写回必须继续走现有后端 PCEC / 基线门禁 / 审批 / 备份 / 编译路径。不要增加未经批准的自动写回或 PLC 下载功能。基线过期时必须拒绝执行。
+8. 验证状态必须区分结构解析、静态预检、TIA 编译和行为验证。未知、跳过、未执行不能显示为通过。没有真实 TIA 环境时，不得宣称真实 TIA 编译或设备行为已验证。
+9. 同步补充单元测试。至少测试：无工程上下文提示、需求确认不触发写回、变更审批门禁、证据定位失败反馈、验证状态的真实显示、基线过期拒绝与既有功能回归。
+10. 不做无关格式化或大范围重命名。不要删除历史功能和测试。避免前后端 API 契约漂移；新增字段要有兼容策略。
+11. 在最终报告中明确列出：完成项、修改文件、关键设计决策、自动化测试真实结果、手动验证结果、未完成项和风险。将“已实现”“已测试”“真实工业环境已验证”作为三种不同状态报告。
+
+完成标准：以本规范第 11 节验收清单为准；若某项受环境限制无法完成，交付最好的可验证部分，并明确说明阻塞原因与下一步。</pre>
+    <div class="actions"><button class="btn" onclick="copyAgentText()">复制 Agent 执行指令</button><span id="copy-status" class="copy-ok">已复制</span><button class="btn" onclick="window.print()">打印 / 导出 PDF</button></div>
+    <div class="callout"><strong>执行顺序建议：</strong>不要先建设复杂的工艺知识图谱。先把“项目上下文 → 工艺需求 → 变更审查 → 验证结果”这条路径做顺畅，并通过现有真实 PLC 工程做端到端验证，再决定工艺语义层需要保存哪些字段。</div>
+  </section>
+  </div>
+</div>
+</main>
+<footer class="footer"><div class="wrap"><div><strong>PLC_chat · 工艺驱动工程工作台</strong></div><div>版本：实施规范草案 v1.0 · 日期：2026-10-25</div><p>本文是产品与工程实施规范，不代表所有描述功能已经实现。仓库代码、测试输出和真实 TIA 工程验证结果优先于本文中的假设。开发时应按当前分支校准路径与契约。</p><div><a href="https://github.com/Roarpeng/PLC_chat">仓库：Roarpeng/PLC_chat</a> · <a href="https://github.com/Roarpeng/PLC_chat/blob/main/plc_project/README.md">当前项目 README</a></div></div></footer>
+<script>
+function copyAgentText(){const el=document.getElementById('agent-instructions');const status=document.getElementById('copy-status');const text=el.innerText; if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(()=>{status.style.display='inline';setTimeout(()=>status.style.display='none',1800)}).catch(()=>fallbackCopy(text,status))}else{fallbackCopy(text,status)}}
+function fallbackCopy(text,status){const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');status.style.display='inline';setTimeout(()=>status.style.display='none',1800)}catch(e){status.textContent='复制失败，请手动选择指令';status.style.display='inline'}ta.remove()}
+</script>
+</body>
+</html>

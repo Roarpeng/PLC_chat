@@ -6,6 +6,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from collections import deque
+import time
+
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
 
@@ -953,12 +956,37 @@ async def put_canvas_session(
     return ApiResponse(ok=True, data=meta, request_id=request_id)
 
 
+# —— 会话批量删除护栏:60s 内 >8 次删除视为异常(2026-10-24 21:01 曾有 30 条
+# 会话在 15s 内被顺序删除、无法溯源的批量丢失事故;正常使用不可能达到该速率)
+_session_delete_times: deque[float] = deque(maxlen=16)
+_SESSION_DELETE_WINDOW_S = 60.0
+_SESSION_DELETE_MAX = 8
+
+
+def _session_delete_rate_ok() -> bool:
+    now = time.time()
+    while _session_delete_times and now - _session_delete_times[0] > _SESSION_DELETE_WINDOW_S:
+        _session_delete_times.popleft()
+    if len(_session_delete_times) >= _SESSION_DELETE_MAX:
+        return False
+    _session_delete_times.append(now)
+    return True
+
+
 @router.delete("/canvas/sessions/{session_id}", response_model=ApiResponse[dict[str, Any]])
 async def delete_canvas_session(
     session_id: str,
     principal: PrincipalDep,
     request_id: RequestIdDep,
 ) -> ApiResponse[dict[str, Any]]:
+    if not _session_delete_rate_ok():
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "code": "PLC_SESSION_DELETE_RATE_LIMITED",
+                "message": "会话删除过于频繁(60 秒内超过 8 次),已拦截。若为误操作请检查是否有自动化在批量删除。",
+            },
+        )
     from gateway.app.services.plc import session_store
 
     removed = session_store.delete_session(session_id)
@@ -968,6 +996,169 @@ async def delete_canvas_session(
             detail={"code": "PLC_SESSION_NOT_FOUND", "message": f"session {session_id} not found"},
         )
     return ApiResponse(ok=True, data={"removed": session_id}, request_id=request_id)
+
+
+@router.get("/canvas/requirements", response_model=ApiResponse[list[dict[str, Any]]])
+async def list_canvas_requirements(
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[list[dict[str, Any]]]:
+    """工艺需求卡 meta 列表(id/summary/status/updated_at/task_kind,updated_at 降序)。"""
+    _ = principal
+    from gateway.app.services.plc import requirement_store
+
+    return ApiResponse(ok=True, data=requirement_store.list_requirements(), request_id=request_id)
+
+
+@router.post("/canvas/requirements/draft", response_model=ApiResponse[dict[str, Any]])
+async def draft_canvas_requirement(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """LLM 生成工艺需求卡草稿(契约 docs/22 §2)——**不落盘**,工程师确认后由前端 PUT。
+
+    body: {prompt, canvas, task_kind?}。未配置 LLM → 400 code=LLM_NOT_CONFIGURED;
+    返回结构不合契约(重试一次仍不符)→ 502 code=LLM_CALL_FAILED。草稿硬规则:
+    confirmation_status 恒 proposed;未知数值参数(超时等)由提示词约束写入
+    open_questions,绝不编造数值;linked_blocks 从 items 提及的画布块名匹配。
+    """
+    _ = principal
+    import asyncio
+
+    from gateway.app.services.plc import requirement_store
+    from gateway.app.services.plc.llm_explain import chat_completion_raw, llm_settings
+    from plc_engine.canvas_model import CanvasState
+
+    prompt = str(body.get("prompt") or "").strip()
+    if not prompt:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "PROMPT_REQUIRED", "message": "body.prompt is required"},
+        )
+    task_kind = str(body.get("task_kind") or "").strip()
+    canvas = CanvasState.from_dict(body.get("canvas") or {})
+    block_names = list(canvas.blocks.keys())
+    settings = llm_settings()
+    if settings is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "LLM_NOT_CONFIGURED",
+                "message": (
+                    "生成需求卡草稿需要 LLM：在网关进程设置环境变量 "
+                    "PLC_LLM_BASE_URL（OpenAI 兼容端点）、PLC_LLM_API_KEY、PLC_LLM_MODEL，"
+                    "或执行 setx DEEPSEEK_API_KEY <key> 后重启网关即可沿用 DeepSeek。"
+                ),
+            },
+        )
+    messages = requirement_store.build_draft_messages(prompt, block_names, task_kind)
+    last_error = ""
+    for attempt in (1, 2):  # 结构不符重试一次,再不符按 LLM_CALL_FAILED 语义 502
+        try:
+            text, _usage = await asyncio.to_thread(
+                chat_completion_raw,
+                messages,
+                settings,
+                timeout_s=60.0,
+                max_tokens=2048,
+                json_mode=True,
+            )
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={"code": "LLM_CALL_FAILED", "message": str(exc)},
+            ) from exc
+        try:
+            draft = requirement_store.requirement_from_llm_payload(
+                text,
+                prompt=prompt,
+                block_names=block_names,
+                task_kind=task_kind,
+                project_name_fallback=canvas.project_name,
+            )
+        except ValueError as exc:
+            last_error = str(exc)
+            logger.warning("requirement draft malformed (attempt %s): %s", attempt, last_error)
+            continue
+        return ApiResponse(ok=True, data=draft, request_id=request_id)
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail={
+            "code": "LLM_CALL_FAILED",
+            "message": f"LLM 返回的需求卡不符合结构契约（已重试一次）：{last_error[:300]}",
+        },
+    )
+
+
+@router.get("/canvas/requirements/{requirement_id}", response_model=ApiResponse[dict[str, Any]])
+async def get_canvas_requirement(
+    requirement_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """单个需求卡完整对象(含 items/open_questions 等全部 §1 字段)。"""
+    _ = principal
+    from gateway.app.services.plc import requirement_store
+
+    data = requirement_store.get_requirement(requirement_id)
+    if data is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PLC_REQUIREMENT_NOT_FOUND",
+                "message": f"requirement {requirement_id} not found",
+            },
+        )
+    return ApiResponse(ok=True, data=data, request_id=request_id)
+
+
+@router.put("/canvas/requirements/{requirement_id}", response_model=ApiResponse[dict[str, Any]])
+async def put_canvas_requirement(
+    requirement_id: str,
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """整卡 upsert(工程师编辑/确认工艺意图后回推)。body 即完整需求卡对象。
+
+    铁律:confirmation_status=confirmed 只改状态,不触发任何 ops/写回。
+    """
+    _ = principal
+    from gateway.app.services.plc import requirement_store
+
+    requirement = dict(body or {})
+    requirement["requirement_id"] = requirement_id
+    try:
+        stored = requirement_store.put_requirement(requirement)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "PLC_REQUIREMENT_INVALID", "message": str(exc)},
+        ) from exc
+    return ApiResponse(ok=True, data=stored, request_id=request_id)
+
+
+@router.delete("/canvas/requirements/{requirement_id}", response_model=ApiResponse[dict[str, Any]])
+async def delete_canvas_requirement(
+    requirement_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """删除需求卡(幂等:已删除的合法 id 再删仍 200;非法 id 404)。"""
+    _ = principal
+    from gateway.app.services.plc import requirement_store
+
+    removed = requirement_store.delete_requirement(requirement_id)
+    if not removed:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PLC_REQUIREMENT_NOT_FOUND",
+                "message": f"requirement {requirement_id} not found",
+            },
+        )
+    return ApiResponse(ok=True, data={"removed": requirement_id}, request_id=request_id)
 
 
 @router.post("/canvas/confirm-writeback", response_model=ApiResponse[dict[str, Any]])
@@ -1012,6 +1203,28 @@ async def confirm_canvas_writeback_endpoint(
         )
     except Exception as exc:  # noqa: BLE001 - 记账失败不阻塞确认/写回
         logger.warning("pcec change skipped at confirm-writeback: %s", exc)
+
+    # --- 需求卡弱关联（契约 docs/22 §2）：可选 requirement_id 补进事务 intent ---
+    # compile_jobs.open_writeback_change 签名不可改（并行线边界），这里在它建账
+    # 之后、作业创建之前读改写账本：get_change → intent.requirement_id → put_change。
+    # 弱关联失败只 warning，绝不阻塞写回；不带/非法格式的 requirement_id 零额外动作。
+    requirement_id = str(body.get("requirement_id") or "").strip()
+    if change_id and requirement_id:
+        try:
+            from gateway.app.services.plc import requirement_store
+
+            if requirement_store.is_valid_requirement_id(requirement_id):
+                import plc_engine.pcec as pcec
+
+                chg = pcec.get_change(change_id)
+                if chg is not None:
+                    intent = chg.get("intent")
+                    if not isinstance(intent, dict):
+                        intent = chg["intent"] = {}
+                    intent["requirement_id"] = requirement_id
+                    pcec.put_change(chg)
+        except Exception as exc:  # noqa: BLE001 - 弱关联失败只 warning
+            logger.warning("pcec requirement link skipped at confirm-writeback: %s", exc)
 
     if not sync:
         from gateway.app.services.plc.compile_jobs import create_compile_job

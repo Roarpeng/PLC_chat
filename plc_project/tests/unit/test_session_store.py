@@ -131,3 +131,25 @@ def test_deleted_endpoint_and_idempotent_delete(tmp_path, monkeypatch):
     r3 = client.get("/api/v1/plc/canvas/sessions/deleted", headers=H)
     assert r3.status_code == 200
     assert "s-x" in r3.json()["data"]["deleted"]
+
+
+def test_bulk_delete_rate_guard(tmp_path, monkeypatch):
+    """60s 内第 9 次删除被 429 拦截(2026-10-24 批量丢失事故的防再发护栏)。"""
+    import gateway.app.routers.plc as plc_router
+
+    client = _client(tmp_path, monkeypatch)
+    sess = {
+        "id": "s-guard", "title": "g", "createdAt": 1, "updatedAt": 2,
+        "messages": [], "canvas": {"project_name": "P", "blocks": {}},
+    }
+    client.put("/api/v1/plc/canvas/sessions/s-guard", json=sess, headers=H)
+    plc_router._session_delete_times.clear()
+    codes = []
+    for _ in range(10):
+        r = client.delete("/api/v1/plc/canvas/sessions/s-guard", headers=H)
+        codes.append(r.status_code)
+        if r.status_code == 429:
+            assert r.json()["detail"]["code"] == "PLC_SESSION_DELETE_RATE_LIMITED"
+            break
+    assert 429 in codes and codes.index(429) == 8, f"guard fired at wrong point: {codes}"
+    plc_router._session_delete_times.clear()
