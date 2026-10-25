@@ -39,6 +39,7 @@ Execution has two modes:
 from __future__ import annotations
 
 import atexit
+import logging
 import multiprocessing
 import os
 import signal
@@ -55,6 +56,8 @@ from pathlib import Path
 from typing import Any
 
 from plc_engine.canvas_model import CanvasState, attribute_compiler_errors
+
+logger = logging.getLogger("researchos.gateway.plc.compile_jobs")
 
 _lock = threading.Lock()
 _jobs: dict[str, dict[str, Any]] = {}
@@ -94,6 +97,330 @@ STAGES = [
     "compile_hmi",
     "save",
 ]
+
+# 基线失配拒绝写回时的统一文案（PCEC 契约 docs/19 §4 基线门禁）
+BASELINE_EXPIRED_MESSAGE = "工程基线已变化，变更过期拒绝（baseline mismatch）"
+# PCEC 事务收敛时 verification.detail 里 diagnostics 的上限
+_DIAGNOSTICS_LIMIT = 20
+# 事务终态：收敛时已是终态的事务不再迁移（终态不可再迁移，契约 §2）
+_TERMINAL_CHANGE_STATUSES = {"applied", "failed", "expired", "rejected", "rolled_back"}
+
+
+# ---------------------------------------------------------------------------
+# PCEC 变更事务记账（契约 docs/19-pcec-contract.md §4 · 网关接入）
+#
+# 设计立场：PCEC 先做「记账员」，不做「新故障点」——本节所有入口都在
+# try/except 里吞掉异常、只记 warning 日志，任何账本问题都不阻塞写回主流程。
+# 只有「基线比对明确返回 False」这一种情况会 fail-closed 拒绝写回。
+# ---------------------------------------------------------------------------
+
+
+def _pcec() -> Any | None:
+    """惰性加载 ``plc_engine.pcec``（并行线 A 交付）；不可用时返回 None。"""
+    try:
+        import plc_engine.pcec as pcec
+
+        return pcec
+    except Exception:  # noqa: BLE001 - 线 A 未交付/损坏时静默降级为不记账
+        return None
+
+
+def _pending_blocks_of(canvas: CanvasState) -> dict[str, Any]:
+    """待写回块（非 synced）——导入产生的 synced 占位块不参与写回/预检。"""
+    return {
+        name: blk
+        for name, blk in canvas.blocks.items()
+        if str(getattr(blk, "status", "")) != "synced"
+    }
+
+
+def _writeback_precheck(canvas: CanvasState) -> tuple[dict[str, Any], dict[str, Any]]:
+    """只对待写回块做本地静态预检；返回 (report, pending_blocks)。
+
+    无待写回块时 ok=True 跳过预检（「导入→直接编译验证」路径不受 TODO 拦截）。
+    """
+    from plc_engine.canvas_tia_transpiler import precheck_canvas_for_writeback
+
+    pending_blocks = _pending_blocks_of(canvas)
+    if pending_blocks:
+        precheck_target = CanvasState(
+            project_name=canvas.project_name,
+            blocks=pending_blocks,
+            hmi_widgets=canvas.hmi_widgets,
+            tags=canvas.tags,
+            source=canvas.source,
+        )
+        pre = precheck_canvas_for_writeback(precheck_target)
+        pre["pending_blocks"] = len(pending_blocks)
+    else:
+        pre = {
+            "ok": True,
+            "errors": [],
+            "warnings": [],
+            "findings": [],
+            "summary": "无待写回块（画布与工程一致），跳过预检直接编译",
+            "pending_blocks": 0,
+        }
+    return pre, pending_blocks
+
+
+def _merge_verification(
+    change: dict[str, Any],
+    levels: dict[str, str] | None = None,
+    detail: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """合并 verification 等级与 detail（transition 的 patch 是顶层字段合并）。"""
+    verification = dict(change.get("verification") or {})
+    if levels:
+        verification.update(levels)
+    if detail:
+        merged_detail = dict(verification.get("detail") or {})
+        merged_detail.update(detail)
+        verification["detail"] = merged_detail
+    return verification
+
+
+def _diagnostics_summary(attributions: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """编译诊断摘要（≤20 条），复用现有归因结构。"""
+    summary: list[dict[str, Any]] = []
+    for att in list(attributions or [])[:_DIAGNOSTICS_LIMIT]:
+        if not isinstance(att, dict):
+            continue
+        summary.append(
+            {
+                "target_type": att.get("target_type"),
+                "target_id": att.get("target_id"),
+                "severity": att.get("severity") or "error",
+                "message": str(att.get("message") or "")[:300],
+                "source": att.get("source") or "compile",
+            }
+        )
+    return summary
+
+
+def _backup_fields(writeback: dict[str, Any] | None) -> tuple[str, str]:
+    """从写回结果里提取 rollback 备份信息；取不到留空（契约 §4）。"""
+    wb = writeback if isinstance(writeback, dict) else {}
+    rollback = wb.get("rollback") if isinstance(wb.get("rollback"), dict) else {}
+    backup_path = str(wb.get("backup_path") or rollback.get("backup_path") or "")
+    backup_hash = str(wb.get("backup_hash") or rollback.get("backup_hash") or "")
+    return backup_path, backup_hash
+
+
+def open_writeback_change(
+    canvas: CanvasState,
+    *,
+    project_path: str,
+    reviewer: str = "engineer",
+) -> str:
+    """确认弹窗即建事务（契约 §4「确认即建事务」）。
+
+    new_change(基线快照) → 本地预检写 v1_static → approval 由确认请求承载 →
+    transition("approved") → put_change。返回 change_id；**任何异常只记
+    warning 并返回空串，绝不阻塞写回主流程**。
+    """
+    try:
+        pcec = _pcec()
+        if pcec is None or not project_path:
+            return ""
+        pre, pending_blocks = _writeback_precheck(canvas)
+        touched = sorted(pending_blocks)
+        pre_ok = not pre.get("errors")
+        head = ",".join(touched[:8]) + ("…" if len(touched) > 8 else "")
+        baseline = pcec.project_baseline(_baseline_source_path(project_path))
+        change = pcec.new_change(
+            "writeback",
+            f"确认写回 {len(touched)} 个块到 {Path(project_path).name}" + (f"（{head}）" if head else ""),
+            ops=[],
+            touched_blocks=touched,
+            baseline=baseline,
+        )
+        # v0=画布结构已解析（CanvasState.from_dict 成功）；v1=本地静态预检
+        change = pcec.transition(
+            change,
+            "analyzed",
+            event="analyzed",
+            verification=_merge_verification(
+                change,
+                {"v0_parsed": "pass", "v1_static": "pass" if pre_ok else "fail"},
+                {"precheck_errors": len(pre.get("errors") or [])},
+            ),
+            preconditions=[
+                {"name": "本地静态预检", "ok": pre_ok},
+                {"name": "基线已采集", "ok": True},
+            ],
+            impact={"blocks": touched, "signals": [], "hmi_widgets": sorted(canvas.hmi_widgets)},
+        )
+        if pre_ok:
+            change = pcec.transition(change, "validated", event="validated")
+            change = pcec.transition(
+                change,
+                "approved",
+                event="approved",
+                approval={
+                    "reviewer": reviewer or "engineer",
+                    "approved_at": _now(),
+                    "scope": touched,
+                },
+            )
+        else:
+            change = pcec.transition(change, "rejected", event="precheck_failed")
+        # put_change 返回的是 meta 摘要(键为 id),不能覆盖 change 本体——
+        # 覆盖后 change_id 取不到,事务建了却回传空(真机 E2E 复现)
+        pcec.put_change(change)
+        change_id = str(change.get("change_id") or "")
+        if change_id:
+            logger.info("pcec change opened id=%s blocks=%s project=%s", change_id, len(touched), project_path)
+        return change_id
+    except Exception as exc:  # noqa: BLE001 - 记账失败不阻塞写回
+        logger.warning("pcec open_writeback_change skipped: %s", exc)
+        return ""
+
+
+def settle_change_from_result(
+    change_id: str,
+    *,
+    ok: bool,
+    writeback: dict[str, Any] | None = None,
+    attributions: list[dict[str, Any]] | None = None,
+    job_id: str = "",
+) -> None:
+    """作业收敛时回写事务（契约 §4「编译作业回写事务」）。
+
+    ok=True → v2_tia_compile=pass、status=applied、rollback.backup_path/hash；
+    ok=False → status=failed、v2=fail、diagnostics 摘要（≤20 条）入 detail。
+    已是终态（如 expired/rejected）的事务不再迁移。异常只记 warning。
+    """
+    try:
+        if not change_id:
+            return
+        pcec = _pcec()
+        if pcec is None:
+            return
+        change = pcec.get_change(change_id)
+        if change is None or change.get("status") in _TERMINAL_CHANGE_STATUSES:
+            return
+        detail = {
+            "compile_job_id": job_id,
+            "error_count": len(attributions or []),
+            "diagnostics": _diagnostics_summary(attributions),
+        }
+        if ok:
+            backup_path, backup_hash = _backup_fields(writeback)
+            rollback = dict(change.get("rollback") or {})
+            rollback["backup_path"] = backup_path
+            rollback["backup_hash"] = backup_hash
+            change = pcec.transition(
+                change,
+                "applied",
+                event="applied",
+                verification=_merge_verification(change, {"v2_tia_compile": "pass"}, detail),
+                rollback=rollback,
+            )
+        else:
+            change = pcec.transition(
+                change,
+                "failed",
+                event="compile_failed",
+                verification=_merge_verification(change, {"v2_tia_compile": "fail"}, detail),
+            )
+        pcec.put_change(change)
+    except Exception as exc:  # noqa: BLE001 - 记账失败不阻塞作业终态
+        logger.warning("pcec settle_change_from_result skipped: %s", exc)
+
+
+def _baseline_source_path(project_path: str | Path) -> str:
+    """基线哈希锚点:优先不可变的 original 副本。
+
+    work 副本会被 prepare_work/写回合法改写,锚定它会把自家流水线误判成
+    「基线已变化」(真机 E2E 复现:prepare_work 重置 work → 门禁误 expired)。
+    original/ 在导入后不变,才是「工程是否被外部改动」的可靠参照。
+    """
+    p = Path(project_path)
+    parts = p.parts
+    for i in range(len(parts) - 2):
+        if parts[i] == "projects" and parts[i + 2] == "work":
+            original = Path(*parts[: i + 2]) / "original" / parts[-1]
+            if original.exists():
+                return str(original)
+    # 无工作区结构:原样返回,不做 Path 规范化(避免分隔符变化扰动基线键)
+    return str(project_path)
+
+
+def _baseline_gate(change_id: str, project_path: str) -> str:
+    """写回执行前的基线门禁（契约 §4「基线门禁」）。
+
+    返回空串 = 放行；非空 = 拒绝原因（事务已置 expired，调用方必须 fail-closed）。
+    pcec 不可用 / 事务缺失 / 比对抛异常 → 放行（PCEC 不做新故障点）；
+    只有 ``baseline_matches`` **明确返回 False** 才拒绝。
+    """
+    if not change_id or not project_path:
+        return ""
+    try:
+        pcec = _pcec()
+        if pcec is None:
+            return ""
+        change = pcec.get_change(change_id)
+        if change is None or change.get("status") in _TERMINAL_CHANGE_STATUSES:
+            return ""
+        if pcec.baseline_matches(change, _baseline_source_path(project_path)):
+            return ""
+        change = pcec.transition(
+            change,
+            "expired",
+            event="expired",
+            verification=_merge_verification(change, None, {"baseline_mismatch": True, "stage": "write_plc"}),
+        )
+        pcec.put_change(change)
+        logger.warning("pcec change expired by baseline mismatch id=%s project=%s", change_id, project_path)
+        return BASELINE_EXPIRED_MESSAGE
+    except Exception as exc:  # noqa: BLE001 - 门禁自身故障不拦写回
+        logger.warning("pcec baseline gate skipped: %s", exc)
+        return ""
+
+
+def _settle_change_for_job(job_id: str) -> None:
+    """作业收敛入口：按作业终态回写事务。cancelled 不动账本；异常在内部吞掉。"""
+    try:
+        job = get_job(job_id)
+    except Exception:  # noqa: BLE001
+        return
+    if not job or not job.get("change_id"):
+        return
+    if job.get("status") not in {"ok", "error"}:
+        return
+    settle_change_from_result(
+        str(job["change_id"]),
+        ok=job.get("status") == "ok",
+        writeback=job.get("result") or {},
+        attributions=list(job.get("attributions") or []),
+        job_id=job_id,
+    )
+
+
+def list_pcec_changes() -> list[dict[str, Any]]:
+    """GET /canvas/changes 的数据源：meta 列表；账本不可用返回空列表不炸。"""
+    try:
+        pcec = _pcec()
+        if pcec is None:
+            return []
+        changes = pcec.list_changes()
+        return list(changes) if isinstance(changes, list) else []
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("pcec list_changes failed: %s", exc)
+        return []
+
+
+def get_pcec_change(change_id: str) -> dict[str, Any] | None:
+    """GET /canvas/changes/{id} 的数据源：完整事务；不可用/不存在返回 None。"""
+    try:
+        pcec = _pcec()
+        if pcec is None:
+            return None
+        return pcec.get_change(change_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("pcec get_change failed: %s", exc)
+        return None
 
 
 def _now() -> float:
@@ -579,9 +906,14 @@ def create_compile_job(
     compile_hmi: bool = True,
     save_on_success: bool = True,
     reset_work: bool = True,
+    change_id: str = "",
     runner: Callable[..., dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Create and schedule a compile job; returns the job snapshot."""
+    """Create and schedule a compile job; returns the job snapshot.
+
+    ``change_id``：confirm-writeback 建立的 PCEC 变更事务（docs/19 §4），
+    作业收敛时会据此回写事务账本；为空表示本次写回不记账。
+    """
     job_id = uuid.uuid4().hex[:16]
     stages = [
         {
@@ -606,6 +938,7 @@ def create_compile_job(
         "degraded": False,
         "timed_out": False,
         "precheck": None,
+        "change_id": str(change_id or ""),
         "created_at": _now(),
         "updated_at": _now(),
         "request": {
@@ -642,6 +975,7 @@ def create_compile_job(
                     "compile_hmi": compile_hmi,
                     "save_on_success": save_on_success,
                     "reset_work": reset_work,
+                    "change_id": str(change_id or ""),
                 },
             }
         try:
@@ -657,6 +991,7 @@ def create_compile_job(
                     compile_hmi=compile_hmi,
                     save_on_success=save_on_success,
                     reset_work=reset_work,
+                    change_id=str(change_id or ""),
                 )
         except Exception as exc:  # noqa: BLE001
             with _lock:
@@ -665,9 +1000,8 @@ def create_compile_job(
                     return
                 if live.get("timed_out"):
                     # 已判定超时，保留 timeout 结论（worker 线程仍在跑，无法强杀）
-                    live["updated_at"] = _now()
-                    return
-                if live.get("cancel_requested"):
+                    pass
+                elif live.get("cancel_requested"):
                     live["status"] = "cancelled"
                     live["error"] = "cancelled by user"
                 else:
@@ -675,33 +1009,36 @@ def create_compile_job(
                     live["error"] = str(exc)
                     live["result"] = {"ok": False, "traceback": traceback.format_exc()}
                 live["updated_at"] = _now()
+            _settle_change_for_job(job_id)
             return
 
         if result is None:
             # 子进程模式终态（超时被杀 → timed_out；取消被杀 → cancelled）
             # 已由 _run_child_job 落地，这里不得再写 job 覆盖结论。
+            _settle_change_for_job(job_id)
             return
 
         with _lock:
             live = _jobs.get(job_id)
             if live is None:
                 return
-            if live.get("timed_out"):
-                # 同上：不覆盖超时结论
-                live["updated_at"] = _now()
-                return
-            live["result"] = result.get("writeback")
-            live["attributions"] = result.get("attributions") or []
-            live["canvas"] = result.get("canvas")
-            live["degraded"] = bool(result.get("degraded"))
-            live["precheck"] = result.get("precheck")
-            if result.get("cancelled") or (live.get("cancel_requested") and live["status"] != "error"):
-                live["status"] = "cancelled"
-                live["error"] = "cancelled by user"
-            else:
-                live["status"] = "ok" if result.get("ok") else "error"
-                live["error"] = None if result.get("ok") else str(result.get("error") or "compile failed")
+            timed_out = bool(live.get("timed_out"))
+            if not timed_out:
+                # 超时时保留 _mark_timeout 的结论，不覆盖
+                live["result"] = result.get("writeback")
+                live["attributions"] = result.get("attributions") or []
+                live["canvas"] = result.get("canvas")
+                live["degraded"] = bool(result.get("degraded"))
+                live["precheck"] = result.get("precheck")
+                if result.get("cancelled") or (live.get("cancel_requested") and live["status"] != "error"):
+                    live["status"] = "cancelled"
+                    live["error"] = "cancelled by user"
+                else:
+                    live["status"] = "ok" if result.get("ok") else "error"
+                    live["error"] = None if result.get("ok") else str(result.get("error") or "compile failed")
             live["updated_at"] = _now()
+
+        _settle_change_for_job(job_id)
 
     use_child = _use_child_process(runner)
 
@@ -800,13 +1137,11 @@ def default_compile_runner(
     compile_hmi: bool = True,
     save_on_success: bool = True,
     reset_work: bool = True,
+    change_id: str = "",
 ) -> dict[str, Any]:
     """Prepare work copy, write PLC (+ optional HMI), compile, attribute errors."""
     from gateway.app.services.plc import workspace as ws
-    from plc_engine.canvas_tia_transpiler import (
-        execute_canvas_writeback,
-        precheck_canvas_for_writeback,
-    )
+    from plc_engine.canvas_tia_transpiler import execute_canvas_writeback
 
     canvas = CanvasState.from_dict(canvas_dict)
     source = canvas.source
@@ -817,30 +1152,7 @@ def default_compile_runner(
     # 只预检「待写回」的块：画布刚导入、用户什么都没改时（全部 synced）不会写任何
     # 内容进 TIA，此时若拿全部块的 TODO 去拦，会让"导入→编译验证"这条最基本的
     # 路径直接不可用（真实工程 HR001 实测就是这个症状）。
-    pending_blocks = {
-        name: blk
-        for name, blk in canvas.blocks.items()
-        if str(getattr(blk, "status", "")) != "synced"
-    }
-    if pending_blocks:
-        precheck_target = CanvasState(
-            project_name=canvas.project_name,
-            blocks=pending_blocks,
-            hmi_widgets=canvas.hmi_widgets,
-            tags=canvas.tags,
-            source=canvas.source,
-        )
-        pre = precheck_canvas_for_writeback(precheck_target)
-        pre["pending_blocks"] = len(pending_blocks)
-    else:
-        pre = {
-            "ok": True,
-            "errors": [],
-            "warnings": [],
-            "findings": [],
-            "summary": "无待写回块（画布与工程一致），跳过预检直接编译",
-            "pending_blocks": 0,
-        }
+    pre, pending_blocks = _writeback_precheck(canvas)
     if pre.get("errors"):
         return _precheck_failure_result(job_id, canvas, pre)
 
@@ -916,6 +1228,22 @@ def default_compile_runner(
     # --- write + compile PLC ---
     if _cancel_guard(job_id, list(STAGES[2:])):
         return _cancelled_result(canvas, degraded=degraded)
+
+    # --- PCEC 基线门禁（docs/19 §4）：工程基线变化 → 变更过期，fail-closed 拒绝写回 ---
+    baseline_reject = _baseline_gate(str(change_id or ""), str(resolved_path))
+    if baseline_reject:
+        update_job_stage(job_id, "write_plc", "error", baseline_reject)
+        _mark_remaining_skipped(job_id, list(STAGES[3:]), "变更过期，未执行")
+        return {
+            "ok": False,
+            "error": "baseline_expired",
+            "writeback": {"ok": False, "error": "baseline_expired", "message": baseline_reject},
+            "attributions": [],
+            "canvas": canvas.to_dict(),
+            "precheck": pre,
+            "degraded": degraded,
+        }
+
     update_job_stage(job_id, "write_plc", "running", "写入 PLC 块/标签…")
     writeback: dict[str, Any] = {"ok": False}
     attributions: list[dict[str, Any]] = []

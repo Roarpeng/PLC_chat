@@ -1,0 +1,450 @@
+/* ==========================================================================
+   ChangeLogDrawer — 顶栏「变更记录」抽屉（前缀 cl-）
+   依赖全局令牌：--surface/-2、--ink/-2/-3、--line/-2、--accent/-soft、
+   --run/--standby/--fault、--mono/--sans、--ease、--shadow-sheet。
+   与 SourceCompareDrawer 同款遮罩交互；浅色工业纸感（无圆角、细分割线）。
+   附带确认弹窗 V 等级行配色（.pcec-v--*，供 App.tsx 回写门禁弹窗使用）。
+   ========================================================================== */
+
+/* —— 覆盖层 —— */
+
+.cl-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 92;
+  background: rgba(27, 30, 28, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: cl-fade 0.14s ease-out;
+}
+
+.cl-card {
+  width: 100%;
+  max-width: 920px;
+  height: 78vh;
+  background: var(--surface);
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
+  box-shadow: var(--shadow-sheet); /* taste-skill-ignore: data-ui workbench interface */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: cl-card-in 0.16s var(--ease);
+}
+
+@keyframes cl-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cl-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* —— 头部 —— */
+
+.cl-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 14px;
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.cl-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.cl-title__name {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.cl-title__sub {
+  font-size: 13px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-origin {
+  flex: none;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 0 5px;
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+  color: var(--ink-3);
+}
+
+.cl-origin--mock {
+  border-color: var(--standby);
+  color: var(--standby);
+}
+
+.cl-close {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  flex: none;
+  transition: background-color 0.12s var(--ease), color 0.12s var(--ease);
+}
+
+.cl-close:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.cl-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* —— 账本列表 —— */
+
+.cl-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+
+.cl-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cl-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cl-list::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+}
+
+.cl-hint {
+  padding: 18px 16px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--ink-3);
+}
+
+/* 条目头：折叠箭头 | 短 id | 时间 | 摘要(弹性) | 状态 | 四 V | 影响块数 */
+.cl-row__head {
+  appearance: none;
+  display: grid;
+  grid-template-columns: 18px 74px 72px minmax(120px, 1fr) auto auto 52px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px 8px 8px;
+  border: none;
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s var(--ease);
+}
+
+.cl-row__head:hover {
+  background: var(--surface-2);
+}
+
+.cl-row__head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.cl-row--open .cl-row__head {
+  background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.cl-chev {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 13px;
+  line-height: 1;
+  color: var(--ink-3);
+  transform: rotate(0deg);
+  transition: transform 0.12s var(--ease);
+}
+
+.cl-chev--open {
+  transform: rotate(90deg);
+}
+
+.cl-id {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent); /* taste-skill-ignore: data-ui workbench interface */
+  padding: 0 5px;
+  line-height: 1.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cl-time {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.cl-summary {
+  min-width: 0;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 事务状态徽章：ok=终态成功 / bad=终态失败族 / hold=流转中 */
+.cl-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 6px;
+  line-height: 1.7;
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+.cl-status--ok {
+  color: var(--run);
+  border-color: var(--run);
+}
+
+.cl-status--bad {
+  color: var(--fault);
+  border-color: var(--fault);
+}
+
+.cl-status--hold {
+  color: var(--standby);
+  border-color: var(--standby);
+}
+
+/* 四 V 迷你徽章：pass=绿 / fail=红 / pending=琥珀 / skipped·未设=弱化 */
+.cl-vs {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.cl-v {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.7;
+  padding: 0 4px;
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+.cl-v--pass {
+  color: var(--run);
+  border-color: var(--run);
+}
+
+.cl-v--fail {
+  color: var(--fault);
+  border-color: var(--fault);
+}
+
+.cl-v--pending {
+  color: var(--standby);
+  border-color: var(--standby);
+}
+
+.cl-v--skipped {
+  color: var(--ink-2);
+}
+
+.cl-v--off {
+  color: var(--ink-3);
+  border-style: dashed;
+}
+
+.cl-touched {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* —— 展开详情（完整事务 JSON 摘要） —— */
+
+.cl-row__detail {
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+}
+
+.cl-detail__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 34px;
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface-2);
+}
+
+.cl-detail__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.cl-detail__meta {
+  margin-left: auto;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.cl-pre {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  padding: 10px 12px 14px 34px;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre;
+  tab-size: 2;
+  user-select: text;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+
+/* —— 底部 —— */
+
+.cl-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 14px;
+  border-top: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.cl-foot__stats {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code/identifier text) */
+  font-size: 12.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-foot__hint {
+  font-size: 13px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* —— 窄屏：条目换行堆叠 —— */
+
+@media (max-width: 860px) {
+  .cl-row__head {
+    grid-template-columns: 18px 74px 72px minmax(80px, 1fr) auto;
+  }
+
+  .cl-vs,
+  .cl-touched {
+    grid-column: 4 / -1;
+    justify-self: start;
+  }
+
+  .cl-touched {
+    justify-self: end;
+  }
+}
+
+/* —— 降级：减少动态效果 —— */
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-overlay,
+  .cl-card {
+    animation: none;
+  }
+
+  .cl-close,
+  .cl-chev,
+  .cl-row__head {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   回写确认弹窗 V 等级行（App.tsx · 契约 19 §5）
+   挂在既有 .spec-row__value 上的着色修饰类。
+   ========================================================================== */
+
+.pcec-v--pass {
+  color: var(--run);
+  font-weight: 600;
+}
+
+.pcec-v--fail {
+  color: var(--fault);
+  font-weight: 600;
+}
+
+.pcec-v--pending {
+  color: var(--standby);
+  font-weight: 600;
+}
+
+.pcec-v--skipped {
+  color: var(--ink-3);
+}

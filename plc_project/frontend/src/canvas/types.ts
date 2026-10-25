@@ -93,6 +93,8 @@ export interface CanvasSourceData {
   plc_name?: string;
   hmi_device_names?: string[];
   export_mode?: string;
+  /** PCEC 工程基线指纹（sha256:…，网关 confirm-writeback / changes 端点写入；缺失时 UI 显示 —） */
+  project_hash?: string;
 }
 
 export interface CanvasRevisionData {

@@ -38,6 +38,14 @@ import {
 import { useResizablePanes } from "./state/useResizablePanes";
 import type { CanvasStateData, CompileJobData, CompilerAttribution } from "./canvas/types";
 import { CompileDrawer } from "./shell/CompileDrawer";
+import { ChangeLogDrawer } from "./shell/ChangeLogDrawer";
+import {
+  CONFIRM_V_SNAPSHOT,
+  V_LEVELS,
+  baselineFingerprint,
+  vStatusMark,
+  vStatusText,
+} from "./state/pcec";
 import {
   GATEWAY_BASE,
   GatewayError,
@@ -173,6 +181,14 @@ const ChevronsRight: React.FC = () => (
   </svg>
 );
 
+/** 「变更记录」低显著度图标（账本清单，学 SclPane 的 </> 入口模式） */
+const ChangeLogIcon: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path d="M5.5 3.5h8M5.5 8h8M5.5 12.5h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M2.6 3.5h.01M2.6 8h.01M2.6 12.5h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+);
+
 const App: React.FC = () => {
   /* 画布与会话 */
   const [canvas, setCanvas] = useState<CanvasStateData>(() => blankCanvas(""));
@@ -214,6 +230,12 @@ const App: React.FC = () => {
   }, []);
   useEffect(() => abortCompilePoll, [abortCompilePoll]);
   const [writebackNotice, setWritebackNotice] = useState<string | null>(null);
+
+  /* 变更记录(PCEC 账本,契约 19 §5):抽屉打开才拉取;编译作业结束(成功/失败)
+     递增 tick,让打开中的抽屉自动重拉账本 */
+  const [changeLogOpen, setChangeLogOpen] = useState(false);
+  const [changesRefreshTick, setChangesRefreshTick] = useState(0);
+  const bumpChangesRefresh = React.useCallback(() => setChangesRefreshTick((t) => t + 1), []);
 
   /* 解析降级告警：只有真的存在降级时才铺开 */
   const [degradation, setDegradation] = useState<DegradationState | null>(null);
@@ -1089,6 +1111,7 @@ const App: React.FC = () => {
         setWritebackNotice("编译作业已启动…");
         try {
           job = await pollCompileJob(job.id);
+          bumpChangesRefresh(); // 作业收敛(ok/error/cancelled)→ 刷新 PCEC 变更账本
         } catch (err) {
           if (isAbortError(err)) {
             setWritebackNotice("已停止等待编译结果（切换会话或离开页面）；网关侧作业可能仍在运行");
@@ -1103,6 +1126,7 @@ const App: React.FC = () => {
                 }s）：网关未在预期时间内结束作业，请检查博图是否弹窗阻塞`;
           setWritebackNotice(detail);
           setTimeout(() => setWritebackNotice(null), 10000);
+          bumpChangesRefresh(); // 轮询失败也可能已落账(如 precheck fail-closed)→ 尽力刷新
           return;
         }
 
@@ -1161,6 +1185,8 @@ const App: React.FC = () => {
             }
           } catch {
             /* optional */
+          } finally {
+            bumpChangesRefresh(); // 修正轮也走编译作业 → 账本同样要刷新
           }
         }
         setWritebackNotice(notice);
@@ -1173,10 +1199,12 @@ const App: React.FC = () => {
       setAttributions(result.attributions || []);
       setWritebackNotice(result.writeback?.ok ? "回写成功" : `回写失败`);
       setTimeout(() => setWritebackNotice(null), 6000);
+      bumpChangesRefresh(); // 同步回写路径同样建事务 → 刷新账本
     } catch (err) {
       const msg = explainGatewayError(err, "未知错误");
       setWritebackNotice(`回写/编译失败：${msg}`);
       setTimeout(() => setWritebackNotice(null), 8000);
+      bumpChangesRefresh(); // 确认/预检阶段失败也可能落账 → 尽力刷新
     } finally {
       setIsSubmitting(false);
     }
@@ -1269,6 +1297,16 @@ const App: React.FC = () => {
             一键自愈
           </button>
         )}
+
+        {/* 变更记录:低显著度次级入口(学 SclPane 的 </> 模式),打开才拉取账本 */}
+        <button
+          className="topbar__toggle"
+          onClick={() => setChangeLogOpen(true)}
+          aria-label="变更记录"
+          title="变更记录 · 带证据的工程变更事务（PCEC 账本）"
+        >
+          <ChangeLogIcon />
+        </button>
 
         <button
           onClick={() => setShowConfirmModal(true)}
@@ -1486,6 +1524,14 @@ const App: React.FC = () => {
         onClose={() => setCompileJob(null)}
       />
 
+      {/* 变更记录抽屉(PCEC):打开才挂载才拉取;编译作业结束后经 refreshTick 自动刷新 */}
+      {changeLogOpen && (
+        <ChangeLogDrawer
+          onClose={() => setChangeLogOpen(false)}
+          refreshTick={changesRefreshTick}
+        />
+      )}
+
       {/* —— 人工确认门禁 —— */}
       {showConfirmModal && (
         <div
@@ -1521,6 +1567,12 @@ const App: React.FC = () => {
                 </span>
               </div>
               <div className="spec-row">
+                <span className="spec-row__label">基线指纹</span>
+                <span className="spec-row__value" title="工程基线 project_hash 前 12 位；基线变化即事务过期拒绝">
+                  {baselineFingerprint(canvas.source)}
+                </span>
+              </div>
+              <div className="spec-row">
                 <span className="spec-row__label">待转译回写逻辑块</span>
                 <span className="spec-row__value">{blockList.length} 块 (SCL / SimaticML)</span>
               </div>
@@ -1528,6 +1580,18 @@ const App: React.FC = () => {
                 <span className="spec-row__label">待同步 HMI 变量绑定</span>
                 <span className="spec-row__value">{widgetList.length} 项 (PlcTagTable)</span>
               </div>
+              {/* V 等级四行(契约 19 §5):确认时刻 V0/V1 已过、V2 待执行、V3 未运行 */}
+              {V_LEVELS.map((v) => {
+                const st = CONFIRM_V_SNAPSHOT[v.key];
+                return (
+                  <div className="spec-row" key={v.key}>
+                    <span className="spec-row__label">{v.full}</span>
+                    <span className={`spec-row__value pcec-v--${st}`}>
+                      {vStatusMark(st)} {vStatusText(st)}
+                    </span>
+                  </div>
+                );
+              })}
               <div className="spec-row spec-row--gate">
                 <span className="spec-row__label">一致性编译校验</span>
                 <span className="spec-row__value">开启 (CompilePlcSoftwareStrict)</span>

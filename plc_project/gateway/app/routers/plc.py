@@ -976,8 +976,13 @@ async def confirm_canvas_writeback_endpoint(
     principal: PrincipalDep,
     request_id: RequestIdDep,
 ) -> ApiResponse[dict[str, Any]]:
-    """Human Confirmation Gate: schedules a compile job (or sync writeback if sync=true)."""
-    _ = principal
+    """Human Confirmation Gate: schedules a compile job (or sync writeback if sync=true).
+
+    确认即建事务（PCEC docs/19 §4）：创建编译作业**之前**按契约建立变更事务
+    （new_change → 预检 v1_static → approval 由本次确认承载 → approved → 账本），
+    change_id 随作业与响应下发。事务全程 try/except：任何异常只记 warning，
+    绝不阻塞写回主流程（PCEC 只做记账员，不做新故障点）。
+    """
     from plc_engine.canvas_model import CanvasState
 
     canvas_raw = body.get("canvas") or {}
@@ -997,6 +1002,17 @@ async def confirm_canvas_writeback_endpoint(
             detail={"code": "PATH_REQUIRED", "message": "project_path or canvas.source.project_path required"},
         )
 
+    # --- PCEC 确认即建事务（契约 §4）：异常只 warning，写回照旧 ---
+    change_id = ""
+    try:
+        from gateway.app.services.plc.compile_jobs import open_writeback_change
+
+        change_id = open_writeback_change(
+            canvas, project_path=project_path, reviewer=principal.subject or "engineer"
+        )
+    except Exception as exc:  # noqa: BLE001 - 记账失败不阻塞确认/写回
+        logger.warning("pcec change skipped at confirm-writeback: %s", exc)
+
     if not sync:
         from gateway.app.services.plc.compile_jobs import create_compile_job
 
@@ -1008,6 +1024,7 @@ async def confirm_canvas_writeback_endpoint(
             compile_hmi=bool(canvas.hmi_devices) and compile_after,
             save_on_success=True,
             reset_work=True,
+            change_id=change_id,
         )
         # Same envelope as the sync branch (async/job/writeback/attributions/canvas) so
         # consumers switch on ``async`` alone instead of guessing the payload shape.
@@ -1019,6 +1036,7 @@ async def confirm_canvas_writeback_endpoint(
                 "writeback": None,
                 "attributions": [],
                 "canvas": canvas.to_dict(),
+                "change_id": change_id,
             },
             request_id=request_id,
         )
@@ -1034,6 +1052,18 @@ async def confirm_canvas_writeback_endpoint(
         plc_name=plc_name,
         compile_after=compile_after,
     )
+    # 同步分支没有作业收敛点，这里直接按结果落账（异常只 warning）
+    try:
+        from gateway.app.services.plc.compile_jobs import settle_change_from_result
+
+        settle_change_from_result(
+            change_id,
+            ok=bool(result.get("ok")),
+            writeback=result,
+            attributions=list(attributions or []),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("pcec settle skipped at confirm-writeback (sync): %s", exc)
     return ApiResponse(
         ok=True,
         data={
@@ -1042,9 +1072,48 @@ async def confirm_canvas_writeback_endpoint(
             "writeback": result,
             "attributions": attributions,
             "canvas": canvas.to_dict(),
+            "change_id": change_id,
         },
         request_id=request_id,
     )
+
+
+@router.get("/canvas/changes", response_model=ApiResponse[list[dict[str, Any]]])
+async def list_canvas_changes(
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[list[dict[str, Any]]]:
+    """PCEC 变更事务 meta 列表（updated_at 降序）。
+
+    账本不可用（pcec 未交付/损坏）时返回空列表，不报错——前端 Mock-first
+    拿到空列表回落内置示例（契约 §5）。
+    """
+    _ = principal
+    from gateway.app.services.plc.compile_jobs import list_pcec_changes
+
+    return ApiResponse(ok=True, data=list_pcec_changes(), request_id=request_id)
+
+
+@router.get("/canvas/changes/{change_id}", response_model=ApiResponse[dict[str, Any]])
+async def get_canvas_change(
+    change_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """单个 PCEC 变更事务的完整 JSON（状态机/四 V 验证/审批/回滚证据）。"""
+    _ = principal
+    from gateway.app.services.plc.compile_jobs import get_pcec_change
+
+    data = get_pcec_change(change_id)
+    if data is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PLC_CHANGE_NOT_FOUND",
+                "message": f"change {change_id} not found",
+            },
+        )
+    return ApiResponse(ok=True, data=data, request_id=request_id)
 
 
 @router.post("/canvas/compile-jobs", response_model=ApiResponse[dict[str, Any]])

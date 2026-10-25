@@ -8,11 +8,13 @@
 
 ```
 plc_project/
-├── plc_engine/          # 核心 PLC 离线解析引擎与数字孪生画布模型
+├── agents/             # 多智能体运行时 (citation / planner / writer / supervisor)
+│   └── plc/tia/        # 【解析核心】SimaticML 解析、IR 模型、SCL 转换器、知识图谱、Review 规则
+├── plc_engine/         # 数字孪生画布引擎与脱机独立 API (解析核心位于 agents/plc/tia)
 │   ├── standalone_api.py# 100% 脱离博图的跨平台离线分析/翻译/审计 API
 │   ├── canvas_model.py  # 数字孪生画布 (PLC 逻辑 + HMI 组态) 与错误归因模型
 │   ├── canvas_tia_transpiler.py # 画布 1:1 SCL 转译、打包与博图回写驱动
-│   ├── tia/             # SimaticML 解析、IR 模型、SCL 转换器、知识图谱、Review 规则
+│   ├── tia/             # 【兼容占位】仅重导出 agents/plc/tia 公共入口，勿在此新增实现
 │   └── cli.py           # 命令行工具主入口 (plc-cli / researchos-tia-cli)
 ├── frontend/            # 现代工业级数字孪生 Web 前端 (React 19 / Vite / TypeScript)
 │   ├── index.html       # Web 模板与 Google Fonts (Outfit, Inter, JetBrains Mono)
@@ -31,7 +33,7 @@ plc_project/
 │   ├── openness_worker/ # Windows 宿主机 TIA Openness 侧车导出/回写微服务 (FastAPI)
 │   ├── tia_adapter/     # PowerShell 自动化导出脚本 (ExportProject.ps1)
 │   ├── connectors/      # PLC 手册与故障诊断知识库连接器
-│   └── tia_openness_mcp/# C# .NET Openness 解决方案 (TiaOpenness.Server.exe)
+│   └── tia_openness_cli/# C# .NET Openness 解决方案 (TiaOpenness.Server.exe)
 │       └── src/         # 支持设备创建、全局库复用、变量表细粒度提取与编译门禁
 ├── tests/               # 完整测试套件与真实工业 Fixtures (46 个测试文件，320 个测试通过)
 │   ├── fixtures/        # tia_ce, tia_dc, tia_exports, tia_openness_surface 等用例
@@ -122,7 +124,7 @@ python -m pytest tests/unit -q
    ```
 3. C# 解决方案编译：
    ```bash
-   cd industrial/tia_openness_mcp
+   cd industrial/tia_openness_cli
    dotnet build -c Release
    ```
-   生成目标文件：`industrial/tia_openness_mcp/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe`
+   生成目标文件：`industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe`
