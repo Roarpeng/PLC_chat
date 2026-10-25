@@ -1,130 +1,94 @@
-# PLC Intelligence Platform (西门子 TIA / SimaticML 工业 PLC 智能分析平台)
+# PLC_chat — 可验证的西门子 TIA / SimaticML 工业 PLC 智能工程系统
 
-本工程为从 ResearchOS 中独立剥离出的 **全栈工业 PLC 智能分析、数字孪生画布与博图闭环研发系统**。专注于西门子 TIA Portal 工程文件的离线解析、PLC-IR 统一中间表示构建、结构化 SCL 代码生成、逻辑知识图谱推理、安全检查、数字孪生 HMI 触控仿真以及 1:1 博图物理回写编译自愈闭环。
+从自然语言对话到博图真实编译闭环的全栈工业 PLC 工程 workbench:**离线解析 → PLC-IR → 知识图谱 → 数字孪生画布 → NL 编辑 → 带证据的变更事务(PCEC)→ TIA Openness 1:1 回写与严格编译**。老项目 LAD 逆向转 SCL 在真实工程上等价性抽样 9/9。
 
 ---
 
-## 🌟 核心特性与架构
+## 架构
 
 ```
 plc_project/
 ├── agents/             # 多智能体运行时 (citation / planner / writer / supervisor)
-│   └── plc/tia/        # 【解析核心】SimaticML 解析、IR 模型、SCL 转换器、知识图谱、Review 规则
-├── plc_engine/         # 数字孪生画布引擎与脱机独立 API (解析核心位于 agents/plc/tia)
-│   ├── standalone_api.py# 100% 脱离博图的跨平台离线分析/翻译/审计 API
-│   ├── canvas_model.py  # 数字孪生画布 (PLC 逻辑 + HMI 组态) 与错误归因模型
-│   ├── canvas_tia_transpiler.py # 画布 1:1 SCL 转译、打包与博图回写驱动
-│   ├── tia/             # 【兼容占位】仅重导出 agents/plc/tia 公共入口，勿在此新增实现
-│   └── cli.py           # 命令行工具主入口 (plc-cli / researchos-tia-cli)
-├── frontend/            # 现代工业级数字孪生 Web 前端 (React 19 / Vite / TypeScript)
-│   ├── index.html       # Web 模板与 Google Fonts (Outfit, Inter, JetBrains Mono)
-│   ├── package.json     # 前端依赖配置
-│   └── src/
-│       ├── index.css    # 现代深色工业主题系统 (毛玻璃、拟真西门子机壳、触感按键)
-│       ├── App.tsx      # 顶层工作台容器 (双向连接后端网关与离线沙箱降级)
-│       └── canvas/
-│           ├── PlcInteractiveCanvas.tsx # 三模态画板 (PLC逻辑 / HMI仿真 / 1:1 SCL预览)
-│           └── types.ts # 画布与控件 TypeScript 接口定义
-├── gateway/             # 独立 FastAPI 网关后端 (含 PLC 专用路由与服务)
-│   ├── app/main.py      # 网关应用入口 (启动端口 8000)
-│   ├── app/routers/plc.py # PLC Ingest、Canvas 补丁、1:1 回写、自愈、审计路由
-│   └── app/services/plc/# Handover Brief、Evidence、Logic Graph、Device Cards
-├── industrial/          # 工业侧车、连接器与驱动
-│   ├── openness_worker/ # Windows 宿主机 TIA Openness 侧车导出/回写微服务 (FastAPI)
-│   ├── tia_adapter/     # PowerShell 自动化导出脚本 (ExportProject.ps1)
-│   ├── connectors/      # PLC 手册与故障诊断知识库连接器
-│   └── tia_openness_cli/# C# .NET Openness 解决方案 (TiaOpenness.Server.exe)
-│       └── src/         # 支持设备创建、全局库复用、变量表细粒度提取与编译门禁
-├── tests/               # 完整测试套件与真实工业 Fixtures (46 个测试文件，320 个测试通过)
-│   ├── fixtures/        # tia_ce, tia_dc, tia_exports, tia_openness_surface 等用例
-│   └── unit/            # 46 个单元测试文件
-└── docs/                # 工业架构与技术规范文档 (含 09-digital-twin-canvas 闭环文档)
+│   └── plc/tia/        # 【解析核心】SimaticML 解析、IR、FlgNet 折叠、SCL 转换、知识图谱
+├── plc_engine/
+│   ├── canvas_model.py           # 数字孪生画布模型(PLC + HMI)与错误归因
+│   ├── canvas_tia_transpiler.py  # 画布 1:1 SCL 转译、回写打包(最小破坏/draft-only)
+│   ├── pcec.py                   # PCEC 变更事务:状态机/基线哈希/事务账本
+│   ├── standalone_api.py         # 100% 脱离博图的跨平台离线分析/翻译/审计 API
+│   └── tia/                      # 【兼容占位】仅重导出 agents/plc/tia,勿在此新增实现
+├── gateway/app/        # 唯一 FastAPI 网关 (端口 8000)
+│   ├── routers/plc.py            # ingest/canvas/回写/编译/会话历史/变更账本 路由
+│   └── services/plc/             # session_store(跨浏览器会话+墓碑)/compile_jobs(PCEC 接入)
+│                                 # / chat_ops(双模式路由+历史压缩+命名规范)/llm_explain
+├── frontend/           # React 19 + Vite + TS 工业工作台
+│   └── src/           # 画布/全局图/SCL 面板/ChatDock(时间戳·复制·Markdown)/
+│                       # ChangeLogDrawer(V0-V3 变更记录)/SourceCompareDrawer(</> 源码下钻)
+├── industrial/
+│   └── tia_openness_cli/         # C# .NET Openness CLI (导出/外部源生成/严格编译)
+├── tests/              # 514 项后端测试 + 真实工业 fixtures;frontend 100 项 vitest
+└── docs/               # 编号文档 01-20(见下)
 ```
 
----
+> 历史副本 `plc_gateway/` 已弃用,权威网关为 `gateway/app`。
 
-## 🚀 核心功能亮点
+## 核心能力
 
-### 1. ⚡ 纯离线脱机独立 API (零博图依赖 / 跨平台)
-无需 Windows 环境或西门子博图授权，可直接运行在 Linux / Docker / macOS / Web 服务端：
-- **`translate_simaticml_to_scl(xml)`**：梯形图/函数块 SimaticML 秒级转换为西门子标准 SCL 源码。
-- **`parse_simaticml_block_content(xml)`**：精确抽取块接口引脚、网络与调用元数据。
-- **`extract_tag_table_content(xml)`**：解析符号名、数据类型与绝对物理地址（`%I`, `%Q`, `%M`）。
-- **`audit_block_content(xml)`**：静态确定性代码审查（双线圈覆盖、未配对置位复位、孤立变量探测）。
+| 能力 | 说明 |
+|---|---|
+| **LAD→SCL 高保真逆向** | SimaticML FlgNet 折叠为表达式 IR 再直译 SCL;真实工程(HR001, 89 块)等价性抽样 **9/9**;归约过程可下钻(`</>` 源码对比抽屉:原始 XML / 直译 SCL / 归约追踪) |
+| **NL 编辑与意图路由** | 简单/复杂问句直答,编辑指令走 ops;**指代性指令**(「按步骤全部修改」)依据分级压缩的对话历史解析;绝不捏造 UserVar 占位变量;变量命名遵循工程惯例(输入 i_ / 输出 o_ / 静态 stat_) |
+| **双模式 LLM(工业可靠优先)** | 简单任务直答(thinking 关),复杂任务自动深想(按复杂信号/长度/跨块引用判定),回答页脚标注「深度思考」 |
+| **PCEC 变更事务** | 每次回写都是可审计事务:`created→analyzed→validated→approved→applied`,change_id 贯穿 UI→编译→账本;**基线门禁**(工程 original 副本哈希变化 → 变更过期拒绝);V0-V3 分级验证(结构/静态/TIA 编译/行为),未知≠通过;前端「变更记录」面板 |
+| **真机回写闭环** | 确认门禁 → 写前备份 fail-closed → 外部源导入 → CompilePlcSoftwareStrict → 错误逆向归因 → 一键自愈;已在真实 TIA V19 + HR001 工程验证全绿 |
+| **跨浏览器会话历史** | 服务端账本 + 本地缓存双写,启动自动合并(占位懒加载);**删除墓碑**防陈旧副本复活 |
+| **成熟 Chat UX** | 消息时间标签、一键复制、Markdown 渲染、流式打字机 |
+| **HMI 仿真** | 画布内软 PLC 联动(按钮/指示灯/仪表),对话创建控件 |
 
-### 2. 🖥️ 数字孪生画布与 HMI 仿真 (Web Canvas)
-- **双模态无缝切换**：
-  - **⚡ PLC 逻辑网络视图**：展示 FB/FC/DB 块、接口信号区、网络逻辑折叠与实时诊断。
-  - **🖥️ HMI 组态仿真视图**：拟真西门子 SIMATIC HMI 触摸面板，支持触控联动（点击启动按钮，运行指示灯点亮，转速仪表升至 1450 RPM）。
-  - **📜 1:1 SCL 实时编译源码视图**：实时查看由画布生成的合规 SCL 外部源。
-- **对话驱动增量更新**：通过自然语言输入（如：“*在 MainDB 增加急停信号，并在 HMI 上添加红色急停按钮*”），AI 自动将变更增量打补丁到画布。
+## 快速启动
 
-### 3. 🔄 1:1 博图物理回写与编译器错误闭环自愈
-- **工程师安全审核门禁**：画布上的草稿内容（`draft`）需经工程师确认后方可触发 1:1 回写。
-- **严苛一致性编译校验**：回写后自动调用 `CompilePlcSoftwareStrict` 门禁。
-- **编译器错误逆向归因**：若编译报错，将错误准确定位至画布出错节点（红框呼吸闪烁高亮）。
-- **一键自愈修复**：点击【🛠️ 一键自愈修复】，AI 结合博图真实错误日志自动补齐未声明变量与修正数据类型。
-
----
-
-## 🛠️ 快速上手与运行
-
-### 1. 环境准备与后端启动
 ```bash
-# 进入项目目录
 cd plc_project
-
-# 安装 Python 依赖
-pip install -e .
-
-# 启动 FastAPI 独立网关服务 (端口 8000)
-python -m uvicorn gateway.app.main:app --port 8000 --host 127.0.0.1
+python tools/devctl.py up gateway   # 网关 :8000(uv 免装依赖)
+python tools/devctl.py up web       # 前端 :5173(Vite)
+python tools/devctl.py status       # 状态 / down --all 一键归零
 ```
-服务启动后可访问：
-- API 交互文档 (Swagger UI)：`http://127.0.0.1:8000/docs`
-- 健康检查：`http://127.0.0.1:8000/health`
 
-### 2. 启动前端数字孪生 Web UI
+图形化一键启动/停止:`启动项目.vbs` / `停止项目.vbs`。浏览器打开 `http://127.0.0.1:5173/`。
+
+> 打开即空白画布;在左侧「历史对话」选择导入的工程会话进入项目上下文(会话历史跨浏览器同步)。
+
+## 测试
+
 ```bash
-# 进入前端目录
-cd frontend
-
-# 安装前端依赖
-npm install
-
-# 启动 Vite 开发服务器 (端口 5173)
-npm run dev -- --port 5173 --host 127.0.0.1
+python -m pytest tests/unit -q      # 后端 514 项
+cd frontend && npm run test         # 前端 100 项
 ```
-在浏览器中打开：`http://127.0.0.1:5173/` 即可体验全套数字孪生交互！
 
-### 3. 运行全量单元测试
-```bash
-python -m pytest tests/unit -q
+覆盖:SimaticML 解析(OB/FB/FC/DB/UDT/标签表)、LAD→SCL 等价回归、知识图谱调用链、PCEC 状态机/基线/账本、会话同步与墓碑、意图路由与命名规范、历史压缩、编译作业与守卫、架构治理防漂移。
+
+## Windows TIA Openness(可选,处理 .ap17~.ap20 原生工程)
+
+```powershell
+# 1. 注册 Openness 白名单(管理员)
+powershell -ExecutionPolicy Bypass -File industrial/scripts/Register-TiaOpennessWhitelist.ps1
+# 2. C# CLI
+cd industrial/tia_openness_cli && dotnet build -c Release
+# 产物: src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe
 ```
-测试涵盖：
-- SimaticML 块结构（OB、FB、FC、DB、UDT、TagTable）解析
-- 梯形图 (LAD) 自保持、比较、跳转、计数器、定时器向 SCL 翻译
-- 知识图谱调用链 (CALLS / USES / INSTANCE_OF) 与读写信号流追踪
-- 扩展 Openness CLI 与 Worker HTTP 侧车交互
-- 脱机独立 API 与 REST 端点
-- 交互式数字孪生画布、补丁应用、错误归因与自愈闭环（**320 项测试全部通过**）
 
----
+网关按需 spawn 一次性 CLI(进程树可杀、工程锁可释放);常驻会话默认关闭(services.toml 可调)。
 
-## 🏭 Windows TIA Openness 侧车对接 (可选)
+## 文档索引(docs/)
 
-如果需要直接处理 `.ap17` ~ `.ap20` 的原始 TIA 工程项目文件：
-1. 在装有 TIA Portal 的 Windows 电脑上运行管理员脚本注册 Openness 白名单：
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File industrial/scripts/Register-TiaOpennessWhitelist.ps1
-   ```
-2. 启动 Openness Worker 侧车：
-   ```bash
-   python -m industrial.openness_worker.server
-   ```
-3. C# 解决方案编译：
-   ```bash
-   cd industrial/tia_openness_cli
-   dotnet build -c Release
-   ```
-   生成目标文件：`industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe`
+| 编号 | 主题 |
+|---|---|
+| 01-13 | 架构基础:Windows Openness Worker、PLC 离线分析器、数字孪生画布、微服务化、LLM 深度解释、前置评估等 |
+| 14 | Chat2PLC V2.5 蓝图存档(四层架构/LAD→SCL/Openness 桥) |
+| 15 | LAD→SCL 后端静默契约(源码工件+按需取源 API) |
+| 16 | LAD→SCL 离线验证报告(S1-S10 修复,等价性 9/9) |
+| 17 | Siemens Automation Framework 深度调研报告 |
+| 18 | AF 集成行动计划(A 方案:自举 AF Profile→官方库对齐) |
+| 19 | PCEC 契约(变更事务对象/状态机/V0-V3/接口) |
+| 20 | 对话历史压缩策略(分级保真,存储永不压缩) |
+
+另见 `docs/PLC_chat_突破性架构理解与演进方案.html`(工程评审与演进建议,PCEC 即其核心提议的落地)。
