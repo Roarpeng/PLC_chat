@@ -190,7 +190,7 @@ export const CreateBlockDialog: React.FC<CreateBlockDialogProps> = ({
                     后续生成过程中的 SCL 源码、数据字典与归档包均存放在此文件夹下。
                   </span>
                 </label>
-                <p className="cbd-note">从零开始：遵循西门子 AF V1.2 标准构建空白工程画布，完成后可打包与回写博图。</p>
+                <p className="cbd-note">从零开始：按内置工程标准构建空白工程画布，完成后可打包与回写博图。</p>
               </>
             )}
           </div>

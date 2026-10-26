@@ -46,6 +46,12 @@ import { WorkbenchHeader } from "./shell/WorkbenchHeader";
 import { TaskQuickBar, type TaskKind } from "./shell/TaskQuickBar";
 import { RequirementCardDrawer } from "./shell/RequirementCardDrawer";
 import { ChangeReviewDrawer } from "./shell/ChangeReviewDrawer";
+/* 新建工程流(契约 23 §1):intent_summary 洗项目名 + 流状态机(纯逻辑,vitest 覆盖) */
+import {
+  NEW_PROJECT_FLOW_IDLE,
+  isValidProjectName,
+  newProjectFlowReducer,
+} from "./shell/newProjectFlow";
 import {
   putRequirement,
   requestDraft,
@@ -192,7 +198,7 @@ const BrandMark: React.FC = () => (
 const TASK_PROMPT_PREFIX: Partial<Record<TaskKind, string>> = {
   understand: "解读工程:",
   diagnose: "诊断问题:",
-  refactor: "重构程序: 按照内置西门子 AF V1.2 标准重构当前工程",
+  refactor: "重构程序: 按照内置西门子标准重构当前工程",
 };
 
 const ChevronsLeft: React.FC = () => (
@@ -276,6 +282,37 @@ const App: React.FC = () => {
   /** ChangeReviewDrawer:非 null 即打开;changeReviewReq 为命中 intent.requirement_id 的需求卡 */
   const [changeReviewId, setChangeReviewId] = useState<string | null>(null);
   const [changeReviewReq, setChangeReviewReq] = useState<Requirement | null>(null);
+
+  /* —— 新建工程流(契约 23 §1):启动屏「新建工程」→ 需求卡草稿 → 确认工艺意图
+        → 最小创建确认 → 既有创建链 →(有已确认需求)N 线 generate-from-requirement。
+        纯状态机在 shell/newProjectFlow.ts(vitest 覆盖),这里只接线。 —— */
+  const [newProjectFlow, dispatchNewProjectFlow] = React.useReducer(
+    newProjectFlowReducer,
+    NEW_PROJECT_FLOW_IDLE,
+  );
+  /** 最小创建确认表单:项目名(默认取 intent_summary 洗成的合法标识)与可选目标目录 */
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectDir, setNewProjectDir] = useState("");
+  const [newProjectNameTouched, setNewProjectNameTouched] = useState(false);
+
+  // 进入「最小创建确认」时(重)填表单:项目名默认值来自状态机,目录清空
+  useEffect(() => {
+    if (newProjectFlow.phase !== "confirm") return;
+    setNewProjectName(newProjectFlow.defaultProjectName);
+    setNewProjectDir("");
+    setNewProjectNameTouched(false);
+  }, [newProjectFlow.phase, newProjectFlow.defaultProjectName]);
+
+  // Esc 取消最小创建确认(创建在途不允许 Esc 中断)
+  useEffect(() => {
+    if (newProjectFlow.phase !== "confirm") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dispatchNewProjectFlow({ type: "CREATE_CANCEL" });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [newProjectFlow.phase]);
+
 
   /* 解析降级告警：只有真的存在降级时才铺开 */
   const [degradation, setDegradation] = useState<DegradationState | null>(null);
@@ -692,7 +729,7 @@ const App: React.FC = () => {
         const zipUrl = `${downloadBase}/api/v1/plc/canvas/download-package?package_type=zip`;
         const zapUrl = `${downloadBase}/api/v1/plc/canvas/download-package?package_type=zap19`;
         const rptUrl = `${downloadBase}/api/v1/plc/canvas/download-package?package_type=receipt`;
-        const pkgMsg = `### 📦 西门子 AF V1.2 标准重构项目打包就绪！\n\n` +
+        const pkgMsg = `### 📦 西门子标准重构项目打包就绪！\n\n` +
           `✅ **官方编译验证**：已通过西门子 TIA Portal V19 Openness 软件完全重建校验，**0 Errors, 0 Warnings (State=Success)**。\n\n` +
           `#### 1. Web 直接下载连接 (点击立即下载)\n` +
           `- 📥 [**点击直接下载：博图 V19 原生工程归档包 (.zap19)**](${zapUrl})\n` +
@@ -726,15 +763,15 @@ const App: React.FC = () => {
             setCanvas(refResult.canvas);
             const rpt = refResult.report || {};
             const ems = (rpt.ems || []).map((e: any) => `  - **${e.name}**: ${e.steps_count} 个步序，${e.cms_count} 个控制模块 (CM)`).join("\n");
-            const msg = `### 🎯 西门子 AF V1.2 标准重构完成\n\n` +
-              `工程已重构为官方标准的 Software Units 架构：\n` +
+            const msg = `### 🎯 西门子标准重构完成\n\n` +
+              `工程已重构为官方标准的模块化结构：\n` +
               `- **主单元 (Unit)**: \`${rpt.target_unit_name || targetUnit}\`\n` +
               `- **装备模块 (Equipment Modules)**: 共 ${rpt.ems?.length || 0} 个标准 EM\n${ems}\n` +
               `- **标准块生成**: ${(rpt.af_blocks_created || []).length} 个纯 SCL 官方规范块\n` +
               `- **物理 I/O 保全**: ${rpt.io_retention?.retained_ios || 0}/${rpt.io_retention?.total_ios || 0} (${rpt.io_retention?.percentage || 100}%)\n` +
               `- **安全联锁保全**: ${(rpt.interlocks || []).length} 处联锁表达式已注入控制节点\n` +
               `- **静态合规审查**: 0 Errors, 0 Warnings\n\n` +
-              `画布已即时切换为 AF 标准架构视图。你可以点击任意块查看生成的 SCL 源码，或直接通过自然语言向我描述工艺需求！`;
+              `画布已即时切换为标准结构视图。你可以点击任意块查看生成的 SCL 源码，或直接通过自然语言向我描述工艺需求！`;
             commitSession(refResult.canvas, [{ id: phId, role: "system", text: msg, ts: Date.now() }]);
             return;
           }
@@ -818,6 +855,7 @@ const App: React.FC = () => {
     const s = sessions.find((x) => x.id === id);
     if (!s) return;
     abortCompilePoll(); // 别让上一个会话的编译结果盖掉这份画布
+    dispatchNewProjectFlow({ type: "RESET" }); // 离开新建工程流
     setActiveSession(id);
     if (s.pendingRemote) {
       // 占位会话:正文还在服务端,拉全量后再进画布(失败保留占位并提示)
@@ -848,6 +886,7 @@ const App: React.FC = () => {
 
   const handleNewSession = () => {
     abortCompilePoll();
+    dispatchNewProjectFlow({ type: "RESET" }); // 离开新建工程流
     setActiveSession(null);
     setCanvas(blankCanvas(""));
     setSelectedBlockName(null);
@@ -887,6 +926,7 @@ const App: React.FC = () => {
 
   /* —— 导入 —— */
   const handleImportCanvas = (imported: CanvasStateData, sourceName: string) => {
+    dispatchNewProjectFlow({ type: "RESET" }); // 导入即离开新建工程流
     const varTotal = Object.values(imported.blocks).reduce((a, b) => a + b.interface.length, 0);
     const s = makeSession(imported, `导入项目 ${sourceName}`);
     s.title = `导入 · ${sourceName}`;
@@ -1010,7 +1050,9 @@ const App: React.FC = () => {
   };
 
   /* —— 从零构建 —— */
-  const handleCreateProject = async (projectName: string, targetDir?: string) => {
+  /** 创建标准工程(template af_v1_2 不动);返回创建后的画布供调用方续接
+   *  (新建工程流创建成功后要继续调 N 线逻辑生成并 settle 消息)。 */
+  const handleCreateProject = async (projectName: string, targetDir?: string): Promise<CanvasStateData> => {
     let fresh = blankCanvas(projectName);
     let projectPath = "";
     try {
@@ -1040,9 +1082,9 @@ const App: React.FC = () => {
       {
         id: newSessionId(),
         role: "system",
-        text: `已创建西门子 AF V1.2 标准工程 ${projectName}。\n` +
-          (targetDir || projectPath ? `- **选定项目目录**：\`${targetDir || projectPath}\`\n` : "") +
-          `- **架构标准**：内置西门子官方 AF V1.2 Software Units 规范\n\n` +
+        text: `已创建标准工程 ${projectName}。\n` +
+          (targetDir || projectPath ? `- **项目目录**：\`${targetDir || projectPath}\`\n` : "") +
+          `- **结构标准**：按西门子官方工程规范初始化\n\n` +
           `后续生成的所有 SCL 源码、数据定义及归档交付包都将默认保存在该选定文件夹下。你可以通过任务快捷条（完善工艺逻辑/重构）或下方输入框开始设计！`,
         ts: Date.now(),
       },
@@ -1053,6 +1095,73 @@ const App: React.FC = () => {
     persistAndSync(list);
     setSelectedBlockName(null);
     setFocus(null);
+    return fresh;
+  };
+
+  /** 新建工程流 · 最小创建确认的「确认创建」(契约 23 §1):
+   *  1. 走既有创建链 handleCreateProject(name, dir)(内部 template af_v1_2 不动);
+   *  2. 本流持有已确认需求卡时,自动调 N 线
+   *     POST /api/v1/plc/canvas/generate-from-requirement 把逻辑块生成进画布
+   *     (try/catch 静默,失败仅对话提示「逻辑生成待后续」,绝不阻塞工程创建);
+   *  3. 对话 settle「工程已创建,标准结构就绪;可继续描述工艺完善逻辑」。 */
+  const handleConfirmCreateProject = async () => {
+    const name = newProjectName.trim();
+    if (newProjectFlow.phase !== "confirm" || !isValidProjectName(name)) {
+      setNewProjectNameTouched(true);
+      return;
+    }
+    dispatchNewProjectFlow({ type: "CREATE_SUBMIT" });
+    setReqDrawerOpen(false); // 创建落定,需求卡抽屉收起
+    const targetDir = newProjectDir.trim();
+    const requirement = newProjectFlow.requirement;
+    let settleExtra = "";
+    let finalCanvas = await handleCreateProject(name, targetDir || undefined);
+    if (requirement && requirement.confirmation_status === "confirmed") {
+      try {
+        const res = await requestPlc<{
+          canvas?: CanvasStateData;
+          blocks_created?: number;
+        } | null>(`/api/v1/plc/canvas/generate-from-requirement`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            requirement,
+            project_name: name,
+            ...(targetDir ? { target_dir: targetDir } : {}),
+          }),
+          signal: AbortSignal.timeout?.(120000),
+        });
+        if (res?.canvas && typeof res.canvas === "object") {
+          finalCanvas = res.canvas;
+          setCanvas(res.canvas);
+        }
+        const blocksCreated = Math.max(
+          Number(res?.blocks_created) || 0,
+          res?.canvas ? Object.keys(res.canvas.blocks ?? {}).length : 0,
+        );
+        if (blocksCreated > 0) {
+          settleExtra = `已按确认的工艺需求生成 ${blocksCreated} 个逻辑块进入画布,`;
+        }
+      } catch {
+        // N 线端点未就绪 / 生成失败:静默,仅对话提示,工程创建不受影响
+        settleExtra = "逻辑生成待后续,";
+      }
+    }
+    // 画布上有块时定位首个非 DB 块,方便工程师立即查看生成结果
+    if (Object.keys(finalCanvas.blocks ?? {}).length > 0) {
+      setSelectedBlockName(
+        Object.values(finalCanvas.blocks).find((b) => b.block_type !== "DB")?.name ?? null,
+      );
+    }
+    commitSession(finalCanvas, [
+      {
+        id: msgId(),
+        role: "system",
+        text: `工程已创建,标准结构就绪;${settleExtra}可继续描述工艺完善逻辑`,
+        ts: Date.now(),
+      },
+    ]);
+    dispatchNewProjectFlow({ type: "CREATE_SETTLED" });
   };
 
   const handleCreateBlock = async (spec: {
@@ -1205,6 +1314,8 @@ const App: React.FC = () => {
    *  再调 requirements.requestDraft(prompt, canvas, "improve") 拉草稿
    *  (mock-first:端点未上线回退示例卡;异常时静默停留空态)。 */
   const openRequirementDraft = async (prompt: string) => {
+    // 新建工程流状态机:guiding 态(已点「新建工程」在等工艺描述)打开草稿即随流进入
+    dispatchNewProjectFlow({ type: "DRAFT_OPENED" });
     setReqDrawerOpen(true);
     setReqDraft(null);
     setReqLoading(true);
@@ -1240,12 +1351,24 @@ const App: React.FC = () => {
     focusChatInput();
   };
 
+  /** 启动屏「新建工程」入口(契约 23 §1):需求先行。复用 improve 任务引导 ——
+   *  输入框为空先预填「工艺需求:」引导输入(不调 draft),有文本直接开需求卡草稿;
+   *  本流内已确认过工艺意图的需求卡,再次点击直达最小创建确认。 */
+  const handleNewProjectEntry = () => {
+    if (newProjectFlow.phase === "creating") return; // 创建在途,忽略重复点击
+    const reenter = newProjectFlow.requirement?.confirmation_status === "confirmed";
+    dispatchNewProjectFlow({ type: "ENTRY_CLICK", promptText: chatInput });
+    if (reenter) return; // 状态机已切 confirm → 弹最小创建确认
+    handleTask("improve"); // 空 prompt → 预填引导;非空 → 打开需求卡草稿
+  };
+
   /** 需求卡工程师编辑(items/open_questions/summary):本地 state 更新 */
   const handleRequirementEdit = (r: Requirement) => setReqDraft(r);
 
   /** 确认工艺意图:PUT confirmed(网关不可达由 requirements 层回显 = 本地更新),
    *  记住最新已确认需求(confirm-writeback 附带 requirement_id 用),并在当前
-   *  对话 settle 一条留痕 —— 契约 §1 铁律:确认仅表示意图确认,绝不触发任何 ops/写回。 */
+   *  对话 settle 一条留痕 —— 契约 §1 铁律:确认仅表示意图确认,绝不触发任何 ops/写回。
+   *  契约 23 §1:若正处于新建工程流 → 弹出最小创建确认(流外确认行为不变)。 */
   const handleConfirmIntent = async (r: Requirement) => {
     const confirmed: Requirement = {
       ...r,
@@ -1254,10 +1377,12 @@ const App: React.FC = () => {
     };
     setReqDraft(confirmed);
     setConfirmedRequirement(confirmed);
+    let finalConfirmed: Requirement = confirmed;
     try {
       const res = await putRequirement(confirmed);
       setReqDraft(res.requirement);
       setConfirmedRequirement(res.requirement);
+      finalConfirmed = res.requirement;
     } catch {
       /* 网关失败:本地已更新(占位语义),静默 */
     }
@@ -1269,6 +1394,8 @@ const App: React.FC = () => {
         ts: Date.now(),
       },
     ]);
+    // 新建工程流内确认 → 状态机切 confirm(UI 弹最小创建确认;流外 idle 不受影响)
+    dispatchNewProjectFlow({ type: "INTENT_CONFIRMED", requirement: finalConfirmed });
   };
 
   /** 打开最近一条变更的四层审查:经 state/pcec.ts fetchChanges 取
@@ -1506,6 +1633,17 @@ const App: React.FC = () => {
 
   const pad2 = (n: number) => String(n).padStart(2, "0"); // taste-skill-ignore: clock timestamp
 
+  /* —— 新建工程流 · 最小创建确认的表单校验(与 CreateBlockDialog 的标识规则同口径) —— */
+  const npfCreating = newProjectFlow.phase === "creating";
+  const npfName = newProjectName.trim();
+  let npfNameError = "";
+  if (!npfName) {
+    npfNameError = newProjectNameTouched ? "请输入项目名" : "";
+  } else if (!isValidProjectName(npfName)) {
+    npfNameError = "仅限字母、数字与下划线，且以字母或下划线开头";
+  }
+  const npfValid = npfName.length > 0 && npfNameError === "";
+
   return (
     <div className="app" data-ui="plc-workbench">
       {/* —— 细顶栏 —— */}
@@ -1709,14 +1847,13 @@ const App: React.FC = () => {
         )}
 
         <div className="center">
-          {/* 启动态三入口(契约 22 §4):无活跃会话且历史为空时替换空白画布引导;
+          {/* 启动态两入口(契约 23 §1):无活跃会话且历史为空时替换空白画布引导;
               有历史会话时保持现状(空白画布+引导),历史侧栏照常可用 */}
           {showLaunchScreen ? (
             <ProjectLaunchScreen
               sessions={sessions}
               onImport={() => setImportOpen(true)}
-              onStartFromRequirement={() => void openRequirementDraft("")}
-              onStartAfProject={() => setCreateDialog("project")}
+              onNewProject={handleNewProjectEntry}
               onSelectSession={handleSelectSession}
             />
           ) : (
@@ -1929,6 +2066,97 @@ const App: React.FC = () => {
                 className="btn btn--primary"
               >
                 {isSubmitting ? "正在还原并触发博图编译…" : "确认执行回写"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* —— 新建工程 · 最小创建确认(契约 23 §1):确认工艺意图后弹出。
+          项目名默认取 intent_summary 洗成的合法标识,目标目录可选(复用
+          CreateBlockDialog 的 targetDir 语义);确认走既有创建链 + N 线逻辑生成 —— */}
+      {(newProjectFlow.phase === "confirm" || npfCreating) && (
+        <div
+          className="overlay"
+          onClick={(e) => {
+            if (e.target !== e.currentTarget) return;
+            if (!npfCreating) dispatchNewProjectFlow({ type: "CREATE_CANCEL" });
+          }}
+        >
+          <div className="sheet" role="dialog" aria-modal="true" aria-label="新建工程确认">
+            <div className="sheet-head">
+              <span className="sheet-mark">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path
+                    d="M8 2.5L13 5v4.5c0 2.2-2 3.4-5 4.5-3-1.1-5-2.3-5-4.5V5L8 2.5z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <div>
+                <div className="sheet-title">确认创建工程</div>
+                <div className="sheet-sub">工艺意图已确认 · 项目名将作为博图工程名</div>
+              </div>
+            </div>
+
+            <div className="spec">
+              <div className="spec-row npf-row">
+                <span className="spec-row__label">项目名</span>
+                <input
+                  className="npf-input npf-input--mono"
+                  value={newProjectName}
+                  placeholder={newProjectFlow.defaultProjectName || "MyProject"}
+                  spellCheck={false}
+                  autoComplete="off"
+                  disabled={npfCreating}
+                  aria-label="项目名"
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  onBlur={() => setNewProjectNameTouched(true)}
+                />
+              </div>
+              {npfNameError && <div className="npf-error">{npfNameError}</div>}
+              <div className="spec-row npf-row">
+                <span className="spec-row__label">目标目录 (选填)</span>
+                <input
+                  className="npf-input npf-input--mono"
+                  value={newProjectDir}
+                  placeholder="如：C:\Projects\Station1 (留空则使用默认工作区)"
+                  spellCheck={false}
+                  autoComplete="off"
+                  disabled={npfCreating}
+                  aria-label="目标目录(选填)"
+                  onChange={(e) => setNewProjectDir(e.target.value)}
+                />
+              </div>
+              <div className="spec-row spec-row--gate">
+                <span className="spec-row__label">工艺需求</span>
+                <span className="spec-row__value" title={newProjectFlow.requirement?.intent_summary ?? ""}>
+                  {newProjectFlow.requirement?.intent_summary
+                    ? `已确认 · ${newProjectFlow.requirement.intent_summary}`.slice(0, 80)
+                    : "—"}
+                </span>
+              </div>
+            </div>
+
+            <div className="sheet-actions">
+              <button
+                type="button"
+                className="btn btn--ghost"
+                disabled={npfCreating}
+                onClick={() => dispatchNewProjectFlow({ type: "CREATE_CANCEL" })}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                disabled={!npfValid || npfCreating}
+                autoFocus
+                onClick={() => void handleConfirmCreateProject()}
+              >
+                {npfCreating ? "正在创建…" : "确认创建"}
               </button>
             </div>
           </div>

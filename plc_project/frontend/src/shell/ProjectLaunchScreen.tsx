@@ -1,13 +1,15 @@
 /**
- * ProjectLaunchScreen —— 工作台启动态三入口(docs/22-workbench-p0-contract.md §4,F1 自建)。
+ * ProjectLaunchScreen —— 工作台启动态两入口(docs/23-af-builtin-contract.md §1,F1 自建)。
  *
  * 出现条件(App.tsx 控制):无活跃会话(activeSessionId 为空且 canvas.blocks 为空)
- * 且历史会话为空 —— 全新工作台的第一屏。三个入口:
+ * 且历史会话为空 —— 全新工作台的第一屏。两个入口:
  *   1. 继续最近项目:最近 3 个会话卡片(历史为空时整块隐藏);
  *   2. 导入工程:与顶栏「导入项目」按钮同一逻辑(打开 ImportDialog);
- *   3. 从工艺需求开始:打开需求卡抽屉草稿态(需求先行,契约 §1 铁律:确认不产生修改)。
+ *   3. 新建工程:需求先行 —— 打开需求卡草稿(输入框为空时由 App 复用 improve
+ *      任务引导预填工艺描述),「确认工艺意图」后进入最小创建确认
+ *      (创建链与逻辑生成接线在 App.tsx,本组件只做入口)。
  * 有历史会话时 App 不挂载本组件,保持既有「空白画布+引导」。
- * 样式走现有设计令牌,低显著度、居中卡片式。
+ * 样式走现有设计令牌,低显著度、居中卡片式;用户可见文案零专业术语。
  */
 import React from "react";
 import type { ChatSession } from "../state/sessions";
@@ -17,10 +19,8 @@ export interface ProjectLaunchScreenProps {
   sessions: ChatSession[];
   /** 触发既有导入对话框(与顶栏「导入项目」同款逻辑) */
   onImport: () => void;
-  /** 打开需求卡抽屉草稿态(requestDraft 空提示词) */
-  onStartFromRequirement: () => void;
-  /** 基于西门子官方 AF V1.2 模板起步 */
-  onStartAfProject?: () => void;
+  /** 新建工程:打开需求卡草稿流(工艺先行);输入框为空时由 App 引导输入 */
+  onNewProject: () => void;
   /** 点历史卡片 = 选中该会话(进画布) */
   onSelectSession: (id: string) => void;
 }
@@ -71,8 +71,7 @@ function sessionTimeLabel(ts: number | undefined): string {
 export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
   sessions,
   onImport,
-  onStartFromRequirement,
-  onStartAfProject,
+  onNewProject,
   onSelectSession,
 }) => {
   // 防御性排序:即使上游未按 updatedAt 降序,这里也取最新的前 3 个
@@ -103,7 +102,7 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
           开始你的 PLC 工程
         </div>
         <div style={{ marginTop: 6, fontSize: 13, color: "var(--ink-2)" }}>
-          导入既有博图工程,或先把工艺需求讲清楚 —— 需求先行,确认不产生任何修改
+          导入既有博图工程,或从工艺需求开始新建 —— 需求先行,确认不产生任何修改
         </div>
       </div>
 
@@ -151,33 +150,18 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
           </span>
         </button>
 
-        {/* 入口 3:从工艺需求开始(需求卡抽屉草稿态) */}
-        <button
-          type="button"
-          className="launch-entry"
-          style={ENTRY_STYLE}
-          onClick={onStartFromRequirement}
-        >
-          <span style={{ fontSize: 15, color: "var(--ink)", fontWeight: 500 }}>
-            从工艺需求开始
-          </span>
-          <span style={{ fontSize: 13, color: "var(--ink-2)" }}>
-            先描述工艺意图,生成需求卡(前置/序列/异常/约束/验收),确认后一键生成 AF 逻辑
-          </span>
-        </button>
-
-        {/* 入口 4:新建西门子 AF V1.2 工程模板 */}
+        {/* 入口 3:新建工程(需求先行 → 确认工艺意图 → 最小创建确认) */}
         <button
           type="button"
           className="launch-entry"
           style={{ ...ENTRY_STYLE, borderColor: "var(--accent, #0066cc)" }}
-          onClick={onStartAfProject ?? onStartFromRequirement}
+          onClick={onNewProject}
         >
           <span style={{ fontSize: 15, color: "var(--accent, #0066cc)", fontWeight: 600 }}>
-            ⚡ 新建标准工程 (内置 AF 架构)
+            新建工程
           </span>
           <span style={{ fontSize: 13, color: "var(--ink-2)" }}>
-            内置西门子官方 AF V1.2 标准（预置 LPML/LUC/LAF/LBC 官方库），纯净 Software Units 架构
+            从工艺需求开始,自动生成标准结构工程 —— 先生成需求卡,确认工艺意图后创建
           </span>
         </button>
       </div>

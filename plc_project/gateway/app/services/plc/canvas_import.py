@@ -527,10 +527,14 @@ def import_canvas_from_path(
     project (routed through the Openness CLI), or a bare ``.apxx`` file.
 
     Returns ``{"canvas": CanvasState.to_dict(), "blocks_parsed": int,
-    "tags_parsed": int, "hmi_parsed": int, "skipped": [...]}``.
+    "tags_parsed": int, "hmi_parsed": int, "skipped": [...],
+    "af_analysis": {conformant, roles_count, pending_count}}``.
     Imported blocks/networks/HMI carry status="synced". When an .apxx tree is
     available it is persisted under PLC_WORK_DIR/projects/<id> and
-    ``canvas.source`` is filled for real writeback paths.
+    ``canvas.source`` is filled for real writeback paths. On success the canvas
+    additionally gets the AF role overlay (af_role annotation only — physical
+    layout/SCL/interfaces/tags/OB untouched; AF analysis failure falls back to
+    ``af_analysis={conformant: null, ...}`` without blocking the import).
     """
     progress = on_progress or _noop_progress
     resolved = Path(resolved)
@@ -604,6 +608,33 @@ def import_canvas_from_path(
             progress("workspace", f"工作区持久化跳过：{exc}")
     else:
         result.pop("_export_root", None)
+
+    # AF 角色覆盖层(导入自动 AF 化,契约 docs/23 §2):分析→标注→报告→PCEC。
+    # 物理冻结铁律:overlay 只加 af_role 与 pending 文案,SCL/接口/标签/OB 一字不动;
+    # 任何失败仅提示,绝不阻塞导入(响应摘要兜底 conformant=null)。
+    result["af_analysis"] = {
+        "conformant": None,
+        "roles_count": 0,
+        "pending_count": 0,
+    }
+    try:
+        from gateway.app.services.plc import af_import
+
+        af_canvas = CanvasState.from_dict(result.get("canvas") or {})
+        if af_canvas.blocks or af_canvas.tags:
+            af_report = af_import.analyze_import(af_canvas)
+            af_canvas = af_import.apply_af_overlay(af_canvas, af_report)
+            result["canvas"] = af_canvas.to_dict()
+            af_project_path = ""
+            if af_canvas.source is not None:
+                af_project_path = str(af_canvas.source.project_path or "")
+            af_import.write_report(
+                af_canvas.project_name or name or resolved.stem, af_report
+            )
+            af_import.record_pcec(af_canvas, af_report, af_project_path or None)
+            result["af_analysis"] = af_import.summarize(af_report)
+    except Exception as exc:  # noqa: BLE001 — AF 失败绝不阻塞导入
+        progress("af_import", f"AF 角色标注跳过:{exc}")
 
     return result
 

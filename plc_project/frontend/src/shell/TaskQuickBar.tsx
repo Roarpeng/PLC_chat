@@ -20,7 +20,7 @@ const TASK_DESCRIPTIONS: Record<TaskKind, string> = {
   understand: "通读工程结构、块职责与信号流向，先弄清现有逻辑再动手",
   diagnose: "从故障或异常表现出发，带证据定位根因",
   improve: "在既有工艺上补全或改进逻辑，建议先生成需求卡确认意图",
-  refactor: "在不改变工艺行为的前提下，将工程重构为西门子 AF V1.2 标准 Software Unit 架构",
+  refactor: "在不改变工艺行为的前提下，将工程重构为西门子官方标准结构",
 };
 
 /** 展示顺序 = 契约顺序：理解 → 诊断 → 完善 → 重构 */

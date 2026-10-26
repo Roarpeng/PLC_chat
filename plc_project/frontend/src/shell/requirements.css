@@ -1048,3 +1048,47 @@
     transition: none;
   }
 }
+
+/* ==========================================================================
+   新建工程 · 最小创建确认(契约 23 §1,前缀 npf-)
+   骨架复用全局 .overlay / .sheet / .spec-row(index.css);这里只补输入行样式。
+   ========================================================================== */
+
+.npf-row {
+  align-items: center;
+}
+
+.npf-row .npf-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.npf-input {
+  padding: 5px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--surface-2, #ffffff);
+  border: 1px solid var(--line-2, #c9ccc4);
+  border-radius: var(--r-md, 6px);
+  outline: none;
+}
+
+.npf-input:focus {
+  border-color: var(--accent, #1d5a90);
+}
+
+.npf-input:disabled {
+  opacity: 0.6;
+}
+
+.npf-input--mono {
+  font-family: var(--mono, monospace); /* taste-skill-ignore: dialog input */
+}
+
+.npf-error {
+  padding: 6px 13px;
+  font-size: 12px;
+  color: var(--fault, #b3261e);
+  border-bottom: 1px solid var(--line);
+}

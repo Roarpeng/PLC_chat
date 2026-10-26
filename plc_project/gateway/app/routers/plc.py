@@ -1416,6 +1416,67 @@ async def generate_af_from_requirement_endpoint(
     )
 
 
+@router.post("/canvas/generate-from-requirement", response_model=ApiResponse[dict[str, Any]])
+async def canvas_generate_from_requirement_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """Generate a canvas draft of AF V1.2 blocks from a confirmed inline requirement card.
+
+    N 线契约(docs/23 §3):body {requirement(完整对象,须 confirmed),
+    project_name, target_dir?}。只产画布草稿——**不做任何写回**,工程
+    落盘/编译/PCEC 仍走既有确认链;target_dir 仅由创建链透传,本端点不使用。
+    复用 planner → generate_af_project_blocks → lint_af_canvas + scl_precheck
+    双门禁,逻辑收敛在 gateway.app.services.plc.af_generate。
+    """
+    _ = principal
+    from gateway.app.services.plc import af_generate
+
+    requirement = body.get("requirement")
+    if not isinstance(requirement, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "REQUIREMENT_REQUIRED",
+                "message": "body.requirement must be the full requirement-card object",
+            },
+        )
+    project_name = str(body.get("project_name") or "").strip()
+    _target_dir = body.get("target_dir")  # 只透传不使用:本端点零写回(契约 §3)
+
+    try:
+        result = af_generate.generate_from_requirement(requirement, project_name)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": str(exc) or "REQUIREMENT_INVALID",
+                "message": "requirement.confirmation_status must be 'confirmed' before generation",
+            },
+        ) from exc
+    except Exception as exc:  # noqa: BLE001 - 生成失败可读 500,不裸抛栈
+        logger.exception("canvas/generate-from-requirement failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "AF_GENERATION_FAILED",
+                "message": f"failed to generate canvas draft from requirement: {exc}",
+            },
+        ) from exc
+
+    return ApiResponse(
+        ok=True,
+        data={
+            "canvas": result["canvas"],
+            "blocks_created": result["blocks_created"],
+            "linter_findings": result["linter_findings"],
+            "iec_violations": result["iec_violations"],
+        },
+        request_id=request_id,
+    )
+
+
 @router.post("/canvas/confirm-writeback", response_model=ApiResponse[dict[str, Any]])
 async def confirm_canvas_writeback_endpoint(
     body: dict[str, Any],
@@ -1998,6 +2059,10 @@ async def canvas_import_endpoint(
         len(data.get("skipped") or []),
         request_id,
     )
+    # af_analysis 兜底:服务层 AF 标注异常时保证字段仍存在(conformant=null)
+    data.setdefault(
+        "af_analysis", {"conformant": None, "roles_count": 0, "pending_count": 0}
+    )
     return ApiResponse(ok=True, data=data, request_id=request_id)
 
 
@@ -2056,7 +2121,37 @@ async def canvas_import_upload_endpoint(
         len(result.get("skipped") or []),
         request_id,
     )
+    # af_analysis 兜底:服务层 AF 标注异常时保证字段仍存在(conformant=null)
+    result.setdefault(
+        "af_analysis", {"conformant": None, "roles_count": 0, "pending_count": 0}
+    )
     return ApiResponse(ok=True, data=result, request_id=request_id)
+
+
+@router.get("/canvas/af/report/latest", response_model=ApiResponse[dict[str, Any]])
+async def canvas_af_report_latest_endpoint(
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+    project: str = "",
+) -> ApiResponse[dict[str, Any]]:
+    """取项目最新的导入分析报告(``PLC_WORK_DIR/af_reports/``);无报告 404。
+
+    ``project`` 为空时取目录内最新一份。报告内容为纯分析数据(角色映射/
+    pending 清单/覆盖率),不含任何画布物理变更。
+    """
+    _ = principal
+    from gateway.app.services.plc import af_import
+
+    report = af_import.latest_report(project)
+    if report is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "AF_REPORT_NOT_FOUND",
+                "message": f"项目 {project or '(任意)'} 尚无导入分析报告",
+            },
+        )
+    return ApiResponse(ok=True, data=report, request_id=request_id)
 
 
 @router.post("/canvas/explain-block", response_model=ApiResponse[dict[str, Any]])

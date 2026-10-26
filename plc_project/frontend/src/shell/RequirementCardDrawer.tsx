@@ -31,7 +31,7 @@ export interface RequirementCardDrawerProps {
   onEdit: (r: Requirement) => void;
   /** 仅确认工艺意图（F1 负责 PUT confirmed；本按钮绝不触发 ops / 写回） */
   onConfirmIntent: (r: Requirement) => void;
-  /** 一键生成 AF V1.2 架构方案 */
+  /** 一键生成标准结构工程块 */
   onGenerateAf?: (r: Requirement) => void;
   onClose: () => void;
 }
@@ -245,7 +245,7 @@ export const RequirementCardDrawer: FC<RequirementCardDrawerProps> = ({
                       className="rcd-confirm"
                       style={{ background: "var(--accent, #0066cc)", color: "#fff" }}
                       onClick={() => onGenerateAf(requirement)}
-                      title="根据已确认的工艺意图自动生成西门子 AF V1.2 标准工程块"
+                      title="根据已确认的工艺意图自动生成标准工程块"
                     >
                       ⚡ 一键生成 PLC 逻辑方案
                     </button>
@@ -262,7 +262,7 @@ export const RequirementCardDrawer: FC<RequirementCardDrawerProps> = ({
               )}
             </div>
             <span className="rcd-foot__note">
-              确认仅表示工艺意图已确认；点击「生成 PLC 逻辑方案」将遵循西门子 AF V1.2 架构自动构建 Unit/EM/CM 架构并提交四层审查
+              确认仅表示工艺意图已确认；点击「生成 PLC 逻辑方案」将按内置工程标准自动构建模块化结构并提交四层审查
             </span>
           </footer>
         )}
