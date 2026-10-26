@@ -43,7 +43,6 @@ import { ChangeLogDrawer } from "./shell/ChangeLogDrawer";
 /* 工作台 P0(契约 22):F1 自建组件 + F2 三组件挂载 */
 import { ProjectLaunchScreen } from "./shell/ProjectLaunchScreen";
 import { WorkbenchHeader } from "./shell/WorkbenchHeader";
-import { TaskQuickBar, type TaskKind } from "./shell/TaskQuickBar";
 import { RequirementCardDrawer } from "./shell/RequirementCardDrawer";
 import { ChangeReviewDrawer } from "./shell/ChangeReviewDrawer";
 /* 新建工程流(契约 23 §1):intent_summary 洗项目名 + 流状态机(纯逻辑,vitest 覆盖) */
@@ -195,12 +194,6 @@ const BrandMark: React.FC = () => (
  * improve 不在此列 —— 它走需求卡草稿流(openRequirementDraft)。
  * 前缀词典集中在此,便于统一调整文案。
  */
-const TASK_PROMPT_PREFIX: Partial<Record<TaskKind, string>> = {
-  understand: "解读工程:",
-  diagnose: "诊断问题:",
-  refactor: "重构程序: 按照内置西门子标准重构当前工程",
-};
-
 const ChevronsLeft: React.FC = () => (
   <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
     <path d="M8.5 3.5L4.5 8l4 4.5M12.5 3.5L8.5 8l4 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -270,8 +263,6 @@ const App: React.FC = () => {
   const bumpChangesRefresh = React.useCallback(() => setChangesRefreshTick((t) => t + 1), []);
 
   /* —— 工作台 P0(契约 22 §4):任务入口 / 需求卡 / 变更审查 —— */
-  /** TaskQuickBar 的 active 任务态(纯前端语境,不派发后端) */
-  const [activeTask, setActiveTask] = useState<TaskKind | null>(null);
   /** 需求卡抽屉(RequirementCardDrawer)三态:open / requirement / loading */
   const [reqDrawerOpen, setReqDrawerOpen] = useState(false);
   const [reqDraft, setReqDraft] = useState<Requirement | null>(null);
@@ -1310,6 +1301,13 @@ const App: React.FC = () => {
     });
   };
 
+  /** 启动屏「新建工程」入口:预填引导词 → 用户输入工艺需求后走需求卡流 */
+  const handleNewProjectEntry = () => {
+    dispatchNewProjectFlow({ type: "ENTRY_CLICK" });
+    if (!chatInput.trim()) setChatInput("工艺需求:");
+    focusChatInput();
+  };
+
   /** 打开需求卡抽屉草稿态:open=true / requirement=null / loading=true,
    *  再调 requirements.requestDraft(prompt, canvas, "improve") 拉草稿
    *  (mock-first:端点未上线回退示例卡;异常时静默停留空态)。 */
@@ -1329,38 +1327,6 @@ const App: React.FC = () => {
     }
   };
 
-  /** TaskQuickBar 任务接线(契约 §4「任务流接线」):
-   *  - understand/diagnose/refactor → 聚焦 ChatDock 输入框 + 预填任务引导前缀
-   *    (纯提示词,不改后端;仅输入框为空时预填,避免覆盖用户已输入的内容);
-   *  - improve → 打开需求卡草稿流,以当前输入框文本(可空)为草稿提示词。 */
-  const handleTask = (t: TaskKind) => {
-    setActiveTask(t);
-    if (t === "improve") {
-      const text = chatInput.trim();
-      if (!text) {
-        // 需求卡草稿需要工艺描述:空输入不调 draft(后端 400),先引导填写
-        setChatInput("工艺需求:");
-        focusChatInput();
-        return;
-      }
-      void openRequirementDraft(text);
-      return;
-    }
-    const prefix = TASK_PROMPT_PREFIX[t];
-    if (prefix && !chatInput.trim()) setChatInput(prefix);
-    focusChatInput();
-  };
-
-  /** 启动屏「新建工程」入口(契约 23 §1):需求先行。复用 improve 任务引导 ——
-   *  输入框为空先预填「工艺需求:」引导输入(不调 draft),有文本直接开需求卡草稿;
-   *  本流内已确认过工艺意图的需求卡,再次点击直达最小创建确认。 */
-  const handleNewProjectEntry = () => {
-    if (newProjectFlow.phase === "creating") return; // 创建在途,忽略重复点击
-    const reenter = newProjectFlow.requirement?.confirmation_status === "confirmed";
-    dispatchNewProjectFlow({ type: "ENTRY_CLICK", promptText: chatInput });
-    if (reenter) return; // 状态机已切 confirm → 弹最小创建确认
-    handleTask("improve"); // 空 prompt → 预填引导;非空 → 打开需求卡草稿
-  };
 
   /** 需求卡工程师编辑(items/open_questions/summary):本地 state 更新 */
   const handleRequirementEdit = (r: Requirement) => setReqDraft(r);
@@ -1739,7 +1705,6 @@ const App: React.FC = () => {
       </header>
 
       {/* —— 任务快捷条(契约 22 §3,F2 组件):低显著度贴顶栏下沿 —— */}
-      <TaskQuickBar active={activeTask} onTask={handleTask} />
 
       {/* —— 工程概览头(契约 22 §4,F1 自建):活跃项目时顶栏下沿常驻 —— */}
       {showWorkbenchHeader && (
