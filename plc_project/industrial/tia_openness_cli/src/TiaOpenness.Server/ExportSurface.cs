@@ -160,10 +160,9 @@ public sealed class ExportSurface
             NoteMissing(OpennessExport.CatBlocks, "SystemBlockGroup", "no_export");
         }
 
-        if (!coreOnly)
-        {
-            ExportSoftwareUnits(plc, plcRoot);
-        }
+        // Official Siemens AF architecture places core blocks inside Software Units.
+        // Always export Software Units even in coreOnly / canvasMode.
+        ExportSoftwareUnits(plc, plcRoot);
 
         ExportGroupTree(
             OpennessExport.GetFirstProp(plc, "TypeGroup"),
@@ -320,6 +319,25 @@ public sealed class ExportSurface
             var uname = OpennessExport.Sanitize(OpennessExport.GetPropString(unit, "Name") ?? "Unit");
             var unitRoot = Path.Combine(plcRoot, "units", uname);
             Directory.CreateDirectory(unitRoot);
+
+            try
+            {
+                var ns = OpennessExport.GetPropString(unit, "Namespace") ?? "";
+                var relations = new List<string>();
+                var relGroup = OpennessExport.GetFirstProp(unit, "RelationGroup", "Relations");
+                if (relGroup is not null)
+                {
+                    foreach (var rel in OpennessExport.Enumerate(relGroup, "Relations", "Items"))
+                    {
+                        var relName = OpennessExport.GetPropString(rel, "Name") ?? OpennessExport.GetPropString(rel, "TargetUnit");
+                        if (!string.IsNullOrEmpty(relName)) relations.Add(relName);
+                    }
+                }
+                var manifestPath = Path.Combine(unitRoot, "unit_manifest.json");
+                var manifestObj = new { name = uname, @namespace = ns, relations };
+                File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifestObj, JsonDefaults.Options));
+            }
+            catch { /* non-fatal unit manifest export */ }
             ExportGroupTree(
                 OpennessExport.GetFirstProp(unit, "BlockGroup"),
                 Path.Combine(unitRoot, "blocks"),

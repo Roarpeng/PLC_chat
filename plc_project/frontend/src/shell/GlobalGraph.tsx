@@ -209,6 +209,15 @@ function BlockNodeView({ data }: NodeProps<GgBlockNode>) {
       <span className="gg-node__bar" aria-hidden="true" />
       <span className="gg-node__row1">
         <span className="gg-node__badge">[{b.block_type}]</span>
+        {b.af_role && (
+          <span
+            className="gg-node__badge"
+            style={{ background: "#e1f0ff", color: "#005bb5", fontSize: "10px", marginLeft: "2px" }}
+            title={`AF V1.2 角色: ${b.af_role}${b.software_unit ? ` (${b.software_unit})` : ""}`}
+          >
+            {b.af_role}
+          </span>
+        )}
         <span className="gg-node__name">&quot;{b.name}&quot;</span>
       </span>
       {rawComment && (

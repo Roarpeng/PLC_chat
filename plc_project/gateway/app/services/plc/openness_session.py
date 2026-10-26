@@ -187,12 +187,16 @@ def generate_from_source(
     scl_path: str,
     *,
     plc_name: str = "",
+    software_unit: str = "",
 ) -> dict[str, Any]:
     if not ensure_session_running():
         return {"ok": False, "fallback": True}
+    body: dict[str, Any] = {"project": project_path, "scl": scl_path, "plc": plc_name}
+    if software_unit:
+        body["unit"] = software_unit
     return _post(
         "/generate-from-source",
-        {"project": project_path, "scl": scl_path, "plc": plc_name},
+        body,
         timeout_s=300.0,
     )
 
@@ -203,11 +207,15 @@ def import_xml(
     *,
     kind: str = "auto",
     hmi_name: str = "",
+    software_unit: str = "",
 ) -> dict[str, Any]:
     if not ensure_session_running():
         return {"ok": False, "fallback": True}
+    body: dict[str, Any] = {"project": project_path, "xml": xml_path, "kind": kind, "hmi": hmi_name}
+    if software_unit:
+        body["unit"] = software_unit
     return _post(
         "/import-xml",
-        {"project": project_path, "xml": xml_path, "kind": kind, "hmi": hmi_name},
+        body,
         timeout_s=300.0,
     )

@@ -79,15 +79,30 @@ def _staged_xmls(bundle_dir: Path) -> list[Path]:
     return sorted(bundle_dir.glob("*.xml"))
 
 
-def _staged_scls(bundle_dir: Path) -> list[Path]:
+def _staged_scl_entries(bundle_dir: Path) -> list[dict[str, Any]]:
     manifest = bundle_dir / "staged_scls.json"
     if manifest.is_file():
-        raw = json.loads(manifest.read_text(encoding="utf-8"))
-        return [Path(p) for p in raw if Path(p).is_file()]
+        try:
+            raw = json.loads(manifest.read_text(encoding="utf-8"))
+        except Exception:
+            raw = []
+        entries = []
+        for item in raw:
+            if isinstance(item, dict):
+                p = Path(item.get("path", ""))
+                if p.is_file():
+                    entries.append({"path": p, "software_unit": str(item.get("software_unit") or item.get("unit") or "")})
+            elif isinstance(item, str) and Path(item).is_file():
+                entries.append({"path": Path(item), "software_unit": ""})
+        return entries
     ext = bundle_dir / "external_sources"
     if ext.is_dir():
-        return sorted(ext.glob("*.scl"))
+        return [{"path": p, "software_unit": p.parent.name if p.parent != ext else ""} for p in ext.rglob("*.scl") if p.is_file()]
     return []
+
+
+def _staged_scls(bundle_dir: Path) -> list[Path]:
+    return [e["path"] for e in _staged_scl_entries(bundle_dir)]
 
 
 def staged_files(bundle_dir: str | Path) -> tuple[list[Path], list[Path]]:
@@ -157,13 +172,15 @@ def plan_writeback(
                 "reason": "",
             }
         )
-    for scl in _staged_scls(bundle):
+    for entry in _staged_scl_entries(bundle):
+        scl = entry["path"]
         planned.append(
             {
                 "action": "generate_from_source",
                 "block": scl.stem,
                 "target": str(scl),
                 "kind": "scl",
+                "software_unit": entry.get("software_unit", ""),
                 "reason": "",
             }
         )
@@ -455,10 +472,12 @@ def execute_writeback(
                 )
                 results.append({"xml": str(target), "kind": entry["kind"], "result": payload})
             else:  # generate_from_source
+                unit = str(entry.get("software_unit") or "")
                 payload = generate_from_source_via_openness_cli(
                     project_path,
                     target,
                     plc_name=plc_name,
+                    software_unit=unit,
                     overwrite=True,
                 )
                 scl_results.append({"scl": str(target), "result": payload})

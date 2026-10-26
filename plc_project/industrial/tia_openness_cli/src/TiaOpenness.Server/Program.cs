@@ -21,7 +21,9 @@ public static class Program
         {
             return RunServe(args.Skip(1).ToArray());
         }
-        return RunCli(args);
+        var rc = RunCli(args);
+        Environment.Exit(rc);
+        return rc;
     }
 
     private static int RunServe(string[] args)
@@ -250,7 +252,9 @@ public static class Program
                     return 3;
                 }
 
-                var imported = blocks.ImportBlock(xml, overwrite);
+                opts.TryGetValue("unit", out var unit);
+                if (string.IsNullOrWhiteSpace(unit)) opts.TryGetValue("software-unit", out unit);
+                var imported = blocks.ImportBlock(xml, overwrite, unit);
                 if (!imported.Ok)
                 {
                     var failPayload = new
@@ -298,7 +302,9 @@ public static class Program
                     return 3;
                 }
 
-                var generated = blocks.GenerateBlocksFromSource(scl, overwrite);
+                opts.TryGetValue("unit", out var unit);
+                if (string.IsNullOrWhiteSpace(unit)) opts.TryGetValue("software-unit", out unit);
+                var generated = blocks.GenerateBlocksFromSource(scl, overwrite, unit);
                 if (!generated.Ok)
                 {
                     var failPayload = new
@@ -321,6 +327,82 @@ public static class Program
                 };
                 Console.WriteLine(JsonSerializer.Serialize(genPayload, JsonDefaults.Options));
                 return saved.Ok ? 0 : 5;
+            }
+
+            if (command == "probe-groups")
+            {
+                opts.TryGetValue("project", out var project);
+                opts.TryGetValue("plc", out var plc);
+                var opened = projects.OpenProject(project!, plc, withoutUi: true);
+                var rootGroup = OpennessExport.GetFirstProp(projects.PlcSoftware, "BlockGroup");
+                var groups = OpennessExport.GetFirstProp(rootGroup, "Groups");
+                Console.WriteLine($"groups type: {groups?.GetType().FullName}");
+                if (groups != null)
+                {
+                    foreach (var m in groups.GetType().GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                    {
+                        if (m.DeclaringType != typeof(object))
+                            Console.WriteLine($"Method: {m.Name}({string.Join(", ", m.GetParameters().Select(param => param.ParameterType.Name))})");
+                    }
+                }
+                return 0;
+            }
+
+            if (command == "create-block-group")
+            {
+                if (!opts.TryGetValue("project", out var project) || string.IsNullOrWhiteSpace(project))
+                {
+                    Console.Error.WriteLine("Missing --project");
+                    return 2;
+                }
+                if (!opts.TryGetValue("group", out var group) || string.IsNullOrWhiteSpace(group))
+                {
+                    Console.Error.WriteLine("Missing --group");
+                    return 2;
+                }
+                opts.TryGetValue("plc", out var plc);
+                var opened = projects.OpenProject(project, plc, withoutUi: true);
+                if (!opened.Ok)
+                {
+                    Console.WriteLine(JsonSerializer.Serialize(opened, JsonDefaults.Options));
+                    return 3;
+                }
+                var created = blocks.FindOrCreateBlockGroup(group);
+                var saved = projects.SaveProject();
+                var payload = new { ok = created is not null, group, saved = saved.Ok };
+                Console.WriteLine(JsonSerializer.Serialize(payload, JsonDefaults.Options));
+                return created is not null ? 0 : 4;
+            }
+
+            if (command == "move-block")
+            {
+                if (!opts.TryGetValue("project", out var project) || string.IsNullOrWhiteSpace(project))
+                {
+                    Console.Error.WriteLine("Missing --project");
+                    return 2;
+                }
+                if (!opts.TryGetValue("block", out var blockName) || string.IsNullOrWhiteSpace(blockName))
+                {
+                    Console.Error.WriteLine("Missing --block");
+                    return 2;
+                }
+                if (!opts.TryGetValue("group", out var group) || string.IsNullOrWhiteSpace(group))
+                {
+                    Console.Error.WriteLine("Missing --group");
+                    return 2;
+                }
+                opts.TryGetValue("plc", out var plc);
+                var opened = projects.OpenProject(project, plc, withoutUi: true);
+                if (!opened.Ok)
+                {
+                    Console.WriteLine(JsonSerializer.Serialize(opened, JsonDefaults.Options));
+                    return 3;
+                }
+                var moveRes = blocks.MoveBlockToGroup(blockName, group);
+                var saved = projects.SaveProject();
+                var payload = new { ok = moveRes.Ok, error = moveRes.Error, block = blockName, group, saved = saved.Ok };
+                Console.WriteLine(JsonSerializer.Serialize(payload, JsonDefaults.Options));
+                return moveRes.Ok ? 0 : 4;
             }
 
             if (command == "compile-plc")
@@ -471,7 +553,9 @@ public static class Program
                     return 3;
                 }
 
-                var imported = blocks.ImportXml(xml, overwrite, kind);
+                opts.TryGetValue("unit", out var unit);
+                if (string.IsNullOrWhiteSpace(unit)) opts.TryGetValue("software-unit", out unit);
+                var imported = blocks.ImportXml(xml, overwrite, kind, unit);
                 if (!imported.Ok)
                 {
                     Console.WriteLine(JsonSerializer.Serialize(new { ok = false, project = opened, import = imported }, JsonDefaults.Options));

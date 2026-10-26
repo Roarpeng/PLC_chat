@@ -159,7 +159,7 @@ public sealed class BlockService
     /// Import a SimaticML block XML via BlockGroup.Blocks.Import(FileInfo, ImportOptions).
     /// Does not save the project — call ProjectService.SaveProject afterwards.
     /// </summary>
-    public ImportBlockResult ImportBlock(string xmlPath, bool overwrite = true)
+    public ImportBlockResult ImportBlock(string xmlPath, bool overwrite = true, string? softwareUnit = null)
     {
         if (string.IsNullOrWhiteSpace(xmlPath))
         {
@@ -179,8 +179,28 @@ public sealed class BlockService
 
         try
         {
-            var blockGroup = GetProp(_projects.PlcSoftware, "BlockGroup")
-                ?? throw new InvalidOperationException("PlcSoftware.BlockGroup is null.");
+            object? blockGroup = null;
+            if (!string.IsNullOrWhiteSpace(softwareUnit))
+            {
+                var unit = FindSoftwareUnit(softwareUnit);
+                if (unit is not null)
+                {
+                    blockGroup = GetProp(unit, "BlockGroup");
+                }
+                if (blockGroup is null)
+                {
+                    blockGroup = FindOrCreateBlockGroup(softwareUnit);
+                }
+                if (blockGroup is null)
+                {
+                    return FailImport("not_found", $"Target block group or software unit '{softwareUnit}' could not be resolved or created.");
+                }
+            }
+            else
+            {
+                blockGroup = GetProp(_projects.PlcSoftware, "BlockGroup")
+                    ?? throw new InvalidOperationException("PlcSoftware.BlockGroup is null.");
+            }
             var blocks = GetProp(blockGroup, "Blocks")
                 ?? throw new InvalidOperationException("BlockGroup.Blocks is null.");
 
@@ -275,7 +295,7 @@ public sealed class BlockService
     /// when that composition actually exposes <c>Import</c>. Missing members
     /// fail closed with <c>no_import</c> — never invent an API.
     /// </summary>
-    public ImportBlockResult ImportXml(string xmlPath, bool overwrite = true, string? kindHint = null)
+    public ImportBlockResult ImportXml(string xmlPath, bool overwrite = true, string? kindHint = null, string? softwareUnit = null)
     {
         if (string.IsNullOrWhiteSpace(xmlPath))
         {
@@ -319,12 +339,12 @@ public sealed class BlockService
 
         if (kind == "block")
         {
-            return ImportBlock(full, overwrite);
+            return ImportBlock(full, overwrite, softwareUnit);
         }
 
         try
         {
-            var resolved = ResolveImportComposition(kind, head);
+            var resolved = ResolveImportComposition(kind, head, softwareUnit);
             if (resolved.SkipReason is not null)
             {
                 return new ImportBlockResult
@@ -606,7 +626,7 @@ public sealed class BlockService
     /// GenerateBlocksFromSource() (GenerateBlockOption.None if the overload exists).
     /// Does not save the project — call ProjectService.SaveProject afterwards.
     /// </summary>
-    public GenerateFromSourceResult GenerateBlocksFromSource(string sclPath, bool overwrite = true)
+    public GenerateFromSourceResult GenerateBlocksFromSource(string sclPath, bool overwrite = true, string? softwareUnit = null)
     {
         if (string.IsNullOrWhiteSpace(sclPath))
         {
@@ -643,7 +663,26 @@ public sealed class BlockService
 
         try
         {
-            var extGroup = GetProp(_projects.PlcSoftware, "ExternalSourceGroup");
+            object? extGroup = null;
+            if (!string.IsNullOrWhiteSpace(softwareUnit))
+            {
+                var unit = FindSoftwareUnit(softwareUnit);
+                if (unit is null)
+                {
+                    return FailGenerate("not_found", $"Software unit '{softwareUnit}' not found.");
+                }
+                extGroup = GetProp(unit, "ExternalSourceGroup") ?? GetProp(unit, "ExternalSources");
+                if (extGroup is null)
+                {
+                    return FailGenerate(
+                        "dependency_unavailable",
+                        $"Software unit '{softwareUnit}' does not expose ExternalSourceGroup.");
+                }
+            }
+            else
+            {
+                extGroup = GetProp(_projects.PlcSoftware, "ExternalSourceGroup");
+            }
             if (extGroup is null)
             {
                 return FailGenerate(
@@ -762,17 +801,18 @@ public sealed class BlockService
                 .OrderBy(info => ExportRank(info.Type))
                 .ThenBy(info => info.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            var exportedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var exportedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var info in ordered)
             {
+                var key = info.Path ?? info.Name;
                 var relative = string.IsNullOrWhiteSpace(info.Path)
                     ? info.Name
                     : info.Path!.Replace('/', Path.DirectorySeparatorChar);
                 var target = Path.Combine(blocksDir, Sanitize(relative) + ".xml");
                 var dir = Path.GetDirectoryName(target);
                 if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-                var one = ExportBlock(info.Name, target, info.Type);
-                exportedNames.Add(info.Name);
+                var one = ExportBlock(key, target, info.Type);
+                exportedKeys.Add(key);
                 if (one.Ok)
                 {
                     exported++;
@@ -817,7 +857,7 @@ public sealed class BlockService
             }
             foreach (var info in listed.Blocks)
             {
-                if (exportedNames.Contains(info.Name)) continue;
+                if (exportedKeys.Contains(info.Path ?? info.Name)) continue;
                 skipped.Add(new ExportSkip
                 {
                     Category = "blocks",
@@ -1075,9 +1115,11 @@ public sealed class BlockService
 
     private (object? Block, BlockInfo? Info) FindBlockAnywhere(string name, string? typeHint)
     {
+        var normalized = name.Replace('\\', '/').Trim();
+        var isPath = normalized.Contains('/');
         foreach (var (group, prefix) in EnumerateBlockRoots())
         {
-            var found = FindBlock(group, name, typeHint, prefix);
+            var found = FindBlock(group, normalized, typeHint, prefix, isPath);
             if (found.Block is not null) return found;
         }
         return (null, null);
@@ -1085,22 +1127,28 @@ public sealed class BlockService
 
     private readonly record struct ImportTarget(object? Composition, string? SkipReason, string? Api, string? Detail);
 
-    private ImportTarget ResolveImportComposition(string kind, string head)
+    private ImportTarget ResolveImportComposition(string kind, string head, string? softwareUnit = null)
     {
         var plc = _projects.PlcSoftware;
+        object? unit = null;
+        if (!string.IsNullOrWhiteSpace(softwareUnit))
+        {
+            unit = FindSoftwareUnit(softwareUnit);
+        }
+        var root = unit ?? plc;
         switch (kind)
         {
             case "type":
             case "types":
             case "udt":
                 return CompositionImport(
-                    OpennessExport.GetFirstProp(plc, "TypeGroup"),
+                    OpennessExport.GetFirstProp(root, "TypeGroup"),
                     "TypeGroup.Types",
                     "Types", "PlcTypes", "DataTypes");
             case "tag":
             case "tags":
                 return CompositionImport(
-                    OpennessExport.GetFirstProp(plc, "TagTableGroup"),
+                    OpennessExport.GetFirstProp(root, "TagTableGroup"),
                     "TagTableGroup.TagTables",
                     "TagTables", "ConstantTables");
             case "watch":
@@ -1254,7 +1302,7 @@ public sealed class BlockService
         }
     }
 
-    private (object? Block, BlockInfo? Info) FindBlock(object group, string name, string? typeHint, string relative)
+    private (object? Block, BlockInfo? Info) FindBlock(object group, string name, string? typeHint, string relative, bool matchPath = false)
     {
         var hint = NormalizeTypeFilter(typeHint);
 
@@ -1263,7 +1311,18 @@ public sealed class BlockService
             foreach (var block in blocks)
             {
                 var info = ToBlockInfo(block, relative);
-                if (!string.Equals(info.Name, name, StringComparison.OrdinalIgnoreCase)) continue;
+                bool match;
+                if (matchPath)
+                {
+                    match = string.Equals(info.Path, name, StringComparison.OrdinalIgnoreCase)
+                        || (name.StartsWith("Units/", StringComparison.OrdinalIgnoreCase) && string.Equals(info.Path, name, StringComparison.OrdinalIgnoreCase))
+                        || string.Equals(info.Path, "Units/" + name, StringComparison.OrdinalIgnoreCase);
+                }
+                else
+                {
+                    match = string.Equals(info.Name, name, StringComparison.OrdinalIgnoreCase);
+                }
+                if (!match) continue;
                 if (hint is not null && !string.Equals(info.Type, hint, StringComparison.OrdinalIgnoreCase)) continue;
                 return (block, info);
             }
@@ -1275,7 +1334,7 @@ public sealed class BlockService
             {
                 var childName = GetPropString(child, "Name") ?? "Group";
                 var childRel = string.IsNullOrEmpty(relative) ? childName : relative + "/" + childName;
-                var found = FindBlock(child, name, typeHint, childRel);
+                var found = FindBlock(child, name, typeHint, childRel, matchPath);
                 if (found.Block is not null) return found;
             }
         }
@@ -1835,4 +1894,200 @@ public sealed class BlockService
 
     private static string? GetPropString(object? obj, string name) =>
         GetProp(obj, name)?.ToString();
+
+    public object? FindSoftwareUnit(string unitName)
+    {
+        var plc = _projects.PlcSoftware;
+        if (plc is null) return null;
+        var units = OpennessExport.GetFirstProp(plc, "SoftwareUnitGroup", "SoftwareUnits", "UnitGroup");
+        if (units is null) return null;
+        foreach (var u in OpennessExport.Enumerate(units, "SoftwareUnits", "Units", "Items"))
+        {
+            var uname = OpennessExport.GetPropString(u, "Name");
+            if (string.Equals(uname, unitName.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                return u;
+            }
+        }
+        return null;
+    }
+
+    public (bool Ok, object? Unit, string? Error) EnsureSoftwareUnit(
+        string unitName,
+        string? namespaceName = null,
+        IEnumerable<string>? relations = null)
+    {
+        if (string.IsNullOrWhiteSpace(unitName)) return (false, null, "unitName required");
+        var plc = _projects.PlcSoftware;
+        if (plc is null) return (false, null, "No project open");
+
+        var existing = FindSoftwareUnit(unitName);
+        if (existing is not null) return (true, existing, null);
+
+        var units = OpennessExport.GetFirstProp(plc, "SoftwareUnitGroup", "SoftwareUnits", "UnitGroup");
+        if (units is null) return (false, null, "SoftwareUnitGroup not available on this PLC");
+
+        var composition = OpennessExport.GetFirstProp(units, "SoftwareUnits", "Units", "Items") ?? units;
+        var createMethod = composition.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance)
+            .FirstOrDefault(m => m.Name == "Create" && (m.GetParameters().Length == 1 || m.GetParameters().Length == 2));
+
+        if (createMethod is null)
+        {
+            return (false, null, "SoftwareUnits.Create method not found");
+        }
+
+        try
+        {
+            object? created = null;
+            if (createMethod.GetParameters().Length == 2 && namespaceName is not null)
+            {
+                created = createMethod.Invoke(composition, new object[] { unitName.Trim(), namespaceName.Trim() });
+            }
+            else
+            {
+                created = createMethod.Invoke(composition, new object[] { unitName.Trim() });
+                if (namespaceName is not null && created is not null)
+                {
+                    var nsProp = created.GetType().GetProperty("Namespace");
+                    if (nsProp is not null && nsProp.CanWrite)
+                    {
+                        nsProp.SetValue(created, namespaceName.Trim());
+                    }
+                }
+            }
+
+            if (relations is not null && created is not null)
+            {
+                var relGroup = OpennessExport.GetFirstProp(created, "RelationGroup", "Relations");
+                if (relGroup is not null)
+                {
+                    var relComp = OpennessExport.GetFirstProp(relGroup, "Relations", "Items") ?? relGroup;
+                    var relCreate = relComp.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                        .FirstOrDefault(m => m.Name == "Create" && m.GetParameters().Length == 1);
+                    if (relCreate is not null)
+                    {
+                        foreach (var relName in relations)
+                        {
+                            var targetUnit = FindSoftwareUnit(relName);
+                            if (targetUnit is not null)
+                            {
+                                try
+                                {
+                                    if (relCreate.GetParameters()[0].ParameterType == typeof(string))
+                                    {
+                                        relCreate.Invoke(relComp, new object[] { relName });
+                                    }
+                                    else
+                                    {
+                                        relCreate.Invoke(relComp, new object[] { targetUnit });
+                                    }
+                                }
+                                catch
+                                {
+                                    // best effort for relation creation
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return (true, created, null);
+        }
+        catch (Exception ex)
+        {
+            return (false, null, Unwrap(ex).Message);
+        }
+    }
+
+
+    public object? FindOrCreateBlockGroup(string groupPath)
+    {
+        var plc = _projects.PlcSoftware;
+        if (plc is null) return null;
+        var rootGroup = GetProp(plc, "BlockGroup");
+        if (rootGroup is null) return null;
+        if (string.IsNullOrWhiteSpace(groupPath)) return rootGroup;
+
+        var parts = groupPath.Replace('\\', '/').Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+        object currentGroup = rootGroup;
+        foreach (var part in parts)
+        {
+            var groups = GetProp(currentGroup, "Groups");
+            if (groups is null) return null;
+
+            object? match = null;
+            if (groups is System.Collections.IEnumerable list)
+            {
+                foreach (var item in list)
+                {
+                    if (item is not null && string.Equals(GetPropString(item, "Name"), part.Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        match = item;
+                        break;
+                    }
+                }
+            }
+            if (match is null)
+            {
+                var (created, skip, api) = OpennessMutate.TryCreateOn(groups, part.Trim(), null);
+                if (created is not null)
+                {
+                    match = created;
+                }
+            }
+            if (match is null) return null;
+            currentGroup = match;
+        }
+        return currentGroup;
+    }
+
+    public (bool Ok, string? Error) MoveBlockToGroup(string blockName, string groupPath)
+    {
+        var (block, info) = FindBlockAnywhere(blockName, null);
+        if (block is null) return (false, $"Block '{blockName}' not found.");
+
+        var targetGroup = FindOrCreateBlockGroup(groupPath);
+        if (targetGroup is null) return (false, $"Failed to find or create target group '{groupPath}'.");
+
+        var tempXml = Path.Combine(Path.GetTempPath(), $"move_{Guid.NewGuid():N}_{blockName}.xml");
+        try
+        {
+            var exportRes = ExportBlock(blockName, tempXml);
+            if (!exportRes.Ok) return (false, exportRes.Error?.Message ?? "Export failed before move.");
+
+            var (deleted, skip, api) = OpennessMutate.TryDelete(block);
+            if (!deleted) return (false, $"Failed to delete block '{blockName}' from previous group: {skip}");
+
+            var targetBlocks = GetProp(targetGroup, "Blocks");
+            if (targetBlocks is null) return (false, "Target group has no Blocks composition.");
+
+            return ImportBlockToComposition(targetBlocks, tempXml, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tempXml)) try { File.Delete(tempXml); } catch { }
+        }
+    }
+
+    private (bool Ok, string? Error) ImportBlockToComposition(object blocks, string xmlPath, bool overwrite)
+    {
+        var import = blocks.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance)
+            .FirstOrDefault(m =>
+            {
+                if (m.Name != "Import") return false;
+                var ps = m.GetParameters();
+                return ps.Length == 2 &&
+                       ps[0].ParameterType.Name.IndexOf("FileInfo", StringComparison.Ordinal) >= 0 &&
+                       ps[1].ParameterType.Name.IndexOf("ImportOptions", StringComparison.Ordinal) >= 0;
+            });
+        if (import is null) return (false, "Blocks.Import not found on target group.");
+
+        var fileInfoType = import.GetParameters()[0].ParameterType;
+        var importOptionsType = import.GetParameters()[1].ParameterType;
+        object importOption = Enum.Parse(importOptionsType, overwrite ? "Override" : "None");
+        var fileInfo = Activator.CreateInstance(fileInfoType, xmlPath)!;
+        import.Invoke(blocks, new[] { fileInfo, importOption });
+        return (true, null);
+    }
 }

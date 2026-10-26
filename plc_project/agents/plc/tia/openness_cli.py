@@ -512,6 +512,7 @@ def import_block_via_openness_cli(
     xml_path: str | Path,
     *,
     plc_name: str = "",
+    software_unit: str = "",
     overwrite: bool = True,
     timeout_s: int = 600,
 ) -> dict[str, Any]:
@@ -530,6 +531,8 @@ def import_block_via_openness_cli(
     ]
     if plc_name:
         args.extend(["--plc", plc_name])
+    if software_unit:
+        args.extend(["--unit", software_unit])
     if not overwrite:
         args.append("--no-overwrite")
 
@@ -554,6 +557,7 @@ def generate_from_source_via_openness_cli(
     scl_path: str | Path,
     *,
     plc_name: str = "",
+    software_unit: str = "",
     overwrite: bool = True,
     timeout_s: int = 600,
 ) -> dict[str, Any]:
@@ -576,6 +580,8 @@ def generate_from_source_via_openness_cli(
     ]
     if plc_name:
         args.extend(["--plc", plc_name])
+    if software_unit:
+        args.extend(["--unit", software_unit])
     if not overwrite:
         args.append("--no-overwrite")
 
@@ -691,6 +697,7 @@ def import_xml_via_openness_cli(
     *,
     kind: str = "auto",
     plc_name: str = "",
+    software_unit: str = "",
     overwrite: bool = True,
     timeout_s: int = 600,
 ) -> dict[str, Any]:
@@ -715,6 +722,8 @@ def import_xml_via_openness_cli(
     ]
     if plc_name:
         args.extend(["--plc", plc_name])
+    if software_unit:
+        args.extend(["--unit", software_unit])
     if not overwrite:
         args.append("--no-overwrite")
 

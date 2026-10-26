@@ -255,9 +255,10 @@ public sealed class SessionServer : IDisposable
         EnsureCore();
         EnsureOpen(root);
         var scl = GetString(root, "scl");
+        var unit = GetString(root, "unit") ?? GetString(root, "software_unit");
         if (string.IsNullOrWhiteSpace(scl) || !File.Exists(scl))
             return new { ok = false, error = "scl file required" };
-        var generated = _blocks!.GenerateBlocksFromSource(scl, overwrite: true);
+        var generated = _blocks!.GenerateBlocksFromSource(scl, overwrite: true, softwareUnit: unit);
         return new { ok = generated.Ok, generate = generated };
     }
 
@@ -267,9 +268,10 @@ public sealed class SessionServer : IDisposable
         EnsureOpen(root);
         var xml = GetString(root, "xml");
         var kind = GetString(root, "kind") ?? "auto";
+        var unit = GetString(root, "unit") ?? GetString(root, "software_unit");
         if (string.IsNullOrWhiteSpace(xml) || !File.Exists(xml))
             return new { ok = false, error = "xml file required" };
-        var imported = _blocks!.ImportXml(xml, overwrite: true, kindHint: kind);
+        var imported = _blocks!.ImportXml(xml, overwrite: true, kindHint: kind, softwareUnit: unit);
         return new { ok = imported.Ok, import = imported };
     }
 

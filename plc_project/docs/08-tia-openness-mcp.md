@@ -2,7 +2,7 @@
 
 ## 定位
 
-`tools/industrial-mcp/tia-openness` 是 ResearchOS **TIA Openness MCP Foundation**：把 Siemens TIA Portal Openness 暴露为 stdio MCP。导出走 chapter-6 walker；写回（Import / GenerateBlocksFromSource / Retrieve / Archive）在 **Windows HostGateway** 上运行，见包内 README 的 implemented vs out-of-scope 表。
+`industrial/tia_openness_cli` 是 ResearchOS **TIA Openness MCP Foundation**：把 Siemens TIA Portal Openness 暴露为 stdio MCP。导出走 chapter-6 walker；写回（Import / GenerateBlocksFromSource / Retrieve / Archive）在 **Windows HostGateway** 上运行，见包内 README 的 implemented vs out-of-scope 表。
 
 ```text
 ResearchOS Agent
@@ -24,7 +24,7 @@ XML → PLC Parser → PLC-IR → Neo4j → PLC Agent
 
 | 项 | 值 |
 |----|-----|
-| 路径 | `tools/industrial-mcp/tia-openness/` |
+| 路径 | `industrial/tia_openness_cli/` |
 | 进程名 | `researchos-tia-openness` |
 | Transport | stdio |
 | 默认 Portal | V19（`TIA_VERSION` / `TIA_PORTAL_ROOT` 可覆盖） |
@@ -90,10 +90,10 @@ plc.tia.ingest   (Parser → PLC-IR → KG → optional Neo4j)
 C# CLI (for Python importer, no MCP session):
 
 ```powershell
-dotnet run --project tools/industrial-mcp/tia-openness/src/TiaOpenness.Server -c Release -- --cli status
-dotnet run --project tools/industrial-mcp/tia-openness/src/TiaOpenness.Server -c Release -- `
+dotnet run --project industrial/tia_openness_cli/src/TiaOpenness.Server -c Release -- --cli status
+dotnet run --project industrial/tia_openness_cli/src/TiaOpenness.Server -c Release -- `
   --cli export-project --project C:\Proj\Line.ap19 --export-dir C:\Export\Line
-dotnet run --project tools/industrial-mcp/tia-openness/src/TiaOpenness.Server -c Release -- `
+dotnet run --project industrial/tia_openness_cli/src/TiaOpenness.Server -c Release -- `
   --cli archive-project --project C:\Proj\Line.ap19 --out-dir C:\Out --name Line.zap19
 ```
 
@@ -109,4 +109,4 @@ Env:
 - Openness DLL 以**反射 + 临时目录 staging**加载（对齐 `ExportProject.ps1`）
 - 加入 Openness 组后必须**重新登录**，否则 `opennessGroupInToken=false`，`tia.open_project` 会返回 `openness_group_token_missing`
 
-详见包内 [`tools/industrial-mcp/tia-openness/README.md`](../../tools/industrial-mcp/tia-openness/README.md)。
+详见包内 [`industrial/tia_openness_cli/README.md`](../industrial/tia_openness_cli/README.md)。

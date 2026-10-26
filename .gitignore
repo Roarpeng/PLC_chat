@@ -56,3 +56,8 @@ plc_project/.researchos/
 
 # Real TIA project data (large binary, not reference material)
 PLC_Openness_data/hr001/
+
+# AF 官方档案太大不入库(GitHub 100MB 限制;本地保留)
+plc_project/docs/*.zip
+plc_project/docs/109817223_AutomationFramework_DOC_V2_2_4_en.pdf
+plc_project/docs/109817223_Automation_Framework_V3.0.0_Manual.pdf

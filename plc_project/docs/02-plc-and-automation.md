@@ -22,7 +22,7 @@ Agent
 
 ## MCP：`tia-openness`（Milestone 1 Foundation — 已落地）
 
-路径：`tools/industrial-mcp/tia-openness/`（C# stdio MCP → TIA Portal V19 Openness）
+路径：`industrial/tia_openness_cli/`（C# CLI → TIA Portal V19 Openness；旧名 `tools/industrial-mcp/tia-openness` 已弃用）
 
 | 工具 | 状态 | 说明 |
 |------|------|------|

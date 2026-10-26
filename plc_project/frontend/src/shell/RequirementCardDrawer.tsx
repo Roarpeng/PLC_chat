@@ -31,6 +31,8 @@ export interface RequirementCardDrawerProps {
   onEdit: (r: Requirement) => void;
   /** 仅确认工艺意图（F1 负责 PUT confirmed；本按钮绝不触发 ops / 写回） */
   onConfirmIntent: (r: Requirement) => void;
+  /** 一键生成 AF V1.2 架构方案 */
+  onGenerateAf?: (r: Requirement) => void;
   onClose: () => void;
 }
 
@@ -40,6 +42,7 @@ export const RequirementCardDrawer: FC<RequirementCardDrawerProps> = ({
   loading = false,
   onEdit,
   onConfirmIntent,
+  onGenerateAf,
   onClose,
 }) => {
   /* Esc 关闭（与 ChangeLogDrawer 同款；open=false 时不挂监听） */
@@ -224,27 +227,42 @@ export const RequirementCardDrawer: FC<RequirementCardDrawerProps> = ({
 
         {!loading && requirement && (
           <footer className="rcd-foot">
-            {confirmed ? (
-              <button
-                type="button"
-                className="rcd-confirm rcd-confirm--done"
-                disabled
-                aria-disabled="true"
-                title="工艺意图已确认（确认不产生任何工程修改）"
-              >
-                ✓ 工艺意图已确认
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="rcd-confirm"
-                onClick={() => onConfirmIntent(requirement)}
-              >
-                确认工艺意图
-              </button>
-            )}
+            <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+              {confirmed ? (
+                <>
+                  <button
+                    type="button"
+                    className="rcd-confirm rcd-confirm--done"
+                    disabled
+                    aria-disabled="true"
+                    title="工艺意图已确认（确认不产生任何工程修改）"
+                  >
+                    ✓ 工艺意图已确认
+                  </button>
+                  {onGenerateAf && (
+                    <button
+                      type="button"
+                      className="rcd-confirm"
+                      style={{ background: "var(--accent, #0066cc)", color: "#fff" }}
+                      onClick={() => onGenerateAf(requirement)}
+                      title="根据已确认的工艺意图自动生成西门子 AF V1.2 标准工程块"
+                    >
+                      ⚡ 一键生成 PLC 逻辑方案
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="rcd-confirm"
+                  onClick={() => onConfirmIntent(requirement)}
+                >
+                  确认工艺意图
+                </button>
+              )}
+            </div>
             <span className="rcd-foot__note">
-              确认仅表示工艺意图已确认，不会修改工程（写回需另行经回写确认门禁）
+              确认仅表示工艺意图已确认；点击「生成 PLC 逻辑方案」将遵循西门子 AF V1.2 架构自动构建 Unit/EM/CM 架构并提交四层审查
             </span>
           </footer>
         )}

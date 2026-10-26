@@ -19,6 +19,8 @@ export interface ProjectLaunchScreenProps {
   onImport: () => void;
   /** 打开需求卡抽屉草稿态(requestDraft 空提示词) */
   onStartFromRequirement: () => void;
+  /** 基于西门子官方 AF V1.2 模板起步 */
+  onStartAfProject?: () => void;
   /** 点历史卡片 = 选中该会话(进画布) */
   onSelectSession: (id: string) => void;
 }
@@ -70,6 +72,7 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
   sessions,
   onImport,
   onStartFromRequirement,
+  onStartAfProject,
   onSelectSession,
 }) => {
   // 防御性排序:即使上游未按 updatedAt 降序,这里也取最新的前 3 个
@@ -159,7 +162,22 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
             从工艺需求开始
           </span>
           <span style={{ fontSize: 13, color: "var(--ink-2)" }}>
-            先描述工艺意图,生成需求卡(前置/序列/异常/约束/验收),确认后再进入逻辑编辑
+            先描述工艺意图,生成需求卡(前置/序列/异常/约束/验收),确认后一键生成 AF 逻辑
+          </span>
+        </button>
+
+        {/* 入口 4:新建西门子 AF V1.2 工程模板 */}
+        <button
+          type="button"
+          className="launch-entry"
+          style={{ ...ENTRY_STYLE, borderColor: "var(--accent, #0066cc)" }}
+          onClick={onStartAfProject ?? onStartFromRequirement}
+        >
+          <span style={{ fontSize: 15, color: "var(--accent, #0066cc)", fontWeight: 600 }}>
+            ⚡ 新建标准工程 (内置 AF 架构)
+          </span>
+          <span style={{ fontSize: 13, color: "var(--ink-2)" }}>
+            内置西门子官方 AF V1.2 标准（预置 LPML/LUC/LAF/LBC 官方库），纯净 Software Units 架构
           </span>
         </button>
       </div>

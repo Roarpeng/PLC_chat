@@ -45,6 +45,9 @@ class CanvasBlock:
     scl_body: str = ""
     status: NodeStatus = "draft"
     errors: list[str] = field(default_factory=list)
+    software_unit: str = ""
+    namespace: str = ""
+    af_role: str = "" 
 
     # 外部源（External Source）SCL 的合法声明区关键字；VAR_STAT 须映射为 VAR
     _SCL_SECTION_KEYWORD = {
@@ -218,6 +221,26 @@ class CanvasState:
     source: CanvasSource | None = None
     revisions: list[CanvasRevision] = field(default_factory=list)
     last_compile_result: dict[str, Any] | None = None
+    software_unit_manifests: dict[str, Any] = field(default_factory=dict)
+
+    def find_block(self, name_or_key: str, software_unit: str = "") -> CanvasBlock | None:
+        if name_or_key in self.blocks:
+            return self.blocks[name_or_key]
+        if software_unit:
+            compound = f"{software_unit}::{name_or_key}"
+            if compound in self.blocks:
+                return self.blocks[compound]
+        for b in self.blocks.values():
+            if b.name == name_or_key and (not software_unit or b.software_unit == software_unit):
+                return b
+        return None
+
+    def blocks_in_unit(self, software_unit: str) -> list[CanvasBlock]:
+        return [b for b in self.blocks.values() if b.software_unit == software_unit]
+
+    def software_units(self) -> list[str]:
+        units = {b.software_unit for b in self.blocks.values() if b.software_unit}
+        return sorted(units)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -229,6 +252,7 @@ class CanvasState:
             "source": asdict(self.source) if self.source else None,
             "revisions": [asdict(r) for r in self.revisions],
             "last_compile_result": self.last_compile_result,
+            "software_unit_manifests": self.software_unit_manifests,
         }
 
     @classmethod
@@ -260,6 +284,9 @@ class CanvasState:
                 scl_body=b_data.get("scl_body", ""),
                 status=b_data.get("status", "draft"),
                 errors=b_data.get("errors", []),
+                software_unit=b_data.get("software_unit", ""),
+                namespace=b_data.get("namespace", ""),
+                af_role=b_data.get("af_role", ""),
             )
 
         for w_id, w_data in (data.get("hmi_widgets") or {}).items():
@@ -307,6 +334,8 @@ class CanvasState:
                 hmi_device_names=list(src.get("hmi_device_names") or []),
                 export_mode=str(src.get("export_mode") or "canvas"),
             )
+
+        state.software_unit_manifests = dict(data.get("software_unit_manifests") or {})
 
         for r in data.get("revisions") or []:
             if isinstance(r, dict):

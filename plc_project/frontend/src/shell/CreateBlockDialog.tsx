@@ -15,7 +15,7 @@ export interface CreateBlockDialogProps {
   existingNames: string[];
   onClose(): void;
   onCreateBlock(spec: CreateBlockSpec): void;
-  onCreateProject(projectName: string): void;
+  onCreateProject(projectName: string, targetDir?: string): void;
 }
 
 /** SCL 标识符合法字符：字母/下划线开头，仅字母、数字、下划线 */
@@ -39,6 +39,7 @@ export const CreateBlockDialog: React.FC<CreateBlockDialogProps> = ({
   onCreateProject,
 }) => {
   const [name, setName] = useState("");
+  const [targetDir, setTargetDir] = useState("");
   const [blockType, setBlockType] = useState<CreateBlockSpec["blockType"]>("FB");
   const [comment, setComment] = useState("");
   const [touched, setTouched] = useState(false);
@@ -48,6 +49,7 @@ export const CreateBlockDialog: React.FC<CreateBlockDialogProps> = ({
   useEffect(() => {
     if (!open) return;
     setName("");
+    setTargetDir("");
     setBlockType("FB");
     setComment("");
     setTouched(false);
@@ -88,7 +90,7 @@ export const CreateBlockDialog: React.FC<CreateBlockDialogProps> = ({
     if (isBlock) {
       onCreateBlock({ name: trimmed, blockType, comment: comment.trim() });
     } else {
-      onCreateProject(trimmed);
+      onCreateProject(trimmed, targetDir.trim());
     }
     onClose();
   };
@@ -173,7 +175,23 @@ export const CreateBlockDialog: React.FC<CreateBlockDialogProps> = ({
                 </label>
               </>
             ) : (
-              <p className="cbd-note">从零开始：空白画布上通过对话指令或新建块逐步构建，最终可回写博图。</p>
+              <>
+                <label className="cbd-field" style={{ marginTop: 12 }}>
+                  <span className="cbd-label">项目存放文件夹 (选定目录)</span>
+                  <input
+                    className="cbd-input cbd-input--mono"
+                    value={targetDir}
+                    placeholder="如：C:\Projects\Station1 (选填，留空则使用默认工作区)"
+                    spellCheck={false}
+                    autoComplete="off"
+                    onChange={(e) => setTargetDir(e.target.value)}
+                  />
+                  <span style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>
+                    后续生成过程中的 SCL 源码、数据字典与归档包均存放在此文件夹下。
+                  </span>
+                </label>
+                <p className="cbd-note">从零开始：遵循西门子 AF V1.2 标准构建空白工程画布，完成后可打包与回写博图。</p>
+              </>
             )}
           </div>
 

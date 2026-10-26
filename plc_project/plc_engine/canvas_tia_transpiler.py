@@ -106,21 +106,28 @@ def canvas_to_tia_bundle(canvas: CanvasState, output_dir: str | Path) -> Path:
     ext_dir = bundle_path / "external_sources"
     ext_dir.mkdir(parents=True, exist_ok=True)
 
-    staged_scls: list[str] = []
+    staged_scls: list[dict[str, Any]] = []
     scl_map = preview_canvas_scl(canvas)
-    for block_name, scl_content in scl_map.items():
+    for block_key, scl_content in scl_map.items():
         # 只重写真正被改动过的块。画布刚从工程导入时所有块都是 synced，
         # 此时若全量重写，会把 89 个块全部用规则翻译结果覆盖原工程
         # （真实工程 HR001 实测：编译错误从 0 涨到 1007）。未改动的块
         # 必须保持 TIA 里的原样，这是最小破坏原则。
-        block = canvas.blocks.get(block_name)
+        block = canvas.blocks.get(block_key)
         if block is not None and str(getattr(block, "status", "")) == "synced":
             continue
-        scl_file = ext_dir / f"{block_name}.scl"
+        su = block.software_unit if block else ""
+        bname = block.name if block else block_key
+        safe_file_name = f"{su}_{bname}.scl" if su else f"{bname}.scl"
+        scl_file = ext_dir / safe_file_name
         # TIA External Source 只认 UTF-8 带 BOM(无 BOM 且含非 ASCII 中文注释时
         # CreateFromFile 直接报 Unable to open the file —— 真机 HR001 复现)
         scl_file.write_text(scl_content, encoding="utf-8-sig")
-        staged_scls.append(str(scl_file))
+        staged_scls.append({
+            "path": str(scl_file),
+            "software_unit": su,
+            "block_name": bname,
+        })
 
     # 2. Tag Table XML — 只有存在 draft 标签才回写（导入的 synced 标签不动，
     #    与块的最小破坏原则一致）

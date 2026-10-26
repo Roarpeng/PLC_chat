@@ -145,7 +145,49 @@ def _network_scl_text(block: Any, net: Any, index: int, language: str) -> str:
     return f"// {lang} 网络 {index + 1}（图形折叠占位），引用符号：{listed}"
 
 
-def _block_to_canvas_block(block: Any, existing: dict[str, CanvasBlock]) -> CanvasBlock:
+def _detect_software_unit(path: Path) -> str:
+    parts = list(path.parts)
+    if "units" in parts:
+        idx = parts.index("units")
+        if idx + 1 < len(parts):
+            return parts[idx + 1]
+    return ""
+
+
+def _infer_af_role(name: str, software_unit: str = "") -> str:
+    n = name.lower()
+    if "callunit" in n:
+        return "CallUnit"
+    if "callequipment" in n:
+        return "CallEquipment"
+    if "emnodes" in n:
+        return "EmNodes"
+    if "controlnodes" in n:
+        return "ControlNodes"
+    if "steptostring" in n:
+        return "StepToString"
+    if "sequence" in n:
+        return "Sequence"
+    if "collectalarms" in n:
+        return "CollectAlarms"
+    if "simulationdata" in n:
+        return "SimulationData"
+    if "hmiinterface" in n:
+        return "HmiInterface"
+    if n.startswith("ob") or "startup" in n or "main" in n or "prodiag" in n:
+        return "OB"
+    if "config" in n:
+        return "Config"
+    if "alarms" in n:
+        return "Alarms"
+    return ""
+
+def _block_to_canvas_block(
+    block: Any,
+    existing: dict[str, CanvasBlock],
+    software_unit: str = "",
+    af_role: str = "",
+) -> CanvasBlock:
     from agents.plc.tia.scl import translate_block_to_scl
 
     block_type = str(getattr(block.block_type, "value", block.block_type) or "FB").upper()
@@ -211,6 +253,8 @@ def _block_to_canvas_block(block: Any, existing: dict[str, CanvasBlock]) -> Canv
         networks=networks,
         scl_body=scl_body,
         status="synced",
+        software_unit=software_unit,
+        af_role=af_role,
     )
 
 
@@ -346,7 +390,8 @@ def _parse_one_xml(xml_file: Path) -> dict[str, Any]:
         block = None
         reason = f"块 XML 解析失败：{exc}"
     if block is not None and block.name:
-        return {"kind": "block", "block": block, "file": xml_file}
+        su = _detect_software_unit(xml_file)
+        return {"kind": "block", "block": block, "file": xml_file, "software_unit": su}
 
     try:
         table = parse_tag_table_xml(xml_file)
@@ -395,7 +440,12 @@ def _parse_export_tree(
         kind = row.get("kind")
         if kind == "block":
             block = row["block"]
-            canvas.blocks[block.name] = _block_to_canvas_block(block, canvas.blocks)
+            su = row.get("software_unit", "")
+            role = _infer_af_role(block.name, su)
+            key = f"{su}::{block.name}" if su else block.name
+            canvas.blocks[key] = _block_to_canvas_block(
+                block, canvas.blocks, software_unit=su, af_role=role
+            )
             blocks_parsed += 1
             continue
         if kind == "tags":
@@ -410,6 +460,21 @@ def _parse_export_tree(
             tags_parsed += len(table.tags)
             continue
         skipped.append({"file": str(row["file"]), "reason": str(row.get("reason") or "")})
+
+    # Scan for unit_manifest.json files under units/
+    try:
+        import json
+        units_dir = parse_root / "units" if parse_root.is_dir() else None
+        if units_dir and units_dir.is_dir():
+            for m_file in units_dir.glob("*/unit_manifest.json"):
+                try:
+                    data = json.loads(m_file.read_text(encoding="utf-8"))
+                    uname = data.get("name") or m_file.parent.name
+                    canvas.software_unit_manifests[uname] = data
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
     # HMI screens (classic XML / Unified JSON) under hmi/
     hmi_count = 0

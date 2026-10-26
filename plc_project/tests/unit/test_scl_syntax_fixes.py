@@ -259,9 +259,13 @@ def test_writeback_bundle_skips_synced_blocks(tmp_path):
     )
     bundle = canvas_to_tia_bundle(canvas, tmp_path / "bundle")
     staged = json.loads((bundle / "staged_scls.json").read_text(encoding="utf-8"))
-    names = [__import__("pathlib").Path(p).stem for p in staged]
+    # staged_scls 契约 v2(软件单元感知):[{path, software_unit, block_name}]
+    names = [e["block_name"] for e in staged]
     assert "FB_Draft" in names, "改动过的块必须写回"
     assert "FB_Synced" not in names, "未改动的块不得重写"
+    entry = next(e for e in staged if e["block_name"] == "FB_Draft")
+    assert entry["path"].endswith("FB_Draft.scl"), entry["path"]
+    assert entry["software_unit"] in ("", None), "未声明软件单元时为空"
 
 
 def test_all_synced_canvas_produces_empty_bundle(tmp_path):

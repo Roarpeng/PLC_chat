@@ -65,6 +65,8 @@ export interface Requirement {
   task_kind: TaskKind;
   /** 生成这张卡的用户原始输入 */
   origin_prompt: string;
+  /** AF V1.2 架构规划方案（AfProject 字典） */
+  af_plan?: any;
 }
 
 /** GET /canvas/requirements 的 meta 条目（列表行） */
@@ -484,5 +486,30 @@ export async function requestDraft(
     if (taskKind) draft.task_kind = taskKind;
     draft.confirmation_status = "proposed";
     return { requirement: draft, origin: "mock" };
+  }
+}
+
+
+/**
+ * 一键生成 AF V1.2 架构方案与逻辑块包（Phase 3 端到端调用）
+ * POST /api/v1/plc/canvas/requirements/{id}/generate-af
+ */
+export async function generateAfFromRequirement(requirementId: string): Promise<{
+  ok: boolean;
+  project?: any;
+  blocks_count?: number;
+  findings?: any[];
+  error?: string;
+}> {
+  try {
+    const res = await requestPlc<any>(
+      `/api/v1/plc/canvas/requirements/${encodeURIComponent(requirementId)}/generate-af`,
+      {
+        method: "POST",
+      }
+    );
+    return res ?? { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || String(err) };
   }
 }

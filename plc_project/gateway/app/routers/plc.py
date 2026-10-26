@@ -832,17 +832,84 @@ async def get_default_canvas(
     principal: PrincipalDep,
     request_id: RequestIdDep,
     project_name: str = "",
+    template: str = "",
 ) -> ApiResponse[dict[str, Any]]:
-    """Return a blank starting canvas.
+    """Return a blank starting canvas or initialized with an architecture template.
 
     演示种子块已移除：打开即是空白画面，用户通过导入工程或主动选择历史
-    会话进入具体项目（产品决策 2026-10-24）。
+    会话进入具体项目（产品决策 2026-10-24）。支持 template=af_v1_2 初始化 AF 架构。
     """
     _ = principal
     from plc_engine.canvas_model import CanvasState
 
     canvas = CanvasState(project_name=project_name)
+    if template.lower() == "af_v1_2":
+        from plc_engine.af.af_generator import generate_af_project_blocks
+        from plc_engine.af.planner import plan_af_project_from_spec
+
+        p_name = project_name or "AF_Project"
+        plan = plan_af_project_from_spec("Unit1 ProcessStation", project_name=p_name)
+        canvas.blocks = generate_af_project_blocks(plan)
+
     return ApiResponse(ok=True, data=canvas.to_dict(), request_id=request_id)
+
+
+@router.post("/canvas/projects/new", response_model=ApiResponse[dict[str, Any]])
+@router.post("/projects/new", response_model=ApiResponse[dict[str, Any]])
+async def create_new_project_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """Create a new PLC project workspace, supporting the af_v1_2 architecture template."""
+    _ = principal
+    import uuid
+    from gateway.app.services.plc import workspace
+    from plc_engine.canvas_model import CanvasSource, CanvasState
+
+    project_name = str(body.get("project_name") or "AF_Project").strip()
+    template = str(body.get("template") or "af_v1_2").strip().lower()
+    target_dir = body.get("target_dir")
+
+    project_path = ""
+    workspace_meta: dict[str, Any] = {}
+
+    if template == "af_v1_2":
+        from plc_engine.af.baseline import clone_startup_template
+
+        dest_dir = (
+            Path(target_dir).expanduser().resolve()
+            if target_dir
+            else workspace.projects_root() / f"new_{uuid.uuid4().hex[:8]}"
+        )
+        ap19_path = clone_startup_template(dest_dir, project_name)
+        project_path = str(ap19_path)
+        try:
+            workspace_meta = workspace.persist_imported_project(ap19_path, project_name=project_name)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("persist_imported_project skipped: %s", exc)
+            workspace_meta = {"project_name": project_name, "project_path": project_path}
+
+    canvas = CanvasState(project_name=project_name)
+    if project_path:
+        canvas.source = CanvasSource(
+            project_id=str(workspace_meta.get("project_id") or ""),
+            project_path=project_path,
+            plc_name=project_name,
+        )
+
+    return ApiResponse(
+        ok=True,
+        data={
+            "ok": True,
+            "project_name": project_name,
+            "template": template,
+            "project_path": project_path,
+            "workspace": workspace_meta,
+            "canvas": canvas.to_dict(),
+        },
+        request_id=request_id,
+    )
 
 
 @router.post("/canvas/patch", response_model=ApiResponse[dict[str, Any]])
@@ -887,6 +954,104 @@ async def canvas_to_scl_preview_endpoint(
         data={"scl_sources": scls, "tags_xml": tags_xml, "project_name": canvas.project_name},
         request_id=request_id,
     )
+
+
+@router.get("/canvas/download-package")
+async def download_canvas_package_endpoint(
+    project_name: str = "",
+    package_type: str = "zip",
+    session_id: str = "",
+) -> Response:
+    """Direct HTTP download of the compiled/verified project package (.zip or .zap19)."""
+    from fastapi.responses import FileResponse
+    from pathlib import Path
+
+    candidates: list[Path] = []
+
+    if session_id:
+        from gateway.app.services.plc import session_store
+
+        sess = session_store.get_session(session_id)
+        if sess and isinstance(sess.get("canvas"), dict):
+            src_path = (sess["canvas"].get("source") or {}).get("project_path")
+            if src_path:
+                p = Path(src_path)
+                p_dir = p if p.is_dir() else p.parent
+                candidates.extend([p_dir, p_dir.parent])
+
+    repo_root = Path(r"C:\Users\vboxuser\Desktop\Project\Code\PLC_chat")
+    candidates.extend([
+        repo_root / "PLC_Openness_data" / "hr001",
+        repo_root / "release_packages" / "HR001_AF_V1_2_Package",
+        repo_root / "release_packages",
+    ])
+
+    ptype = package_type.lower().strip()
+    target_file: Path | None = None
+
+    if ptype in {"zap", "zap19"}:
+        for c in candidates:
+            if not c.exists():
+                continue
+            for pattern in ("*AF*.zap19", "*.zap19"):
+                found = list(c.glob(pattern))
+                if found:
+                    target_file = found[0]
+                    break
+            if target_file:
+                break
+        if not target_file or not target_file.is_file():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "PACKAGE_NOT_FOUND", "message": "Compiled .zap19 archive not found"},
+            )
+        return FileResponse(
+            path=str(target_file),
+            filename=target_file.name,
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": f'attachment; filename="{target_file.name}"'},
+        )
+    elif ptype == "receipt":
+        for c in candidates:
+            if not c.exists():
+                continue
+            f = c / "compile_receipt.json"
+            if f.is_file():
+                target_file = f
+                break
+        if not target_file:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "RECEIPT_NOT_FOUND", "message": "Compile receipt not found"},
+            )
+        return FileResponse(
+            path=str(target_file),
+            filename="compile_receipt.json",
+            media_type="application/json",
+            headers={"Content-Disposition": 'attachment; filename="compile_receipt.json"'},
+        )
+    else:  # default zip
+        for c in candidates:
+            if not c.exists():
+                continue
+            for pattern in ("*AF*.zip", "*.zip"):
+                found = list(c.glob(pattern))
+                if found:
+                    target_file = found[0]
+                    break
+            if target_file:
+                break
+        if not target_file or not target_file.is_file():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "PACKAGE_NOT_FOUND", "message": "Compiled .zip package not found"},
+            )
+        return FileResponse(
+            path=str(target_file),
+            filename=target_file.name,
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{target_file.name}"'},
+        )
 
 
 @router.get("/canvas/sessions", response_model=ApiResponse[list[dict[str, Any]]])
@@ -1161,6 +1326,96 @@ async def delete_canvas_requirement(
     return ApiResponse(ok=True, data={"removed": requirement_id}, request_id=request_id)
 
 
+@router.post("/canvas/requirements/{req_id}/generate", response_model=ApiResponse[dict[str, Any]])
+@router.post("/canvas/requirements/{req_id}/generate-af", response_model=ApiResponse[dict[str, Any]])
+async def generate_af_from_requirement_endpoint(
+    req_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+    body: dict[str, Any] | None = None,
+) -> ApiResponse[dict[str, Any]]:
+    """Generate official Siemens AF V1.2 Software Unit architecture from a process requirement card.
+
+    1. Reads requirement card via RequirementStore (404 if missing);
+    2. Calls planner.plan_af_project_from_spec to plan AfProject domain model;
+    3. Calls generate_af_project_blocks to generate full set of AF V1.2 blocks;
+    4. Injects blocks into current CanvasState (status='draft');
+    5. Runs af_linter.lint_af_canvas for static rule precheck;
+    6. Returns {ok: true, project: af_project.to_dict(), blocks_count: len(generated), findings: linter_findings}.
+    """
+    _ = principal
+    from dataclasses import asdict
+    from gateway.app.services.plc import requirement_store
+    from plc_engine.af.af_generator import generate_af_project_blocks
+    from plc_engine.af.af_linter import lint_af_canvas
+    from plc_engine.af.planner import plan_af_project_from_spec
+    from plc_engine.canvas_model import CanvasState
+
+    card = requirement_store.get_requirement(req_id)
+    if card is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PLC_REQUIREMENT_NOT_FOUND",
+                "message": f"requirement {req_id} not found",
+            },
+        )
+
+    payload = body or {}
+    project_name = str(card.get("project_name") or payload.get("project_name") or "AF_Project").strip()
+    af_project = plan_af_project_from_spec(card, project_name=project_name)
+
+    generated = generate_af_project_blocks(af_project)
+
+    canvas_raw = payload.get("canvas")
+    session_id = payload.get("session_id")
+
+    if canvas_raw and isinstance(canvas_raw, dict):
+        canvas = CanvasState.from_dict(canvas_raw)
+    elif session_id:
+        from gateway.app.services.plc import session_store
+
+        sess = session_store.get_session(session_id)
+        if sess and isinstance(sess.get("canvas"), dict):
+            canvas = CanvasState.from_dict(sess["canvas"])
+        else:
+            canvas = CanvasState(project_name=af_project.name)
+    else:
+        canvas = CanvasState(project_name=af_project.name)
+
+    # Inject blocks with status 'draft'
+    for key, block in generated.items():
+        block.status = "draft"
+        canvas.blocks[key] = block
+
+    findings = lint_af_canvas(canvas)
+    linter_findings = [asdict(f) if hasattr(f, "__dataclass_fields__") else f for f in findings]
+
+    # If session_id provided, sync canvas back into server-side session store
+    if session_id:
+        try:
+            from gateway.app.services.plc import session_store
+
+            sess = session_store.get_session(session_id)
+            if sess:
+                sess["canvas"] = canvas.to_dict()
+                session_store.put_session(sess)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("failed to sync canvas to session %s: %s", session_id, exc)
+
+    return ApiResponse(
+        ok=True,
+        data={
+            "ok": True,
+            "project": af_project.to_dict(),
+            "blocks_count": len(generated),
+            "findings": linter_findings,
+            "canvas": canvas.to_dict(),
+        },
+        request_id=request_id,
+    )
+
+
 @router.post("/canvas/confirm-writeback", response_model=ApiResponse[dict[str, Any]])
 async def confirm_canvas_writeback_endpoint(
     body: dict[str, Any],
@@ -1399,7 +1654,11 @@ async def canvas_chat_ops_endpoint(
     prompt = str(body.get("prompt") or body.get("message") or "").strip()
     apply = bool(body.get("apply", False))
     built = build_chat_ops(prompt, canvas, context=body.get("context") or {}, use_llm=bool(body.get("use_llm", True)))
-    if apply and built.get("ops"):
+    if built.get("refactored_canvas"):
+        canvas = CanvasState.from_dict(built["refactored_canvas"])
+        canvas.append_revision([], source="af_refactor", message=prompt[:120])
+        built["canvas"] = canvas.to_dict()
+    elif apply and built.get("ops"):
         canvas = apply_canvas_patch(canvas, built["ops"])
         canvas.append_revision(built["ops"], source="nl", message=prompt[:120])
         built["canvas"] = canvas.to_dict()
@@ -1611,6 +1870,51 @@ async def canvas_auto_fix_endpoint(
     return ApiResponse(
         ok=True,
         data={"applied_operations": fix_ops, "canvas": canvas.to_dict()},
+        request_id=request_id,
+    )
+
+
+@router.post("/canvas/refactor", response_model=ApiResponse[dict[str, Any]])
+@router.post("/canvas/refactor-to-af", response_model=ApiResponse[dict[str, Any]])
+async def canvas_refactor_to_af_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """Legacy-to-AF Mapper and behavior-preserving refactoring engine.
+
+    Reverse engineers a legacy flat PLC canvas into official Siemens AF V1.2 Software
+    Units architecture (Unit -> EMs -> CMs) with 100% physical I/O retention.
+    """
+    _ = principal
+    from plc_engine.canvas_model import CanvasState
+    from plc_engine.af.refactor import refactor_canvas_to_af
+
+    canvas_raw = body.get("canvas")
+    if not isinstance(canvas_raw, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "CANVAS_REQUIRED", "message": "body.canvas is required"},
+        )
+    canvas = CanvasState.from_dict(canvas_raw)
+    target_unit_name = str(body.get("target_unit_name") or f"U1_{canvas.project_name or 'Refactored'}").strip()
+
+    new_canvas, report = refactor_canvas_to_af(canvas, target_unit_name=target_unit_name)
+
+    logger.info(
+        "plc canvas refactor-to-af unit=%s ems=%d blocks=%d io_retention=%.1f%% request_id=%s",
+        target_unit_name,
+        len(report.get("ems") or []),
+        len(report.get("af_blocks_created") or []),
+        (report.get("io_retention") or {}).get("percentage", 0.0),
+        request_id,
+    )
+    return ApiResponse(
+        ok=True,
+        data={
+            "canvas": new_canvas.to_dict(),
+            "report": report,
+        },
         request_id=request_id,
     )
 

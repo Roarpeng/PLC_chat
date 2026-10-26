@@ -28,6 +28,9 @@ export interface CanvasBlockData {
   scl_body?: string;
   status: NodeStatus;
   errors?: string[];
+  software_unit?: string;
+  namespace?: string;
+  af_role?: string;
 }
 
 export type HmiWidgetType =
