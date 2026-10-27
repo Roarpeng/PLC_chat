@@ -1,6 +1,8 @@
 /* ==========================================================================
-   ChatDock — 中栏底部对话坞（前缀 dock-）
-   白底面板、上边线；展开态 max-height 40vh 内部滚动；无气泡时间戳保持干净
+   ChatDock —— 对话坞（前缀 dock-）
+   两种宿主：chat 态 .chat-stage 满铺（高度由外层 flex 撑满，输入行贴底）；
+   split 态 .shell-chat 底部停靠（展开上限 40vh，内部滚动）。
+   白底面板、上边线；无气泡时间戳保持干净
    ========================================================================== */
 
 .dock :focus-visible {
@@ -15,7 +17,9 @@
   font-family: var(--sans);
 }
 
-/* ---- 头部行（折叠/展开共用） ---- */
+/* 头部行（折叠/展开共用）。
+   flex:none —— chat-stage 满铺态下 .dock 是纵向 flex 容器，头部固定高不被压缩；
+   旧底部停靠态（.dock 非 flex 容器）此声明无效，不影响。 */
 
 .dock-head {
   display: flex;
@@ -24,6 +28,7 @@
   gap: 8px;
   min-height: 34px;
   padding: 6px 8px 6px 14px;
+  flex: none;
 }
 
 .dock-headinfo {
@@ -67,11 +72,17 @@
   color: var(--ink);
 }
 
-/* ---- 展开态主体 ---- */
+/* ---- 展开态主体 ----
+   纵向 flex 列：消息区 flex:1 滚动，输入行贴底。
+   max-height: 40vh 是旧底部停靠态（split 模式 .shell-chat）的展开上限；
+   chat-stage 满铺态由 WorkspacePanel.css 的 .chat-stage .dock-body
+   覆盖为 max-height: none（特异性 0,2,0 > 0,1,0，顺序无关，无冲突）。
+   overflow: hidden 防止输入行被内容顶出可视区。 */
 
 .dock-body {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   max-height: 40vh;
 }
 
@@ -152,6 +163,8 @@
   gap: 8px;
   padding: 8px 12px 10px;
   flex-shrink: 0;
+  /* 兜底贴底：消息区为空或不足时，输入行仍钉在 flex 列尾部 */
+  margin-top: auto;
 }
 
 .dock-input {

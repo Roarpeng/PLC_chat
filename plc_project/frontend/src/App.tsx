@@ -27,6 +27,8 @@ import {
   type ChatMessage,
   type ChatSession,
 } from "./state/sessions";
+/* 导入成功后自动生成工程简报 + 建议问题(briefing 纯函数,vitest 覆盖) */
+import { buildBriefing, briefingToMessage } from "./state/briefing";
 import {
   bootstrapRemoteMerge,
   hydrateRemoteSession,
@@ -980,6 +982,7 @@ const App: React.FC = () => {
   const handleImportCanvas = (imported: CanvasStateData, sourceName: string) => {
     dispatchNewProjectFlow({ type: "RESET" }); // 导入即离开新建工程流
     const varTotal = Object.values(imported.blocks).reduce((a, b) => a + b.interface.length, 0);
+    const brief = buildBriefing(imported);
     const s = makeSession(imported, `导入项目 ${sourceName}`);
     s.title = `导入 · ${sourceName}`;
     s.messages = [
@@ -992,6 +995,8 @@ const App: React.FC = () => {
         } 个物理标签。全部对象标记为已同步。`,
         ts: Date.now(),
       },
+      /* 工程简报:makeSession 已有机制上追加 system 消息(ServerPath/Upload 均经由本函数) */
+      { id: newSessionId(), role: "system", text: briefingToMessage(brief), ts: Date.now() },
     ];
     const list = [s, ...sessions];
     setSessions(list);
