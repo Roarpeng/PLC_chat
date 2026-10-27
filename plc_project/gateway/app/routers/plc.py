@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import logging
+import time
+from collections import deque
 from pathlib import Path
 from typing import Any
-
-from collections import deque
-import time
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
@@ -864,6 +863,7 @@ async def create_new_project_endpoint(
     """Create a new PLC project workspace, supporting the af_v1_2 architecture template."""
     _ = principal
     import uuid
+
     from gateway.app.services.plc import workspace
     from plc_engine.canvas_model import CanvasSource, CanvasState
 
@@ -963,8 +963,9 @@ async def download_canvas_package_endpoint(
     session_id: str = "",
 ) -> Response:
     """Direct HTTP download of the compiled/verified project package (.zip or .zap19)."""
-    from fastapi.responses import FileResponse
     from pathlib import Path
+
+    from fastapi.responses import FileResponse
 
     candidates: list[Path] = []
 
@@ -1345,6 +1346,7 @@ async def generate_af_from_requirement_endpoint(
     """
     _ = principal
     from dataclasses import asdict
+
     from gateway.app.services.plc import requirement_store
     from plc_engine.af.af_generator import generate_af_project_blocks
     from plc_engine.af.af_linter import lint_af_canvas
@@ -1455,7 +1457,7 @@ async def canvas_generate_from_requirement_endpoint(
                 "message": "requirement.confirmation_status must be 'confirmed' before generation",
             },
         ) from exc
-    except Exception as exc:  # noqa: BLE001 - 生成失败可读 500,不裸抛栈
+    except Exception as exc:
         logger.exception("canvas/generate-from-requirement failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1530,7 +1532,7 @@ async def confirm_canvas_writeback_endpoint(
             from gateway.app.services.plc import requirement_store
 
             if requirement_store.is_valid_requirement_id(requirement_id):
-                import plc_engine.pcec as pcec
+                from plc_engine import pcec
 
                 chg = pcec.get_change(change_id)
                 if chg is not None:
@@ -1948,8 +1950,8 @@ async def canvas_refactor_to_af_endpoint(
     Units architecture (Unit -> EMs -> CMs) with 100% physical I/O retention.
     """
     _ = principal
-    from plc_engine.canvas_model import CanvasState
     from plc_engine.af.refactor import refactor_canvas_to_af
+    from plc_engine.canvas_model import CanvasState
 
     canvas_raw = body.get("canvas")
     if not isinstance(canvas_raw, dict):
@@ -2200,3 +2202,298 @@ async def canvas_explain_block_endpoint(
         ) from exc
 
     return ApiResponse(ok=True, data={"explanation": text}, request_id=request_id)
+
+
+@router.post("/canvas/db/import", response_model=ApiResponse[dict[str, Any]])
+async def canvas_db_import_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """Import SCL DATA_BLOCK text onto the canvas as DB blocks (docs/24 B 线).
+
+    body: ``{db_text (SCL 文本) 或 file_path, project_name, canvas?}`` — 传入上次
+    响应的 ``canvas`` 可合并多个 DB（多次调用/一段文本多个 DATA_BLOCK 均可）。
+    Returns ``{blocks_created, canvas}``.
+    """
+    _ = principal
+    import asyncio
+
+    db_text = str(body.get("db_text") or "").strip()
+    file_path = str(body.get("file_path") or "").strip()
+    project_name = str(body.get("project_name") or "").strip()
+    if not db_text and not file_path:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "DB_TEXT_REQUIRED",
+                "message": "db_text（SCL 文本）或 file_path 必填其一",
+            },
+        )
+
+    resolved = None
+    if not db_text:
+        try:
+            resolved = plc.resolve_allowed_path(file_path)
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "PLC_PATH_NOT_FOUND", "message": str(exc)},
+            ) from exc
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"code": "PLC_PATH_DENIED", "message": str(exc)},
+            ) from exc
+
+    from gateway.app.services.plc.db_import import (
+        DBImportRejected,
+        import_db_path,
+        import_db_text,
+    )
+    from plc_engine.canvas_model import CanvasState
+
+    canvas = None
+    canvas_raw = body.get("canvas")
+    if isinstance(canvas_raw, dict) and canvas_raw:
+        canvas = CanvasState.from_dict(canvas_raw)
+
+    try:
+        if resolved is not None:
+            data = await asyncio.to_thread(
+                import_db_path, resolved, project_name, canvas
+            )
+        else:
+            data = await asyncio.to_thread(
+                import_db_text, db_text, project_name, canvas
+            )
+    except DBImportRejected as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": exc.code, "message": exc.message},
+        ) from exc
+
+    logger.info(
+        "plc canvas db import blocks=%s project=%s request_id=%s",
+        data.get("blocks_created"),
+        (data.get("canvas") or {}).get("project_name"),
+        request_id,
+    )
+    return ApiResponse(ok=True, data=data, request_id=request_id)
+
+
+@router.post("/canvas/mermaid/generate", response_model=ApiResponse[dict[str, Any]])
+async def canvas_mermaid_generate_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """LLM 生成工艺 Mermaid 时序图（契约 docs/24 C 线）：对话 + 画布 → sequenceDiagram。
+
+    body: {prompt, canvas}。空 prompt → 400 code=PROMPT_REQUIRED；
+    未配置 PLC_LLM_* / DEEPSEEK_API_KEY → 400 code=LLM_NOT_CONFIGURED（附配置指引）；
+    LLM 调用失败或输出非法（缺 sequenceDiagram 声明）→ 502 code=LLM_CALL_FAILED。
+    成功返回 {mermaid, description}——前端 ChatDock 检测 ```mermaid 围栏后内联渲染 SVG。
+    """
+    _ = principal
+    import asyncio
+
+    from gateway.app.services.plc.llm_explain import LlmNotConfigured
+    from gateway.app.services.plc.mermaid_gen import generate_mermaid_sequence
+    from plc_engine.canvas_model import CanvasState
+
+    prompt = str(body.get("prompt") or "").strip()
+    if not prompt:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "PROMPT_REQUIRED", "message": "body.prompt is required"},
+        )
+    canvas = CanvasState.from_dict(body.get("canvas") or {})
+    try:
+        result = await asyncio.to_thread(generate_mermaid_sequence, prompt, canvas)
+    except LlmNotConfigured as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "LLM_NOT_CONFIGURED",
+                "message": (
+                    "生成 Mermaid 时序图需要 LLM：在网关进程设置环境变量 "
+                    "PLC_LLM_BASE_URL（OpenAI 兼容端点）、PLC_LLM_API_KEY、PLC_LLM_MODEL，"
+                    "或执行 setx DEEPSEEK_API_KEY <key> 后重启网关即可沿用 DeepSeek。"
+                ),
+            },
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"code": "LLM_CALL_FAILED", "message": str(exc)},
+        ) from exc
+
+    logger.info(
+        "plc canvas mermaid generated blocks=%s request_id=%s",
+        len(canvas.blocks),
+        request_id,
+    )
+    return ApiResponse(ok=True, data=result, request_id=request_id)
+
+
+@router.post("/canvas/generate-from-mermaid", response_model=ApiResponse[dict[str, Any]])
+async def canvas_generate_from_mermaid_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """D 线契约(docs/24 §D):Mermaid sequenceDiagram → AF V1.2 画布草稿。
+
+    body ``{mermaid, project_name}``;链路纯文本解析(零 LLM):
+    ``mermaid_parser.plan_from_mermaid``(participant→CM、消息/alt/Note→步序)
+    → ``af_generator.generate_af_project_blocks``(官方 V1.2 块)→ 合成画布
+    (全部 draft,零写回)→ ``af_linter.lint_af_canvas`` 静态预检。
+    返回 ``{canvas, blocks_created, linter_findings}``;空/非法 Mermaid → 400。
+    """
+    _ = principal
+    from dataclasses import asdict
+
+    from plc_engine.af.af_generator import generate_af_project_blocks
+    from plc_engine.af.af_linter import lint_af_canvas
+    from plc_engine.af.mermaid_parser import MermaidParseError, plan_from_mermaid
+    from plc_engine.canvas_model import CanvasState
+
+    mermaid_text = body.get("mermaid")
+    if not isinstance(mermaid_text, str) or not mermaid_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "MERMAID_REQUIRED",
+                "message": "body.mermaid (Mermaid sequenceDiagram text) is required",
+            },
+        )
+    project_name = str(body.get("project_name") or "").strip() or "AF_Project"
+
+    try:
+        af_project = plan_from_mermaid(mermaid_text, project_name=project_name)
+    except MermaidParseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": str(exc) or "MERMAID_INVALID",
+                "message": f"invalid Mermaid sequenceDiagram: {exc}",
+            },
+        ) from exc
+    except Exception as exc:
+        logger.exception("canvas/generate-from-mermaid failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "AF_GENERATION_FAILED",
+                "message": f"failed to plan AF project from Mermaid: {exc}",
+            },
+        ) from exc
+
+    generated = generate_af_project_blocks(af_project)
+    canvas = CanvasState(project_name=af_project.name)
+    for key, block in generated.items():
+        block.status = "draft"
+        canvas.blocks[key] = block
+
+    findings = lint_af_canvas(canvas)
+    linter_findings = [
+        asdict(f) if hasattr(f, "__dataclass_fields__") else f for f in findings
+    ]
+
+    logger.info(
+        "plc canvas generate-from-mermaid blocks=%s project=%s request_id=%s",
+        len(generated),
+        af_project.name,
+        request_id,
+    )
+    return ApiResponse(
+        ok=True,
+        data={
+            "canvas": canvas.to_dict(),
+            "blocks_created": len(generated),
+            "linter_findings": linter_findings,
+        },
+        request_id=request_id,
+    )
+
+
+@router.post("/canvas/io/import", response_model=ApiResponse[dict[str, Any]])
+async def canvas_io_import_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """IO 表导入（契约 docs/24 · A 线）：PLCTags.xlsx 路径或 CSV 文本 → 画布标签。
+
+    body: ``{file_path``（服务器路径，走 PLC_PATH_ALLOWLIST 校验）或
+    ``file_content``（CSV 文本），``project_name``；可选 ``canvas``（上次响应
+    的画布 dict，传入则增量合并，否则新建空白画布）``}``。同名标签不覆盖、
+    blocks/HMI 不动，导入标签 status="draft"。返回
+    ``{tags_created, tags_skipped, tags_total, canvas}``。
+    """
+    _ = principal
+    import asyncio
+
+    from gateway.app.services.plc.io_import import IoImportRejected, import_io_table
+
+    file_path = str(body.get("file_path") or "").strip()
+    file_content = body.get("file_content")
+    csv_text = file_content if isinstance(file_content, str) else ""
+    project_name = str(body.get("project_name") or "").strip()
+
+    if not file_path and not csv_text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "IO_SOURCE_REQUIRED",
+                "message": "file_path 或 file_content（CSV 文本）至少提供一个",
+            },
+        )
+
+    resolved: Path | None = None
+    if file_path:
+        try:
+            resolved = plc.resolve_allowed_path(file_path)
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "PLC_PATH_NOT_FOUND", "message": str(exc)},
+            ) from exc
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"code": "PLC_PATH_DENIED", "message": str(exc)},
+            ) from exc
+
+    canvas = None
+    canvas_raw = body.get("canvas")
+    if isinstance(canvas_raw, dict) and canvas_raw:
+        from plc_engine.canvas_model import CanvasState
+
+        canvas = CanvasState.from_dict(canvas_raw)
+
+    try:
+        # file_path 与 file_content 同时给出时以文件路径为准
+        result = await asyncio.to_thread(
+            import_io_table,
+            resolved,
+            canvas,
+            project_name,
+            csv_text="" if resolved is not None else csv_text,
+        )
+    except IoImportRejected as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": exc.code, "message": exc.message},
+        ) from exc
+
+    logger.info(
+        "plc canvas io import file=%s created=%s skipped=%s total=%s request_id=%s",
+        resolved or "(csv_text)",
+        result.get("tags_created"),
+        result.get("tags_skipped"),
+        result.get("tags_total"),
+        request_id,
+    )
+    return ApiResponse(ok=True, data=result, request_id=request_id)
