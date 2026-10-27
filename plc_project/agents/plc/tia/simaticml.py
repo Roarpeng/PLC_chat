@@ -1117,6 +1117,15 @@ def parse_block_xml(path: Path) -> Block | None:
     from agents.plc.tia.safety import detect_block_safety
 
     block.is_safety = detect_block_safety(block)
+
+    # Bug1 防护源头:know-how 保护(is_protected() 搜 knowhow/protection 属性)
+    # 或体未导出(FB/FC/OB 无网络且无源文本——TIA 只给了接口)时标记
+    # interface_only。导入侧据此设 CanvasBlock.protected,写回侧硬跳过,
+    # 否则翻译空壳会在写回时覆盖 TIA 原始内容。DB/UDT 无程序体属正常形态,不标。
+    block.interface_only = block.is_protected() or (
+        block.block_type not in {BlockType.DB, BlockType.UDT}
+        and not block.has_program_body()
+    )
     return block
 
 

@@ -12,6 +12,11 @@ from pathlib import Path
 from typing import Any
 
 from agents.plc.tia.writeback import execute_writeback
+from plc_engine.af.refactor import (
+    AF_EXPORT_RESTRUCTURE_ROLES,
+    af_software_unit_for_role,
+    restructure_staged_scl_to_af,
+)
 from plc_engine.canvas_model import CanvasState, attribute_compiler_errors
 
 
@@ -97,8 +102,18 @@ def preview_canvas_tags_xml(canvas: CanvasState) -> str:
     return ET.tostring(doc, encoding="utf-8", xml_declaration=True).decode("utf-8")
 
 
-def canvas_to_tia_bundle(canvas: CanvasState, output_dir: str | Path) -> Path:
-    """Create a fully compliant Openness writeback import bundle from Canvas state."""
+def canvas_to_tia_bundle(
+    canvas: CanvasState,
+    output_dir: str | Path,
+    af_refactor: bool = True,
+) -> Path:
+    """Create a fully compliant Openness writeback import bundle from Canvas state.
+
+    ``af_refactor=True``(默认)时,对 af_role∈{unit,em,cm} 的待写回块执行
+    AF V1.2 架构重排(见 plc_engine.af.refactor.restructure_staged_scl_to_af):
+    staged SCL 重排为 Unit/EM/CM 结构,数据引用逐字冻结;传 False 可整体
+    关闭(全部块按原始 SCL 原样导出)。
+    """
     bundle_path = Path(output_dir).resolve()
     bundle_path.mkdir(parents=True, exist_ok=True)
 
@@ -107,15 +122,43 @@ def canvas_to_tia_bundle(canvas: CanvasState, output_dir: str | Path) -> Path:
     ext_dir.mkdir(parents=True, exist_ok=True)
 
     staged_scls: list[dict[str, Any]] = []
+    skipped_protected: list[str] = []
     scl_map = preview_canvas_scl(canvas)
+    # 3.5 AF 架构重构的角色序号(决定 U<n>_/U1Em<n>_/U1Em1CM<nn>_ 命名)
+    af_ordinals: dict[str, int] = {role: 0 for role in AF_EXPORT_RESTRUCTURE_ROLES}
     for block_key, scl_content in scl_map.items():
+        block = canvas.blocks.get(block_key)
+        # Bug1 硬防护(必须先于 synced 判断):know-how/加密块的保护与 status
+        # 无关 —— 体从未离开过 TIA,画布上只有接口,哪怕被改成 draft 也绝不
+        # 写回,否则翻译空壳会覆盖 TIA 原始块。原块原样保留在 TIA 工程中,
+        # 跳过名单写入 bundle manifest(skipped_protected.json)。
+        if block is not None and bool(getattr(block, "protected", False)):
+            skipped_protected.append(block.name or block_key)
+            continue
         # 只重写真正被改动过的块。画布刚从工程导入时所有块都是 synced，
         # 此时若全量重写，会把 89 个块全部用规则翻译结果覆盖原工程
         # （真实工程 HR001 实测：编译错误从 0 涨到 1007）。未改动的块
         # 必须保持 TIA 里的原样，这是最小破坏原则。
-        block = canvas.blocks.get(block_key)
         if block is not None and str(getattr(block, "status", "")) == "synced":
             continue
+        # 3.5 AF 架构重构:导入只做了 af_role 标注(元数据),导出时必须把
+        # 非 AF 块的 staged SCL 重排为 AF Unit/EM/CM 结构(非破坏式,可关):
+        # - 仅 af_role ∈ {unit, em, cm} 的 draft 块参与;safety(只读)、
+        #   global(DB/OB 布局冻结)、pending/空角色 → 保持原 SCL;
+        # - 数据引用冻结:DB 名/变量名/%I %Q 地址/符号表逐字保留,只改
+        #   代码组织结构(AF 软件单元标识 + 调用分层标注);
+        # - 非破坏式:重排结果只写入 staged 文件,画布块本体不被改动。
+        af_role_txt = str(getattr(block, "af_role", "") or "").strip() if block is not None else ""
+        af_role_key = af_role_txt.lower()
+        af_su = ""
+        if af_refactor and af_role_key in AF_EXPORT_RESTRUCTURE_ROLES:
+            af_ordinals[af_role_key] += 1
+            af_su = af_software_unit_for_role(
+                block.name if block is not None else block_key,
+                af_role_key,
+                af_ordinals[af_role_key],
+            )
+            scl_content = restructure_staged_scl_to_af(scl_content, af_role_key, af_su)
         su = block.software_unit if block else ""
         bname = block.name if block else block_key
         safe_file_name = f"{su}_{bname}.scl" if su else f"{bname}.scl"
@@ -127,6 +170,9 @@ def canvas_to_tia_bundle(canvas: CanvasState, output_dir: str | Path) -> Path:
             "path": str(scl_file),
             "software_unit": su,
             "block_name": bname,
+            # AF 元数据(追加字段;writeback 只消费 path/software_unit/block_name)
+            "af_role": af_role_txt,
+            "af_software_unit": af_su,
         })
 
     # 2. Tag Table XML — 只有存在 draft 标签才回写（导入的 synced 标签不动，
@@ -140,6 +186,10 @@ def canvas_to_tia_bundle(canvas: CanvasState, output_dir: str | Path) -> Path:
     # 3. Write manifest files
     (bundle_path / "staged_scls.json").write_text(json.dumps(staged_scls, indent=2), encoding="utf-8")
     (bundle_path / "staged_xmls.json").write_text(json.dumps(staged_xmls, indent=2), encoding="utf-8")
+    # Bug1:know-how/加密块跳过名单(原样保留在 TIA 中,供前端/审计展示)
+    (bundle_path / "skipped_protected.json").write_text(
+        json.dumps(skipped_protected, indent=2), encoding="utf-8"
+    )
 
     return bundle_path
 

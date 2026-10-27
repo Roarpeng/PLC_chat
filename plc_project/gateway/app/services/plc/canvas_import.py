@@ -255,6 +255,9 @@ def _block_to_canvas_block(
         status="synced",
         software_unit=software_unit,
         af_role=af_role,
+        # Bug1:know-how/体未导出块标记 protected —— scl_body 是空壳,
+        # 写回侧必须跳过,否则 TIA 原始内容被覆盖。
+        protected=bool(getattr(block, "interface_only", False)),
     )
 
 

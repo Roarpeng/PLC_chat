@@ -277,6 +277,9 @@ class Block:
     attributes: dict[str, str] = field(default_factory=dict)
     source_file: str = ""  # path to original SimaticML XML export
     is_safety: bool = False  # F-OB / F-FB / F-FC / F-DB — never mixed into std scan
+    # know-how 保护或体未导出(TIA 只给了接口):画布侧据此设 CanvasBlock.protected,
+    # 写回侧硬跳过,防止翻译空壳覆盖 TIA 原始块(Bug1)。
+    interface_only: bool = False
 
     def interface_section(self, section: InterfaceSection) -> list[Variable]:
         return [v for v in self.interface if v.section == section]

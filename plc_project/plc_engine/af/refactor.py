@@ -11,6 +11,7 @@ into official Siemens Automation Framework (AF) V1.2 architecture:
 from __future__ import annotations
 
 import copy
+import re
 from typing import Any
 
 from plc_engine.af.af_generator import generate_af_project_blocks
@@ -180,3 +181,197 @@ def _enrich_callequipment_blocks(
         # Insert before END_FUNCTION_BLOCK
         if "END_FUNCTION_BLOCK" in block.scl_body:
             block.scl_body = block.scl_body.replace("END_FUNCTION_BLOCK", f"{binding_doc}\nEND_FUNCTION_BLOCK")
+
+
+# =====================================================================
+# Bug2: Export-time AF restructuring (per staged block, lightweight)
+# =====================================================================
+#
+# 与上方 ``refactor_canvas_to_af`` 的分工:
+# - ``refactor_canvas_to_af`` 是全画布"另起炉灶"式重构:新建整套 AF 块并
+#   把旧块标记 superseded,其映射器会**改写数据引用**(如 ``"Q_Cyl" := TRUE``
+#   → ``#controlNodes.cyl.commands.workPosition := TRUE``),只保留物理 IO
+#   百分比,不满足"逐字冻结"约束,不能用于导出写回路径。
+# - 下面这一节是导出路径专用的轻量重排:对单个 staged 块的 SCL 做
+#   **组织层** AF 化(AF 软件单元标识 + Unit/EM/CM 调用分层标注),
+#   数据引用(#变量 / "DB名".成员 / %I %Q 地址)与语句顺序逐字冻结。
+#   之所以不动可执行语句本身:SCL 语句顺序敏感,任何重排/改写都会改变
+#   行为或数据指向;而接口/块名不动则保证 TIA 侧调用方不受影响。
+
+#: 参与 AF 重排的 af_role(导入 overlay 的通用角色词表子集)。
+#: safety(只读)/ global(DB/OB 布局冻结)/ pending/空 一律保持原 SCL。
+AF_EXPORT_RESTRUCTURE_ROLES = ("unit", "em", "cm")
+
+#: 数据引用提取:#变量、带引号的 DB/符号名、绝对 IO 地址。
+_DATA_REF_RE = re.compile(
+    r'#[A-Za-z_][A-Za-z0-9_]*|"[^"]+"|%[IQMW][BWD]?\d+(?:\.\d+)?',
+    re.IGNORECASE,
+)
+
+# 语句分层识别(EM 步序层 / CM 设备 IO 层 / Unit 层)
+_SEQ_LINE_RE = re.compile(r"\bstep\b", re.IGNORECASE)
+_IO_ADDR_RE = re.compile(r"%[IQMW][BWD]?", re.IGNORECASE)
+_TAG_ASSIGN_RE = re.compile(r'^\s*"[^"\. ]+"\s*:=')  # 整名符号赋值(非 DB 成员)
+_LABEL_LINE_RE = re.compile(r"^\s*-?\d+\s*:\s*(?://.*)?$")  # CASE 分支标签,跟随当前层
+# 控制流骨架(IF/CASE/FOR/END_*)跟随当前层——切层只由赋值语句驱动,
+# 避免横幅在步序体内逐行抖动。
+_CTRL_FLOW_RE = re.compile(
+    r"^\s*(?:IF|ELSIF|ELSE|END_IF|FOR|TO|BY|WHILE|END_FOR|END_WHILE|CASE|OF|END_CASE|"
+    r"REPEAT|UNTIL|END_REPEAT|RETURN|GOTO)\b",
+    re.IGNORECASE,
+)
+
+_AF_PREFIX_STRIP_RE = re.compile(r"^(?:FB|FC|OB|DB|SFB|SFC)\d*_?", re.IGNORECASE)
+_AF_INVALID_CHAR_RE = re.compile(r"[^A-Za-z0-9_]")
+
+
+def extract_scl_data_references(scl: str) -> list[str]:
+    """Extract every data-reference token from SCL text (freeze-check helper).
+
+    Tokens: ``#Var``、``"DB名"/"符号名"``、``%I0.0/%Q0.0/...``。
+    """
+    return _DATA_REF_RE.findall(scl or "")
+
+
+def af_software_unit_for_role(block_name: str, af_role: str, ordinal: int = 1) -> str:
+    """Derive the AF V1.2 Software Unit name for a staged block.
+
+    - unit → ``U<n>_<Name>``
+    - em   → ``U1Em<n>_<Name>``
+    - cm   → ``U1Em1CM<nn>_<Name>``
+    """
+    clean = _AF_INVALID_CHAR_RE.sub("", _AF_PREFIX_STRIP_RE.sub("", str(block_name or "").strip()))
+    if not clean:
+        clean = "Module"
+    n = max(1, int(ordinal))
+    role = str(af_role or "").strip().lower()
+    if role == "unit":
+        return f"U{n}_{clean}"
+    if role == "em":
+        return f"U1Em{n}_{clean}"
+    if role == "cm":
+        return f"U1Em1CM{n:02d}_{clean}"
+    return clean
+
+
+def _af_role_banner(af_role: str, af_su: str) -> list[str]:
+    """AF identity banner lines (body-legal // comments, quote-free)."""
+    role = str(af_role or "").strip().lower()
+    if role == "unit":
+        call_chain = "OB Main -> CallUnit(U{su}) -> CallEquipment/EMs -> CMs".format(su=af_su)
+        layer = "Unit"
+    elif role == "em":
+        call_chain = "OB Main -> CallUnit(U1) -> CallEquipment({su}) -> Sequence -> CMs".format(su=af_su)
+        layer = "Equipment Module"
+    else:  # cm
+        call_chain = "OB Main -> CallUnit(U1) -> CallEquipment(U1Em1) -> CM({su})".format(su=af_su)
+        layer = "Control Module"
+    return [
+        "    // ==============================================================",
+        f"    // AF V1.2 Software Unit : {af_su}   (af_role = {role})",
+        f"    // AF Layer              : {layer}",
+        f"    // AF Call Structure     : {call_chain}",
+        "    // --------------------------------------------------------------",
+        "    // DATA REFERENCES FROZEN / 数据引用冻结:",
+        "    //   原始 DB 名 / 符号名 / %I %Q 地址 / #变量 在下方逐字保留",
+        "    //   且语句顺序不变;仅代码组织结构重排为 AF Unit/EM/CM 分层。",
+        "    // AF ControlNodes 桥接说明(追加式,不改原始 DB 偏移):",
+        f"    //   {af_su}_ControlNodes 为 AF 接口 DB(块号追加),原 DB 不动。",
+        "    // ==============================================================",
+    ]
+
+
+_LAYER_BANNERS = {
+    "sequence": "    // --- [AF Sequence | EM 步序层] 以下为原始语句(逐字、原顺序) ---",
+    "cm": "    // --- [AF CallEquipment -> CM | 设备 IO 控制层] 以下为原始语句(逐字、原顺序) ---",
+    "unit": "    // --- [AF CallUnit | Unit 模式/状态层] 以下为原始语句(逐字、原顺序) ---",
+}
+
+
+def _classify_body_line(line: str) -> str:
+    """Classify a body statement into an AF layer without touching it.
+
+    只有赋值语句(``:=``)驱动切层;注释/空行/CASE 标签/控制流骨架跟随
+    当前层,保证节标稳定不抖动。
+    """
+    s = line.strip()
+    if (
+        not s
+        or s.startswith("//")
+        or _LABEL_LINE_RE.match(s)
+        or _CTRL_FLOW_RE.match(s)
+        or ":=" not in s
+    ):
+        return ""
+    if _SEQ_LINE_RE.search(s):
+        return "sequence"
+    if _IO_ADDR_RE.search(s) or _TAG_ASSIGN_RE.match(s):
+        return "cm"
+    return "unit"
+
+
+def restructure_staged_scl_to_af(scl: str, af_role: str, af_software_unit: str) -> str:
+    """Restructure one staged legacy SCL into AF Unit/EM/CM organization.
+
+    只做组织层重排,可执行语句逐字逐序保留:
+
+    1. AF 软件单元横幅(身份/命名空间/调用层级/ControlNodes 桥接说明);
+    2. 函数体按 AF 调用分层(Unit/Sequence/CM)加节标——语句不移动、不改写,
+       仅在"语句性质切换处"插入 ``// ---`` 节标;
+    3. 冻结校验:原 SCL 的全部数据引用 token(#变量/"名字"/%地址)必须
+       逐字出现在重排结果中,且带引号的符号名集合完全一致;任一不满足
+       则原样返回 ``scl``(宁可不出 AF 结构,绝不带着丢引用的重排版进 TIA)。
+
+    DB/UDT 或无法定位 BEGIN..END_ 结构的文本同样原样返回。
+    """
+    if not scl or not str(af_role or "").strip().lower() in AF_EXPORT_RESTRUCTURE_ROLES:
+        return scl
+    head = scl.lstrip()
+    if head.startswith("DATA_BLOCK") or head.startswith("TYPE"):
+        return scl  # DB/UDT 布局冻结,不做任何改写
+
+    lines = scl.splitlines()
+    end_idx = next(
+        (
+            i
+            for i, ln in enumerate(lines)
+            if ln.strip()
+            in ("END_FUNCTION_BLOCK", "END_ORGANIZATION_BLOCK", "END_FUNCTION")
+        ),
+        -1,
+    )
+    begin_idx = -1
+    if end_idx > 0:
+        begin_idx = max(
+            (i for i in range(end_idx) if lines[i].strip() == "BEGIN"),
+            default=-1,
+        )
+    if begin_idx < 0:
+        return scl
+
+    out: list[str] = lines[: begin_idx + 1]
+    out.extend(_af_role_banner(str(af_role).strip().lower(), af_software_unit))
+
+    current_layer = ""
+    for ln in lines[begin_idx + 1 : end_idx]:
+        layer = _classify_body_line(ln)
+        if layer and layer != current_layer:
+            out.append(_LAYER_BANNERS[layer])
+            current_layer = layer
+        out.append(ln)
+
+    out.extend(lines[end_idx:])
+    new_scl = "\n".join(out)
+    if scl.endswith("\n"):
+        new_scl += "\n"
+
+    # ---- 数据引用冻结校验(运行时兜底,测试另有独立断言) ----
+    orig_refs = set(extract_scl_data_references(scl))
+    new_refs = set(extract_scl_data_references(new_scl))
+    if not orig_refs <= new_refs:
+        return scl
+    orig_quoted = {t for t in orig_refs if t.startswith('"')}
+    new_quoted = {t for t in new_refs if t.startswith('"')}
+    if orig_quoted != new_quoted:
+        return scl
+    return new_scl

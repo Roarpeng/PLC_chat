@@ -47,7 +47,10 @@ class CanvasBlock:
     errors: list[str] = field(default_factory=list)
     software_unit: str = ""
     namespace: str = ""
-    af_role: str = "" 
+    af_role: str = ""
+    # Bug1:know-how/加密块(TIA 只导出接口、体未离开原工程)。protected 块
+    # 写回时被硬跳过;get_full_scl 只发接口 + KNOW-HOW 说明,绝不发翻译空壳。
+    protected: bool = False
 
     # 外部源（External Source）SCL 的合法声明区关键字；VAR_STAT 须映射为 VAR
     _SCL_SECTION_KEYWORD = {
@@ -59,6 +62,12 @@ class CanvasBlock:
         "VAR": "VAR",
     }
 
+    # protected 块意外被导出时的显式说明（双保险第 2 层）
+    _PROTECTED_NOTICE = (
+        "// [KNOW-HOW PROTECTED - interface only, body not exported. "
+        "Original block in TIA project must not be overwritten.]"
+    )
+
     def get_full_scl(self) -> str:
         """Render complete SCL compilation unit text (TIA External Source dialect).
 
@@ -67,7 +76,17 @@ class CanvasBlock:
         - 静态区写作 VAR（VAR_STAT 在外部源中非法）；
         - 声明区不允许行内 // 注释（注释由 SimaticML XML 承载）；
         - 块头（FUNCTION_BLOCK 等）之后只允许属性块，// 注释非法。
+
+        protected=True（know-how/体未导出）时只发完整接口声明 + 空 BEGIN/END +
+        顶部 KNOW-HOW 说明 —— 画布上根本没有真体，任何"翻译体"都是空壳，
+        写出去就会覆盖 TIA 原始块。即使意外被写出，也必须是可读说明而非静默空壳。
         """
+        if self.protected:
+            return f"{self._PROTECTED_NOTICE}\n{self._render_scl(include_body=False)}"
+        return self._render_scl()
+
+    def _render_scl(self, *, include_body: bool = True) -> str:
+        """实际渲染;``include_body=False`` 供 protected 分支输出空体接口壳。"""
         lines: list[str] = []
         btype = self.block_type.upper()
         if btype in {"FB", "FC", "OB"}:
@@ -102,9 +121,9 @@ class CanvasBlock:
                 lines.append("END_VAR")
 
             lines.append("BEGIN")
-            if self.scl_body.strip():
+            if include_body and self.scl_body.strip():
                 lines.append(self.scl_body.strip())
-            elif self.networks:
+            elif include_body and self.networks:
                 for net in self.networks:
                     if net.title:
                         lines.append(f"    // Network {net.id}: {net.title}")
@@ -123,7 +142,7 @@ class CanvasBlock:
             lines.append("END_DATA_BLOCK")
 
         elif btype == "UDT":
-            if self.scl_body.strip():
+            if include_body and self.scl_body.strip():
                 return self.scl_body.strip() + "\n"
             lines.append(f'TYPE "{self.name}"')
             lines.append("STRUCT")
@@ -287,6 +306,8 @@ class CanvasState:
                 software_unit=b_data.get("software_unit", ""),
                 namespace=b_data.get("namespace", ""),
                 af_role=b_data.get("af_role", ""),
+                # Bug1:protected 标记必须随画布持久化往返,否则写回防线失效
+                protected=bool(b_data.get("protected", False)),
             )
 
         for w_id, w_data in (data.get("hmi_widgets") or {}).items():
