@@ -1,0 +1,409 @@
+/* ==========================================================================
+   WorkspacePanel —— 画布面板样式（契约 25 §2，L 线）
+   前缀 wsp-。依赖全局设计令牌：--surface/-2、--ink/-2/-3、--line/-2、
+   --accent/-2/-soft、--mono/--sans、--ease。
+   本文件同时承载 L 线 App 布局壳（.shell*）与 chat 态对话坞满铺覆盖
+   （.chat-stage）——index.css 不在 L 线可改范围，样式集中于此。
+   ========================================================================== */
+
+/* —— 面板根：右侧滑入（translateX + opacity，300ms 弹性曲线） —— */
+
+.wsp {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  background: var(--surface);
+  animation: wsp-slide-in 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes wsp-slide-in {
+  from {
+    transform: translateX(28px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   竖向图标标签栏（~48px，工业感按钮式）
+   ========================================================================== */
+
+.wsp-rail {
+  flex: none;
+  width: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 6px 0;
+  background: var(--surface-2);
+  border-right: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  overflow-y: auto;
+}
+
+.wsp-rail__btn {
+  appearance: none;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border: none;
+  border-left: 2px solid transparent; /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background-color 0.12s var(--ease), color 0.12s var(--ease),
+    border-color 0.12s var(--ease);
+}
+
+.wsp-rail__btn:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.wsp-rail__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* 当前标签：--accent 内侧标线 + 浅钢蓝底提亮（学 .tabstrip 的低显著度高亮） */
+.wsp-rail__btn--on,
+.wsp-rail__btn--on:hover {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+  color: var(--accent-2);
+}
+
+.wsp-rail__glyph {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ==========================================================================
+   主区：顶栏 + 内容
+   ========================================================================== */
+
+.wsp-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.wsp-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 3px 6px 3px 12px;
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface);
+}
+
+.wsp-head__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.wsp-head__spacer {
+  flex: 1;
+}
+
+.wsp-head__btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border: 1px solid transparent; /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.12s var(--ease), color 0.12s var(--ease);
+}
+
+.wsp-head__btn:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.wsp-body {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.wsp-body > * {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.wsp-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  font-size: 13px;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+/* ==========================================================================
+   时序图标签：Mermaid SVG 渲染区
+   ========================================================================== */
+
+.wsp-mermaid {
+  overflow: auto;
+  padding: 16px;
+  background: var(--surface);
+}
+
+.wsp-mermaid-svg svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.wsp-mermaid-fallback {
+  margin: 0;
+  padding: 14px;
+  width: 100%;
+  overflow: auto;
+  background: var(--surface-2);
+  border-left: 3px solid var(--standby); /* taste-skill-ignore: data-ui workbench interface */
+  font-family: var(--mono); /* taste-skill-ignore: data-ui (code text) */
+  font-size: 12px;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ==========================================================================
+   抽屉内嵌宿主：把 RequirementCardDrawer / ChangeReviewDrawer 的 fixed
+   覆盖层收进面板内容区（组件不改，纯 CSS 降维：modal → inline）
+   ========================================================================== */
+
+.wsp-drawerhost {
+  position: relative;
+}
+
+.wsp-drawerhost .rcd-overlay,
+.wsp-drawerhost .crd-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: auto;
+  background: transparent;
+  padding: 0;
+  animation: none;
+}
+
+.wsp-drawerhost .rcd-card,
+.wsp-drawerhost .crd-card {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  border: none;
+  box-shadow: none;
+  animation: none;
+}
+
+/* ==========================================================================
+   L 线 App 布局壳：chat / split / fullscreen 三态（契约 25 §2 状态机）
+   ========================================================================== */
+
+.shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* 左侧工程栏挂载点：S 线 ProjectSidebar 渲染进 #sidebar-slot。
+   chat/split 态宽度由 S 线自定；fullscreen 态收成极窄图标条。 */
+#sidebar-slot {
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell--fullscreen #sidebar-slot {
+  width: 48px;
+  max-width: 48px;
+  border-right: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.shell-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+/* —— split 态：对话（左，flex） + 画布（右，百分比宽，可拖） —— */
+
+.shell-split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.shell-chat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end; /* 对话坞贴底，Gemini 式 */
+}
+
+/* 分隔线：拖拽调整画布宽度（min 20%，与 .gutter 同款视觉） */
+.shell-gutter {
+  flex: none;
+  width: 7px;
+  margin: 0 -3px;
+  z-index: 20;
+  cursor: col-resize;
+  position: relative;
+  touch-action: none;
+}
+
+.shell-gutter::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 1px;
+  background: transparent;
+  transition: background 0.12s var(--ease), width 0.12s var(--ease);
+}
+
+.shell-gutter:hover::after,
+.shell--dragging .shell-gutter::after {
+  width: 2px;
+  left: 2.5px;
+  background: var(--accent);
+}
+
+.shell--dragging {
+  cursor: col-resize;
+}
+
+.shell--dragging .shell-chat,
+.shell--dragging .shell-canvas {
+  pointer-events: none;
+}
+
+.shell-canvas {
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* —— chat 态：对话满铺（.dock-body 原 40vh 上限解除） —— */
+
+.chat-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-stage .dock {
+  flex: 1;
+  min-height: 0;
+}
+
+.chat-stage .dock-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.chat-stage__launch {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* —— fullscreen 态：画布满铺 + 底部薄条对话输入（点击展开回 split） —— */
+
+.shell-fullscreen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-fullscreen .wsp {
+  flex: 1;
+  min-height: 0;
+}
+
+.shell-thinbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border-top: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.shell-thinbar__input {
+  flex: 1;
+  min-width: 0;
+}
+
+.shell-thinbar__btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 1px solid var(--line-2); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.12s var(--ease), color 0.12s var(--ease);
+}
+
+.shell-thinbar__btn:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* —— 顶栏 [画布] 切换按钮文案(等宽工业风;开态提亮) —— */
+
+.topbar__canvas-toggle {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.topbar__toggle[aria-pressed="true"] .topbar__canvas-toggle {
+  color: var(--accent-2);
+}

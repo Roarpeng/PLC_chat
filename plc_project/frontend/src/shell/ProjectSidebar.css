@@ -1,0 +1,584 @@
+/* ==========================================================================
+   ProjectSidebar — 左侧工程栏(前缀 psb-,docs/25 §3,S 线)
+   深色工业导轨:复用 HMI 屏幕域令牌(--scr-*),工作台的深色场从触摸屏
+   延伸到柜体左侧线槽;钢蓝强调(浅色场 --accent 的深底高光版 --psb-accent-hi,
+   与 index.css 中 HMI 焦点环 #6fa8dc 同源)。方角、无渐变、静置无投影;
+   当前对话用 IEC 信号灯绿点(--scr-green)指示。宽度不做过渡(嵌入式浏览器
+   会冻结 CSS 过渡,见 index.css .pane 注记)。
+   ========================================================================== */
+
+.psb {
+  /* 深色场局部令牌:钢蓝高光 / 钢蓝晕染底 */
+  --psb-accent: var(--accent, #1d5a90);
+  --psb-accent-hi: #6fa8dc;
+  --psb-accent-wash: rgba(29, 90, 144, 0.32);
+
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 240px;
+  min-height: 0;
+  background: var(--scr, #0e1116);
+  color: var(--scr-text, #e3e8ee);
+  border-right: 1px solid var(--scr-line, #2a313b); /* taste-skill-ignore: data-ui workbench interface */
+  font-family: var(--sans);
+  user-select: none;
+}
+
+.psb :focus-visible {
+  outline: 2px solid var(--psb-accent-hi, #6fa8dc);
+  outline-offset: 1px;
+}
+
+/* ---- 顶部品牌行 ---- */
+
+.psb-top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 10px 9px 14px;
+}
+
+.psb-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.psb-brand-mark {
+  display: block;
+  flex: none;
+}
+
+.psb-brand-name {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--scr-text, #e3e8ee);
+  white-space: nowrap;
+}
+
+.psb-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border: 1px solid transparent; /* taste-skill-ignore: data-ui workbench interface */
+  background: transparent;
+  color: var(--scr-dim, #8d97a3);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.psb-iconbtn:hover {
+  background: var(--scr-panel, #151a20);
+  color: var(--scr-text, #e3e8ee);
+}
+
+/* ---- 新建工程主按钮(突出) ---- */
+
+.psb-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: none;
+  margin: 2px 10px 10px;
+  padding: 7px 10px;
+  border: none;
+  background: var(--psb-accent, #1d5a90);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.psb-new:hover {
+  background: var(--accent-2, #164a78);
+}
+
+.psb-new:active {
+  transform: translateY(1px);
+}
+
+/* ---- 工程 + 对话树 ---- */
+
+.psb-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 8px 10px;
+}
+
+.psb-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.psb-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.psb-list::-webkit-scrollbar-thumb {
+  background: #333c48;
+}
+
+.psb-list::-webkit-scrollbar-thumb:hover {
+  background: #414c5a;
+}
+
+.psb-empty {
+  padding: 28px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--scr-dim, #8d97a3);
+  line-height: 1.9;
+}
+
+/* 工程行:名称(点击=切换活跃)+ 悬停删除按钮 */
+
+.psb-project {
+  position: relative;
+}
+
+.psb-project-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--scr-dim, #8d97a3);
+  font-family: var(--sans);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.psb-project-main:hover {
+  background: var(--scr-panel, #151a20);
+  color: var(--scr-text, #e3e8ee);
+}
+
+/* 活跃工程:钢蓝晕染底 + 左缘 2px 钢蓝竖条 */
+
+.psb-project--active .psb-project-main {
+  background: var(--psb-accent-wash, rgba(29, 90, 144, 0.32));
+  color: var(--psb-accent-hi, #6fa8dc);
+  font-weight: 600;
+}
+
+.psb-project--active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 5px;
+  bottom: 5px;
+  width: 2px;
+  background: var(--psb-accent-hi, #6fa8dc);
+}
+
+.psb-chev {
+  flex: none;
+  color: var(--scr-dim, #8d97a3);
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease, color 0.12s ease;
+}
+
+.psb-project--active .psb-chev {
+  transform: rotate(0deg);
+  color: var(--psb-accent-hi, #6fa8dc);
+}
+
+.psb-project-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 删除按钮:悬停 / 键盘聚焦工程行时出现 */
+
+.psb-project-del {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--scr-dim, #8d97a3);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+
+.psb-project:hover .psb-project-del,
+.psb-project:focus-within .psb-project-del {
+  opacity: 1;
+  visibility: visible;
+}
+
+.psb-project-del:hover {
+  background: rgba(226, 114, 107, 0.16); /* taste-skill-ignore: data-ui workbench interface */
+  color: var(--scr-red, #e2726b);
+}
+
+/* 对话子列表:仅活跃工程展开;左侧 1px 线槽形成树形导轨 */
+
+.psb-convlist {
+  display: flex;
+  flex-direction: column;
+  margin: 1px 0 8px 15px;
+  padding-left: 7px;
+  border-left: 1px solid var(--scr-line, #2a313b); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.psb-conv {
+  position: relative;
+}
+
+.psb-conv-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 5px 8px;
+  border: none;
+  background: transparent;
+  color: var(--scr-dim, #8d97a3);
+  font-family: var(--sans);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.psb-conv-main:hover {
+  background: var(--scr-panel, #151a20);
+  color: var(--scr-text, #e3e8ee);
+}
+
+.psb-conv--active .psb-conv-main {
+  color: var(--psb-accent-hi, #6fa8dc);
+}
+
+/* 当前对话指示灯:IEC 信号灯绿,点亮带辉光(与 HMI hw-lamp 同语汇) */
+
+.psb-conv-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--scr-line, #2a313b);
+}
+
+.psb-conv--active .psb-conv-dot {
+  background: var(--scr-green, #6fcf97);
+  box-shadow: 0 0 6px rgba(111, 207, 151, 0.8); /* taste-skill-ignore: IEC 信号灯辉光 */
+}
+
+.psb-conv-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.psb-conv-time {
+  flex: none;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
+  font-size: 12px;
+  color: var(--scr-dim, #8d97a3);
+}
+
+.psb-conv--active .psb-conv-time {
+  color: var(--psb-accent-hi, #6fa8dc);
+}
+
+/* + 新对话:虚线端子排样式 */
+
+.psb-newconv {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin: 3px 0 2px;
+  padding: 4px 9px;
+  border: 1px dashed var(--scr-line, #2a313b); /* taste-skill-ignore: data-ui workbench interface */
+  background: transparent;
+  color: var(--scr-dim, #8d97a3);
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+
+.psb-newconv:hover {
+  color: var(--psb-accent-hi, #6fa8dc);
+  border-color: var(--psb-accent-hi, #6fa8dc);
+  background: rgba(29, 90, 144, 0.18); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+/* ---- 底部:折叠成图标条 ---- */
+
+.psb-foot {
+  flex: none;
+  border-top: 1px solid var(--scr-line, #2a313b); /* taste-skill-ignore: data-ui workbench interface */
+  padding: 4px 8px 6px;
+}
+
+.psb-foot-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--scr-dim, #8d97a3);
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.psb-foot-btn:hover {
+  background: var(--scr-panel, #151a20);
+  color: var(--scr-text, #e3e8ee);
+}
+
+/* ---- 折叠态:~48px 图标条 ---- */
+
+.psb--rail {
+  width: 48px;
+}
+
+.psb-rail-head {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 8px;
+}
+
+.psb-rail-new {
+  flex: none;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 10px;
+  border: none;
+  background: var(--psb-accent, #1d5a90);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.psb-rail-new:hover {
+  background: var(--accent-2, #164a78);
+}
+
+.psb-rail-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0 8px;
+}
+
+.psb-rail-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.psb-rail-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.psb-rail-list::-webkit-scrollbar-thumb {
+  background: #333c48;
+}
+
+.psb-rail-empty {
+  font-size: 13px;
+  color: var(--scr-dim, #8d97a3);
+  padding: 6px 0;
+}
+
+/* 工程首字图标:悬停显示全名(native title);当前工程钢蓝描边高亮 */
+
+.psb-rail-item {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent; /* taste-skill-ignore: data-ui workbench interface */
+  background: transparent;
+  color: var(--scr-dim, #8d97a3);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.psb-rail-item:hover {
+  background: var(--scr-panel, #151a20);
+  color: var(--scr-text, #e3e8ee);
+}
+
+.psb-rail-item--active {
+  background: var(--psb-accent-wash, rgba(29, 90, 144, 0.32));
+  border-color: var(--psb-accent-hi, #6fa8dc);
+  color: var(--psb-accent-hi, #6fa8dc);
+}
+
+.psb-rail-foot {
+  flex: none;
+  border-top: 1px solid var(--scr-line, #2a313b); /* taste-skill-ignore: data-ui workbench interface */
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 8px;
+}
+
+.psb-rail-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--scr-dim, #8d97a3);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.psb-rail-expand:hover {
+  background: var(--scr-panel, #151a20);
+  color: var(--scr-text, #e3e8ee);
+}
+
+/* ---- 删除工程确认弹窗(浅色面板,与应用其它对话框同语汇) ---- */
+
+.psb-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 10, 12, 0.55); /* taste-skill-ignore: data-ui workbench interface */
+  animation: psb-fade-in 0.14s ease-out;
+}
+
+.psb-confirm {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface, #f9faf7);
+  border: 1px solid var(--line-2, #c3c7bc); /* taste-skill-ignore: data-ui workbench interface */
+  box-shadow: var(--shadow-sheet, 0 16px 40px -14px rgba(25, 28, 26, 0.34)); /* taste-skill-ignore: 浮层投影 */
+  color: var(--ink, #191c1a);
+  animation: psb-sheet-in 0.16s var(--ease, ease);
+}
+
+.psb-confirm-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px 12px;
+}
+
+.psb-confirm-mark {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fault, #b3261e);
+  background: #faf1f0;
+  border: 1px solid #e0bab6; /* taste-skill-ignore: data-ui workbench interface */
+}
+
+.psb-confirm-heading {
+  min-width: 0;
+}
+
+.psb-confirm-title {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink, #191c1a);
+  line-height: 1.4;
+}
+
+.psb-confirm-text {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--ink-2, #454b46);
+  line-height: 1.6;
+}
+
+.psb-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 2px 18px 16px;
+}
+
+/* 按钮本体复用全局 .btn / .btn--ghost / .btn--danger(index.css) */
+
+@keyframes psb-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes psb-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- 动效偏好 ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .psb *,
+  .psb *::before,
+  .psb *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

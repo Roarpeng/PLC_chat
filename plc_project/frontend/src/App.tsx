@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { PlcInteractiveCanvas, type FocusTarget } from "./canvas/PlcInteractiveCanvas";
-import { HistorySidebar } from "./shell/HistorySidebar";
+import type { FocusTarget } from "./canvas/PlcInteractiveCanvas";
 import { ChatDock } from "./shell/ChatDock";
-import { VariableInspector } from "./shell/VariableInspector";
 import { ImportDialog } from "./shell/ImportDialog";
 import { CreateBlockDialog } from "./shell/CreateBlockDialog";
 import { blankCanvas } from "./state/tiaXmlImport";
@@ -36,7 +34,20 @@ import {
   syncSessionDelete,
 } from "./state/sessionSync";
 import { compressHistory } from "./state/historyContext";
-import { useResizablePanes } from "./state/useResizablePanes";
+/* L 线(契约 25 §2):画布面板 + 智能标签路由;工程一等实体类型来自 state/projects(P 线) */
+import { WorkspacePanel } from "./shell/WorkspacePanel";
+import { ProjectSidebar } from "./shell/ProjectSidebar";
+import { OnboardingScreen } from "./shell/OnboardingScreen";
+import {
+  fetchProjects,
+  createProject,
+  createConversation,
+  deleteProject as apiDeleteProject,
+  type ProjectMeta,
+  type ConversationMeta,
+} from "./state/projects";
+import { extractMermaidSource, smartRoute, type CanvasTab } from "./shell/smartRoute";
+import type { Project } from "./state/projects";
 import type { CanvasStateData, CompileJobData, CompilerAttribution } from "./canvas/types";
 import { CompileDrawer } from "./shell/CompileDrawer";
 import { ChangeLogDrawer } from "./shell/ChangeLogDrawer";
@@ -179,32 +190,17 @@ function compileJobNotes(job: CompileJobPayload): string[] {
   return notes;
 }
 
-const BrandMark: React.FC = () => (
-  <svg width="20" height="20" viewBox="0 0 100 100" aria-hidden="true">
-    <rect width="100" height="100" rx="18" fill="#1E5F97" />
-    <rect x="20" y="32" width="60" height="9" fill="#fff" />
-    <rect x="20" y="47" width="40" height="9" fill="#fff" />
-    <rect x="20" y="62" width="50" height="9" fill="#fff" />
-  </svg>
-);
-
 /**
  * 任务引导前缀(契约 22 §4「任务流接线」):understand/diagnose/refactor 点击后
  * 预填进 ChatDock 输入框的引导词,仅是给 LLM 的任务语境提示,不改后端行为;
  * improve 不在此列 —— 它走需求卡草稿流(openRequirementDraft)。
  * 前缀词典集中在此,便于统一调整文案。
  */
-const ChevronsLeft: React.FC = () => (
-  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path d="M8.5 3.5L4.5 8l4 4.5M12.5 3.5L8.5 8l4 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const ChevronsRight: React.FC = () => (
-  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path d="M7.5 3.5L11.5 8l-4 4.5M3.5 3.5L7.5 8l-4 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+/** 布局状态机(契约 25 §2 L 线):
+ *  chat       纯对话全屏(默认,Gemini 式)
+ *  split      对话(左,flex) + 画布(右,55% 起可拖)
+ *  fullscreen 画布满铺 + 底部薄条对话输入(Esc 返回 split) */
+type LayoutMode = "chat" | "split" | "fullscreen";
 
 /** 「变更记录」低显著度图标（账本清单，学 SclPane 的 </> 入口模式） */
 const ChangeLogIcon: React.FC = () => (
@@ -232,6 +228,66 @@ const App: React.FC = () => {
   /* 对话坞 */
   const [chatInput, setChatInput] = useState("");
   const [dockCollapsed, setDockCollapsed] = useState(false);
+
+  /* —— L 线布局状态机(契约 25 §2):chat(默认)/split/fullscreen + 画布标签 —— */
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>("chat");
+  const [activeTab, setActiveTab] = useState<CanvasTab>("graph");
+
+  /* 工程/对话管理(Gemini 式) */
+  const [projectList, setProjectList] = useState<ProjectMeta[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [conversationList, setConversationList] = useState<ConversationMeta[]>([]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  /** split 态画布宽度占主区百分比:初始 55%,拖拽调整,最小 20% */
+  const [canvasPct, setCanvasPct] = useState(55);
+  const [draggingCanvas, setDraggingCanvas] = useState(false);
+  const splitRef = React.useRef<HTMLDivElement | null>(null);
+  /** 最新一份 Mermaid 源码(画布时序图标签数据源,AI 回答 settle 时更新) */
+  const [latestMermaid, setLatestMermaid] = useState<string | null>(null);
+  /** 画布内嵌变更审查(与对话内弹出的 ChangeReviewDrawer 分账,避免双开) */
+  const [canvasReviewId, setCanvasReviewId] = useState<string | null>(null);
+  const [canvasReviewReq, setCanvasReviewReq] = useState<Requirement | null>(null);
+  /**
+   * 工程一等实体占位(契约 25 §1,P 线接线):当前画布所属工程。
+   * P 线 projects API 就绪后由它供给;此刻恒为 null,L 线不依赖非空假设。
+   */
+  const activeProject = useMemo<Project | null>(() => null, []);
+  void activeProject;
+
+  /** [画布]顶栏按钮:chat→split 展开;split→chat 收起;fullscreen→split 还原 */
+  const toggleCanvasPane = () => {
+    setLayoutMode((mode) => (mode === "chat" ? "split" : mode === "fullscreen" ? "split" : "chat"));
+  };
+
+  /** fullscreen 态 Esc → 返回 split(契约 §2) */
+  useEffect(() => {
+    if (layoutMode !== "fullscreen") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLayoutMode("split");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [layoutMode]);
+
+  /** split 态分隔线拖拽:按主区宽度换算画布百分比,夹在 20%~85% */
+  const onCanvasGutterDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDraggingCanvas(true);
+  };
+  const onCanvasGutterMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingCanvas || !splitRef.current) return;
+    const rect = splitRef.current.getBoundingClientRect();
+    const pct = ((rect.right - e.clientX) / rect.width) * 100;
+    setCanvasPct(Math.min(85, Math.max(20, pct)));
+  };
+  const onCanvasGutterUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    setDraggingCanvas(false);
+  };
 
   /* 中栏：选中块驱动（三栏并存，无标签页） */
   const [selectedBlockName, setSelectedBlockName] = useState<string | null>(null);
@@ -309,9 +365,6 @@ const App: React.FC = () => {
   const [degradation, setDegradation] = useState<DegradationState | null>(null);
   const [degradationOpen, setDegradationOpen] = useState(false);
 
-  const panes = useResizablePanes("plc-copilot.panes.v1");
-  const { leftOpen, rightOpen, leftWidth, rightWidth } = panes.state;
-
   /* 变量交叉引用分析 */
   const report = useMemo(() => analyzeCanvas(canvas), [canvas]);
   const wiredTags = useMemo(() => Object.values(canvas.tags), [canvas.tags]);
@@ -319,15 +372,18 @@ const App: React.FC = () => {
   /* 状态统计 */
   const blockList = useMemo(() => Object.values(canvas.blocks), [canvas.blocks]);
   const widgetList = useMemo(() => Object.values(canvas.hmi_widgets), [canvas.hmi_widgets]);
-  const errorCount =
-    blockList.filter((b) => b.status === "error").length +
-    widgetList.filter((w) => w.status === "error").length;
   const draftCount =
     blockList.filter((b) => b.status === "draft").length +
     widgetList.filter((w) => w.status === "draft").length;
-  const syncedCount =
-    blockList.filter((b) => b.status === "synced").length +
-    widgetList.filter((w) => w.status === "synced").length;
+
+  /** 画布草稿块计数(供智能路由在异步 settle 后读到最新值,避免闭包过期) */
+  const draftCountOf = (c: CanvasStateData) =>
+    Object.values(c.blocks).filter((b) => b.status === "draft").length +
+    Object.values(c.hmi_widgets).filter((w) => w.status === "draft").length;
+  const draftCountRef = React.useRef(draftCount);
+  useEffect(() => {
+    draftCountRef.current = draftCount;
+  }, [draftCount]);
 
   const activeSession = activeSessionId ? sessions.find((s) => s.id === activeSessionId) ?? null : null;
 
@@ -546,6 +602,9 @@ const App: React.FC = () => {
       sessionId = commitSession(next, msgs, userText ?? undefined);
     }
 
+    // L 线(契约 25 §2):编辑结果 settle 后跑智能标签路由(draftCount 用编辑后画布)
+    applySmartRoute(systemText ?? summarizeOps(ops), { draftCount: draftCountOf(next) });
+
     // 后端尽力同步：成功且期间无新编辑时，用权威结果和解（同时刷新会话快照）
     requestPlc<CanvasStateData>(`/api/v1/plc/canvas/patch`, {
       method: "POST",
@@ -672,6 +731,8 @@ const App: React.FC = () => {
           } · 输出 ${u.completion_tokens ?? "?"} tok）`
         : "";
     updateMessageText(phId, sysText + footer);
+    // L 线(契约 25 §2):AI 回答 settle 后跑智能标签路由(切画布标签/自动滑入)
+    applySmartRoute(sysText);
     return true;
   };
 
@@ -1364,15 +1425,16 @@ const App: React.FC = () => {
     dispatchNewProjectFlow({ type: "INTENT_CONFIRMED", requirement: finalConfirmed });
   };
 
-  /** 打开最近一条变更的四层审查:经 state/pcec.ts fetchChanges 取
-   *  updated_at 最新的事务 id;若 change.intent.requirement_id 命中当前
-   *  已确认需求,则把需求卡一并传给 ChangeReviewDrawer(契约 §3)。 */
-  const handleReviewLatestChange = async () => {
+  /** 解析最新一条变更事务(供两处消费):updated_at 最新的 change_id;
+   *  若 change.intent.requirement_id 命中当前已确认需求,把需求卡一并带回。 */
+  const resolveLatestChange = async (): Promise<{
+    id: string | null;
+    req: Requirement | null;
+  }> => {
     try {
       const { items } = await fetchChanges();
-      if (!items.length) return; // 真实空账本:无可审查项
+      if (!items.length) return { id: null, req: null }; // 真实空账本:无可审查项
       const latest = items.reduce((a, b) => (b.updated_at > a.updated_at ? b : a));
-      setChangeReviewId(latest.change_id);
       if (confirmedRequirement?.requirement_id) {
         try {
           const res = await fetchChange(latest.change_id);
@@ -1380,19 +1442,56 @@ const App: React.FC = () => {
             | { requirement_id?: string }
             | null
             | undefined;
-          setChangeReviewReq(
-            intent?.requirement_id === confirmedRequirement.requirement_id
-              ? confirmedRequirement
-              : null,
-          );
-          return;
+          return {
+            id: latest.change_id,
+            req:
+              intent?.requirement_id === confirmedRequirement.requirement_id
+                ? confirmedRequirement
+                : null,
+          };
         } catch {
           /* 命中判断失败 → 按未关联需求处理 */
         }
       }
-      setChangeReviewReq(null);
+      return { id: latest.change_id, req: null };
     } catch {
       /* fetchChanges 自带 mock 回退,正常不会到这里 */
+      return { id: null, req: null };
+    }
+  };
+
+  /** 打开最近一条变更的四层审查(对话内模态抽屉):工程概览头「审查最近变更」入口 */
+  const handleReviewLatestChange = async () => {
+    const { id, req } = await resolveLatestChange();
+    if (!id) return;
+    setChangeReviewId(id);
+    setChangeReviewReq(req);
+  };
+
+  /**
+   * L 线智能标签路由接线(契约 25 §2):AI 回答 settle 后调用。
+   * 命中 → 切画布标签 + chat 态自动滑入 split;scl 命中附带 focusBlock
+   * (setSelectedBlock);review 命中解析最新事务供画布内嵌审查视图;
+   * 回答含 ```mermaid 围栏 → 更新 latestMermaid(时序图标签数据源)。
+   * override.draftCount 允许调用方传入"刚编辑后"的草稿数,绕开闭包过期。
+   */
+  const applySmartRoute = (text: string, override?: { draftCount?: number }) => {
+    const mermaid = extractMermaidSource(text);
+    if (mermaid) setLatestMermaid(mermaid);
+    const route = smartRoute(text, {
+      selectedBlock: selectedBlockName ?? undefined,
+      hasMermaid: !!mermaid,
+      draftCount: override?.draftCount ?? draftCountRef.current,
+    });
+    if (!route) return;
+    if (route.tab === "scl" && route.focusBlock) setSelectedBlockName(route.focusBlock);
+    setActiveTab(route.tab);
+    if (route.autoOpen) setLayoutMode((mode) => (mode === "chat" ? "split" : mode));
+    if (route.tab === "review") {
+      void resolveLatestChange().then(({ id, req }) => {
+        setCanvasReviewId(id);
+        setCanvasReviewReq(req);
+      });
     }
   };
 
@@ -1576,29 +1675,6 @@ const App: React.FC = () => {
     }
   };
 
-  /* 一键自愈 */
-  const handleTriggerAutoFix = async () => {
-    if (!attributions.length) return;
-    setIsSubmitting(true);
-    try {
-      const data = await requestPlc<{ canvas?: CanvasStateData }>(`/api/v1/plc/canvas/auto-fix`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ canvas, attributions }),
-      });
-      if (data?.canvas) {
-        setCanvas(data.canvas);
-        setAttributions([]);
-      }
-    } catch {
-      // 后端不可用 → 忽略
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const pad2 = (n: number) => String(n).padStart(2, "0"); // taste-skill-ignore: clock timestamp
-
   /* —— 新建工程流 · 最小创建确认的表单校验(与 CreateBlockDialog 的标识规则同口径) —— */
   const npfCreating = newProjectFlow.phase === "creating";
   const npfName = newProjectName.trim();
@@ -1612,51 +1688,16 @@ const App: React.FC = () => {
 
   return (
     <div className="app" data-ui="plc-workbench">
-      {/* —— 细顶栏 —— */}
+      {/* —— 细顶栏(契约 25 §2 L 线简化):状态指示灯 + 变更记录 + 回写博图 + [画布] —— */}
       <header className="topbar">
-        <button
-          className="topbar__toggle"
-          onClick={panes.toggleLeft}
-          aria-label={leftOpen ? "隐藏历史对话" : "显示历史对话"}
-          title={leftOpen ? "隐藏历史对话" : "显示历史对话"}
-        >
-          <ChevronsLeft />
-        </button>
-
-        <div className="topbar__brand">
-          <BrandMark />
-          <span className="topbar__name">{canvas.project_name}</span>
-          <span className="tagchip">TIA V19</span>
-          {backendConnected !== null && (
-            <span className="conn">
-              <i className={`led ${backendConnected ? "led--run" : ""}`} />
-              {backendConnected ? "网关已就绪" : "离线沙箱模式"}
-            </span>
-          )}
-        </div>
+        {backendConnected !== null && (
+          <span className="conn" title={backendConnected ? "网关已就绪" : "离线沙箱模式"}>
+            <i className={`led ${backendConnected ? "led--run" : "led--standby"}`} />
+            {backendConnected ? "网关已就绪" : "离线沙箱模式"}
+          </span>
+        )}
 
         <div className="topbar__spacer" />
-
-        <div className="meters" role="status" aria-label="画布同步状态">
-          <div className={`meter meter--run ${syncedCount === 0 ? "meter--zero" : ""}`}>
-            <span className="meter__label">已同步</span>
-            <span className="meter__value">{pad2(syncedCount)}</span>
-          </div>
-          <div className={`meter meter--standby ${draftCount === 0 ? "meter--zero" : ""}`}>
-            <span className="meter__label">草稿</span>
-            <span className="meter__value">{pad2(draftCount)}</span>
-          </div>
-          <div className={`meter meter--fault ${errorCount === 0 ? "meter--zero" : ""}`}>
-            <span className="meter__label">博图报错</span>
-            <span className="meter__value">{pad2(errorCount)}</span>
-          </div>
-        </div>
-
-        {errorCount > 0 && (
-          <button onClick={handleTriggerAutoFix} disabled={isSubmitting} className="btn btn--danger">
-            一键自愈
-          </button>
-        )}
 
         {/* 变更记录:低显著度次级入口(学 SclPane 的 </> 模式),打开才拉取账本 */}
         <button
@@ -1677,13 +1718,21 @@ const App: React.FC = () => {
           回写博图
         </button>
 
+        {/* [画布]:chat↔split 展开/收起;fullscreen 态点它先还原 split */}
         <button
           className="topbar__toggle"
-          onClick={panes.toggleRight}
-          aria-label={rightOpen ? "隐藏变量面板" : "显示变量面板"}
-          title={rightOpen ? "隐藏变量面板" : "显示变量面板"}
+          onClick={toggleCanvasPane}
+          aria-pressed={layoutMode !== "chat"}
+          aria-label={layoutMode === "chat" ? "打开画布" : "收起画布"}
+          title={
+            layoutMode === "chat"
+              ? "打开画布面板（全局图 / SCL / HMI / 变量 / 时序图）"
+              : layoutMode === "fullscreen"
+                ? "还原为分栏对话"
+                : "收起画布，回到纯对话"
+          }
         >
-          <ChevronsRight />
+          <span className="topbar__canvas-toggle">[画布]</span>
         </button>
       </header>
 
@@ -1767,94 +1816,203 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* —— 三栏面板区 —— */}
-      <div className={`panes ${panes.isDragging ? "panes--dragging" : ""}`}>
-        {leftOpen && (
-          <>
-            <div className="pane pane--left" style={{ width: leftWidth }}>
-              <div className="pane__inner">
-                <HistorySidebar
-                  sessions={sessions}
-                  activeSessionId={activeSessionId}
-                  onSelect={handleSelectSession}
-                  onNewSession={handleNewSession}
-                  onDelete={handleDeleteSession}
-                  onHide={panes.toggleLeft}
+      {/* 引导屏(无工程时) */}
+      {showOnboarding && (
+        <OnboardingScreen
+          onImport={() => {
+            setShowOnboarding(false);
+            setImportOpen(true);
+          }}
+          onNewFromChat={() => {
+            setShowOnboarding(false);
+            handleNewSession();
+          }}
+        />
+      )}
+
+      {/* —— L 线布局壳(契约 25 §2):chat / split / fullscreen 三态状态机 —— */}
+      <div className={`shell shell--${layoutMode}${draggingCanvas ? " shell--dragging" : ""}`}>
+        {/* 左侧工程栏挂载点(S 线):ProjectSidebar 渲染进 #sidebar-slot;fullscreen 态 CSS 收窄 */}
+        <ProjectSidebar
+          projects={projectList}
+          activeProjectId={activeProjectId}
+          conversations={conversationList}
+          activeConversationId={activeSessionId}
+          collapsed={sidebarCollapsed || layoutMode === "fullscreen"}
+          onSelectProject={(pid) => {
+            setActiveProjectId(pid);
+            const conv = conversationList.find((c) => c.projectId === pid);
+            if (conv) handleSelectSession(conv.id);
+          }}
+          onSelectConversation={handleSelectSession}
+          onNewConversation={() => handleNewSession()}
+          onNewProject={() => setShowOnboarding(true)}
+          onDeleteProject={(pid) => {
+            void apiDeleteProject(pid).then(() => {
+              setProjectList((prev) => prev.filter((p) => p.id !== pid));
+              if (activeProjectId === pid) {
+                setActiveProjectId(null);
+                handleNewSession();
+              }
+            });
+          }}
+          onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
+        />
+
+        <div className="shell-main">
+          {layoutMode === "fullscreen" ? (
+            /* fullscreen:画布满铺 + 底部薄条(输入框保留,展开回 split) */
+            <div className="shell-fullscreen">
+              <WorkspacePanel
+                activeTab={activeTab}
+                onActiveTabChange={setActiveTab}
+                fullscreen
+                onToggleMaximize={() => setLayoutMode("split")}
+                onClose={() => setLayoutMode("chat")}
+                canvas={canvas}
+                selectedBlockName={selectedBlockName}
+                onSelectBlock={setSelectedBlockName}
+                blockEdges={report.blockEdges}
+                focus={focus}
+                onFocusChange={setFocus}
+                onCanvasChange={setCanvas}
+                onCreateBlock={() => setCreateDialog("block")}
+                onAddVariable={handleAddVariable}
+                onAddNetwork={handleAddNetwork}
+                onRemoveBlock={handleRemoveBlock}
+                onRenameBlock={handleRenameBlock}
+                onRemoveVariable={handleRemoveVariable}
+                onRemoveNetwork={handleRemoveNetwork}
+                onDeepExplain={handleDeepExplain}
+                crossReport={report}
+                wiredTags={wiredTags}
+                onJumpToRef={handleJumpToRef}
+                mermaidText={latestMermaid}
+                requirement={reqDraft}
+                requirementLoading={reqLoading}
+                onRequirementEdit={handleRequirementEdit}
+                onConfirmIntent={(r) => void handleConfirmIntent(r)}
+                reviewChangeId={canvasReviewId}
+                reviewRequirement={canvasReviewReq}
+                onReviewFocusTarget={handleFocusChangeTarget}
+              />
+              <div className="shell-thinbar">
+                <button
+                  type="button"
+                  className="shell-thinbar__btn"
+                  onClick={() => setLayoutMode("split")}
+                  aria-label="展开对话,还原分栏"
+                  title="展开对话（还原分栏）"
+                >
+                  ⌃
+                </button>
+                <input
+                  className="dock-input shell-thinbar__input"
+                  value={chatInput}
+                  placeholder="对话输入保留中…（Enter 发送 / 点左侧按钮展开对话）"
+                  aria-label="指令输入（画布全屏薄条）"
+                  spellCheck={false}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                      e.preventDefault();
+                      void handleSend();
+                    }
+                  }}
                 />
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={() => void handleSend()}
+                  disabled={isSubmitting || !chatInput.trim()}
+                >
+                  发送
+                </button>
               </div>
             </div>
-            <div
-              className="gutter"
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="拖拽调整历史栏宽度"
-              onPointerDown={(e) => panes.beginDrag("left", e)}
-              onMouseDown={(e) => panes.beginDrag("left", e)}
-            />
-          </>
-        )}
-
-        <div className="center">
-          {/* 启动态两入口(契约 23 §1):无活跃会话且历史为空时替换空白画布引导;
-              有历史会话时保持现状(空白画布+引导),历史侧栏照常可用 */}
-          {showLaunchScreen ? (
-            <ProjectLaunchScreen
-              sessions={sessions}
-              onImport={() => setImportOpen(true)}
-              onNewProject={handleNewProjectEntry}
-              onSelectSession={handleSelectSession}
-            />
-          ) : (
-            <PlcInteractiveCanvas
-            canvas={canvas}
-            selectedBlockName={selectedBlockName}
-            onSelectBlock={setSelectedBlockName}
-            blockEdges={report.blockEdges}
-            focus={focus}
-            onFocusChange={setFocus}
-            onCanvasChange={setCanvas}
-            onCreateBlock={() => setCreateDialog("block")}
-            onAddVariable={handleAddVariable}
-            onAddNetwork={handleAddNetwork}
-            onRemoveBlock={handleRemoveBlock}
-            onRenameBlock={handleRenameBlock}
-            onRemoveVariable={handleRemoveVariable}
-            onRemoveNetwork={handleRemoveNetwork}
-            onDeepExplain={handleDeepExplain}
-          />
-          )}
-          <ChatDock
-            messages={activeSession?.messages ?? []}
-            inputValue={chatInput}
-            onInputChange={setChatInput}
-            onSend={handleSend}
-            collapsed={dockCollapsed}
-            onToggleCollapse={() => setDockCollapsed((c) => !c)}
-          />
-        </div>
-
-        {rightOpen && (
-          <>
-            <div
-              className="gutter"
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="拖拽调整变量面板宽度"
-              onPointerDown={(e) => panes.beginDrag("right", e)}
-              onMouseDown={(e) => panes.beginDrag("right", e)}
-            />
-            <div className="pane pane--right" style={{ width: rightWidth }}>
-              <div className="pane__inner">
-                <VariableInspector
-                  report={report}
+          ) : layoutMode === "split" ? (
+            /* split:对话(左,flex) + 画布(右,canvasPct%,可拖) */
+            <div className="shell-split" ref={splitRef}>
+              <div className="shell-chat">
+                <ChatDock
+                  messages={activeSession?.messages ?? []}
+                  inputValue={chatInput}
+                  onInputChange={setChatInput}
+                  onSend={handleSend}
+                  collapsed={dockCollapsed}
+                  onToggleCollapse={() => setDockCollapsed((c) => !c)}
+                />
+              </div>
+              <div
+                className="shell-gutter"
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="拖拽调整画布宽度"
+                onPointerDown={onCanvasGutterDown}
+                onPointerMove={onCanvasGutterMove}
+                onPointerUp={onCanvasGutterUp}
+                onPointerCancel={onCanvasGutterUp}
+              />
+              <div className="shell-canvas" style={{ width: `${canvasPct}%` }}>
+                <WorkspacePanel
+                  activeTab={activeTab}
+                  onActiveTabChange={setActiveTab}
+                  fullscreen={false}
+                  onToggleMaximize={() => setLayoutMode("fullscreen")}
+                  onClose={() => setLayoutMode("chat")}
+                  canvas={canvas}
+                  selectedBlockName={selectedBlockName}
+                  onSelectBlock={setSelectedBlockName}
+                  blockEdges={report.blockEdges}
+                  focus={focus}
+                  onFocusChange={setFocus}
+                  onCanvasChange={setCanvas}
+                  onCreateBlock={() => setCreateDialog("block")}
+                  onAddVariable={handleAddVariable}
+                  onAddNetwork={handleAddNetwork}
+                  onRemoveBlock={handleRemoveBlock}
+                  onRenameBlock={handleRenameBlock}
+                  onRemoveVariable={handleRemoveVariable}
+                  onRemoveNetwork={handleRemoveNetwork}
+                  onDeepExplain={handleDeepExplain}
+                  crossReport={report}
                   wiredTags={wiredTags}
                   onJumpToRef={handleJumpToRef}
-                  onCollapse={panes.toggleRight}
+                  mermaidText={latestMermaid}
+                  requirement={reqDraft}
+                  requirementLoading={reqLoading}
+                  onRequirementEdit={handleRequirementEdit}
+                  onConfirmIntent={(r) => void handleConfirmIntent(r)}
+                  reviewChangeId={canvasReviewId}
+                  reviewRequirement={canvasReviewReq}
+                  onReviewFocusTarget={handleFocusChangeTarget}
                 />
               </div>
             </div>
-          </>
-        )}
+          ) : (
+            /* chat(默认):纯对话满铺,ChatDock 占整个主区 */
+            <div className="chat-stage">
+              {showLaunchScreen && (
+                <div className="chat-stage__launch">
+                  <ProjectLaunchScreen
+                    sessions={sessions}
+                    onImport={() => setImportOpen(true)}
+                    onNewProject={handleNewProjectEntry}
+                    onSelectSession={handleSelectSession}
+                  />
+                </div>
+              )}
+              <ChatDock
+                messages={activeSession?.messages ?? []}
+                inputValue={chatInput}
+                onInputChange={setChatInput}
+                onSend={handleSend}
+                collapsed={dockCollapsed}
+                onToggleCollapse={() => setDockCollapsed((c) => !c)}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 导入项目对话框 */}

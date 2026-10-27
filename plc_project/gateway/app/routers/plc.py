@@ -2497,3 +2497,267 @@ async def canvas_io_import_endpoint(
         request_id,
     )
     return ApiResponse(ok=True, data=result, request_id=request_id)
+
+
+# —— P 线:Project / Conversation 两层模型(契约 docs/25 §1)——
+# Session(消息+画布耦合)拆为 Project(画布唯一权威容器)+ Conversation
+# (纯消息流);旧 /canvas/sessions 端点保留读旧数据,新代码一律走下面这组。
+
+
+@router.get("/canvas/projects", response_model=ApiResponse[list[dict[str, Any]]])
+async def list_canvas_projects(
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[list[dict[str, Any]]]:
+    """工程列表(轻量 meta:name/updated_at/conversation_count,不含画布)。"""
+    _ = principal
+    from gateway.app.services.plc import project_store
+
+    return ApiResponse(ok=True, data=project_store.list_projects(), request_id=request_id)
+
+
+@router.post("/canvas/projects", response_model=ApiResponse[dict[str, Any]])
+async def create_canvas_project(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """新建工程。body: ``{project_name, canvas?}``;未传 canvas 则建空白画布。"""
+    _ = principal
+    from gateway.app.services.plc import project_store
+
+    project_name = str(body.get("project_name") or "").strip()
+    canvas = body.get("canvas")
+    if not project_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "PLC_PROJECT_INVALID", "message": "project_name required"},
+        )
+    if not isinstance(canvas, dict) or not canvas:
+        canvas = {
+            "project_name": project_name,
+            "blocks": {},
+            "hmi_widgets": {},
+            "tags": {},
+        }
+    now = time.time()
+    project = {
+        "id": project_store.new_project_id(),
+        "project_name": project_name,
+        "canvas": canvas,
+        "created_at": now,
+        "updated_at": now,
+    }
+    project_store.put_project(project)
+    logger.info("plc project created id=%s name=%s request_id=%s", project["id"], project_name, request_id)
+    return ApiResponse(ok=True, data=project_store.get_project(project["id"]), request_id=request_id)
+
+
+@router.post("/canvas/projects/migrate", response_model=ApiResponse[dict[str, Any]])
+async def migrate_canvas_projects(
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """旧 sessions → projects/conversations 手动触发迁移(幂等,可重复调用)。"""
+    _ = principal
+    from gateway.app.services.plc import project_store
+
+    stats = project_store.migrate_from_sessions()
+    logger.info(
+        "plc projects migrated projects=%s conversations=%s request_id=%s",
+        stats.get("projects_migrated"),
+        stats.get("conversations_migrated"),
+        request_id,
+    )
+    return ApiResponse(ok=True, data=stats, request_id=request_id)
+
+
+@router.get("/canvas/projects/{project_id}", response_model=ApiResponse[dict[str, Any]])
+async def get_canvas_project(
+    project_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """单工程完整对象(含画布与 conversation_count)。"""
+    _ = principal
+    from gateway.app.services.plc import project_store
+
+    data = project_store.get_project(project_id)
+    if data is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PLC_PROJECT_NOT_FOUND",
+                "message": f"project {project_id} not found",
+            },
+        )
+    return ApiResponse(ok=True, data=data, request_id=request_id)
+
+
+@router.put("/canvas/projects/{project_id}", response_model=ApiResponse[dict[str, Any]])
+async def put_canvas_project(
+    project_id: str,
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """整工程 upsert(body 即完整工程对象,画布唯一权威写入口)。"""
+    _ = principal
+    from gateway.app.services.plc import project_store
+
+    project = dict(body or {})
+    project["id"] = project_id
+    try:
+        meta = project_store.put_project(project)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "PLC_PROJECT_INVALID", "message": str(exc)},
+        ) from exc
+    return ApiResponse(ok=True, data=meta, request_id=request_id)
+
+
+@router.delete("/canvas/projects/{project_id}", response_model=ApiResponse[dict[str, Any]])
+async def delete_canvas_project(
+    project_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """删除工程并级联删除其全部对话(幂等)。"""
+    _ = principal
+    from gateway.app.services.plc import project_store
+
+    cascaded = project_store.delete_project(project_id)
+    if cascaded is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PLC_PROJECT_NOT_FOUND",
+                "message": f"project {project_id} not found",
+            },
+        )
+    logger.info(
+        "plc project deleted id=%s conversations_cascaded=%s request_id=%s",
+        project_id,
+        cascaded,
+        request_id,
+    )
+    return ApiResponse(
+        ok=True, data={"removed": project_id, "conversations_removed": cascaded}, request_id=request_id
+    )
+
+
+@router.get("/canvas/projects/{project_id}/conversations", response_model=ApiResponse[list[dict[str, Any]]])
+async def list_canvas_conversations(
+    project_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[list[dict[str, Any]]]:
+    """某工程下对话 meta 列表(id/project_id/title/updated_at,无消息体)。"""
+    _ = principal
+    from gateway.app.services.plc import project_store
+
+    return ApiResponse(
+        ok=True, data=project_store.list_conversations(project_id), request_id=request_id
+    )
+
+
+@router.post("/canvas/projects/{project_id}/conversations", response_model=ApiResponse[dict[str, Any]])
+async def create_canvas_conversation(
+    project_id: str,
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """在工程下新建空对话。body: ``{title?}``(缺省「新对话」)。"""
+    _ = principal
+    from gateway.app.services.plc import project_store
+
+    if project_store.get_project(project_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PLC_PROJECT_NOT_FOUND",
+                "message": f"project {project_id} not found",
+            },
+        )
+    now = time.time()
+    conversation = {
+        "id": project_store.new_conversation_id(),
+        "project_id": project_id,
+        "title": (str(body.get("title") or "").strip() or "新对话")[:120],
+        "messages": [],
+        "created_at": now,
+        "updated_at": now,
+    }
+    project_store.put_conversation(conversation)
+    return ApiResponse(
+        ok=True, data=project_store.get_conversation(conversation["id"]), request_id=request_id
+    )
+
+
+@router.get("/canvas/conversations/{conversation_id}", response_model=ApiResponse[dict[str, Any]])
+async def get_canvas_conversation(
+    conversation_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """单对话完整对象(含 messages,不含画布)。"""
+    _ = principal
+    from gateway.app.services.plc import project_store
+
+    data = project_store.get_conversation(conversation_id)
+    if data is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PLC_CONVERSATION_NOT_FOUND",
+                "message": f"conversation {conversation_id} not found",
+            },
+        )
+    return ApiResponse(ok=True, data=data, request_id=request_id)
+
+
+@router.put("/canvas/conversations/{conversation_id}", response_model=ApiResponse[dict[str, Any]])
+async def put_canvas_conversation(
+    conversation_id: str,
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """整对话 upsert(body 即完整对话对象,只带消息不带画布)。"""
+    _ = principal
+    from gateway.app.services.plc import project_store
+
+    conversation = dict(body or {})
+    conversation["id"] = conversation_id
+    try:
+        meta = project_store.put_conversation(conversation)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "PLC_CONVERSATION_INVALID", "message": str(exc)},
+        ) from exc
+    return ApiResponse(ok=True, data=meta, request_id=request_id)
+
+
+@router.delete("/canvas/conversations/{conversation_id}", response_model=ApiResponse[dict[str, Any]])
+async def delete_canvas_conversation(
+    conversation_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """删对话并同步所属工程 conversation_count(幂等)。"""
+    _ = principal
+    from gateway.app.services.plc import project_store
+
+    removed = project_store.delete_conversation(conversation_id)
+    if removed is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PLC_CONVERSATION_NOT_FOUND",
+                "message": f"conversation {conversation_id} not found",
+            },
+        )
+    return ApiResponse(ok=True, data={"removed": conversation_id}, request_id=request_id)

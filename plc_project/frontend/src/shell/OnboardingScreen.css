@@ -1,0 +1,170 @@
+/* ==========================================================================
+   OnboardingScreen — 无工程引导屏(前缀 onb-,docs/25 §3,S 线)
+   低调工业感:制图纸网格底(与 .stage 同款 24px 网格)+ 方角瓷板卡片,
+   钢蓝为唯一强调(卡片悬停描边 / 主入口顶缘 3px / 图标章);文件格式用
+   IBM Plex Mono 端子牌呈现。无渐变、无投影堆叠、无大插图 —— 不做
+   landing page,是工作台的第一屏。
+   ========================================================================== */
+
+.onb {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  padding: 32px 24px;
+  overflow-y: auto;
+  background-color: var(--bg, #eceee8);
+  background-image: linear-gradient(rgba(27, 30, 28, 0.04) 1px, transparent 1px), /* taste-skill-ignore: 制图纸网格(data-ui) */
+    linear-gradient(90deg, rgba(27, 30, 28, 0.04) 1px, transparent 1px); /* taste-skill-ignore: 制图纸网格(data-ui) */
+  background-size: 24px 24px;
+  font-family: var(--sans);
+  color: var(--ink, #191c1a);
+}
+
+/* ---- 头部:品牌标 + 标题 + 一句副题 ---- */
+
+.onb-head {
+  text-align: center;
+  max-width: 520px;
+}
+
+.onb-mark {
+  display: block;
+  margin: 0 auto 14px;
+}
+
+.onb-title {
+  font-family: var(--sans);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--ink, #191c1a);
+}
+
+.onb-sub {
+  margin: 8px auto 0;
+  font-size: 13px;
+  color: var(--ink-2, #454b46);
+  line-height: 1.7;
+}
+
+/* ---- 两张大卡片 ---- */
+
+.onb-cards {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: min(780px, 100%);
+}
+
+.onb-card {
+  flex: 1 1 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 24px 24px 20px;
+  background: var(--surface, #f9faf7);
+  border: 1px solid var(--line-2, #c3c7bc); /* taste-skill-ignore: data-ui workbench interface */
+  border-top: 3px solid var(--line-2, #c3c7bc); /* taste-skill-ignore: data-ui workbench interface */
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.onb-card:hover {
+  border-color: var(--accent, #1d5a90);
+  box-shadow: 0 0 0 1px var(--accent, #1d5a90); /* taste-skill-ignore: data-ui workbench interface */
+}
+
+/* 主入口(新建工程):顶缘常显钢蓝 */
+
+.onb-card--primary {
+  border-top-color: var(--accent, #1d5a90);
+}
+
+/* 图标章:钢蓝软底方章(与 .sheet-mark 同语汇) */
+
+.onb-card__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: var(--accent-soft, #dfeaf3);
+  border: 1px solid var(--accent, #1d5a90); /* taste-skill-ignore: data-ui workbench interface */
+  color: var(--accent, #1d5a90);
+}
+
+.onb-card__title {
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink, #191c1a);
+}
+
+.onb-card__text {
+  font-size: 13px;
+  color: var(--ink-2, #454b46);
+  line-height: 1.7;
+}
+
+.onb-card__chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.onb-card__hint {
+  margin-top: 2px;
+  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
+  font-size: 12px;
+  color: var(--accent, #1d5a90);
+}
+
+/* ---- 端子牌小 chip(文件格式 / 支持格式) ---- */
+
+.onb-chip {
+  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
+  font-size: 12px;
+  color: var(--ink-2, #454b46);
+  background: var(--surface-2, #eff1ea);
+  border: 1px solid var(--line, #dcdfd6); /* taste-skill-ignore: data-ui workbench interface */
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+/* ---- 底部支持格式提示 ---- */
+
+.onb-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.onb-foot__label {
+  font-size: 13px;
+  letter-spacing: 0.4px;
+  color: var(--ink-3, #666d66);
+}
+
+/* ---- 动效偏好 ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .onb *,
+  .onb *::before,
+  .onb *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
