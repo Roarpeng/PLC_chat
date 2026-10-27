@@ -7,8 +7,11 @@
    ========================================================================== */
 
 .onb {
-  flex: 1;
-  min-height: 0;
+  /* 固定覆盖层:不参与 .app(column flex)流,否则出现时会把 shell(含左侧
+     工程栏)往下挤——真机复现:点新建工程→引导屏出现→侧栏缩到底部 */
+  position: fixed;
+  inset: 0;
+  z-index: 200;
   display: flex;
   flex-direction: column;
   align-items: center;
