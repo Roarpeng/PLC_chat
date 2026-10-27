@@ -1635,23 +1635,6 @@ const App: React.FC = () => {
           )}
         </div>
 
-        <div className="topbar__actions">
-          <button
-            className="btn btn--ghost"
-            onClick={() => setCreateDialog("project")}
-            title="从零开始构建一个空白项目"
-          >
-            空白项目
-          </button>
-          <button
-            className="btn btn--ghost"
-            onClick={() => setImportOpen(true)}
-            title="导入博图 Openness 导出的 XML 或服务器路径"
-          >
-            导入项目
-          </button>
-        </div>
-
         <div className="topbar__spacer" />
 
         <div className="meters" role="status" aria-label="画布同步状态">
