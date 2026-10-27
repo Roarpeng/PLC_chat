@@ -354,3 +354,54 @@
 .dock-bubble {
   user-select: text;
 }
+
+
+/* —— 建议问题可点击按钮(工程简报) —— */
+.dock-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 0 11px 8px;
+}
+
+.dock-suggestion-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--line-2, #c8ccc4);
+  border-radius: 6px;
+  background: var(--surface, #f9faf7);
+  color: var(--ink, #191c1a);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dock-suggestion-btn:hover {
+  border-color: var(--accent, #1d5a90);
+  background: var(--accent-soft, #e8f0f6);
+}
+
+.dock-suggestion-btn:active {
+  background: var(--accent-soft, #e8f0f6);
+  transform: scale(0.99);
+}
+
+.dock-suggestion-num {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent, #1d5a90);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--mono, monospace);
+}

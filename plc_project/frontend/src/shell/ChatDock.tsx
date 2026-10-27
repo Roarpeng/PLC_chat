@@ -11,6 +11,8 @@ export interface ChatDockProps {
   onSend(): void;
   collapsed: boolean;
   onToggleCollapse(): void;
+  /** 点击建议问题直接发送(工程简报的建议条目) */
+  onSuggestion?(text: string): void;
 }
 
 /** HH:MM 时间标签（无时间戳的旧消息显示 "—"） */
@@ -145,6 +147,37 @@ const MermaidBlock: React.FC<{ code: string }> = ({ code }) => {
   );
 };
 
+/** 从系统消息中提取建议问题(编号列表行),渲染为可点击按钮 */
+const SuggestionList: React.FC<{ text: string; onSuggestion?: (t: string) => void }> = ({
+  text,
+  onSuggestion,
+}) => {
+  const lines = text.split("\n");
+  const suggIdx = lines.findIndex((l) => l.includes("建议从这里开始问"));
+  if (suggIdx < 0 || !onSuggestion) return null;
+  const suggs = lines
+    .slice(suggIdx + 1)
+    .map((l) => l.replace(/^\d+\.\s*/, "").trim())
+    .filter(Boolean);
+  if (!suggs.length) return null;
+  return (
+    <div className="dock-suggestions" role="group" aria-label="建议问题">
+      {suggs.map((s, i) => (
+        <button
+          key={`sugg-${i}`}
+          type="button"
+          className="dock-suggestion-btn"
+          title="点击发送此问题"
+          onClick={() => onSuggestion(s)}
+        >
+          <span className="dock-suggestion-num">{i + 1}</span>
+          {s}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 /** 系统消息正文：文本段照旧 Markdown 渲染，mermaid 围栏段替换为 MermaidBlock。 */
 const SystemMessageBody: React.FC<{ text: string }> = ({ text }) => {
   const segments = splitMermaidSegments(text);
@@ -162,7 +195,7 @@ const SystemMessageBody: React.FC<{ text: string }> = ({ text }) => {
 };
 
 /** 单条消息：时间标签 + 正文（系统消息渲染 Markdown）+ 悬停复制按钮 */
-const DockMessage: React.FC<{ m: ChatMessage }> = ({ m }) => {
+const DockMessage: React.FC<{ m: ChatMessage; onSuggestion?: (t: string) => void }> = ({ m, onSuggestion }) => {
   const [copied, setCopied] = useState(false);
   const label = timeLabel(m.ts);
   const onCopy = async () => {
@@ -205,6 +238,7 @@ const DockMessage: React.FC<{ m: ChatMessage }> = ({ m }) => {
         </button>
       </div>
       <SystemMessageBody text={m.text} />
+      <SuggestionList text={m.text} onSuggestion={onSuggestion} />
     </div>
   );
 };
@@ -216,6 +250,7 @@ export const ChatDock: React.FC<ChatDockProps> = ({
   onSend,
   collapsed,
   onToggleCollapse,
+  onSuggestion,
 }) => {
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -325,7 +360,7 @@ export const ChatDock: React.FC<ChatDockProps> = ({
             {messages.length === 0 ? (
               <p className="dock-empty">输入指令，画布会实时更新，可随时在历史中找回。</p>
             ) : (
-              messages.map((m) => <DockMessage key={m.id} m={m} />)
+              messages.map((m) => <DockMessage key={m.id} m={m} onSuggestion={onSuggestion} />)
             )}
           </div>
           <form

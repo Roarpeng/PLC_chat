@@ -2014,6 +2014,10 @@ const App: React.FC = () => {
                 onSend={handleSend}
                 collapsed={dockCollapsed}
                 onToggleCollapse={() => setDockCollapsed((c) => !c)}
+                onSuggestion={(text) => {
+                  setChatInput(text);
+                  setTimeout(() => handleSend(), 50);
+                }}
               />
             </div>
           )}
