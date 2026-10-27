@@ -267,12 +267,25 @@
   display: flex;
 }
 
+/* 对话区(左栏):dock 占满整个高度,消息从顶滚到底,输入钉底 */
 .shell-chat {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end; /* 对话坞贴底，Gemini 式 */
+}
+
+.shell-chat .dock {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-chat .dock-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none; /* 解除旧底部停靠 40vh 上限,split 态消息占满左栏 */
 }
 
 /* 分隔线：拖拽调整画布宽度（min 20%，与 .gutter 同款视觉） */
