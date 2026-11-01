@@ -427,6 +427,16 @@ def _now() -> float:
     return time.time()
 
 
+# ---------------------------------------------------------------------------
+# 可复用小助手导出（供 refactor_pipeline 等后续作业复用；纯别名，不改变既有行为）
+# ---------------------------------------------------------------------------
+
+#: 待写回块提取（非 synced）——重构流水线的临时副本编译沿用同一「待写回」语义
+pending_blocks_of = _pending_blocks_of
+#: 本地静态预检（含 TODO 占位/接口一致性门禁）——临时副本编译的前置预检复用
+writeback_precheck = _writeback_precheck
+
+
 def job_timeout_seconds() -> float:
     """作业硬超时（秒）。env COMPILE_JOB_TIMEOUT_S；<=0 表示不限制。"""
     raw = os.getenv(_TIMEOUT_ENV, "").strip()

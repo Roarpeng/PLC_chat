@@ -13,6 +13,11 @@ from typing import Any, Literal
 
 NodeStatus = Literal["synced", "draft", "error"]
 
+# scl_body 以块头关键字开头 = 携带完整编译单元(AF 引擎模板产物),渲染时直通
+_FULL_SCL_UNIT_RE = re.compile(
+    r"^(FUNCTION_BLOCK|FUNCTION|ORGANIZATION_BLOCK|DATA_BLOCK|TYPE)\b", re.IGNORECASE
+)
+
 
 @dataclass
 class CanvasVariable:
@@ -87,6 +92,12 @@ class CanvasBlock:
 
     def _render_scl(self, *, include_body: bool = True) -> str:
         """实际渲染;``include_body=False`` 供 protected 分支输出空体接口壳。"""
+        # scl_body 携带完整编译单元(AF 引擎模板产物等)时直通——否则会自渲染
+        # 外壳再嵌一层 FUNCTION_BLOCK/DATA_BLOCK,真机 GenerateBlocksFromSource
+        # 直接拒绝(实测自举块 24/24 全失败的双头根因)。
+        body_text = self.scl_body.strip()
+        if include_body and body_text and _FULL_SCL_UNIT_RE.match(body_text):
+            return body_text + "\n"
         lines: list[str] = []
         btype = self.block_type.upper()
         if btype in {"FB", "FC", "OB"}:
@@ -872,12 +883,1219 @@ def attribute_compiler_errors(canvas: CanvasState, compile_result: dict[str, Any
     return attributions
 
 
-def generate_canvas_autofix_patch(canvas: CanvasState, attributions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+# ---------------------------------------------------------------------------
+# 规则化自愈规则库（HR001 真机交付缺陷清单回流，治存量）
+# 4 类人工 regex 修法中可无类型证据安全规则化的部分：
+#   R1  自实例 DB 绝对引用 → ``#`` 前缀（自动补丁 op）
+#   R2-lite  疑似数组成员裸访问 → 仅 diagnostic 标注（不自动改）
+#   R3  多实例调用形态重构 → 明确跳过（见 generate_canvas_autofix_patch 注释）
+# 有 TIA Openness XML 证据（evidence_dir）时的升级规则：
+#   R2-full  XML 确证数组成员 → 自动补下标（update_block_scl/update_network）
+#   R4  接口对账：body 引用 ``#X`` 未声明 → 按 XML 类型补 add_variable；
+#       证据也没有 → diagnostic 警告（不误补）
+# ---------------------------------------------------------------------------
+
+#: R2-lite 疑似数组成员名清单（可配置）：对这些成员名的"裸访问"（不带
+#: ``[下标]``）只生成 diagnostic 供修复循环提示 LLM/人工，绝不自动改——
+#: 数组性丢失需要类型证据（如 ``EdgeDetc.Pulse`` 实为 Array[0..15]），
+#: 盲加下标会改出错误语义。
+ARRAY_MEMBER_HINTS: tuple[str, ...] = ("Pulse", "Para", "Auto_Force")
+
+#: R1 判定：FB 程序体里绝对引用自己的实例 DB（如 FB1080 里写
+#: ``"DB1080_Component".x``，应为 ``#x``）。可判定特征：引用的
+#: ``"DB<数字>_<后缀>"`` 的数字与当前 FB 编号相同（编号取块名前缀
+#: FB<数字>）。跨块引用（数字不同）绝不能改——FB1040 引用 DB1080 是
+#: 合法的全局 DB 访问（HR001 FB1040 真实存在）。
+_FB_NAME_NUMBER_RE = re.compile(r"^FB(\d+)", re.IGNORECASE)
+
+
+class AutofixPatch(list):
+    """``generate_canvas_autofix_patch`` 的返回值：ops 列表 + 诊断标注。
+
+    向后兼容契约（fix_loop 等既有调用方零改动）：
+    - 本类型是普通 ``list[dict]`` 子类——``list(result)``、``len()``、迭代、
+      直接喂给 ``apply_canvas_patch`` 行为与旧的裸 list 完全一致；
+    - ``diagnostics`` 属性携带"不自动改、仅供 LLM/人工复核"的标注项
+      （R2-lite 等），不进入 ops 列表，也就不会被 ``apply_canvas_patch``
+      执行、不影响 ``clear_errors`` 的触发条件。
+    """
+
+    def __init__(
+        self,
+        ops: list[dict[str, Any]] | tuple[dict[str, Any], ...] = (),
+        diagnostics: list[dict[str, Any]] | tuple[dict[str, Any], ...] = (),
+    ) -> None:
+        super().__init__(ops)
+        self.diagnostics: list[dict[str, Any]] = list(diagnostics)
+
+
+def _self_instance_ref_pattern(fb_number: str) -> re.Pattern[str]:
+    """R1 补丁正则：``"DB<fb_number>_<后缀>"``.成员链 → ``#成员链``。"""
+    return re.compile(
+        rf'"DB{fb_number}_[A-Za-z0-9_]+"\s*\.\s*([A-Za-z_][A-Za-z0-9_.]*)'
+    )
+
+
+def _autofix_self_instance_db_refs(canvas: CanvasState) -> list[dict[str, Any]]:
+    """R1：自实例 DB 绝对引用 → ``#`` 前缀补丁（块 SCL 文本 regex op）。
+
+    仅作用于 FB 块（块名前缀 FB<数字> 且引用 DB 同编号）；protected
+    （know-how 加密）块绝不改写。体优先级与 ``CanvasBlock._render_scl``
+    一致：``scl_body`` 非空时补 ``update_block_scl``，否则逐网络补
+    ``update_network``。正则替换幂等，无命中不产 op。
+    """
+    ops: list[dict[str, Any]] = []
+    for key, block in canvas.blocks.items():
+        if (block.block_type or "").upper() != "FB" or block.protected:
+            continue
+        m = _FB_NAME_NUMBER_RE.match(block.name or "")
+        if not m:
+            continue
+        pattern = _self_instance_ref_pattern(m.group(1))
+        if block.scl_body.strip():
+            patched = pattern.sub(r"#\1", block.scl_body)
+            if patched != block.scl_body:
+                ops.append({"op": "update_block_scl", "name": key, "scl_body": patched})
+            continue
+        for net in block.networks:
+            if not net.scl_text.strip():
+                continue
+            patched = pattern.sub(r"#\1", net.scl_text)
+            if patched != net.scl_text:
+                ops.append({
+                    "op": "update_network",
+                    "block": key,
+                    "network_id": net.id,
+                    "scl_text": patched,
+                })
+    return ops
+
+
+def _diagnose_unindexed_array_members(canvas: CanvasState) -> list[dict[str, Any]]:
+    """R2-lite：疑似数组下标丢失 → diagnostic 标注（不自动改）。
+
+    对 ``ARRAY_MEMBER_HINTS`` 中成员名的裸成员访问（``.Pulse``、
+    ``.Para``…，其后不跟 ``[``）逐行生成诊断条目；注释行忽略。
+    仅标注——真数组（如 ``EdgeDetc.Pulse`` 实为 Array[0..15]）需要
+    类型证据才能补对下标，无证据时自动改必然引入错误语义。
+    """
+    member_patterns = [
+        (member, re.compile(rf"\.{re.escape(member)}\b(?!\s*\[)"))
+        for member in ARRAY_MEMBER_HINTS
+    ]
+    diagnostics: list[dict[str, Any]] = []
+    for block in canvas.blocks.values():
+        if block.protected:
+            continue
+        if block.scl_body.strip():
+            sources: list[tuple[int | None, str]] = [(None, block.scl_body)]
+        else:
+            sources = [(net.id, net.scl_text) for net in block.networks if net.scl_text.strip()]
+        for net_id, text in sources:
+            for line_no, line in enumerate((text or "").splitlines(), start=1):
+                stripped = line.strip()
+                if not stripped or stripped.startswith(("//", "(*")):
+                    continue
+                for member, pattern in member_patterns:
+                    if pattern.search(line):
+                        diagnostics.append({
+                            "rule": "R2_lite_array_unindexed",
+                            "block": block.name,
+                            "network": net_id,
+                            "member": member,
+                            "line_no": line_no,
+                            "evidence": stripped,
+                            "severity": "warning",
+                        "message": (
+                            f"疑似数组下标丢失：.{member} 在常见数组成员清单中但未带 [ 下标；"
+                            "需接口/类型证据确认（如 Array[0..15]），未自动修改"
+                        ),
+                    })
+    return diagnostics
+
+
+# ---------------------------------------------------------------------------
+# XML 证据驱动规则（R2-full / R4）——evidence_dir 提供 TIA Openness 导出时启用
+# ---------------------------------------------------------------------------
+
+#: 证据接口缓存（键 = abspath(export_dir)）。缓存归本模块（调用方）管理，
+#: 真机导出目录解析一次全量复用；失效靠进程重启或清空该 dict。
+_EVIDENCE_INTERFACE_CACHE: dict[str, dict[str, Any]] = {}
+
+#: XML 声明区名 → canvas VAR 段名（对齐 canvas_import 的既有映射约定）
+_XML_SECTION_TO_CANVAS: dict[str, str] = {
+    "": "VAR",
+    "None": "VAR",
+    "Constant": "VAR",
+    "Input": "VAR_INPUT",
+    "Output": "VAR_OUTPUT",
+    "Return": "VAR_OUTPUT",
+    "InOut": "VAR_IN_OUT",
+    "Static": "VAR_STAT",
+    "Temp": "VAR_TEMP",
+}
+
+#: body 里 ``#X`` 实例根符号提取（R4 接口对账的引用侧）
+_BODY_ROOT_REF_RE = re.compile(r"#([A-Za-z_]\w*)")
+
+#: 回溯访问表达式头部时属于标识符链的字符（字母数字/下划线/点）
+_IDENT_CHAIN_CHARS = set("_.") | {chr(c) for c in range(ord("0"), ord("9") + 1)}
+
+
+def _load_evidence_interfaces(evidence_dir: str | None) -> dict[str, Any]:
+    """加载（并缓存）Openness 导出目录的块接口证据树。
+
+    任何失败（目录不存在 / XML 全部非法）都返回空 dict——规则层自然降级
+    回 R2-lite 的仅诊断行为，绝不让证据问题打断修复循环。
+    """
+    if not evidence_dir:
+        return {}
+    import os
+
+    from plc_engine.array_evidence import load_block_interfaces
+
+    key = os.path.abspath(evidence_dir)
+    hit = _EVIDENCE_INTERFACE_CACHE.get(key)
+    if hit is None:
+        try:
+            hit = load_block_interfaces(evidence_dir)
+        except Exception:  # noqa: BLE001 — 证据缺失只降级不炸修复循环
+            hit = {}
+        _EVIDENCE_INTERFACE_CACHE[key] = hit
+    return hit
+
+
+def _patched_text_view(
+    canvas: CanvasState, prior_ops: list[dict[str, Any]]
+) -> tuple[dict[str, str], dict[tuple[str, Any], str]]:
+    """当前文本视图：原始 scl_body / 网络 scl_text 叠加先行 op 的改写。
+
+    R1 与 R2-full/R4 可能命中同一段文本（自实例 DB 引用改成 ``#`` 后又
+    暴露出数组裸访问 / 未声明根符号）——后行规则必须基于先行规则改写后
+    的文本计算补丁，否则两条 update_block_scl 互相覆盖、先改的补丁被
+    静默丢弃。
+    """
+    bodies = {key: blk.scl_body for key, blk in canvas.blocks.items()}
+    nets: dict[tuple[str, Any], str] = {
+        (key, net.id): net.scl_text
+        for key, blk in canvas.blocks.items()
+        for net in blk.networks
+    }
+    for op in prior_ops:
+        if not isinstance(op, dict):
+            continue
+        if op.get("op") == "update_block_scl" and op.get("name") in bodies:
+            bodies[op["name"]] = str(op.get("scl_body") or "")
+        elif (
+            op.get("op") == "update_network"
+            and (op.get("block"), op.get("network_id")) in nets
+        ):
+            nets[(op["block"], op["network_id"])] = str(op.get("scl_text") or "")
+    return bodies, nets
+
+
+def _evidence_context_for_match(line: str, match: re.Match[str]) -> tuple[str, str] | None:
+    """从裸成员匹配处向前回溯所属访问表达式 → ``(证据块名, 成员路径)``。
+
+    支持两种 SCL 访问形态：
+    - ``#A.B.Member``（本块实例访问，返回特殊块名 ``@self``）；
+    - ``"DBxxx".A.B.Member``（全局 DB 访问，返回引号里的 DB 名）。
+    两者都不是（裸局部名、表达式残段等）→ None（无证据上下文，
+    只诊断不改文）。
+    """
+    i = match.start()
+    while i > 0 and (line[i - 1].isalnum() or line[i - 1] in _IDENT_CHAIN_CHARS):
+        i -= 1
+    path = line[i:match.end()].lstrip(".")
+    head = line[:i].rstrip()
+    if not path:
+        return None
+    if head.endswith("#"):
+        return "@self", path
+    db = re.search(r'"([A-Za-z0-9_]+)"\s*$', head)
+    if db:
+        return db.group(1), path
+    return None
+
+
+def _fix_unindexed_arrays_in_text(
+    text: str,
+    *,
+    canvas_block_name: str,
+    interfaces: dict[str, Any],
+) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
+    """R2-full 单文本修补：证据确证的数组成员补下标。
+
+    返回 ``(新文本, R2_array_evidence_fixed 记录, 未确证的 R2-lite 记录)``。
+    逐行处理（注释行跳过），每行的多处在匹配尾部右起插入下标，保持
+    行首缩进 / 行尾换行原样。插入 ``[..]`` 后负向前瞻不再命中 → 幂等。
+    """
+    from plc_engine.array_evidence import resolve_member
+
+    member_patterns = [
+        (member, re.compile(rf"\.{re.escape(member)}\b(?!\s*\[)"))
+        for member in ARRAY_MEMBER_HINTS
+    ]
+    fixed_records: list[dict[str, Any]] = []
+    lite_records: list[dict[str, Any]] = []
+    out_lines: list[str] = []
+    for line_no, raw_line in enumerate((text or "").splitlines(keepends=True), start=1):
+        core = raw_line.rstrip("\r\n")
+        tail = raw_line[len(core):]
+        stripped = core.strip()
+        if not stripped or stripped.startswith(("//", "(*")):
+            out_lines.append(raw_line)
+            continue
+        insertions: list[tuple[int, str]] = []
+        for member, pattern in member_patterns:
+            for m in pattern.finditer(core):
+                ctx = _evidence_context_for_match(core, m)
+                resolved: dict[str, Any] | None = None
+                evidence_block = ""
+                if ctx is not None:
+                    evidence_block, path = ctx
+                    tree = (
+                        interfaces.get(canvas_block_name)
+                        if evidence_block == "@self"
+                        else interfaces.get(evidence_block)
+                    )
+                    if tree is not None:
+                        resolved = resolve_member(tree, path)
+                if resolved and resolved.get("found") and resolved.get("is_array"):
+                    subscript = str(resolved.get("subscript") or "[0]")
+                    insertions.append((m.end(), subscript))
+                    fixed_records.append({
+                        "rule": "R2_array_evidence_fixed",
+                        "block": canvas_block_name,
+                        "network": None,  # 由调用方按来源补网络号
+                        "member": member,
+                        "path": ctx[1] if ctx else member,
+                        "evidence": str(resolved.get("data_type") or ""),
+                        "subscript": subscript,
+                        "evidence_block": "@self" if evidence_block == "@self" else evidence_block,
+                        "line_no": line_no,
+                        "severity": "info",
+                        "message": (
+                            f"XML 证据确证数组：{ctx[1] if ctx else member} 实为 "
+                            f"{resolved.get('data_type')}，已自动补下标 {subscript}"
+                        ),
+                    })
+                else:
+                    lite_records.append({
+                        "rule": "R2_lite_array_unindexed",
+                        "block": canvas_block_name,
+                        "network": None,
+                        "member": member,
+                        "line_no": line_no,
+                        "evidence": stripped,
+                        "severity": "warning",
+                        "message": (
+                            f"疑似数组下标丢失：.{member} 在常见数组成员清单中但未带 [ 下标；"
+                            "XML 证据未能确证其数组性，未自动修改"
+                        ),
+                    })
+        new_core = core
+        for pos, subscript in sorted(insertions, key=lambda t: t[0], reverse=True):
+            new_core = new_core[:pos] + subscript + new_core[pos:]
+        out_lines.append(new_core + tail)
+    return "".join(out_lines), fixed_records, lite_records
+
+
+def _autofix_array_subscript_promotion(
+    canvas: CanvasState,
+    interfaces: dict[str, Any],
+    prior_ops: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """R6：数组下标提升——翻译层把 ``[idx]`` 拍平成路径尾段 ``.idx`` 的还原。
+
+    真机 FB1010 案例：READ_DBL/WRT_DBL 的 ANY 指针实参原为
+    ``"DB5000".AryTypePara[Index].Aux.WriteTypeParaDBL``（AryTypePara 是
+    ``Array[0..300] of "UDT_TypePara"``），翻译产物成了
+    ``"DB5000".AryTypePara.Aux.WriteTypeParaDBL.Index``。三重证据门：
+    ① 路径首段在 DB 证据中为数组类型；② 尾段是本块声明的整型变量；
+    ③ 整条路径按成员解析失败（可解析的是正常访问，绝不动）。
+    """
+    from plc_engine.array_evidence import is_array_type
+
+    int_types = {"int", "dint", "uint", "udint", "sint", "usint", "byte", "word"}
+    pat = re.compile(r'"([^"]+)"\.([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+)')
+    ops: list[dict[str, Any]] = []
+    diagnostics: list[dict[str, Any]] = []
+
+    def _resolve_chain(root: Any, segs: list[str]) -> bool:
+        cur = root
+        for s in segs:
+            members = getattr(cur, "members", None) or {}
+            nxt = members.get(s)
+            if nxt is None:
+                low = s.lower()
+                for k, v in members.items():
+                    if k.lower() == low:
+                        nxt = v
+                        break
+            if nxt is None:
+                return False
+            cur = nxt
+        return True
+
+    def _fix_text(text: str, block_key: str, block_name: str, int_vars: dict[str, str]) -> tuple[str, int]:
+        count = 0
+
+        def repl(m: re.Match[str]) -> str:
+            nonlocal count
+            db, path = m.group(1), m.group(2)
+            db_iface = interfaces.get(db)
+            if not db_iface:
+                return m.group(0)
+            segs = path.split(".")
+            if len(segs) < 3:
+                return m.group(0)
+            tail = segs[-1]
+            int_var = int_vars.get(tail.lower())
+            if not int_var:
+                return m.group(0)
+            node = db_iface.get(segs[0])
+            if node is None:
+                return m.group(0)
+            if not is_array_type(str(getattr(node, "data_type", "") or "")):
+                return m.group(0)
+            if _resolve_chain(node, segs[1:]):
+                return m.group(0)  # 全程可按成员解析 → 正常访问,不是拍平形态
+            count += 1
+            diagnostics.append({
+                "rule": "R6_array_subscript_promoted",
+                "block": block_name,
+                "network": None,
+                "path": path,
+                "evidence": str(getattr(node, "data_type", "")),
+                "subscript": f"[{int_var}]",
+                "severity": "info",
+                "message": f"数组下标提升：\"{db}\".{path} → \"{db}\".{segs[0]}[{int_var}].{'.'.join(segs[1:-1])}（证据：数组类型成员 + 尾段为本块整型变量）",
+            })
+            return f'"{db}".{segs[0]}[{int_var}].{".".join(segs[1:-1])}'
+
+        return pat.sub(repl, text), count
+
+    bodies, nets = _patched_text_view(canvas, prior_ops)
+    for key, block in canvas.blocks.items():
+        if block.protected:
+            continue
+        int_vars = {
+            v.name.lower(): v.name
+            for v in block.interface
+            if (v.data_type or "").strip().lower() in int_types
+        }
+        if not int_vars:
+            continue
+        if bodies.get(key, "").strip():
+            new_text, n = _fix_text(bodies[key], key, block.name or key, int_vars)
+            if n:
+                ops.append({"op": "update_block_scl", "name": key, "scl_body": new_text})
+        else:
+            for net in block.networks:
+                cur = nets.get((key, net.id), "")
+                if not cur.strip():
+                    continue
+                new_text, n = _fix_text(cur, key, block.name or key, int_vars)
+                if n:
+                    for d in diagnostics[-n:]:
+                        d["network"] = net.id
+                    ops.append({
+                        "op": "update_network",
+                        "block": key,
+                        "network_id": net.id,
+                        "scl_text": new_text,
+                    })
+    return ops, diagnostics
+
+
+def _autofix_bool_sr_latch_rewrite(
+    canvas: CanvasState,
+    prior_ops: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """R7：Bool 声明上的 SR 实例调用/取 Q → 等价手写锁存。
+
+    真机 FB2009 案例：翻译体发出 ``#X.SR(R1 := a, R := b)`` 与 ``#X.Q``，
+    但 X 在块声明中是 ``Bool``——对 Bool 变量做实例调用/成员取值非法。
+    SR(置位优先)语义等价改写：``#X := ((a) OR (#X) AND NOT (b));``、
+    ``#X.Q`` → ``#X``。真值门 = 块自身 interface 声明为 Bool（无需外部证据）；
+    IEC_TIMER/FB 实例上的合法调用绝不触碰。
+    """
+    bodies, nets = _patched_text_view(canvas, prior_ops)
+    ops: list[dict[str, Any]] = []
+    diagnostics: list[dict[str, Any]] = []
+
+    def _bool_roots(block: "CanvasBlock", text: str) -> set[str]:
+        """Bool 声明根集合：块结构化 interface + 当前文本声明区(两者取并集)。
+
+        R5 重建后声明区在 scl_body 文本里，结构化 interface 是旧扁平形态——
+        只看一侧都会漏(真机 FB2009:SR 调用改写没触发即此因)。
+        """
+        roots = {
+            v.name.lower()
+            for v in block.interface
+            if (v.data_type or "").strip().lower() == "bool"
+        }
+        for m in re.finditer(r'^\s*(?:"([^"]+)"|([A-Za-z_]\w*))\s*:\s*Bool\s*;', text, re.M):
+            roots.add((m.group(1) or m.group(2)).lower())
+        return roots
+
+    def _split_args(argstr: str) -> dict[str, str]:
+        args: dict[str, str] = {}
+        depth = 0
+        cur = ""
+        for ch in argstr:
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+            if ch == "," and depth == 0:
+                _take(args, cur)
+                cur = ""
+            else:
+                cur += ch
+        _take(args, cur)
+        return args
+
+    def _take(args: dict[str, str], raw: str) -> None:
+        m = re.match(r"^\s*(\w+)\s*:=\s*(.+?)\s*$", raw, re.S)
+        if m:
+            args[m.group(1).upper()] = m.group(2)
+
+    def _fix_text(text: str, block_key: str, block_name: str, block: "CanvasBlock") -> tuple[str, int]:
+        bools = _bool_roots(block, text)
+        count = 0
+        # 1) #X.Q → #X（X 为 Bool 声明）
+        def q_repl(m: re.Match[str]) -> str:
+            nonlocal count
+            if m.group(1).lower() not in bools:
+                return m.group(0)
+            count += 1
+            diagnostics.append({
+                "rule": "R7_bool_q_rewrite",
+                "block": block_name,
+                "member": m.group(1),
+                "severity": "info",
+                "message": f"Bool 取 Q 改写：{m.group(0)} → #{m.group(1)}（Bool 声明无 .Q 成员）",
+            })
+            return f"#{m.group(1)}"
+
+        text = re.sub(r"#(\w+)\.Q\b", q_repl, text)
+        # 2) #X.SR(R1 := a, R := b) → 手写锁存（括号平衡扫描取实参）
+        out: list[str] = []
+        i = 0
+        pat = re.compile(r"#(\w+)\.SR\(")
+        while True:
+            m = pat.search(text, i)
+            if not m:
+                out.append(text[i:])
+                break
+            root = m.group(1)
+            if root.lower() not in bools:
+                out.append(text[i : m.end()])
+                i = m.end()
+                continue
+            # 扫到配对右括号
+            depth = 1
+            j = m.end()
+            while j < len(text) and depth:
+                if text[j] == "(":
+                    depth += 1
+                elif text[j] == ")":
+                    depth -= 1
+                j += 1
+            argstr = text[m.end() : j - 1]
+            args = _split_args(argstr)
+            # TIA SR 指令实参:S=置位,R1=复位,置位优先(文档语义;历史人工清单
+            # 警告"写错方向会静默翻转机台行为"——方向必须以此为准)
+            s_set, r1_reset = args.get("S"), args.get("R1")
+            if s_set is None or r1_reset is None:
+                out.append(text[i:j])
+                i = j
+                continue
+            stmt = f"#{root} := (({s_set}) OR (#{root}) AND NOT ({r1_reset}));"
+            count += 1
+            diagnostics.append({
+                "rule": "R7_bool_sr_latch",
+                "block": block_name,
+                "member": root,
+                "severity": "info",
+                "message": f"Bool 上的 SR 调用改写为手写锁存（置位优先 S/R1）：#{root}.SR(...) → {stmt}",
+            })
+            out.append(text[i : m.start()])
+            out.append(stmt)
+            i = j
+        return "".join(out), count
+
+    for key, block in canvas.blocks.items():
+        if block.protected:
+            continue
+        if not _bool_roots(block, bodies.get(key, "")):
+            continue
+        if bodies.get(key, "").strip():
+            new_text, n = _fix_text(bodies[key], key, block.name or key, block)
+            if n:
+                ops.append({"op": "update_block_scl", "name": key, "scl_body": new_text})
+        else:
+            for net in block.networks:
+                cur = nets.get((key, net.id), "")
+                if not cur.strip():
+                    continue
+                new_text, n = _fix_text(cur, key, block.name or key, block)
+                if n:
+                    for d in diagnostics[-n:]:
+                        d["network"] = net.id
+                    ops.append({
+                        "op": "update_network",
+                        "block": key,
+                        "network_id": net.id,
+                        "scl_text": new_text,
+                    })
+    return ops, diagnostics
+
+
+def _autofix_quote_spacey_db_segments(
+    canvas: CanvasState,
+    interfaces: dict[str, Any],
+    prior_ops: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """R8：DB 路径中含空格的成员段引号化。
+
+    真机 FC2400 案例：``"DB2100 Modbus Value".ROS Para.Status Word``——语义上
+    证据树可解析（成员名本就带空格），但 TIA SCL 语法要求含空格段必须写成
+    ``"DB2100 Modbus Value"."ROS Para"."Status Word"``。证据驱动的逐段
+    引号化：段名在证据树中存在且含空格 → 包引号。
+    """
+    bodies, nets = _patched_text_view(canvas, prior_ops)
+    ops: list[dict[str, Any]] = []
+    diagnostics: list[dict[str, Any]] = []
+    pat = re.compile(r'"([^"]+)"\.([A-Za-z_][\w. ]*(?:\.[A-Za-z_][\w. ]*)*)')
+
+    def _quote_segments(db: str, path: str) -> str | None:
+        """逐段对照证据树引号化;任一段含空格且证据确证 → 返回新路径,否则 None。"""
+        db_iface = interfaces.get(db)
+        if db_iface is None:
+            return None
+        segs = path.split(".")
+        node: Any = _DbRoot(db_iface)
+        out_segs: list[str] = []
+        changed = False
+        for seg in segs:
+            stripped = seg.strip()
+            if not stripped:
+                return None
+            members = getattr(node, "members", None) or {}
+            hit = members.get(stripped)
+            if hit is None:
+                low = stripped.lower()
+                for k, v in members.items():
+                    if k.lower() == low:
+                        hit = v
+                        break
+            if hit is None:
+                return None  # 证据无法确证该段——不动(宁缺毋错)
+            if " " in stripped:
+                out_segs.append(f'"{stripped}"')
+                changed = True
+            else:
+                out_segs.append(stripped)
+            node = hit
+        return ".".join(out_segs) if changed else None
+
+    class _DbRoot:
+        def __init__(self, members: dict[str, Any]):
+            self.members = members
+
+    def _fix_text(text: str, block_key: str, block_name: str) -> tuple[str, int]:
+        count = 0
+
+        def repl(m: re.Match[str]) -> str:
+            nonlocal count
+            db, path = m.group(1), m.group(2)
+            new_path = _quote_segments(db, path)
+            if new_path is None:
+                return m.group(0)
+            count += 1
+            diagnostics.append({
+                "rule": "R8_spacey_db_path_quoted",
+                "block": block_name,
+                "path": path,
+                "severity": "info",
+                "message": f"DB 路径空格段引号化：\"{db}\".{path} → \"{db}\".{new_path}",
+            })
+            return f'"{db}".{new_path}'
+
+        return pat.sub(repl, text), count
+
+    for key, block in canvas.blocks.items():
+        if block.protected:
+            continue
+        if bodies.get(key, "").strip():
+            new_text, n = _fix_text(bodies[key], key, block.name or key)
+            if n:
+                ops.append({"op": "update_block_scl", "name": key, "scl_body": new_text})
+        else:
+            for net in block.networks:
+                cur = nets.get((key, net.id), "")
+                if not cur.strip():
+                    continue
+                new_text, n = _fix_text(cur, key, block.name or key)
+                if n:
+                    for d in diagnostics[-n:]:
+                        d["network"] = net.id
+                    ops.append({
+                        "op": "update_network",
+                        "block": key,
+                        "network_id": net.id,
+                        "scl_text": new_text,
+                    })
+    return ops, diagnostics
+
+
+def _load_native_scl_bodies(evidence_dir: str | None) -> dict[str, str]:
+    """加载（并缓存）原生 SCL 正文（仅原生 SCL 语言块；LAD 块不含）。"""
+    if not evidence_dir:
+        return {}
+    import os
+
+    from plc_engine.array_evidence import load_native_scl_bodies
+
+    key = os.path.abspath(evidence_dir) + "#native"
+    hit = _EVIDENCE_INTERFACE_CACHE.get(key)
+    if hit is None:
+        try:
+            hit = load_native_scl_bodies(evidence_dir) or {}
+        except Exception:  # noqa: BLE001 — 原生正文缺失只降级不炸修复循环
+            hit = {}
+        _EVIDENCE_INTERFACE_CACHE[key] = hit
+    return hit
+
+
+def _autofix_native_scl_restore(
+    canvas: CanvasState,
+    interfaces: dict[str, Any],
+    native_bodies: dict[str, str],
+    prior_ops: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """R10：原生 SCL 块逐字还原。
+
+    原项目中的原生 SCL 语言块，其 XML ``<StructuredText>`` 携带原始正文
+    （Token/Access 五要素完整）——按文档顺序还原即得到**天然可编译**的
+    原始代码，严格优于任何翻译产物（真机 FB1010/FB5715 案例：翻译体的
+    READ_DBL 指针形态等语义缺陷在原生正文中根本不存在）。声明区沿用
+    R5 的 XML 证据重建，正文整体替换为原生文本。
+    """
+    ops: list[dict[str, Any]] = []
+    diagnostics: list[dict[str, Any]] = []
+    bodies, _nets = _patched_text_view(canvas, prior_ops)
+    for key, block in canvas.blocks.items():
+        if block.block_type.upper() not in {"FB", "FC"}:
+            continue
+        if block.protected:
+            continue
+        native = native_bodies.get(block.name) or native_bodies.get(key.split("::")[-1])
+        if not native or not native.strip():
+            continue
+        iface = interfaces.get(block.name) or interfaces.get(key.split("::")[-1])
+        if not iface:
+            continue
+        unit = _rebuild_unit_from_evidence(block, iface, native)
+        if not unit or not unit.strip():
+            continue
+        if bodies.get(key, "").strip() == unit.strip():
+            continue  # 已是原生还原形态 → 幂等
+        ops.append({"op": "update_block_scl", "name": key, "scl_body": unit})
+        diagnostics.append({
+            "rule": "R10_native_scl_restored",
+            "block": block.name or key,
+            "severity": "info",
+            "lines": len(native.splitlines()),
+            "message": (
+                f"原生 SCL 逐字还原（XML StructuredText "
+                f"{len(native.splitlines())} 行，替代翻译体——原始代码天然可编译）"
+            ),
+        })
+    return ops, diagnostics
+
+
+def _autofix_t_conv_wrap(
+    canvas: CanvasState,
+    interfaces: dict[str, Any],
+    prior_ops: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """R9：DTL→Time_Of_Day 赋值插入 T_CONV 转换。
+
+    真机 FB5008 案例：原 LAD 的 T_CONV 指令被翻译层丢弃(只留注释),
+    ``"SyS_Time"(Time_Of_Day) := "DB…".CurPLCTime(DTL)`` 类型不匹配编译错。
+    证据门:LHS 是画布 tag 且类型为 Time_Of_Day、RHS 是 DB 路径且证据类型
+    为 DTL → 包装为 ``T_CONV(IN := rhs)``(TIA 日期/时间转换指令,SCL 可调)。
+    """
+    bodies, nets = _patched_text_view(canvas, prior_ops)
+    tags = canvas.tags or {}
+    ops: list[dict[str, Any]] = []
+    diagnostics: list[dict[str, Any]] = []
+    # LHS tag := RHS "DB".path;  (RHS 到行尾或注释前)
+    pat = re.compile(r'^(\s*)"([^"]+)"\s*:=\s*("(?:[^"]+)"(?:\.\w+)+)\s*;', re.M)
+
+    def _rhs_type(db: str, path: str) -> str | None:
+        db_iface = interfaces.get(db)
+        if not db_iface:
+            return None
+        node: Any = None
+        segs = path.split(".")
+        members: dict[str, Any] = db_iface  # type: ignore[assignment]
+        for s in segs:
+            hit = members.get(s.strip('"'))
+            if hit is None:
+                low = s.strip('"').lower()
+                for k, v in members.items():
+                    if k.lower() == low:
+                        hit = v
+                        break
+            if hit is None:
+                return None
+            node = hit
+            members = getattr(hit, "members", None) or {}
+        return str(getattr(node, "data_type", "") or "").strip() if node else None
+
+    def _fix_text(text: str, block_key: str, block_name: str) -> tuple[str, int]:
+        count = 0
+
+        def repl(m: re.Match[str]) -> str:
+            nonlocal count
+            indent, lhs, rhs = m.group(1), m.group(2), m.group(3)
+            tag = tags.get(lhs)
+            if tag is None:
+                return m.group(0)
+            lhs_t = str(getattr(tag, "data_type", "") or "").strip()
+            if lhs_t.lower() != "time_of_day":
+                return m.group(0)
+            db = rhs.split('"')[1]
+            path = rhs.split(".", 1)[1]
+            rhs_t = _rhs_type(db, path)
+            if rhs_t is None or rhs_t.lower() != "dtl":
+                return m.group(0)
+            count += 1
+            diagnostics.append({
+                "rule": "R9_t_conv_wrap",
+                "block": block_name,
+                "path": path,
+                "severity": "info",
+                "message": f"DTL→Time_Of_Day 类型不匹配赋值插入 T_CONV：{lhs} := {rhs}(DTL)",
+            })
+            return f'{indent}"{lhs}" := T_CONV(IN := {rhs});'
+
+        return pat.sub(repl, text), count
+
+    for key, block in canvas.blocks.items():
+        if block.protected:
+            continue
+        if bodies.get(key, "").strip():
+            new_text, n = _fix_text(bodies[key], key, block.name or key)
+            if n:
+                ops.append({"op": "update_block_scl", "name": key, "scl_body": new_text})
+        else:
+            for net in block.networks:
+                cur = nets.get((key, net.id), "")
+                if not cur.strip():
+                    continue
+                new_text, n = _fix_text(cur, key, block.name or key)
+                if n:
+                    ops.append({
+                        "op": "update_network",
+                        "block": key,
+                        "network_id": net.id,
+                        "scl_text": new_text,
+                    })
+    return ops, diagnostics
+
+
+def _autofix_array_subscripts_with_evidence(
+    canvas: CanvasState,
+    interfaces: dict[str, Any],
+    prior_ops: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """R2-full：XML 证据确证的数组裸访问 → 补下标（update_block_scl / update_network）。
+
+    体优先级与 R1 一致（``scl_body`` 非空补整块、否则逐网络）；文本基于
+    ``prior_ops`` 叠加后的视图计算，保证与 R1 同块协作不互相覆盖。protected
+    块绝不改写。返回 ``(ops, diagnostics)``——diagnostics 含已修复
+    （R2_array_evidence_fixed）与未确证（R2_lite_array_unindexed）两类。
+    """
+    bodies, nets = _patched_text_view(canvas, prior_ops)
+    ops: list[dict[str, Any]] = []
+    diagnostics: list[dict[str, Any]] = []
+    for key, block in canvas.blocks.items():
+        if block.protected:
+            continue
+        if bodies.get(key, "").strip():
+            new_text, fixed, lite = _fix_unindexed_arrays_in_text(
+                bodies[key], canvas_block_name=block.name or key, interfaces=interfaces
+            )
+            for d in fixed + lite:
+                d["network"] = None
+            diagnostics.extend(fixed + lite)
+            if new_text != bodies[key]:
+                ops.append({"op": "update_block_scl", "name": key, "scl_body": new_text})
+        else:
+            for net in block.networks:
+                cur = nets.get((key, net.id), "")
+                if not cur.strip():
+                    continue
+                new_text, fixed, lite = _fix_unindexed_arrays_in_text(
+                    cur, canvas_block_name=block.name or key, interfaces=interfaces
+                )
+                for d in fixed + lite:
+                    d["network"] = net.id
+                diagnostics.extend(fixed + lite)
+                if new_text != cur:
+                    ops.append({
+                        "op": "update_network",
+                        "block": key,
+                        "network_id": net.id,
+                        "scl_text": new_text,
+                    })
+    return ops, diagnostics
+
+
+def _member_scl_type(node: Any) -> str:
+    """XML 成员节点 → SCL data_type 串（Struct 按证据展开成内联类型）。
+
+    canvas 的 ``CanvasVariable`` 是扁平单串，嵌套 Struct 只能内联展开——
+    渲染层 ``{name} : {data_type};`` 会在末尾补 ``;``，恰与
+    ``End_Struct;`` 的合法句法闭合（历史人工修复 round 3 的同款写法）。
+    UDT / 多实例 FB 引用（``"FB1061_RobotAutoStep"``）与 IEC_TIMER
+    保持 XML 原始类型串，不展开（多实例成员由 TIA 按类型自建）。
+    """
+    base = str(getattr(node, "data_type", "") or "").strip()
+    children = getattr(node, "members", None) or {}
+    if not children or not base.lower().endswith("struct"):
+        return base
+    inner = [
+        f"    {child.name} : {_member_scl_type(child)};"
+        for child in children.values()
+    ]
+    return base + "\n" + "\n".join(inner) + "\nEnd_Struct"
+
+
+def _reconcile_body_interface_with_evidence(
+    canvas: CanvasState,
+    interfaces: dict[str, Any],
+    prior_ops: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """R4 接口对账：body 引用 ``#X`` 未声明 → 按 XML 证据补 add_variable。
+
+    防误伤边界：
+    - 只对 FB/FC 的 body（``scl_body`` 优先，退网络 scl_text）、protected 跳过；
+    - 块自身必须存在于 XML 证据（无块级证据时逐符号全量告警只会误伤，跳过）；
+    - 只补证据确凿的根符号（画布接口未声明、XML 已声明），已声明不重复补
+      （大小写不敏感比较，幂等）；证据也没有的只进 warning 诊断；
+    - 全局 DB 引用（``"DBxxx".y``）不补——那是 DB 的接口，不是本块的。
+    """
+    from plc_engine.array_evidence import find_member
+
+    bodies, nets = _patched_text_view(canvas, prior_ops)
+    ops: list[dict[str, Any]] = []
+    diagnostics: list[dict[str, Any]] = []
+    for key, block in canvas.blocks.items():
+        if (block.block_type or "").upper() not in {"FB", "FC"} or block.protected:
+            continue
+        tree = interfaces.get(block.name) or interfaces.get(key)
+        if tree is None:
+            continue
+        text = bodies.get(key, "")
+        if not text.strip():
+            text = "\n".join(
+                nets.get((key, net.id), "") for net in block.networks
+            )
+        # 引用侧：逐行提取 #X 根符号（跳过注释行）
+        roots: list[str] = []
+        seen: set[str] = set()
+        for line in (text or "").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith(("//", "(*")):
+                continue
+            for m in _BODY_ROOT_REF_RE.finditer(line):
+                root = m.group(1)
+                if root.lower() not in seen:
+                    seen.add(root.lower())
+                    roots.append(root)
+        if not roots:
+            continue
+        declared = {v.name.lower() for v in block.interface}
+        for root in roots:
+            if root.lower() in declared:
+                continue
+            node = find_member(tree, root)
+            if node is not None:
+                data_type = _member_scl_type(node)
+                section = _XML_SECTION_TO_CANVAS.get(
+                    str(getattr(node, "section", "") or "").strip(), "VAR"
+                )
+                ops.append({
+                    "op": "add_variable",
+                    "block": key,
+                    "variable": {
+                        "name": root,
+                        "data_type": data_type,
+                        "section": section,
+                        "comment": "Auto-declared from Openness XML evidence (R4)",
+                    },
+                })
+                xml_type = str(getattr(node, "data_type", "") or "")
+                diagnostics.append({
+                    "rule": "R4_interface_member_added",
+                    "block": block.name or key,
+                    "member": root,
+                    "data_type": data_type,
+                    "section": section,
+                    "evidence": xml_type,
+                    "severity": "info",
+                    "message": (
+                        f"接口对账：body 引用 #{root} 未声明，按 XML 证据补声明 "
+                        f"{root} : {xml_type}（{section}）"
+                    ),
+                })
+            else:
+                diagnostics.append({
+                    "rule": "R4_interface_member_no_evidence",
+                    "block": block.name or key,
+                    "member": root,
+                    "severity": "warning",
+                    "message": f"接口缺失且无证据：body 引用 #{root}，画布接口未声明，XML 证据中也未找到",
+                })
+    return ops, diagnostics
+
+
+# ---------------------------------------------------------------------------
+# R5：接口整备——XML 证据重建声明区（治导入层"拍平损坏"接口）
+# ---------------------------------------------------------------------------
+
+# XML 声明区名 → SCL 声明区关键字（external source 方言；静态区写 VAR）
+_XML_SECTION_TO_SCL = {
+    "input": "VAR_INPUT",
+    "output": "VAR_OUTPUT",
+    "inout": "VAR_IN_OUT",
+    "static": "VAR",
+    "temp": "VAR_TEMP",
+    "constant": "VAR",
+    "return": "VAR_OUTPUT",
+    "none": "VAR",
+}
+_SCL_SECTION_ORDER = ("VAR_INPUT", "VAR_OUTPUT", "VAR_IN_OUT", "VAR", "VAR_TEMP")
+
+
+def _interface_damage_signals(block: "CanvasBlock") -> list[str]:
+    """画布接口的损坏信号（R5 触发条件）。
+
+    真机 FB1080 案例（62 个 TIA 错误全来自声明区）：导入层把嵌套 Struct
+    拍平——父成员只剩 ``Struct`` 空壳、嵌套成员平铺成同级且大量重复，
+    另有类型 ``Undef``/缺失成员。body 修复对这类损伤无效。
+    """
+    signals: list[str] = []
+    seen: set[str] = set()
+    for v in block.interface:
+        dt = (v.data_type or "").strip()
+        low = dt.lower()
+        if low in {"", "undef"}:
+            signals.append(f"unknown-type:{v.name}")
+        elif low == "struct":
+            signals.append(f"flattened-struct-shell:{v.name}")
+        dedup = f"{(v.section or '').upper()}:{v.name.lower()}"
+        if dedup in seen:
+            signals.append(f"duplicate:{v.name}")
+        seen.add(dedup)
+    return signals
+
+
+def _needs_quoting(ident: str) -> bool:
+    """标识符是否需要 SCL 引号包裹（含空格/非标识符字符——真机 FB2008 案例：
+    XML 成员名 ``A Station CoolingFan`` 原样渲染会被 TIA 拆词报
+    ``The specified value "Station" is invalid``）。"""
+    return not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", ident or "")
+
+
+def _collect_quoted_member_paths(members: dict[str, Any], prefix: str = "") -> list[tuple[str, str]]:
+    """递归收集需加引号的成员路径：``(原始路径, 加引号路径)``。
+
+    顶层形如 ``("A Station CoolingFan", '"A Station CoolingFan"')``；
+    嵌套形如 ``("Aux.Heart Fail", 'Aux."Heart Fail"')``。
+    """
+    pairs: list[tuple[str, str]] = []
+    for name, mem in (members or {}).items():
+        path = f"{prefix}{name}"
+        if _needs_quoting(name):
+            head, _, _ = path.rpartition(name)
+            pairs.append((path, f'{head}"{name}"'))
+        child_members = getattr(mem, "members", None) or {}
+        if child_members:
+            pairs.extend(_collect_quoted_member_paths(child_members, path + "."))
+    return pairs
+
+
+def _render_evidence_member(mem: Any, indent: str = "    ") -> list[str]:
+    """按证据成员节点渲染声明行：嵌套 Struct 内联展开，其余按权威类型串。
+
+    证据树把 UDT/多实例的 ``Sections`` 也展开进 ``members``——但带引号的
+    UDT/FB 引用必须按引用渲染（类型真实存在于工程），只有字面 ``Struct``
+    才内联展开。证据为空/``Undef``/``Void`` 的成员跳过：前两者无类型可写，
+    ``Void`` 在声明区非法（真机 FB2008/FC2400 案例：TIA 报 "Data type
+    Void is not allowed here"）——与旧渲染器"Void 成员发射层丢弃"同款约定。
+    """
+    dt = str(getattr(mem, "data_type", "") or "").strip()
+    if dt.lower() in {"", "undef", "void"}:
+        return []
+    members = getattr(mem, "members", None) or {}
+    nm = f'"{mem.name}"' if _needs_quoting(mem.name) else mem.name
+    if members and dt.lower() == "struct":
+        lines = [f"{indent}{nm} : Struct"]
+        for child in members.values():
+            lines.extend(_render_evidence_member(child, indent + "    "))
+        lines.append(f"{indent}end_struct;")
+        return lines
+    return [f"{indent}{nm} : {dt};"]
+
+
+def _render_decl_sections_from_evidence(top_members: dict[str, Any]) -> str:
+    """顶层证据成员按声明区分组渲染（固定顺序，全部以 END_VAR 闭合）。"""
+    by_section: dict[str, list[str]] = {}
+    for mem in top_members.values():
+        scl_sec = _XML_SECTION_TO_SCL.get(
+            str(getattr(mem, "section", "") or "static").strip().lower(), "VAR"
+        )
+        lines = _render_evidence_member(mem)
+        if lines:
+            by_section.setdefault(scl_sec, []).extend(lines)
+    out: list[str] = []
+    for sec in _SCL_SECTION_ORDER:
+        body = by_section.pop(sec, [])
+        if body:
+            out.append(sec)
+            out.extend(body)
+            out.append("END_VAR")
+    rest = [ln for lines in by_section.values() for ln in lines]
+    if rest:  # 未知 section 名残余（理论不出现）并入 VAR,宁多勿漏
+        out.extend(["VAR", *rest, "END_VAR"])
+    return "\n".join(out)
+
+
+def _rebuild_unit_from_evidence(block: "CanvasBlock", top_members: dict[str, Any], body_text: str) -> str:
+    """证据接口 + 现行 body → 完整编译单元文本（走完整单元直通渲染）。
+
+    body 中对带空格成员的引用同步加引号（``#A Station CoolingFan(`` →
+    ``#"A Station CoolingFan"(``），与声明区渲染口径一致。
+    """
+    btype = block.block_type.upper()
+    if btype == "FB":
+        head, tail = f'FUNCTION_BLOCK "{block.name}"', "END_FUNCTION_BLOCK"
+    elif btype == "FC":
+        head, tail = f'FUNCTION "{block.name}" : Void', "END_FUNCTION"
+    else:
+        return ""
+    decls = _render_decl_sections_from_evidence(top_members)
+    body = (body_text or "").strip()
+    for raw_path, quoted_path in _collect_quoted_member_paths(top_members):
+        body = re.sub(
+            re.escape(raw_path) + r"(?![\w])",
+            lambda _m, q=quoted_path: q,  # lambda 防替换串转义歧义
+            body,
+        )
+    parts = [head]
+    if decls:
+        parts.append(decls)
+    parts.append("BEGIN")
+    if body:
+        parts.append(body)
+    parts.append(tail)
+    return "\n".join(parts) + "\n"
+
+
+def _autofix_rebuild_damaged_interfaces(
+    canvas: CanvasState,
+    interfaces: dict[str, Any],
+    prior_ops: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """R5 主规则：接口有损坏信号且 XML 证据持有该块 → 整块重建为完整单元。
+
+    body 取叠加先行 op 后的视图（R1 等已改写的文本不被覆盖丢弃）；
+    已是完整单元（R5 幂等）/无证据/protected → 跳过。
+    """
+    ops: list[dict[str, Any]] = []
+    diagnostics: list[dict[str, Any]] = []
+    bodies, _nets = _patched_text_view(canvas, prior_ops)
+    for key, block in canvas.blocks.items():
+        if block.block_type.upper() not in {"FB", "FC"}:
+            continue
+        if getattr(block, "protected", False):
+            continue
+        current = bodies.get(key, "")
+        if current.strip() and _FULL_SCL_UNIT_RE.match(current.strip()):
+            continue  # 已是完整单元（R5 重建产物/引擎模板）→ 幂等
+        iface = interfaces.get(block.name) or interfaces.get(key.split("::")[-1])
+        if not iface:
+            continue
+        damage = _interface_damage_signals(block)
+        if not damage:
+            continue
+        unit = _rebuild_unit_from_evidence(block, iface, current)
+        if not unit or not unit.strip():
+            continue
+        ops.append({"op": "update_block_scl", "name": key, "scl_body": unit})
+        diagnostics.append({
+            "rule": "R5_interface_rebuilt",
+            "block": block.name or key,
+            "severity": "info",
+            "signals": damage[:8],
+            "signal_count": len(damage),
+            "evidence_members": len(iface),
+            "message": (
+                f"接口整备：声明区按 XML 证据重建（损坏信号 {len(damage)} 处，"
+                f"如 {damage[0]}；证据成员 {len(iface)} 个）"
+            ),
+        })
+    return ops, diagnostics
+
+
+def generate_canvas_autofix_patch(
+    canvas: CanvasState,
+    attributions: list[dict[str, Any]],
+    evidence_dir: str | None = None,
+) -> AutofixPatch:
     """Synthesize deterministic self-healing patch operations from compiler/binding attributions.
 
     For instance:
     - If HMI widget references missing variable in DB -> automatically declare it in DB interface.
     - If a block has undefined timer or missing declaration -> patch interface.
+
+    HR001 缺陷清单回流新增（治存量，无需类型证据即可安全实施）：
+    - R1  自实例 DB 绝对引用（``"DB<本FB编号>_<后缀>".x``）→ ``#x``，
+          以块 SCL 文本 regex 补丁 op（update_block_scl / update_network）实施；
+    - R2-lite  常见数组成员名裸访问 → 仅 diagnostic（返回值 ``.diagnostics``），
+          不进 ops、不触发 clear_errors，供修复循环提示 LLM/人工；
+    - R3  多实例调用形态（``#SR.SR(R1:=..)`` 改手写锁存、定时器 ``.TON(``
+          参数形态重建）明确跳过：``#X.SR(...)`` / ``#X.TON(...)`` 本身是
+          合法 SCL，HR001 的真缺陷在于实例实为数组（R2 类型证据缺失）或
+          参数被折叠丢失——两种情形都需要被调 FB 的接口/接线证据才能等价
+          重写（SR 置位优先 / RS 复位优先，写错方向会静默翻转机台行为；
+          TON 缺参补 ``()`` 会把定时器静默清零）。无证据规则化只会把编译
+          错误换成更隐蔽的语义错误，故不实现。
+
+    evidence_dir（可选，TIA Openness XML 导出目录）提供类型证据时的升级：
+    - R2-full  ``ARRAY_MEMBER_HINTS`` 成员裸访问经 XML 确证为数组 →
+          自动补下标 op（update_block_scl / update_network），下标取各维
+          下界（``Array[0..15]`` → ``[0]``、``Array[1..200]`` → ``[1]``、
+          双维 → ``[0,1]``）；未确证的保持 R2-lite 仅诊断。已带 ``[`` 的
+          负向前瞻天然跳过 → 幂等。诊断 rule=R2_array_evidence_fixed，
+          evidence 字段为 XML 权威类型串（如 ``Array[0..15] of Bool``）。
+    - R4  接口对账：FB/FC body 引用 ``#X`` 但画布接口未声明 → 按 XML
+          证据补 ``add_variable``（Struct 按证据展开内联类型，多实例 FB /
+          UDT 引用原样带引号）；证据也没有 → 仅 warning 诊断
+          （rule=R4_interface_member_no_evidence）。已声明不重复补 → 幂等。
+    - ``evidence_dir=None``（默认）与旧行为完全一致——fix_loop 等既有
+          调用方零改动兼容。
+
+    返回 ``AutofixPatch``（list 子类，向后兼容旧调用方），
+    诊断标注挂 ``.diagnostics``。
     """
     fix_ops: list[dict[str, Any]] = []
 
@@ -902,7 +2120,57 @@ def generate_canvas_autofix_patch(canvas: CanvasState, attributions: list[dict[s
                     },
                 })
 
+    # R1：自实例 DB 绝对引用 → # 前缀（幂等 regex 补丁，跨块引用不受影响）
+    fix_ops.extend(_autofix_self_instance_db_refs(canvas))
+
+    diagnostics: list[dict[str, Any]] = []
+    if evidence_dir is None:
+        # 无证据模式：R2-lite 疑似数组未下标仅诊断（不产生 op、不触发 clear_errors）
+        diagnostics = _diagnose_unindexed_array_members(canvas)
+    else:
+        # R2-full / R4 / R5：XML 证据确证才改文；文本基于先行 op 视图，规则间不互相覆盖
+        interfaces = _load_evidence_interfaces(evidence_dir)
+        # R5 先行：拍平损坏的声明区按证据整块重建（R1 之后的 body 视图入单元）；
+        # 后行 R2-full/R4 在重建后的完整单元文本上继续叠加
+        r5_ops, r5_diags = _autofix_rebuild_damaged_interfaces(canvas, interfaces, prior_ops=fix_ops)
+        fix_ops.extend(r5_ops)
+        diagnostics.extend(r5_diags)
+        # R10：原生 SCL 块逐字还原(在 R5 声明重建之后、文本规则之前——
+        # 原生正文替代翻译体,后行规则在原生视图上扫描为无害空转)
+        native_bodies = _load_native_scl_bodies(evidence_dir)
+        r10_ops, r10_diags = _autofix_native_scl_restore(
+            canvas, interfaces, native_bodies, prior_ops=fix_ops
+        )
+        fix_ops.extend(r10_ops)
+        diagnostics.extend(r10_diags)
+        r2_ops, r2_diags = _autofix_array_subscripts_with_evidence(
+            canvas, interfaces, prior_ops=fix_ops
+        )
+        fix_ops.extend(r2_ops)
+        diagnostics.extend(r2_diags)
+        # R6：数组下标提升(R2 之后——R2 兜常规裸访问,R6 兜拍平成 .idx 尾段的形态)
+        r6_ops, r6_diags = _autofix_array_subscript_promotion(canvas, interfaces, prior_ops=fix_ops)
+        fix_ops.extend(r6_ops)
+        diagnostics.extend(r6_diags)
+        # R7：Bool 声明上的 SR 调用/.Q 取值 → 等价手写锁存(块自身声明即真值门)
+        r7_ops, r7_diags = _autofix_bool_sr_latch_rewrite(canvas, prior_ops=fix_ops)
+        fix_ops.extend(r7_ops)
+        diagnostics.extend(r7_diags)
+        # R8：DB 路径含空格段引号化(证据确证段名;TIA 语法要求,与解析无关)
+        r8_ops, r8_diags = _autofix_quote_spacey_db_segments(canvas, interfaces, prior_ops=fix_ops)
+        fix_ops.extend(r8_ops)
+        diagnostics.extend(r8_diags)
+        # R9：DTL→Time_Of_Day 赋值插入 T_CONV(翻译层丢指令的类型不匹配)
+        r9_ops, r9_diags = _autofix_t_conv_wrap(canvas, interfaces, prior_ops=fix_ops)
+        fix_ops.extend(r9_ops)
+        diagnostics.extend(r9_diags)
+        r4_ops, r4_diags = _reconcile_body_interface_with_evidence(
+            canvas, interfaces, prior_ops=fix_ops
+        )
+        fix_ops.extend(r4_ops)
+        diagnostics.extend(r4_diags)
+
     if fix_ops:
         fix_ops.append({"op": "clear_errors"})
 
-    return fix_ops
+    return AutofixPatch(fix_ops, diagnostics)

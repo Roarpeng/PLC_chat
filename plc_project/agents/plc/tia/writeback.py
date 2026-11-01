@@ -23,6 +23,7 @@ from typing import Any
 from agents.plc.tia.changeset import PlcChangeSet, write_import_bundle
 from agents.plc.tia.openness_cli import (
     compile_plc_via_openness_cli,
+    exception_chain_messages,
     generate_from_source_via_openness_cli,
     import_block_via_openness_cli,
     import_xml_via_openness_cli,
@@ -323,6 +324,25 @@ def _backup_blocked_result(
     }
 
 
+def _exception_result(exc: BaseException) -> dict[str, Any]:
+    """异常 → 失败 result payload（错误收集专用）。
+
+    ``str(exc)`` 只含最外层消息；这里把 Python 异常链
+    （``__cause__``/``__context__``，等价 .NET InnerException）逐层追加为
+    ``内部异常: …`` 行，并同步给出结构化 ``error_chain``。只增信息、
+    不改既有前缀——compile_jobs 归因 / fix_loop / refactor_pipeline
+    均按 message 字符串消费，追加详情行不会破坏解析。
+    """
+    text = str(exc)
+    chain = exception_chain_messages(exc)
+    if chain:
+        text += "\n" + "\n".join(f"内部异常: {message}" for message in chain)
+    payload: dict[str, Any] = {"ok": False, "error": text}
+    if chain:
+        payload["error_chain"] = chain
+    return payload
+
+
 def execute_writeback(
     project_path: str | Path,
     bundle_dir: str | Path,
@@ -482,7 +502,8 @@ def execute_writeback(
                 )
                 scl_results.append({"scl": str(target), "result": payload})
         except Exception as exc:  # noqa: BLE001
-            payload = {"ok": False, "error": str(exc)}
+            # 错误收集：str(exc) 会丢异常链根因，这里带出 InnerException 等价物
+            payload = _exception_result(exc)
             if action == "generate_from_source":
                 scl_results.append({"scl": str(target), "result": payload})
             else:

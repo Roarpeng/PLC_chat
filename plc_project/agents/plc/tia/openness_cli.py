@@ -117,17 +117,244 @@ def _looks_like_missing_windows_openness_host(text: str) -> bool:
     )
 
 
+# ---------------------------------------------------------------------------
+# Openness 错误详情提取（只增信息、不做截断）
+#
+# 溯源结论：真机 GenerateBlocksFromSource 失败时，C# Host 只回传
+# ``Unwrap(ex).Message`` —— 即 ``EngineeringTargetInvocationException`` 的
+# 包装语 "Error when calling method 'X' of type 'Y'"（常在类型名中途戛然而止，
+# 本层 Python 侧没有任何 [:N] 切片）；SCL 行号/语法诊断藏在
+# InnerException 全链与 EngineeringCompilationError 集合
+# （Path/LineNumber/Text）里，只有它们被塞进 payload 时才有得提取。
+# 本节把 CLI/worker payload 或 Python 异常中携带的这些结构完整取出、
+# 逐行追加到失败消息尾部；展示层截断（画布 300 字符 / 流水线 50 条上限）
+# 由消费方负责，提取层保证不丢信息。
+# ---------------------------------------------------------------------------
+
+# InnerException 链在 JSON payload 中可能的键名（C# camelCase 序列化）
+_INNER_EXCEPTION_KEYS = ("innerException", "inner", "innerExceptions", "innerMessages")
+# EngineeringCompilationError 集合可能的键名
+_COMPILE_ERROR_KEYS = (
+    "compilerErrors",
+    "compilationErrors",
+    "compileErrors",
+    "engineeringCompilationErrors",
+    "compilerMessages",
+)
+# 单条编译诊断的行号/文本/路径字段（各自按优先级取第一个非空）
+_LINE_KEYS = ("lineNumber", "line", "lineStart", "ln")
+_TEXT_KEYS = ("text", "description", "message", "msg")
+_PATH_KEYS = ("path", "file", "fileName", "source")
+
+
+def _iter_payload_dicts(node: Any, *, _depth: int = 0):
+    """深度优先遍历 payload 里所有 dict（深度封顶，防御畸形嵌套）。"""
+    if _depth > 10:
+        return
+    if isinstance(node, dict):
+        yield node
+        for value in node.values():
+            yield from _iter_payload_dicts(value, _depth=_depth + 1)
+    elif isinstance(node, (list, tuple)):
+        for value in node:
+            yield from _iter_payload_dicts(value, _depth=_depth + 1)
+
+
+def _normalize_line_number(raw: Any) -> int | None:
+    """'000014'/'14'/14 → 14；无法解析返回 None。"""
+    if raw is None:
+        return None
+    text = str(raw).strip()
+    if not text.isdigit():
+        return None
+    stripped = text.lstrip("0")
+    return int(stripped) if stripped else 0
+
+
+def format_compilation_error_entry(entry: Any, *, default_path: str = "") -> str:
+    """一条 EngineeringCompilationError → ``<文件> 行 N: 文本``。
+
+    行号缺失时只留文本；Path 缺失时用 ``default_path``（外部源 .scl 文件名）
+    兜底，保证每条诊断都能自证出自哪个源文件。未知 dict 结构整体 JSON
+    序列化兜底——宁可冗长不可丢信息。
+    """
+    if isinstance(entry, dict):
+        line = None
+        for key in _LINE_KEYS:
+            line = _normalize_line_number(entry.get(key))
+            if line is not None:
+                break
+        text = ""
+        for key in _TEXT_KEYS:
+            value = entry.get(key)
+            if isinstance(value, str) and value.strip():
+                text = value.strip()
+                break
+        if not text:
+            text = json.dumps(entry, ensure_ascii=False)
+        path = ""
+        for key in _PATH_KEYS:
+            value = entry.get(key)
+            if isinstance(value, str) and value.strip():
+                path = Path(value).name or value.strip()
+                break
+        if not path:
+            path = default_path
+        body = f"行 {line}: {text}" if line is not None else text
+        if path:
+            return f"{path} {body}"
+        return body
+    line_text = str(entry).strip() if entry is not None else ""
+    if not line_text:
+        return ""
+    return f"{default_path} {line_text}" if default_path else line_text
+
+
+def exception_chain_messages(exc: BaseException) -> list[str]:
+    """Python 异常链（等价 .NET InnerException）全链消息。
+
+    逐层取 ``__cause__``，无 cause 再看 ``__context__``；带环保护。
+    ``str(exc)`` 只有最外层，修复循环需要的根因在链上。
+    """
+    messages: list[str] = []
+    seen: set[int] = {id(exc)}
+    current: BaseException | None = exc.__cause__ or exc.__context__
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        message = str(current).strip()
+        if message:
+            messages.append(message)
+        current = current.__cause__ or current.__context__
+    return messages
+
+
+def openness_error_details(
+    payload_or_exc: Any,
+    *,
+    scl_path: str | Path | None = None,
+) -> list[str]:
+    """提取失败 payload / 异常中的附加错误详情行（不截断、不改动既有正文）。
+
+    覆盖三类信息：
+    (a) InnerException 全链消息 —— ``innerException`` 等键，逐层
+        ``内部异常[N]: …``（Python 异常输入走 ``__cause__`` 链）；
+    (b) 编译错误集合（EngineeringCompilationError：Path/LineNumber/Text）
+        —— 逐条 ``<文件> 行 N: 文本``，整组并入单行（消费方的前瞻正则
+        不接受条目间换行），兼容「行 N:」解析；
+    (c) 外部源 .scl 文件名与首条诊断关联 —— ``外部源: <name>`` 置于诊断前。
+    另附带 CLI ``_stderr`` 尾部（若有）。返回行只用于追加，展示层截断
+    留给消费方。
+    """
+    inner_lines: list[str] = []
+    compile_lines: list[str] = []
+
+    # 外部源文件名：优先显式 scl_path，其次 payload 里的 sclPath/sourceName
+    scl_name = Path(scl_path).name if scl_path else ""
+    if not scl_name and not isinstance(payload_or_exc, BaseException):
+        for node in _iter_payload_dicts(payload_or_exc):
+            for key in ("sclPath", "sourceName"):
+                value = node.get(key)
+                if isinstance(value, str) and value.strip():
+                    scl_name = Path(value).name
+                    break
+            if scl_name:
+                break
+
+    if isinstance(payload_or_exc, BaseException):
+        # (a) Python 异常链：内部异常[1]/[2]/… 逐层带出根因
+        for index, message in enumerate(exception_chain_messages(payload_or_exc), start=1):
+            inner_lines.append(f"内部异常[{index}]: {message}")
+    else:
+        # 递归遍历：inner_depth 记录当前节点位于 InnerException 链的第几层，
+        # 普通子结构重置为 0，避免链上 dict 被重复计数
+        def _walk(node: Any, inner_depth: int) -> None:
+            if inner_depth > 8 or node is None:
+                return
+            if isinstance(node, (str, int, float, bool)):
+                if inner_depth > 0:
+                    text = str(node).strip()
+                    if text:
+                        inner_lines.append(f"内部异常[{inner_depth}]: {text}")
+                return
+            if isinstance(node, (list, tuple)):
+                for item in node:
+                    _walk(item, 0)
+                return
+            if not isinstance(node, dict):
+                return
+            if inner_depth > 0:
+                message = ""
+                for key in _TEXT_KEYS:
+                    value = node.get(key)
+                    if isinstance(value, str) and value.strip():
+                        message = value.strip()
+                        break
+                if not message:
+                    message = json.dumps(node, ensure_ascii=False)
+                inner_lines.append(f"内部异常[{inner_depth}]: {message}")
+            for key, value in node.items():
+                if key in _INNER_EXCEPTION_KEYS and value:
+                    items = value if isinstance(value, (list, tuple)) else [value]
+                    for item in items:
+                        _walk(item, inner_depth + 1)
+                elif key in _COMPILE_ERROR_KEYS:
+                    entries = value
+                    if isinstance(entries, dict):
+                        entries = entries.get("errors") or entries.get("items") or []
+                    if isinstance(entries, (list, tuple)):
+                        for entry in entries:
+                            line = format_compilation_error_entry(
+                                entry, default_path=scl_name
+                            )
+                            if line:
+                                compile_lines.append(line)
+                    elif isinstance(entries, str) and entries.strip():
+                        compile_lines.append(entries.strip())
+                else:
+                    _walk(value, 0)
+
+        _walk(payload_or_exc, 0)
+
+    details: list[str] = []
+    if scl_name:
+        details.append(f"外部源: {scl_name}")
+    details.extend(inner_lines)
+    # CLI stderr 尾部（_payload_from_stdio 收集，正文不会重复包含）
+    if isinstance(payload_or_exc, dict):
+        stderr = str(payload_or_exc.get("_stderr") or "").strip()
+        if stderr:
+            details.append(f"CLI stderr: {stderr}")
+    # 编译诊断固定放在最后一行、整组并入单行：消费方
+    # （plc_engine.attribute_compiler_errors）用前瞻
+    # ``(?=行\s*0*\d+[:：]|$)`` 切分条目，``$`` 只匹配串尾——条目之间一旦
+    # 换行就会整条丢失，故按 TIA 原生风格用三个空格串联全部条目
+    if compile_lines:
+        details.append(
+            f"编译诊断（{len(compile_lines)} 条）: " + "   ".join(compile_lines)
+        )
+    return details
+
+
 def format_openness_failure(
     payload_or_exc: Any,
     *,
     project_path: str | Path | None = None,
     action: str = "export",
+    scl_path: str | Path | None = None,
 ) -> str:
-    """Human-readable Openness failure; license errors are primary (not 'no XML')."""
+    """Human-readable Openness failure; license errors are primary (not 'no XML').
+
+    兼容约束：消息前缀格式与历史版本完全一致（"TIA Openness …失败。
+    /工程: /详情: "），InnerException 链、编译诊断、外部源关联等新增
+    详情行只追加在尾部——消费方（compile_jobs 归因 / fix_loop /
+    refactor_pipeline）按 message 字符串解析，只允许信息量单调增加。
+    """
     text = _payload_text(payload_or_exc)
     if isinstance(payload_or_exc, BaseException):
         text = str(payload_or_exc) or text
     proj = str(project_path) if project_path else ""
+    extra_lines = openness_error_details(payload_or_exc, scl_path=scl_path)
+    extra = ("\n" + "\n".join(extra_lines)) if extra_lines else ""
     if is_license_error(text):
         return (
             "TIA Openness 已打开工程，但操作失败：缺少必要许可证（如 STEP 7 Basic）。\n"
@@ -135,6 +362,7 @@ def format_openness_failure(
             "STEP 7 / TIA 许可证后重试导出与写回。\n"
             + (f"工程: {proj}\n" if proj else "")
             + f"详情: {text}"
+            + extra
         )
     if _looks_like_missing_powershell(text) or (
         os.name != "nt" and _looks_like_missing_windows_openness_host(text)
@@ -154,6 +382,7 @@ def format_openness_failure(
             "4) 将新的 `.zap` / XML 上传到 ResearchOS\n\n"
             + (f"工程: {proj}\n" if proj else "")
             + f"详情: {text}"
+            + extra
         )
     action_cn = {
         "export": "导出 SimaticML XML",
@@ -170,6 +399,7 @@ def format_openness_failure(
         f"TIA Openness {action_cn}失败。\n"
         + (f"工程: {proj}\n" if proj else "")
         + f"详情: {text or payload_or_exc}"
+        + extra
     )
 
 
@@ -587,9 +817,15 @@ def generate_from_source_via_openness_cli(
 
     result = openness_cli(*args, timeout_s=timeout_s)
     if not result.get("ok"):
+        # 外部源生成失败：带上 scl_path，让提取层把 .scl 文件名与
+        # 首条编译诊断关联（payload 里的 InnerException 链 /
+        # EngineeringCompilationError 全部追加，不截断）
         raise RuntimeError(
             format_openness_failure(
-                result, project_path=project, action="generate_from_source"
+                result,
+                project_path=project,
+                action="generate_from_source",
+                scl_path=scl,
             )
         )
     return result

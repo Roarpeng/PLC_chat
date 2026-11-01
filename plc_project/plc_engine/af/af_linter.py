@@ -32,8 +32,15 @@ def lint_af_canvas(canvas: CanvasState) -> list[AfFinding]:
     findings: list[AfFinding] = []
 
     for key, block in canvas.blocks.items():
-        # Skip superseded legacy blocks that are kept for auditing/traceability
-        if block.af_role == "legacy_superseded" or (block.software_unit and block.software_unit.lower().startswith("legacy")):
+        # Skip superseded legacy blocks that are kept for auditing/traceability.
+        # af_pending_manual:无法自动映射、保留原样待人工确认的块(与导入侧
+        # af_import 的 PENDING_MARKER 同一约定)——它们未被 AF 化重构,
+        # 对它们跑 AF 架构规则只会产生与重构无关的噪音。
+        if (
+            block.af_role == "legacy_superseded"
+            or block.af_role == "af_pending_manual"
+            or (block.software_unit and block.software_unit.lower().startswith("legacy"))
+        ):
             continue
 
         # Check Rule AF-04: OB numbering for OB blocks

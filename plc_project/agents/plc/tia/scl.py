@@ -71,10 +71,88 @@ _BOX_OUT_PIN_SUFFIX = {"q": "Q", "qu": "QU", "qd": "QD", "cv": "CV", "et": "ET",
 #: Folded statements whose boolean inputs come straight from these pin names.
 _RLO_INPUT_PINS = ("in", "en", "s", "s1", "r", "r1", "cu", "cd", "ld", "clk", "pre")
 
+#: 已知系统函数的 SCL 赋值式调用签名（TIA SCL 语境治本，HR001 缺陷回流）。
+#: LAD 命名参数式 ``RD_SYS_T(EN:=.., RET_VAL:=.., OUT:=..)`` 不是合法 SCL——
+#: 系统函数是 FC 语义，只能以赋值式调用 ``#RetVal := RD_SYS_T(#t);``。
+#: 元组首元素是 RET_VAL 语义参数（提为赋值左值），其余按 SCL 位置形参顺序排列；
+#: 空余位（如 TIME_TCK 无参）表示该函数没有位置参数。
+_SYS_FUNC_SIGNATURES: dict[str, tuple[str, ...]] = {
+    "RD_SYS_T": ("RET_VAL", "OUT"),
+    "RD_LOC_T": ("RET_VAL", "OUT"),
+    "WR_SYS_T": ("RET_VAL", "IN"),
+    "WR_LOC_T": ("RET_VAL", "IN"),
+    # S7 经典系统函数同形态：SFC1 READ_CLK(RET_VAL, OUT)；TIME_TCK 仅返回值。
+    "READ_CLK": ("RET_VAL", "OUT"),
+    "TIME_TCK": ("RET_VAL",),
+}
+
 
 def _paren(expr: str) -> str:
     """Parenthesize a term when it would bind ambiguously in a join."""
     return f"({expr})" if (" OR " in expr or " AND " in expr) else expr
+
+
+# ---------------------------------------------------------------------------
+# 折叠语句形态归一化（HR001 缺陷回流：治本）
+# 折叠层 flgnet_fold 对 Jump/SYS_TIME 部件仍发 ``JMP`` / 命名参数式系统函数
+# 调用（该文件另线维护，不可在本层改动）；scl.translate() 是折叠语句的
+# 唯一消费出口，在这里统一把文本归一化为 TIA SCL 合法形态。
+# ---------------------------------------------------------------------------
+_JUMP_STMT_RES: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"^JMP\s+(\w+);$"), r"GOTO \1;"),
+    (re.compile(r"^IF\s+(.+?)\s+THEN\s+JMP\s+(\w+);\s*END_IF;$"), r"IF \1 THEN GOTO \2; END_IF;"),
+)
+
+_SYS_FUNC_CALL_RE = re.compile(
+    r"^\s*(" + "|".join(_SYS_FUNC_SIGNATURES) + r")\s*\((.*)\)\s*;\s*$",
+    re.IGNORECASE,
+)
+_SYS_FUNC_NAMED_ARG_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*(?:=>|:=)\s*(.+)$")
+
+
+def _normalize_goto_stmt(stmt: str) -> str:
+    """折叠层遗留的 ``JMP <label>;`` 语句 → ``GOTO <label>;``（TIA SCL 关键字）。"""
+    text = stmt.strip()
+    for pattern, repl in _JUMP_STMT_RES:
+        if pattern.match(text):
+            return pattern.sub(repl, text)
+    return stmt
+
+
+def _normalize_sys_func_stmt(stmt: str) -> str:
+    """折叠层遗留的命名参数式系统函数调用 → SCL 合法赋值式。
+
+    折叠层发 ``RD_SYS_T(EN := <en>, RET_VAL => <lhs>, OUT => <arg>);``；本层
+    按 ``_SYS_FUNC_SIGNATURES`` 归一化为 ``<lhs> := RD_SYS_T(<arg>);``，EN
+    门控恢复为 ``IF <en> THEN … END_IF;`` 包裹。非系统函数、位置参数形态或
+    缺 RET_VAL 落点（无法构造赋值式）时原样返回，绝不猜改。
+    """
+    m = _SYS_FUNC_CALL_RE.match(stmt)
+    if not m:
+        return stmt
+    fname = m.group(1).upper()
+    named: dict[str, str] = {}
+    for chunk in m.group(2).split(","):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        arg = _SYS_FUNC_NAMED_ARG_RE.match(chunk)
+        if not arg:
+            return stmt  # 位置参数/非命名形态：不属本规则，原样返回
+        named[arg.group(1).upper()] = arg.group(2).strip()
+    sig = _SYS_FUNC_SIGNATURES[fname]
+    en = named.pop("EN", "")
+    lhs = named.pop(sig[0], "")
+    if not lhs:
+        return stmt
+    if sig[1:]:
+        args = [named[k] for k in sig[1:] if k in named]
+    else:
+        args = []
+    body = f"{lhs} := {fname}({', '.join(args)});"
+    if en and en.upper() != "TRUE":
+        return f"IF {en} THEN {body} END_IF;"
+    return body
 
 
 def _pin_exact_variant(part: Part, pin: str) -> str:
@@ -563,36 +641,56 @@ class NetworkTranslator:
             self.statements.append(f"IF {en} THEN {dst_txt} := {rhs}; END_IF;")
 
     def _emit_sys_func(self, part: Part) -> None:
-        """Fixed-function boxes (RD_SYS_T / WR_LOC_T…) → SCL call."""
-        fname = part.name or "FUNC"
-        params: list[str] = []
-        en = self._en_condition(part)
-        if en is not None:
-            params.append(f"EN := {en}")
-        seen: set[str] = {"operand", "db", "instance", "Instance", "en", "EN", "eno", "ENO"}
+        """Fixed-function boxes (RD_SYS_T / WR_LOC_T…) → SCL 赋值式调用。
+
+        HR001 真机交付缺陷回流（治本）：此前发 LAD 命名参数式
+        ``RD_SYS_T(EN := .., RET_VAL := .., OUT := ..);`` —— TIA SCL 里系统
+        函数是 FC 语义，该形态非法，合法形态是赋值式
+        ``#RetVal := RD_SYS_T(#t);``。处理规则：
+
+        - RET_VAL 语义参数提为赋值左值；其余参数按 ``_SYS_FUNC_SIGNATURES``
+          的位置顺序传递；EN 门控退化为 ``IF <en> THEN … END_IF;`` 包裹；
+        - 连 RET_VAL 落点都没有时不发射已知非法调用，退化为结构化 TODO
+          （函数结果不接左值在 SCL 中同样非法，留待 LLM/人工补全）。
+        """
+        fname = (part.name or "FUNC").strip()
+        sig = _SYS_FUNC_SIGNATURES.get(fname.upper())
+        # 引脚名统一大写做大小写不敏感匹配（FlgNet 混用 RET_VAL / Ret_Val）。
+        skip = {"OPERAND", "DB", "INSTANCE", "EN", "ENO"}
+        pins: dict[str, str] = {}
         for pin, acc in part.accesses.items():
-            if pin in seen:
-                continue
-            params.append(f"{pin} := {acc.as_scl()}")
-            seen.add(pin)
+            key = (pin or "").upper()
+            if key and key not in skip:
+                pins.setdefault(key, acc.as_scl())
         for wire in self.network.wires:
             for ep in wire.endpoints:
                 if ep.kind != "namecon" or ep.uuid != part.uuid:
                     continue
-                pin = ep.pin or ""
-                if not pin or pin in seen:
+                key = (ep.pin or "").upper()
+                if not key or key in skip or key in pins:
                     continue
-                acc = None
                 for other in wire.endpoints:
                     if other.kind == "identcon":
                         acc = self.network.access_parts.get(other.uuid)
                         if acc is not None:
+                            pins.setdefault(key, acc.as_scl())
                             break
-                if acc is None:
-                    continue
-                params.append(f"{pin} := {acc.as_scl()}")
-                seen.add(pin)
-        self.statements.append(f"{fname}({', '.join(params)});")
+        ret_key = sig[0] if sig else "RET_VAL"
+        lhs = pins.pop(ret_key, "")
+        if not lhs:
+            self.statements.append(format_todo(part))
+            return
+        if sig:
+            args = [pins[k] for k in sig[1:] if k in pins]
+        else:
+            # 未登记签名的系统函数：RET_VAL 提左值，其余按引脚出现顺序位置传。
+            args = list(pins.values())
+        body = f"{lhs} := {fname}({', '.join(args)});"
+        en = self._en_condition(part)
+        if en is None:
+            self.statements.append(body)
+        else:
+            self.statements.append(f"IF {en} THEN {body} END_IF;")
 
     def _emit_time_conv(self, part: Part) -> None:
         src = self._pin_access(part, "in") or part.accesses.get("IN")
@@ -658,7 +756,11 @@ class NetworkTranslator:
         if name == "Return":
             self.statements.append("RETURN;" if cond == "TRUE" else f"IF {cond} THEN RETURN; END_IF;")
         else:
-            self.statements.append(f"JMP {label};" if cond == "TRUE" else f"IF {cond} THEN JMP {label}; END_IF;")
+            # TIA SCL 的跳转关键字是 GOTO（JMP 是 LAD/STL 语境），标签由
+            # Label 部件以 ``<label>:`` 形态发射（HR001 缺陷回流：治本）。
+            self.statements.append(
+                f"GOTO {label};" if cond == "TRUE" else f"IF {cond} THEN GOTO {label}; END_IF;"
+            )
 
     def _emit_for_kind(self, part: Part, name: str) -> None:
         """Own-emission branch per producer kind (fold statement unavailable)."""
@@ -791,7 +893,7 @@ class NetworkTranslator:
                 folded = positional.pop(0)
             if folded is not None:
                 consumed.add(id(folded))
-                rendered = stmt_to_scl(folded)
+                rendered = _normalize_sys_func_stmt(_normalize_goto_stmt(stmt_to_scl(folded)))
                 kinds = {"move", "call"} if expected == "math" else {expected}
                 if folded.kind not in kinds:
                     # Never silently drop: keep the folded logic, leave a trace.
@@ -811,7 +913,7 @@ class NetworkTranslator:
         for leftover in folded_statements:
             if id(leftover) in consumed:
                 continue
-            rendered = stmt_to_scl(leftover)
+            rendered = _normalize_sys_func_stmt(_normalize_goto_stmt(stmt_to_scl(leftover)))
             if "(* loop guard *)" in rendered:
                 target = leftover.target.as_scl() if leftover.target is not None else (leftover.target_scl or "?")
                 self.statements.append(

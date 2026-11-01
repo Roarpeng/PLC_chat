@@ -40,6 +40,9 @@ class IoMappingEntry:
     cm_field: str = ""        # e.g. "workPosition", "homePosition", "signal"
     em_name: str = ""         # Associated EM name
     source_block: str = ""    # Legacy block where it was referenced
+    # 兜底记账:该 IO 是被第4/5级兜底 CM(LBC_DigitalSignal /
+    # LBC_SimpleActuator)收编的 —— 只证明"没丢",不证明语义映射精确。
+    fallback: bool = False
 
 
 @dataclass
@@ -51,6 +54,11 @@ class InterlockEntry:
     source_block: str = ""
     associated_cms: list[str] = field(default_factory=list)
     description: str = ""
+
+
+#: 无法自动映射的块统一标注(与导入侧 af_import 的 PENDING_MARKER 同一约定,
+#: 两套体系互认,不再各说各话)
+_PENDING_ROLE = "af_pending_manual"
 
 
 @dataclass
@@ -102,6 +110,17 @@ class LegacyAnalysis:
     retained_ios_count: int
     io_retention_rate: float        # Percentage e.g. 100.0
     interlocks_detected: list[InterlockEntry]
+    # ---- 诚实降级记账(向后兼容默认值,旧调用方不受影响) ----
+    # 完全降级:一个 EM/步序块都没识别出来,不应生成任何 AF 块
+    degraded: bool = False
+    # 降级原因代码(机器可读):no_sequence_block / no_interlock_detected /
+    # unmapped_blocks_pending
+    degrade_reasons: list[str] = field(default_factory=list)
+    # 无法自动映射、保持原样待人工确认(af_pending_manual)的块名
+    pending_blocks: list[str] = field(default_factory=list)
+    # I/O 保留拆分:精确语义映射 vs 兜底收编(两者之和 = retained_ios_count)
+    retained_direct_count: int = 0
+    retained_fallback_count: int = 0
 
 
 class LegacyToAfMapper:
@@ -122,9 +141,17 @@ class LegacyToAfMapper:
     _AXIS_KEYWORDS = ["axis", "motor", "servo", "drive", "vfd", "inverter", "轴", "电机", "伺服", "变频"]
     _ANALOG_KEYWORDS = ["analog", "temp", "pressure", "level", "weight", "ai_", "模拟量", "温度", "压力", "液位"]
 
-    _MODE_CONTROL_KEYWORDS = ["main", "mode", "state", "master", "automanual", "fb1000", "总控", "主循环", "模式"]
-    _SEQUENCE_KEYWORDS = ["autostep", "sequence", "fb1060", "工位", "步序", "流程"]
+    # 通用工艺关键词(与具体工程编号/块名无关):
+    # 严禁出现 fb1000/fb1060/autostep 之类 HR001 专属字面量——通用词靠
+    # 语义命中,HR001 风格命名(AutoStep/FB1000_MainControl)恰含 step/main
+    # 而被覆盖,其他工程同样公平。
+    _MODE_CONTROL_KEYWORDS = ["main", "mode", "state", "master", "automanual", "总控", "主循环", "模式"]
+    _SEQUENCE_KEYWORDS = ["sequence", "step", "工位", "步序", "流程"]
     _SAFETY_KEYWORDS = ["safety", "estop", "emergency", "guard", "door", "curtain", "interlock", "急停", "安全", "互锁"]
+
+    # 步序块评分阈值:块名命中(+2)/CASE+step 模式(+3)/Step=N 比较(+2)/
+    # 调用出度(+1),至少 2 分才算 EM 候选——单一弱信号不再误判。
+    EM_MIN_SEQUENCE_SCORE = 2
 
     def __init__(self, canvas: CanvasState, target_unit_name: str = "U1_Refactored") -> None:
         self.canvas = canvas
@@ -137,8 +164,12 @@ class LegacyToAfMapper:
         # 1. Extract all physical I/Os
         io_entries = self._extract_all_ios()
 
-        # 2. Extract safety interlocks
+        # 2. Extract safety interlocks(一个都没扫到时诚实记降级原因,
+        #    不再凭空注入 GlobalEmergencyStop 占位联锁)
         interlocks = self._extract_interlocks()
+        degrade_reasons: list[str] = []
+        if not interlocks:
+            degrade_reasons.append("no_interlock_detected")
 
         # 3. Detect and classify Control Modules (CMs)
         cms = self._detect_control_modules(io_entries, interlocks)
@@ -151,12 +182,24 @@ class LegacyToAfMapper:
 
         # 6. Build legacy block to AF mapping
         block_mapping = self._build_block_mapping(unit)
+        pending_blocks = sorted(
+            name for name, target in block_mapping.items() if target.startswith(_PENDING_ROLE)
+        )
 
-        # 7. Calculate I/O retention
+        # 7. Calculate I/O retention(拆分精确映射 / 兜底收编)
         total_ios = len(io_entries)
-        retained_ios = len([m for m in io_entries if m.cm_name])
+        retained_entries = [m for m in io_entries if m.cm_name]
+        retained_direct = [m for m in retained_entries if not m.fallback]
+        retained_fallback = [m for m in retained_entries if m.fallback]
         # If total is 0, 100% by default; otherwise calculate percentage
-        retention_rate = 100.0 if total_ios == 0 else round((retained_ios / total_ios) * 100.0, 2)
+        retention_rate = 100.0 if total_ios == 0 else round((len(retained_entries) / total_ios) * 100.0, 2)
+
+        # 8. 诚实降级判定:一个 EM 都没识别出来 → 完全降级,不生成模板垃圾
+        degraded = not ems
+        if degraded:
+            degrade_reasons.append("no_sequence_block")
+        elif pending_blocks:
+            degrade_reasons.append("unmapped_blocks_pending")
 
         return LegacyAnalysis(
             project_name=self.canvas.project_name,
@@ -165,9 +208,14 @@ class LegacyToAfMapper:
             block_mapping=block_mapping,
             io_mappings=io_entries,
             total_ios_detected=total_ios,
-            retained_ios_count=retained_ios,
+            retained_ios_count=len(retained_entries),
             io_retention_rate=retention_rate,
             interlocks_detected=interlocks,
+            degraded=degraded,
+            degrade_reasons=degrade_reasons,
+            pending_blocks=pending_blocks,
+            retained_direct_count=len(retained_direct),
+            retained_fallback_count=len(retained_fallback),
         )
 
     def build_af_project(self, analysis: LegacyAnalysis) -> AfProject:
@@ -332,16 +380,10 @@ class LegacyToAfMapper:
                                 )
                             )
 
-        # If no interlocks found, provide standard safety interlock fallback
-        if not interlocks:
-            interlocks.append(
-                InterlockEntry(
-                    name="GlobalEmergencyStop",
-                    expression="NOT #EmergencyStop",
-                    description="Standard safety emergency stop interlock",
-                )
-            )
-
+        # 联锁诚实边界:一个都没扫到就返回空列表并让上层记
+        # degrade_reasons="no_interlock_detected"——绝不凭空注入
+        # GlobalEmergencyStop 占位联锁(占位联锁会让报告显得"有安全兜底",
+        # 实际是记账造假)。
         return interlocks
 
     def _detect_control_modules(
@@ -456,7 +498,8 @@ class LegacyToAfMapper:
                     )
                 )
 
-        # Step 4: Detect Digital Sensors (%I)
+        # Step 4: Detect Digital Sensors (%I) —— 兜底级:所有剩余 %I 都被
+        # LBC_DigitalSignal 收编(语义只到"这是个数字输入"),标记 fallback。
         for entry in io_entries:
             if entry.address in assigned_ios:
                 continue
@@ -468,6 +511,7 @@ class LegacyToAfMapper:
                 entry.cm_name = cm_name
                 entry.cm_type = "LBC_DigitalSignal"
                 entry.cm_field = "signal"
+                entry.fallback = True
                 assigned_ios.add(entry.address)
                 cms.append(
                     AfCm(
@@ -475,10 +519,12 @@ class LegacyToAfMapper:
                         cm_type="LBC_DigitalSignal",
                         description=f"Digital Sensor {cm_name}",
                         io_mapping={"signal": entry.address, "signalTag": entry.tag_name},
+                        fallback=True,
                     )
                 )
 
         # Step 5: Catch-all for remaining unassigned %Q points -> LBC_SimpleActuator
+        # 兜底级:剩余执行器输出只证明"没丢",同样标记 fallback。
         for entry in io_entries:
             if entry.address in assigned_ios:
                 continue
@@ -487,6 +533,7 @@ class LegacyToAfMapper:
                 entry.cm_name = cm_name
                 entry.cm_type = "LBC_SimpleActuator"
                 entry.cm_field = "command"
+                entry.fallback = True
                 assigned_ios.add(entry.address)
                 cms.append(
                     AfCm(
@@ -494,22 +541,51 @@ class LegacyToAfMapper:
                         cm_type="LBC_SimpleActuator",
                         description=f"Actuator {cm_name}",
                         io_mapping={"command": entry.address, "commandTag": entry.tag_name},
+                        fallback=True,
                     )
                 )
 
         return cms
+
+    def _score_sequence_block(self, b_name: str, code: str) -> int:
+        """通用步序块评分(无任何工程专属字面量)。
+
+        信号与权重:
+        - 块名命中通用步序词(sequence/step/工位/步序/流程)  +2
+        - CASE..OF 步进机且代码含 step 语义                   +3
+        - 步号比较模式 ``Step = N``(状态机分支判定)          +2
+        - 调用出度(主步序调用子步序/FB 的特征,>=1 处)        +1
+
+        评分达到 ``EM_MIN_SEQUENCE_SCORE`` 才算 EM 候选;无命中即无 EM,
+        由上层走诚实降级路径。
+        """
+        b_lower = b_name.lower()
+        score = 0
+        if any(k in b_lower for k in self._SEQUENCE_KEYWORDS):
+            score += 2
+        if re.search(r"\bCASE\b[\s\S]*?\bOF\b", code, re.IGNORECASE) and "step" in code.lower():
+            score += 3
+        if re.search(r"Step\s*=\s*\d+", code, re.IGNORECASE):
+            score += 2
+        if len(set(re.findall(r"#([A-Za-z_]\w*)\s*\(", code))) >= 1:
+            score += 1
+        return score
 
     def _detect_ems_and_sequences(
         self,
         cms: list[AfCm],
         interlocks: list[InterlockEntry],
     ) -> list[CandidateEm]:
-        """Detect sequence logic and cluster into candidate Equipment Modules."""
+        """Detect sequence logic and cluster into candidate Equipment Modules.
+
+        识别不到任何步序块时返回**空列表**——调用方据此走诚实降级
+        (全部块 pending),绝不编造 Station1 之类的模板假 EM。
+        """
         ems: list[CandidateEm] = []
         em_idx = 1
 
-        # Search for sequencer blocks (only executable FBs and FCs)
-        seq_blocks: list[tuple[str, CanvasBlock]] = []
+        # 步序块识别:通用评分制,只看块名语义 + 代码模式 + 调用出度
+        scored_blocks: list[tuple[int, str, CanvasBlock]] = []
         for b_name, block in self.canvas.blocks.items():
             if block.block_type.upper() not in {"FB", "FC"}:
                 continue
@@ -522,18 +598,15 @@ class LegacyToAfMapper:
             for net in block.networks:
                 code += f"\n{net.scl_text}"
 
-            has_seq_name = any(k in b_lower for k in self._SEQUENCE_KEYWORDS) or bool(re.search(r"\bstep\b", b_lower))
-            has_case = bool(re.search(r"\bCASE\b[\s\S]*?\bOF\b", code, re.IGNORECASE))
-            has_step_comp = bool(re.search(r"Step\s*=\s*\d+", code, re.IGNORECASE))
+            score = self._score_sequence_block(b_name, code)
+            if score >= self.EM_MIN_SEQUENCE_SCORE:
+                scored_blocks.append((score, b_name, block))
 
-            if has_seq_name or (has_case and "step" in code.lower()) or has_step_comp:
-                seq_blocks.append((b_name, block))
-
-        # Sort sequence blocks so that master 'AutoStep' comes first (EM 1)
-        seq_blocks.sort(key=lambda item: (
-            0 if "autostep" in item[0].lower() and "robot" not in item[0].lower() and "drill" not in item[0].lower() and "diamond" not in item[0].lower() else 1,
-            item[0],
-        ))
+        # 评分降序、同分按块名升序(纯确定性排序;不再对任何特定名字
+        # 特调顺序——HR001 的 AutoStep 之所以排 EM1,是因为它信号分最高
+        # 且名字靠前,而非硬编码特判)。
+        scored_blocks.sort(key=lambda item: (-item[0], item[1]))
+        seq_blocks = [(b_name, block) for _, b_name, block in scored_blocks]
 
         if seq_blocks:
             # If multiple EMs exist, partition CMs by reference, keeping common ones in EM1
@@ -552,21 +625,18 @@ class LegacyToAfMapper:
                         all_claimed_cms.add(cm.name)
                 em_cm_map[idx_e] = matched_cms
 
-            # Common / unclaimed CMs belong to EM1 (Master)
+            # Common / unclaimed CMs belong to EM1 (highest-scored master sequence)
             unclaimed = [cm for cm in cms if cm.name not in all_claimed_cms]
             if 1 in em_cm_map:
                 em_cm_map[1] = em_cm_map[1] + [cm for cm in unclaimed if cm not in em_cm_map[1]]
-                if not em_cm_map[1]:
-                    em_cm_map[1] = list(cms)
 
             for b_name, block in seq_blocks:
                 em_name = self._derive_em_name(b_name, em_idx)
+                # EM 未引用到 CM 属于合法形态(纯步序 EM),不再编造
+                # cyl/sensor 假 CM 模板
                 assigned_cms = em_cm_map.get(em_idx) if len(seq_blocks) > 1 else list(cms)
-                if not assigned_cms:
-                    assigned_cms = [
-                        AfCm(name=f"cyl{em_name}Feed", cm_type="LBC_TwoWayActuator", description=f"{em_name} feed cylinder"),
-                        AfCm(name=f"sensor{em_name}Ready", cm_type="LBC_DigitalSignal", description=f"{em_name} ready sensor"),
-                    ]
+                if assigned_cms is None:
+                    assigned_cms = []
                 steps = self._extract_steps_from_block(block, assigned_cms)
                 cand_em = CandidateEm(
                     em_idx=em_idx,
@@ -578,41 +648,6 @@ class LegacyToAfMapper:
                 )
                 ems.append(cand_em)
                 em_idx += 1
-        else:
-            # Fallback: create default process EM with standard steps
-            default_steps = [
-                ExtractedStep(
-                    step_id=10,
-                    name="WAIT_FOR_START",
-                    actions=["// Ready for cycle start"],
-                    transition_condition="TRUE",
-                    next_step_id=20,
-                ),
-                ExtractedStep(
-                    step_id=20,
-                    name="EXECUTE_CYCLE",
-                    actions=[f"#controlNodes.{cm.name}.commands.workPosition := TRUE;" for cm in cms if cm.cm_type == "LBC_TwoWayActuator"] or ["// Execute process"],
-                    transition_condition=f"#controlNodes.{cms[0].name}.status.inWorkPosition" if any(cm.cm_type == "LBC_TwoWayActuator" for cm in cms) else "TRUE",
-                    next_step_id=30,
-                ),
-                ExtractedStep(
-                    step_id=30,
-                    name="RETURN_HOME",
-                    actions=[f"#controlNodes.{cm.name}.commands.homePosition := TRUE;" for cm in cms if cm.cm_type == "LBC_TwoWayActuator"] or ["// Return home"],
-                    transition_condition=f"#controlNodes.{cms[0].name}.status.inHomePosition" if any(cm.cm_type == "LBC_TwoWayActuator" for cm in cms) else "TRUE",
-                    next_step_id=1,
-                ),
-            ]
-            ems.append(
-                CandidateEm(
-                    em_idx=1,
-                    name="Station1",
-                    source_blocks=[],
-                    steps=default_steps,
-                    control_modules=list(cms),
-                    interlocks=interlocks,
-                )
-            )
 
         return ems
 
@@ -800,24 +835,27 @@ class LegacyToAfMapper:
         )
 
     def _build_block_mapping(self, unit: CandidateUnit) -> dict[str, str]:
-        """Construct the legacy block to AF target role mapping table."""
+        """Construct the legacy block to AF target role mapping table.
+
+        无法映射的块值为 ``{_PENDING_ROLE} (…)`` 开头——上层据此把它们
+        标为 af_pending_manual 保留原样,而不是笼统 superseded。
+        """
+        first_em = unit.ems[0].name if unit.ems else "Process"
         mapping: dict[str, str] = {}
         for b_name in self.canvas.blocks:
             b_lower = b_name.lower()
             if any(k in b_lower for k in self._MODE_CONTROL_KEYWORDS):
                 mapping[b_name] = f"{unit.name}::CallUnit (Unit Mode & State Manager)"
             elif any(k in b_lower for k in self._SEQUENCE_KEYWORDS):
-                em_name = unit.ems[0].name if unit.ems else "Process"
-                mapping[b_name] = f"U1Em1_{em_name}::Sequence + StepToString (EM State Machine)"
+                mapping[b_name] = f"U1Em1_{first_em}::Sequence + StepToString (EM State Machine)"
             elif any(k in b_lower for k in self._SAFETY_KEYWORDS):
                 mapping[b_name] = f"U1Em0_General (Safety Boundary & Interlocks)"
             elif any(k in b_lower for k in self._CYL_KEYWORDS + self._AXIS_KEYWORDS):
-                em_name = unit.ems[0].name if unit.ems else "Process"
-                mapping[b_name] = f"U1Em1_{em_name}::CallEquipment (Control Modules Hub)"
+                mapping[b_name] = f"U1Em1_{first_em}::CallEquipment (Control Modules Hub)"
             elif b_name.startswith("DB"):
-                mapping[b_name] = f"{unit.name}::EmNodes / U1Em1_Station1::ControlNodes"
+                mapping[b_name] = f"{unit.name}::EmNodes / U1Em1_{first_em}::ControlNodes"
             else:
-                mapping[b_name] = f"Legacy_Superseded (Preserved in backup namespace)"
+                mapping[b_name] = f"{_PENDING_ROLE} (无法自动映射,保留原样待人工确认)"
         return mapping
 
     @staticmethod

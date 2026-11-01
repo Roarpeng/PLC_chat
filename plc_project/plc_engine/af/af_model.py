@@ -36,6 +36,10 @@ class AfCm:
     io_mapping: dict[str, str] = field(default_factory=dict)
     # Default parameters (e.g. monitoring times, setpoints)
     parameters: dict[str, Any] = field(default_factory=dict)
+    # 兜底记账:第4/5级通用收编(数字信号兜底/剩余执行器兜底)生成的 CM
+    # 标记为 True——其 I/O "保留"只是记账不是精确语义映射,报告侧据此拆分
+    # retained_direct / retained_fallback,避免 100% 恒真的假验证。
+    fallback: bool = False
 
 
 @dataclass

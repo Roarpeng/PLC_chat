@@ -2761,3 +2761,137 @@ async def delete_canvas_conversation(
             },
         )
     return ApiResponse(ok=True, data={"removed": conversation_id}, request_id=request_id)
+
+
+# —— 作业式重构流水线（refactor → auto_fix → compile(临时副本) → fix_loop → package）——
+
+
+@router.post("/canvas/refactor-pipeline", response_model=ApiResponse[dict[str, Any]])
+async def create_refactor_pipeline_endpoint(
+    body: dict[str, Any],
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """启动重构流水线作业（立即返回 job_id，后台分阶段执行可轮询）。
+
+    body: ``{canvas: dict, project_name?: str, do_compile?: bool = true,
+    auto_fix?: bool = true}``。target 命名沿用 ``U1_{project_name}`` 规则；
+    编译验证走临时副本（非破坏），无 Openness 环境时该阶段诚实 skipped。
+    """
+    _ = principal
+    from gateway.app.services.plc import refactor_pipeline
+
+    canvas_raw = body.get("canvas")
+    if not isinstance(canvas_raw, dict) or not canvas_raw:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "CANVAS_REQUIRED", "message": "body.canvas is required"},
+        )
+    # evidence_dir(可选):Openness XML 导出目录,启用证据驱动的数组/接口修复。
+    # 与 /canvas/import 同一套白名单沙箱;缺省时流水线自行探测工作区 baseline。
+    evidence_dir = ""
+    raw_evidence = str(body.get("evidence_dir") or "").strip()
+    if raw_evidence:
+        try:
+            evidence_dir = str(plc.resolve_allowed_path(raw_evidence))
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "PLC_PATH_NOT_FOUND", "message": str(exc)},
+            ) from exc
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"code": "PLC_PATH_DENIED", "message": str(exc)},
+            ) from exc
+    job = refactor_pipeline.create_refactor_pipeline_job(
+        canvas_raw,
+        project_name=str(body.get("project_name") or ""),
+        do_compile=bool(body.get("do_compile", True)),
+        auto_fix=bool(body.get("auto_fix", True)),
+        evidence_dir=evidence_dir,
+    )
+    logger.info(
+        "plc refactor pipeline queued id=%s project=%s do_compile=%s auto_fix=%s evidence=%s request_id=%s",
+        job["id"],
+        str(body.get("project_name") or ""),
+        bool(body.get("do_compile", True)),
+        bool(body.get("auto_fix", True)),
+        evidence_dir or "(probe)",
+        request_id,
+    )
+    return ApiResponse(ok=True, data={"job_id": job["id"]}, request_id=request_id)
+
+
+@router.get("/canvas/refactor-pipeline/{job_id}", response_model=ApiResponse[dict[str, Any]])
+async def get_refactor_pipeline_endpoint(
+    job_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """轮询流水线作业：``{id, status, stage, stages: [{name, status, detail?}], result?}``。
+
+    阶段固定五段 ``refactor/auto_fix/compile/fix_loop/package``；status ∈
+    running|ok|error|cancelled；终态 ok 时 result 携带 canvas/report/compile/
+    package/warnings。
+    """
+    _ = principal
+    from gateway.app.services.plc import refactor_pipeline
+
+    view = refactor_pipeline.refactor_job_view(job_id)
+    if view is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"code": "JOB_NOT_FOUND"})
+    return ApiResponse(ok=True, data=view, request_id=request_id)
+
+
+@router.get("/canvas/refactor-pipeline/{job_id}/package")
+async def download_refactor_pipeline_package_endpoint(
+    job_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> Response:
+    """下载流水线交付包（zip 流，FileResponse 伺服作业记录的临时目录产物）。
+
+    作业不存在 → 404 JOB_NOT_FOUND；作业未完成/未产出包 → 404 PACKAGE_NOT_READY。
+    """
+    _ = principal
+    from fastapi.responses import FileResponse
+
+    from gateway.app.services.plc import refactor_pipeline
+
+    job = refactor_pipeline.get_refactor_pipeline_job(job_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"code": "JOB_NOT_FOUND"})
+    zip_path = str(job.get("package_path") or "")
+    if not zip_path or not Path(zip_path).is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PACKAGE_NOT_READY",
+                "message": "交付包尚未生成（作业未完成或未产出交付包）",
+            },
+        )
+    name = Path(zip_path).name
+    logger.info("plc refactor pipeline package download id=%s file=%s request_id=%s", job_id, name, request_id)
+    return FileResponse(
+        path=zip_path,
+        filename=name,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+
+@router.post("/canvas/refactor-pipeline/{job_id}/cancel", response_model=ApiResponse[dict[str, Any]])
+async def cancel_refactor_pipeline_endpoint(
+    job_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> ApiResponse[dict[str, Any]]:
+    """请求取消流水线（阶段边界生效；对齐 compile-jobs 的取消语义）。"""
+    _ = principal
+    from gateway.app.services.plc import refactor_pipeline
+
+    job = refactor_pipeline.cancel_refactor_pipeline_job(job_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"code": "JOB_NOT_FOUND"})
+    return ApiResponse(ok=True, data={"id": job_id, "status": job["status"]}, request_id=request_id)

@@ -339,7 +339,9 @@ def settle_refactor_change(
 # ---------------------------------------------------------------------------
 
 
-def _stage_refactor(canvas: CanvasState, target: str) -> tuple[CanvasState, dict[str, Any], list[str]]:
+def _stage_refactor(
+    canvas: CanvasState, target: str, evidence_dir: str = ""
+) -> tuple[CanvasState, dict[str, Any], list[str]]:
     """调重构引擎；``self_contained`` kwarg 未支持时降级并记 warning。
 
     返回 (新画布, 引擎报告, warnings)；报告原样透传（pending_blocks/degraded
@@ -349,7 +351,9 @@ def _stage_refactor(canvas: CanvasState, target: str) -> tuple[CanvasState, dict
 
     warnings: list[str] = []
     try:
-        new_canvas, report = refactor_canvas_to_af(canvas, target, self_contained=True)
+        new_canvas, report = refactor_canvas_to_af(
+            canvas, target, self_contained=True, evidence_dir=evidence_dir or None
+        )
     except TypeError:
         # 引擎智能体正在加 self_contained kwarg；未支持时降级为无 kwarg 调用。
         # （若降级调用本身仍 TypeError，说明引擎真坏了，异常照常向上抛。）
@@ -652,30 +656,28 @@ def _extract_compile_errors(
 
 
 def _compile_write_scope(canvas: CanvasState) -> tuple[CanvasState, list[str]]:
-    """编译写集裁剪：已取代旧块与含翻译期 TODO 的 pending 块视为 synced。
+    """编译写集裁剪：只写 AF 家族（重构新增块），旧块一律保留 TIA 原件。
 
-    - 取代块（af_role=legacy_superseded）：原内容已在源工程里（重构只标注
-      不删除），不该再写进编译副本；且被 autofix 触碰过的取代块会变 draft
-      并可能残留翻译期 TODO，混入写集会让预检 fail-closed 拦停整批
-      （实测 FB720_KuKa_MainCtrl 案例）。
-    - pending 块（af_pending_manual）：R5 接口重建会使其变 draft；body 含
-      翻译期 TODO/空网络占位的（scl_precheck 同款口径）移出写集——TODO 是
-      诚实占位（未翻译的 LAD 元素），删掉或硬送编译器都不诚实，保持
-      synced 原样交付、由 warnings 报告（实测 FB1142/FC2100 系案例）。
-    其余 pending 块保留 draft——它们未被取代，autofix 的修复要随包交付。
+    交付语义 = 原始工程 + AF 新块覆盖层。旧块(legacy_superseded /
+    af_pending_manual——含 R10 原生还原块)在 TIA 工程里本就是**一致可编译的
+    原件**；用翻译体覆盖它们只会引入语义保真债(真机 V1-V26 的 1007+→7 错
+    全部来自这类覆盖),而"pending 保留原样待人工确认"的诚实模型本就要求
+    原件不动。故:凡 af_role 非 AF 家族(Sequence/CallEquipment/CallUnit/
+    ControlNodes/EmNodes/OB/StepToString/CallEquipment_DB/CallUnit_DB 及
+    键含 "::" 的 AF 生成块)的 draft 块一律视为 synced——不写、不覆盖。
     """
+    af_roles = {
+        "Sequence", "CallEquipment", "CallUnit", "ControlNodes", "EmNodes",
+        "OB", "StepToString", "CallEquipment_DB", "CallUnit_DB",
+    }
     scoped = deepcopy(canvas)
     excluded: list[str] = []
     for name, block in list(scoped.blocks.items()):
-        role = getattr(block, "af_role", "")
         if getattr(block, "status", "") != "draft":
             continue
-        text = "\n".join(
-            [str(block.scl_body or "")]
-            + [str(getattr(n, "scl_text", "") or "") for n in (block.networks or [])]
-        ).upper()
-        has_placeholder = "TODO" in text or "(* EMPTY NETWORK *)" in text
-        if role == "legacy_superseded" or (role == "af_pending_manual" and has_placeholder):
+        role = getattr(block, "af_role", "")
+        is_af = role in af_roles or ("::" in name and role not in {"legacy_superseded", "af_pending_manual"})
+        if not is_af:
             block.status = "synced"
             excluded.append(name)
     return scoped, excluded
@@ -780,7 +782,7 @@ def _temp_compile(
         _inconsistent = [
             str(n)
             for n in (_inner.get("inconsistentBlocks") or [])
-            if isinstance(n, str) and n.strip()
+            if isinstance(n, str) and n.strip() and "compiling finished" not in str(n).lower()
         ]
         return {
             "ran": True,
@@ -970,7 +972,7 @@ def _run_job(
         if _cancel_guard(job_id, list(STAGES)):
             return
         _set_stage(job_id, "refactor", "running", f"执行 AF V1.2 重构（target={target}）…")
-        canvas, report, stage_warnings = _stage_refactor(canvas, target)
+        canvas, report, stage_warnings = _stage_refactor(canvas, target, evidence_dir=evidence_dir)
         warnings.extend(stage_warnings)
         # 引擎完全降级（零 AF 块）：中间三段照契约跳过，降级证据转 warnings，
         # 流水线整体仍 ok（由 warnings 表达降级），package 段收据如实呈现。

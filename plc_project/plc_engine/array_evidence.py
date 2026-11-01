@@ -40,6 +40,7 @@ import glob
 import html
 import os
 import re
+from pathlib import Path
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
@@ -492,3 +493,30 @@ def load_native_scl_bodies(
     if cache is not None:
         cache[key] = bodies
     return bodies
+
+
+def load_tag_types(export_dir: str) -> dict[str, str]:
+    """导出目录 tags/*.xml → ``{tag 名: DataTypeName}``（权威类型表）。
+
+    画布导入推导的 tag 类型存在误差(真机 U1Em1:ITempErr 画布记 Int、
+    工程实为 Bool)——PLC_IO.xml 是工程导出的唯一权威。
+    """
+    types: dict[str, str] = {}
+    tags_dir = Path(export_dir)
+    for cand in (tags_dir / "plc", tags_dir):
+        for sub in (cand, *cand.glob("*/tags")):
+            if sub.is_dir():
+                for fp in sorted(sub.glob("*.xml")):
+                    try:
+                        text = fp.read_text(encoding="utf-8", errors="replace")
+                    except OSError:
+                        continue
+                    for m in re.finditer(
+                        r"<DataTypeName>([^<]+)</DataTypeName>.*?"
+                        r"<LogicalAddress>[^<]+</LogicalAddress>\s*<Name>([^<]+)</Name>",
+                        text, re.S,
+                    ):
+                        types[m.group(2)] = m.group(1)
+                if types:
+                    return types
+    return types

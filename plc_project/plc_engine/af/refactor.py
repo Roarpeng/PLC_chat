@@ -2,10 +2,14 @@
 
 Orchestrates reverse engineering and refactoring of non-standard TIA projects
 into official Siemens Automation Framework (AF) V1.2 architecture:
-- Generates complete AF V1.2 Software Unit blocks (Units, EMs, CMs, OBs, DBs)
-- Marks original legacy blocks as superseded
-- Produces architecture comparison reports with 100% I/O retention verification
-- Executes AF static architecture linter to guarantee compliance.
+- Generates complete AF V1.2 Software Unit blocks (Units, EMs, CMs, OBs, DBs);
+  library 模式实例化官方库类型,self_contained 自举模式生成零库依赖纯 SCL
+- Marks migrated legacy blocks as superseded;unmappable blocks are honestly
+  flagged af_pending_manual (与导入侧 af_pending_manual 体系互认)
+- Produces architecture comparison reports with physical I/O retention
+  accounting (direct / fallback 拆分,不再恒报 100% 的记账假象)
+- Executes AF static architecture linter to guarantee compliance
+- 识别不出任何 EM/步序块时完全降级:不生成 AF 块,全部块 pending 待人工
 """
 
 from __future__ import annotations
@@ -22,48 +26,98 @@ from plc_engine.canvas_model import CanvasBlock, CanvasState
 
 def refactor_canvas_to_af(
     canvas: CanvasState,
-    target_unit_name: str = "U1_Refactored",
+    target_unit_name: str | None = None,
+    *,
+    self_contained: bool = False,
+    evidence_dir: str | None = None,
 ) -> tuple[CanvasState, dict[str, Any]]:
     """Refactor a legacy CanvasState into official AF V1.2 architecture.
 
     Args:
         canvas: The original flat legacy CanvasState.
         target_unit_name: Name of the target AF Unit (e.g. "U1_Assembly").
+            ``None`` 时沿用历史默认 ``U1_Refactored``(向后兼容)。
+        self_contained: 自举生成模式——产物不引用任何官方库类型
+            (LUC_/LAF_/LBC_/LPMLV2022_),可零依赖编译;块注释里诚实标注
+            "自举简化实现,非官方库等价认证"。默认 ``False`` 走官方库模板,
+            行为与历史版本一致(现有调用方不受影响)。
 
     Returns:
         tuple[CanvasState, dict[str, Any]]:
             - new_canvas: Updated CanvasState containing AF V1.2 blocks alongside
-              superseded legacy blocks.
+              superseded legacy blocks(无法映射的块标 af_pending_manual 保留原样)。
             - report: Comprehensive architecture transformation report detailing
-              block mappings, EM/CM hierarchy, 100% physical I/O retention,
-              safety interlocks, and AF linter findings.
+              block mappings, EM/CM hierarchy, physical I/O retention(拆分
+              direct/fallback), safety interlocks, AF linter findings, and
+              honest degradation flags (``degraded``/``degrade_reasons``/
+              ``pending_blocks``). 一个 EM/步序块都识别不出时**完全降级**:
+              不生成任何 AF 块,旧块全部标 af_pending_manual。
+
+    Report contract(供流水线对齐):
+        - ``generator_mode``: ``"library"`` | ``"self_contained"``
+        - ``degraded``: True 表示完全降级(无 EM,未生成任何 AF 块)
+        - ``degrade_reasons``: 机器可读原因码列表,取值
+          ``no_sequence_block`` / ``no_interlock_detected`` / ``unmapped_blocks_pending``
+        - ``pending_blocks``: 保持原样待人工确认(af_pending_manual)的块名列表
+        - ``io_retention``: 兼容保留 ``total_ios/retained_ios/percentage``,
+          新增 ``retained_direct``(精确语义映射)与 ``retained_fallback``
+          (第4/5级兜底 CM 收编,只证明"没丢");``details[]`` 每项新增 ``fallback``。
+          完全降级时 retained 三项均为 0、percentage 为 0.0(未迁移,不记账)。
     """
+    effective_target = (target_unit_name or "").strip() or "U1_Refactored"
+    generator_mode = "self_contained" if self_contained else "library"
+
     # 1. Execute Legacy-to-AF Mapper analysis
-    mapper = LegacyToAfMapper(canvas, target_unit_name=target_unit_name)
+    mapper = LegacyToAfMapper(canvas, target_unit_name=effective_target)
     analysis = mapper.analyze()
 
-    # 2. Build AF Project Domain Model
+    # 2. 完全降级:一个 EM/步序块都没识别出来——诚实报 pending,不生成
+    #    模板垃圾(不再编造假 Station1 / 硬编码三步序列)。
+    if analysis.degraded:
+        return _build_degraded_refactor(canvas, analysis, effective_target, generator_mode)
+
+    # 3. Build AF Project Domain Model
     af_project = mapper.build_af_project(analysis)
 
-    # 3. Generate all AF V1.2 CanvasBlocks
-    af_blocks = generate_af_project_blocks(af_project)
+    # 4. Generate all AF V1.2 CanvasBlocks(library 或 self_contained 模板)
+    # 权威 tag 类型(PLC_IO.xml)优先——画布导入推导有误差(真机 ITempErr 案例)
+    tag_types = {
+        str(t.name): str(t.data_type or "")
+        for t in (getattr(canvas, "tags", None) or {}).values()
+    }
+    try:
+        from plc_engine.array_evidence import load_tag_types
 
-    # 4. Enrich CallEquipment blocks with hardware I/O and interlock bindings
+        if evidence_dir:
+            tag_types.update(load_tag_types(evidence_dir))
+    except Exception:  # noqa: BLE001 — 权威表缺失退画布推导
+        pass
+    af_blocks = generate_af_project_blocks(
+        af_project, self_contained=self_contained, tag_types=tag_types
+    )
+
+    # 5. Enrich CallEquipment blocks with hardware I/O and interlock bindings
     _enrich_callequipment_blocks(af_blocks, analysis)
 
-    # 5. Clone canvas and mark legacy blocks as superseded
+    # 6. Clone canvas;可迁移块标 superseded,无法映射块标 af_pending_manual
+    #    保留原样(与导入侧 af_import 的诚实标注体系互认)
     new_canvas = copy.deepcopy(canvas)
+    pending_set = set(analysis.pending_blocks)
 
-    for block in new_canvas.blocks.values():
-        block.comment = f"[AF-REFACTORED: Superseded by {target_unit_name}] " + (block.comment or "")
-        block.af_role = "legacy_superseded"
-        block.software_unit = "Legacy_Superseded"
+    for key, block in new_canvas.blocks.items():
+        if key in pending_set:
+            block.af_role = "af_pending_manual"
+            block.comment = "[AF-PENDING: 无法自动映射,保留原样待人工确认] " + (block.comment or "")
+        else:
+            block.comment = f"[AF-REFACTORED: Superseded by {effective_target}] " + (block.comment or "")
+            block.af_role = "legacy_superseded"
+            block.software_unit = "Legacy_Superseded"
 
-    # 6. Add all generated AF blocks into the new canvas
+    # 7. Add all generated AF blocks into the new canvas
     for key, block in af_blocks.items():
         new_canvas.blocks[key] = block
 
-    # 7. Update software unit manifests
+    # 8. Update software unit manifests
     for unit in af_project.units:
         su_name = unit.unit_name
         new_canvas.software_unit_manifests.setdefault(su_name, {"type": "Unit", "unit_idx": unit.unit_idx})
@@ -72,10 +126,10 @@ def refactor_canvas_to_af(
             em_su = f"U{unit.unit_idx}Em{em.em_idx}_{em.name}"
             new_canvas.software_unit_manifests.setdefault(em_su, {"type": "EM", "em_idx": em.em_idx})
 
-    # 8. Run AF static linter on refactored canvas
+    # 9. Run AF static linter on refactored canvas
     findings = lint_af_canvas(new_canvas)
 
-    # 9. Build architecture comparison report
+    # 10. Build architecture comparison report
     ems_summary = []
     if analysis.units:
         for em in analysis.units[0].ems:
@@ -92,6 +146,7 @@ def refactor_canvas_to_af(
                             "description": cm.description,
                             "io_mapping": cm.io_mapping,
                             "parameters": cm.parameters,
+                            "fallback": cm.fallback,
                         }
                         for cm in em.control_modules
                     ],
@@ -111,7 +166,11 @@ def refactor_canvas_to_af(
     report: dict[str, Any] = {
         "status": "success",
         "project_name": canvas.project_name,
-        "target_unit_name": target_unit_name,
+        "target_unit_name": effective_target,
+        "generator_mode": generator_mode,
+        "degraded": False,
+        "degrade_reasons": list(analysis.degrade_reasons),
+        "pending_blocks": sorted(pending_set),
         "legacy_blocks_count": len(canvas.blocks),
         "af_blocks_count": len(af_blocks),
         "block_mapping": analysis.block_mapping,
@@ -119,6 +178,8 @@ def refactor_canvas_to_af(
         "io_retention": {
             "total_ios": analysis.total_ios_detected,
             "retained_ios": analysis.retained_ios_count,
+            "retained_direct": analysis.retained_direct_count,
+            "retained_fallback": analysis.retained_fallback_count,
             "percentage": analysis.io_retention_rate,
             "details": [
                 {
@@ -129,6 +190,7 @@ def refactor_canvas_to_af(
                     "cm_type": m.cm_type,
                     "cm_field": m.cm_field,
                     "em_name": m.em_name,
+                    "fallback": m.fallback,
                 }
                 for m in analysis.io_mappings
             ],
@@ -153,6 +215,70 @@ def refactor_canvas_to_af(
             for f in findings
         ],
         "af_blocks_created": sorted(list(af_blocks.keys())),
+    }
+
+    return new_canvas, report
+
+
+def _build_degraded_refactor(
+    canvas: CanvasState,
+    analysis: Any,
+    target_unit_name: str,
+    generator_mode: str,
+) -> tuple[CanvasState, dict[str, Any]]:
+    """完全降级路径:识别不出任何 EM/步序块时的诚实返回。
+
+    - 不生成任何 AF 块(绝不产出 Station1 式模板垃圾);
+    - 旧块**保持原样**,仅标注 af_role="af_pending_manual" 待人工确认;
+    - 报告 degraded=True + degrade_reasons + pending_blocks=全部块名;
+      io_retention 三项 retained 均为 0(未迁移就不做 100% 假记账)。
+    """
+    new_canvas = copy.deepcopy(canvas)
+    for block in new_canvas.blocks.values():
+        block.af_role = "af_pending_manual"
+
+    findings = lint_af_canvas(new_canvas)
+
+    report: dict[str, Any] = {
+        "status": "degraded",
+        "project_name": canvas.project_name,
+        "target_unit_name": target_unit_name,
+        "generator_mode": generator_mode,
+        "degraded": True,
+        "degrade_reasons": list(analysis.degrade_reasons),
+        "pending_blocks": sorted(canvas.blocks.keys()),
+        "legacy_blocks_count": len(canvas.blocks),
+        "af_blocks_count": 0,
+        "block_mapping": analysis.block_mapping,
+        "ems": [],
+        "io_retention": {
+            "total_ios": analysis.total_ios_detected,
+            "retained_ios": 0,
+            "retained_direct": 0,
+            "retained_fallback": 0,
+            "percentage": 0.0,
+            "details": [],
+        },
+        "interlocks": [
+            {
+                "name": ic.name,
+                "expression": ic.expression,
+                "source_block": ic.source_block,
+                "associated_cms": ic.associated_cms,
+                "description": ic.description,
+            }
+            for ic in analysis.interlocks_detected
+        ],
+        "lint_findings": [
+            {
+                "rule_id": f.rule_id,
+                "severity": f.severity,
+                "block_name": f.block_name,
+                "message": f.message,
+            }
+            for f in findings
+        ],
+        "af_blocks_created": [],
     }
 
     return new_canvas, report
