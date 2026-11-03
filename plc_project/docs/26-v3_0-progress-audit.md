@@ -99,3 +99,12 @@
 2. `feat`：前端"产品当班"设计系统重构（冷灰+钴蓝、草稿线稿首屏、按钮动效、lint/inspect 0 FAIL、219 测试绿）
 3. `chore`：HR001 交付包与攻坚脚本入库 + 根目录 .gitignore
 4. `docs`：本审计
+5. `fix(security)`（2026-11-03 后续）：Mimosa 深扫 21 项 finding 三泳道修复（21→12，剩余逐项豁免）、
+   agents 层 XML 守卫接线 9 处、`test_pcec_gateway` 账本隔离缺陷修复——详见 `docs/27-security-remediation.md`
+
+## 7. 架构谱系补充（2026-11-03）
+
+公开资料核实：博世 OpCon 为真实框架（Bosch Rexroth，基于 **CoDeSys 2.2**，现更名 Nexeed），
+与 TIA/S7/Openness 回写链不同生态；"站点 FB 六槽位"无公开规范。本仓库 AF 线（西门子
+SIOS 109817223，V1.2 库模板）为唯一与本工具链兼容的架构依赖；六槽位精华（槽位约束的
+LLM 编辑）已由 `slot_context_slicer.py` 无品牌吸收。§3 谱系勘误据此成立。
