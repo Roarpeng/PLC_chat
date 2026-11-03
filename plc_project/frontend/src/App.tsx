@@ -100,13 +100,24 @@ import {
   pipelineProgressText,
   pipelineResultMessage,
   pipelineStageViews,
-  type PipelineStageView,
   type RefactorIntent,
   type RefactorPipelineJob,
   type RefactorPipelineRequestBody,
   type RefactorPipelineReport,
   type RefactorPipelineStage,
 } from "./state/refactorPipeline";
+import {
+  activeTasks,
+  finishTask,
+  patchTask,
+  sweepFinished,
+  tasksBySession,
+  upsertTask,
+  LONG_TASK_LABELS,
+  type LongTask,
+  type LongTaskStatus,
+} from "./state/longTasks";
+import { LongTaskChips } from "./shell/LongTaskChips";
 
 /** 一条解析降级告警（coverage.py `warnings[]` 的元素，或 review 截断提示） */
 type DegradationWarning = {
@@ -279,12 +290,31 @@ const App: React.FC = () => {
   const sessionConvMapRef = React.useRef<Map<string, string>>(new Map());
   /** 画布权威回写防抖句柄(putProject fire-and-forget,800ms 合并高频提交) */
   const projectCanvasSyncTimer = React.useRef<number | null>(null);
-  /** 重构流水线进度卡(轮询期间实时刷新;终态保留到下次启动/切会话) */
-  const [pipeline, setPipeline] = useState<{
-    jobId: string;
-    startedAt: number;
-    stages: PipelineStageView[];
-  } | null>(null);
+  /* —— LongTaskCenter(统一长任务中心):重构流水线/编译回写/AI 分析共用的
+     任务登记。任务跟随自己的 sessionId 跑完(切会话不中止),结果写回所属
+     会话;顶栏芯片 + 对话坞任务卡渲染同一份数据。 —— */
+  const [longTasks, setLongTasks] = useState<LongTask[]>([]);
+  const longTasksRef = React.useRef<LongTask[]>([]);
+  longTasksRef.current = longTasks;
+  /** 登记/补丁/收终态小工具(全部走纯函数 upsert/patch/finish,读最新 ref 防闭包过期) */
+  const registerTask = (task: LongTask) => setLongTasks((prev) => upsertTask(prev, task));
+  const patchLongTask = (id: string, patch: Partial<LongTask>) =>
+    setLongTasks((prev) => patchTask(prev, id, patch));
+  const finishLongTask = (id: string, status: LongTaskStatus, errorText?: string) =>
+    setLongTasks((prev) => finishTask(prev, id, status, errorText));
+  /* 终态收尾窗口:结束后保留 2.5s 供芯片/卡片显示绿色收尾,随后清扫 */
+  useEffect(() => {
+    if (!longTasks.some((t) => t.status !== "running")) return;
+    const t = window.setTimeout(() => setLongTasks((prev) => sweepFinished(prev)), 2600);
+    return () => window.clearTimeout(t);
+  }, [longTasks]);
+  /* 浏览器标签标题:有任务在跑时给出页面级提示 */
+  useEffect(() => {
+    const running = activeTasks(longTasks);
+    document.title = running.length
+      ? `● ${running[0].title} 进行中 — PLC Co-Pilot`
+      : "PLC Co-Pilot · 数字孪生画布与博图闭环工作台";
+  }, [longTasks]);
   /** split 态画布宽度占主区百分比:初始 55%,拖拽调整,最小 20% */
   const [canvasPct, setCanvasPct] = useState(55);
   const [draggingCanvas, setDraggingCanvas] = useState(false);
@@ -624,6 +654,37 @@ const App: React.FC = () => {
       return pendingId;
     }
     return activeSessionIdRef.current;
+  };
+
+  /** 顶栏长任务芯片点击:跳回任务所属会话(需要时切回分栏)并滚动到锚定消息 */
+  const handleJumpToLongTask = (task: LongTask) => {
+    if (!sessions.some((s) => s.id === task.sessionId)) return;
+    if (layoutMode === "fullscreen") setLayoutMode("split");
+    setDockCollapsed(false);
+    handleSelectSession(task.sessionId);
+    if (task.messageId) {
+      window.setTimeout(() => {
+        document
+          .querySelector(`[data-mid="${CSS.escape(task.messageId || "")}"]`)
+          ?.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 320);
+    }
+  };
+
+  /** 后台长任务的结果写回"它所属的会话"(用户可能已切走):
+   *  只更新目标会话的消息与画布快照;会话不存在(已删)则静默跳过。
+   *  与 commitSession 的差别:不新建会话、不动当前激活态。 */
+  const commitSessionFor = (sessionId: string, nextCanvas: CanvasStateData, msgs: ChatMessage[]) => {
+    setSessions((prev) => {
+      const cur = prev.find((s) => s.id === sessionId);
+      if (!cur) return prev; // 会话已删除:结果无处落,静默
+      const list = [
+        { ...cur, messages: msgs.length ? [...cur.messages, ...msgs] : cur.messages, updatedAt: Date.now(), canvas: nextCanvas },
+        ...prev.filter((s) => s.id !== sessionId),
+      ];
+      persistAndSync(list);
+      return list;
+    });
   };
 
   /* ---------------- P 线接线(契约 25 §1):工程一等实体 ---------------- */
@@ -966,7 +1027,8 @@ const App: React.FC = () => {
     }
 
     // 进度占位(轮询期间只改内存不落盘,收敛时统一 persist);
-    // 同步驱动对话坞进度卡:阶段芯片实时刷新,终态保留展示
+    // 同步登记 LongTaskCenter:顶栏芯片+对话坞任务卡渲染同一任务
+    const taskSessionId = activeSessionIdRef.current ?? "";
     let lastStages: RefactorPipelineStage[] | undefined;
     const paint = (job: RefactorPipelineJob) => {
       lastStages = job.stages;
@@ -976,9 +1038,20 @@ const App: React.FC = () => {
         false,
       );
     };
-    setPipeline({ jobId, startedAt: Date.now(), stages: [] });
+    registerTask({
+      id: phId,
+      sessionId: taskSessionId,
+      kind: "refactor_pipeline",
+      title: LONG_TASK_LABELS.refactor_pipeline,
+      startedAt: Date.now(),
+      updatedAt: Date.now(),
+      status: "running",
+      stages: [],
+      detail: `作业 ${jobId}`,
+      messageId: phId,
+    });
     const paintCard = (stages: RefactorPipelineStage[] | undefined) => {
-      setPipeline((p) => (p ? { ...p, stages: pipelineStageViews(stages) } : p));
+      patchLongTask(phId, { stages: pipelineStageViews(stages) });
     };
     updateMessageText(phId, "已启动重构流水线…", false);
 
@@ -1007,7 +1080,8 @@ const App: React.FC = () => {
       paintCard(job.stages); // 终态阶段也进卡(完成/出错态可见)
 
       if (job.status === "ok" && job.result?.canvas) {
-        if (canvasRef.current !== canvasAtStart) {
+        finishLongTask(phId, "done");
+        if (canvasRef.current !== canvasAtStart && activeSessionIdRef.current === taskSessionId) {
           // 脏守卫:流水线跑的几十分钟里用户又改了画布——结果不自动覆盖
           updateMessageText(
             phId,
@@ -1016,12 +1090,18 @@ const App: React.FC = () => {
           );
           return true;
         }
-        setCanvas(job.result.canvas);
         updateMessageText(phId, pipelineResultMessage(job.result, { jobId }));
-        commitSession(job.result.canvas, []); // 刷新会话画布快照
+        if (activeSessionIdRef.current === taskSessionId) {
+          setCanvas(job.result.canvas);
+          commitSession(job.result.canvas, []); // 刷新会话画布快照
+        } else {
+          // 用户已切到别的会话:结果写回流水线所属会话,不打扰当前画布
+          commitSessionFor(taskSessionId, job.result.canvas, []);
+        }
         return true;
       }
       // error / cancelled / ok 但无画布 —— 如实报错并附出错阶段 detail
+      finishLongTask(phId, "error", job.error || undefined);
       const badStage = (job.stages || []).find((s) => s.status === "error");
       const head =
         job.status === "cancelled" ? "### 重构流水线已取消" : "### 重构流水线执行失败";
@@ -1034,14 +1114,16 @@ const App: React.FC = () => {
       return true;
     } catch (err) {
       if (isAbortError(err)) {
-        // 会话切换/卸载中止：在占位消息上留下结论，不留悬挂的"进行中"
+        // 卸载页面中止:在占位消息上留下结论,任务收 error 态
         paintCard(lastStages);
+        finishLongTask(phId, "error", "已停止等待(页面卸载)");
         updateMessageText(
           phId,
-          `### 重构流水线\n\n${pipelineProgressText(lastStages)}\n\n> 已停止等待流水线结果（切换会话或离开页面）；网关侧作业可能仍在运行。作业 ${jobId}`,
+          `### 重构流水线\n\n${pipelineProgressText(lastStages)}\n\n> 已停止等待流水线结果（离开页面）；网关侧作业可能仍在运行。作业 ${jobId}`,
         );
         return true;
       }
+      finishLongTask(phId, "error", explainGatewayError(err, "轮询失败"));
       updateMessageText(
         phId,
         `### 重构流水线等待失败\n\n${explainGatewayError(err, "网关未返回错误详情")}\n\n> 作业 ${jobId}`,
@@ -1053,19 +1135,35 @@ const App: React.FC = () => {
   };
 
   /* 发送自然语言指令：优先后端 /canvas/chat-ops，失败回落本地规则引擎。
-     用户消息与"正在思考…"占位立即上屏（不等网络），结果原位写入占位 */
+     用户消息与"正在思考…"占位立即上屏（不等网络），结果原位写入占位。
+     LongTaskCenter 语义:消息落账后整个处理链转后台(isSubmitting 即释),
+     多条消息可并行处理——问答/分析/流水线天然并行;**编辑类 ops 段由
+     opsBusyRef 串行**(防画布写竞态,决策点 2)。 */
+  const opsBusyRef = React.useRef(false);
   const handleSend = async () => {
     const prompt = chatInput.trim();
     if (!prompt || isSubmitting) return;
-    setIsSubmitting(true);
     setChatInput("");
     const phId = msgId();
+    const sendSessionId = activeSessionIdRef.current;
     commitSession(canvas, [
       { id: msgId(), role: "user", text: prompt, ts: Date.now() },
       { id: phId, role: "system", text: "正在思考…", ts: Date.now() },
     ], prompt);
     const settle = (text: string) => updateMessageText(phId, text);
-    try {
+    void (async () => {
+      try {
+        await runSendFlow(prompt, phId, sendSessionId);
+      } catch (err) {
+        settle(`处理失败：${explainGatewayError(err, "未知错误")}`);
+      }
+    })();
+  };
+
+  /** handleSend 的后台处理链(原 try 块整体;编辑段内部自带 ops 串行锁) */
+  const runSendFlow = async (prompt: string, phId: string, sendSessionId: string | null) => {
+    {
+      const settle = (text: string) => updateMessageText(phId, text);
       let ops: any[] = [];
       let previewNote = "";
       // 提问/分析类输入且本地无编辑意图 → 直接走流式问答，绝不让 LLM ops 路径
@@ -1077,14 +1175,30 @@ const App: React.FC = () => {
         if (Object.keys(canvas.blocks).length === 0) {
           // 空白画布上问项目问题——LLM 只会收到空上下文答非所问，
           // 直接引导用户进入导入的会话（打开即空白是新默认，历史需主动选）。
-          settle(
+          updateMessageText(
+            phId,
             "当前是空白画布，还没有项目上下文。请先在左侧「历史对话」中点选你导入的工程会话" +
               "（或点「导入项目」）,再问我项目问题,我就能基于真实块和逻辑来分析。",
           );
           return;
         }
         answerTried = true;
-        if (await tryChatAnswerStream(prompt, phId)) return;
+        /* AI 分析也是长任务:登记 LongTaskCenter(轻量细条+顶栏芯片),
+           结束(成功/失败/LLM 判为编辑类)即收态 */
+        registerTask({
+          id: phId,
+          sessionId: sendSessionId ?? "",
+          kind: "llm_answer",
+          title: LONG_TASK_LABELS.llm_answer,
+          startedAt: Date.now(),
+          updatedAt: Date.now(),
+          status: "running",
+          detail: prompt.slice(0, 40),
+          messageId: phId,
+        });
+        const answered = await tryChatAnswerStream(prompt, phId);
+        finishLongTask(phId, answered ? "done" : "error", answered ? undefined : "已转编辑链处理");
+        if (answered) return;
       }
       // 重构意图先于打包意图判定(顺序要求):prompt 同时含"重构 + 打包/下载"时
       // 不再被打包固定文案抢占 —— 流水线 package 阶段天然产出交付包并附下载链接。
@@ -1173,44 +1287,51 @@ const App: React.FC = () => {
         settle("暂未识别出可执行的画布操作。分析类问题（如运行逻辑/原理）请选中画布中的块后查看深度解释；编辑指令示例：创建 FB ConveyorCtrl / 在 ConveyorCtrl 中添加变量 Speed Real / 添加急停按钮。");
         return;
       }
-      // Local precheck when ops touch SCL（只检查 ops 触及的块——导入产生的
-      // synced 占位块不会被写回，不该拦住无关编辑；与编译门禁同语义）
-      try {
-        const pre = await requestPlc<{ ok?: boolean; errors?: Array<{ message?: string }> }>(
-          `/api/v1/plc/canvas/precheck`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              canvas: applyOpsLocally(canvas, ops),
-              block_names: touchedBlockNames(ops),
-            }),
-            signal: AbortSignal.timeout?.(10000),
-          },
-        );
-        if (pre && pre.ok === false) {
-          const unique = [...new Set((pre.errors || []).map((e: any) => e.message))];
-          settle(`本地预检未通过，未应用修改：${unique.join("；") || "未知错误"}`);
-          return;
-        }
-      } catch {
-        /* precheck optional */
+      // 编辑类 ops 段:全局串行锁(决策点 2)——问答/分析/流水线可并行,但
+      // 画布写操作一次只允许一条在飞,防竞态互相覆盖
+      if (opsBusyRef.current) {
+        settle("上一条编辑指令还在执行中，请等它完成后再发编辑类指令；提问类消息不受影响。");
+        return;
       }
-      await applyOpsAndCommit(ops, null, `${summarizeOps(ops)}${previewNote}`, {
-        reuseSystemId: phId,
-      });
-    } finally {
-      setIsSubmitting(false);
+      opsBusyRef.current = true;
+      try {
+        // Local precheck when ops touch SCL（只检查 ops 触及的块——导入产生的
+        // synced 占位块不会被写回，不该拦住无关编辑；与编译门禁同语义）
+        try {
+          const pre = await requestPlc<{ ok?: boolean; errors?: Array<{ message?: string }> }>(
+            `/api/v1/plc/canvas/precheck`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                canvas: applyOpsLocally(canvas, ops),
+                block_names: touchedBlockNames(ops),
+              }),
+              signal: AbortSignal.timeout?.(10000),
+            },
+          );
+          if (pre && pre.ok === false) {
+            const unique = [...new Set((pre.errors || []).map((e: any) => e.message))];
+            settle(`本地预检未通过，未应用修改：${unique.join("；") || "未知错误"}`);
+            return;
+          }
+        } catch {
+          /* precheck optional */
+        }
+        await applyOpsAndCommit(ops, null, `${summarizeOps(ops)}${previewNote}`, {
+          reuseSystemId: phId,
+        });
+      } finally {
+        opsBusyRef.current = false;
+      }
     }
   };
 
-  /* 会话切换 / 新建 / 删除 */
+  /* 会话切换 / 新建 / 删除 —— LongTaskCenter 语义:长任务跟随自己的会话
+     继续跑(不因切换中止),完成时写回所属会话;此处不再 abort。 */
   const handleSelectSession = (id: string) => {
     const s = sessions.find((x) => x.id === id);
     if (!s) return;
-    abortCompilePoll(); // 别让上一个会话的编译结果盖掉这份画布
-    abortRefactorPoll(); // 重构流水线同理:中止轮询,过期结果不进新会话
-    setPipeline(null); // 进度卡随会话走,过期进度不跨会话残留
     dispatchNewProjectFlow({ type: "RESET" }); // 离开新建工程流
     setActiveSession(id);
     /* P 线:切回挂靠工程的会话时恢复活跃工程上下文(画布回写依赖它) */
@@ -1245,9 +1366,6 @@ const App: React.FC = () => {
   };
 
   const handleNewSession = () => {
-    abortCompilePoll();
-    abortRefactorPoll();
-    setPipeline(null);
     dispatchNewProjectFlow({ type: "RESET" }); // 离开新建工程流
     setActiveSession(null);
     setActiveProject(null);
@@ -1296,9 +1414,6 @@ const App: React.FC = () => {
       /* 不回查 handleSelectSession:setSessions 是异步的,此刻闭包里的 sessions
          还没有这条新会话,find 会落空静默 return(真机复现:刷新后点侧栏对话
          画布仍空白)。这里直接内联设置激活态与画布。 */
-      abortCompilePoll();
-      abortRefactorPoll();
-      setPipeline(null);
       dispatchNewProjectFlow({ type: "RESET" });
       setActiveSession(cid);
       setActiveProject(conv.projectId);
@@ -1321,9 +1436,11 @@ const App: React.FC = () => {
         setTimeout(() => setWritebackNotice(null), 8000);
       }
     });
+    /* 该会话的在飞长任务收 error 态(结果已无处可写),芯片不再悬挂 */
+    for (const t of tasksBySession(longTasksRef.current, id)) {
+      finishLongTask(t.id, "error", "会话已删除");
+    }
     if (activeSessionId === id) {
-      abortCompilePoll();
-      abortRefactorPoll();
       setActiveSession(null);
       setCanvas(blankCanvas(""));
       setSelectedBlockName(null);
@@ -1359,10 +1476,11 @@ const App: React.FC = () => {
       setSessions(list);
       persistAndSync(list);
       void syncSessionDelete(localId);
+      /* 该会话在飞长任务收 error 态(结果无处落) */
+      for (const t of tasksBySession(longTasksRef.current, localId)) {
+        finishLongTask(t.id, "error", "会话已删除");
+      }
       if (activeSessionIdRef.current === localId) {
-        abortCompilePoll();
-        abortRefactorPoll();
-        setPipeline(null);
         setActiveSession(null);
         setCanvas(blankCanvas(""));
         setSelectedBlockName(null);
@@ -1943,7 +2061,10 @@ const App: React.FC = () => {
    * - `onProgress`：每次探测都写 `compileJob`，阶段状态实时上屏；
    * - 终止条件：status ∈ {ok, error, cancelled}（含网关侧 timed_out 落成的 error）。
    */
-  const pollCompileJob = async (jobId: string): Promise<CompileJobPayload> => {
+  const pollCompileJob = async (
+    jobId: string,
+    onProgress?: (job: CompileJobPayload) => void,
+  ): Promise<CompileJobPayload> => {
     const controller = new AbortController();
     compileAbortRef.current = controller;
     try {
@@ -1958,7 +2079,10 @@ const App: React.FC = () => {
           intervalMs: COMPILE_POLL_INTERVAL_MS,
           timeoutMs: COMPILE_POLL_TIMEOUT_MS,
           signal: controller.signal,
-          onProgress: (j) => setCompileJob(j),
+          onProgress: (j) => {
+            setCompileJob(j);
+            onProgress?.(j);
+          },
         },
       );
       // 中止可能落在最后一次探测与收敛之间：这时结果已过期，按中止处理
@@ -2008,12 +2132,30 @@ const App: React.FC = () => {
         let job: CompileJobPayload = data.job;
         setCompileJob(job);
         setWritebackNotice("编译作业已启动…");
+        /* LongTaskCenter:编译也是长任务(顶栏芯片常驻指示,轮询实时刷 detail) */
+        const compileTaskId = `compile-${job.id}`;
+        const compileSessionId = activeSessionIdRef.current ?? "";
+        registerTask({
+          id: compileTaskId,
+          sessionId: compileSessionId,
+          kind: "compile",
+          title: LONG_TASK_LABELS.compile,
+          startedAt: Date.now(),
+          updatedAt: Date.now(),
+          status: "running",
+          detail: `编译作业 ${job.id.slice(0, 10)} · 回写 ${canvas.project_name}`,
+        });
         try {
-          job = await pollCompileJob(job.id);
+          job = await pollCompileJob(job.id, (j) => {
+            patchLongTask(compileTaskId, {
+              detail: `编译作业 ${j.id.slice(0, 10)} · ${j.status === "running" ? "进行中" : j.status}`,
+            });
+          });
           bumpChangesRefresh(); // 作业收敛(ok/error/cancelled)→ 刷新 PCEC 变更账本
         } catch (err) {
           if (isAbortError(err)) {
-            setWritebackNotice("已停止等待编译结果（切换会话或离开页面）；网关侧作业可能仍在运行");
+            finishLongTask(compileTaskId, "error", "已停止等待(页面卸载)");
+            setWritebackNotice("已停止等待编译结果（离开页面）；网关侧作业可能仍在运行");
             setTimeout(() => setWritebackNotice(null), 8000);
             return;
           }
@@ -2025,11 +2167,17 @@ const App: React.FC = () => {
                 }s）：网关未在预期时间内结束作业，请检查博图是否弹窗阻塞`;
           setWritebackNotice(detail);
           setTimeout(() => setWritebackNotice(null), 10000);
+          finishLongTask(compileTaskId, "error", "等待编译结果失败");
           bumpChangesRefresh(); // 轮询失败也可能已落账(如 precheck fail-closed)→ 尽力刷新
           return;
         }
 
         // degraded / timed_out / precheck 没有专属 UI 位置：合并进既有的 error 行、通知条和会话消息
+        finishLongTask(
+          compileTaskId,
+          job.status === "ok" ? "done" : "error",
+          job.status === "ok" ? undefined : (job.error || undefined),
+        );
         const notes = compileJobNotes(job);
         const detail = notes.join("；");
         const headline = job.error && job.error !== "precheck_failed" ? job.error : null;
@@ -2039,32 +2187,32 @@ const App: React.FC = () => {
         });
 
         if (job.canvas) {
+          const compileMsg: ChatMessage = {
+            id: msgId(),
+            role: "system",
+            text: [`编译作业 ${job.status}`, ...notes].join("："),
+            ts: Date.now(),
+          };
+          const onCompileSession = activeSessionIdRef.current === compileSessionId;
+          const commitCompileResult = (c: CanvasStateData, msg: ChatMessage) => {
+            if (onCompileSession) commitSession(c, [msg]);
+            else commitSessionFor(compileSessionId, c, [msg]);
+          };
           if (canvasRef.current !== canvasAtStart) {
             // 脏守卫:编译期间用户又改了画布——结果不自动覆盖,消息照记
-            commitSession(canvasRef.current, [
-              {
-                id: msgId(),
-                role: "system",
-                text: [
-                  `编译作业 ${job.status}`,
-                  ...notes,
-                  "（编译期间画布有新的修改，结果未自动覆盖画布，确认后可重新回写）",
-                ].join("："),
-                ts: Date.now(),
-              },
-            ]);
+            commitCompileResult(canvasRef.current, {
+              ...compileMsg,
+              text: [
+                `编译作业 ${job.status}`,
+                ...notes,
+                "（编译期间画布有新的修改，结果未自动覆盖画布，确认后可重新回写）",
+              ].join("："),
+            });
             setWritebackNotice("编译期间画布又有修改：结果保留在对话中，未自动覆盖画布");
             setTimeout(() => setWritebackNotice(null), 10000);
           } else {
-            setCanvas(job.canvas);
-            commitSession(job.canvas, [
-              {
-                id: msgId(),
-                role: "system",
-                text: [`编译作业 ${job.status}`, ...notes].join("："),
-                ts: Date.now(),
-              },
-            ]);
+            if (onCompileSession) setCanvas(job.canvas);
+            commitCompileResult(job.canvas, compileMsg);
           }
         }
         setAttributions((job.attributions || []) as CompilerAttribution[]);
@@ -2154,6 +2302,13 @@ const App: React.FC = () => {
         )}
 
         <div className="topbar__spacer" />
+
+        {/* LongTaskCenter:页面级长任务指示(任何布局可见;点击跳回所属会话) */}
+        <LongTaskChips
+          tasks={longTasks}
+          currentSessionId={activeSessionId}
+          onJump={handleJumpToLongTask}
+        />
 
         {/* 变更记录:低显著度次级入口(学 SclPane 的 </> 模式),打开才拉取账本 */}
         <button
@@ -2406,7 +2561,7 @@ const App: React.FC = () => {
                   }}
                   blockNames={blockNameList}
                   onOpenBlock={handleOpenBlockFromChat}
-                  pipeline={pipeline}
+                  tasks={tasksBySession(longTasks, activeSessionId ?? "")}
                 />
               </div>
               <div
@@ -2481,7 +2636,7 @@ const App: React.FC = () => {
                 }}
                 blockNames={blockNameList}
                 onOpenBlock={handleOpenBlockFromChat}
-                pipeline={pipeline}
+                tasks={tasksBySession(longTasks, activeSessionId ?? "")}
               />
             </div>
           )}

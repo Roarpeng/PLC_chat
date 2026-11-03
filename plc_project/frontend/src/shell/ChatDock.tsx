@@ -1,10 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { ChatMessage } from "../state/sessions";
-import {
-  pipelineActiveStage,
-  pipelineSettled,
-  type PipelineStageView,
-} from "../state/refactorPipeline";
+import { formatElapsed, type LongTask, type LongTaskStatus } from "../state/longTasks";
+import { pipelineActiveStage } from "../state/refactorPipeline";
 import MarkdownBody from "../MarkdownBody";
 import { linkifyBlockNames } from "./blockRefs";
 import "./chatdock.css";
@@ -23,39 +20,54 @@ export interface ChatDockProps {
   blockNames?: string[];
   /** 点击块引用 → 画布打开对应功能块 */
   onOpenBlock?(name: string): void;
-  /** 重构流水线进度卡(App 侧轮询驱动;null=无在飞/终态已清) */
-  pipeline?: {
-    jobId: string;
-    startedAt: number;
-    stages: PipelineStageView[];
-  } | null;
+  /** 长任务视图(当前会话的任务子集,App 侧统一驱动;null/空=无在飞或终态已清) */
+  tasks?: LongTask[] | null;
 }
 
-/** 重构流水线进度卡:阶段芯片(完成/进行/待开始/跳过/出错) + 作业号 + 实时时耗 */
-const PipelineCard: React.FC<{ pipeline: NonNullable<ChatDockProps["pipeline"]> }> = ({
-  pipeline,
-}) => {
+/** 运行中任务的 1s 心跳(now 驱动计时文案;终态停跳,计数冻结) */
+function useTicker(running: boolean): number {
   const [now, setNow] = useState(() => Date.now());
-  const settled = pipelineSettled(pipeline.stages);
   useEffect(() => {
-    if (settled) return;
+    if (!running) return;
     const t = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(t);
-  }, [settled]);
-  const active = pipelineActiveStage(pipeline.stages);
-  const secs = Math.max(0, Math.floor((now - pipeline.startedAt) / 1000));
-  const elapsed = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+  }, [running]);
+  return now;
+}
+
+/** status → 标题后缀(阶段卡/启动卡共用) */
+function statusSuffix(status: LongTaskStatus, starting = false): string {
+  if (status === "done") return " · 已结束";
+  if (status === "error") return " · 出错";
+  return starting ? " · 启动中" : " · 进行中";
+}
+
+/** 阶段型任务进度卡(重构流水线/编译回写):阶段芯片(完成/进行/待开始/跳过/出错) + 实时时耗 */
+const PipelineCard: React.FC<{ task: LongTask }> = ({ task }) => {
+  const now = useTicker(task.status === "running");
+  const failed = task.status === "error";
+  const active = pipelineActiveStage(task.stages ?? []);
+  const elapsed = formatElapsed(task.startedAt, now);
+  // 副注(原作业号位):无 running 阶段 detail 可下挂时,用 task.detail 前 40 字符顶在标题行右缘
+  const headNote = !active?.detail && task.detail ? task.detail.slice(0, 40) : "";
+  // detail 行:运行中挂 running 阶段说明;出错优先挂错误摘要
+  const detailLine = failed ? task.errorText || task.detail : active?.detail;
   return (
-    <div className="dock-pipeline" role="status" aria-label="重构流水线进度">
+    <div
+      className={"dock-pipeline" + (failed ? " is-error" : "")}
+      role="status"
+      aria-label={`${task.title}进度`}
+    >
       <div className="dock-pipeline__head">
         <span className="dock-pipeline__title">
-          重构流水线{settled ? " · 已结束" : ""}
+          {task.title}
+          {statusSuffix(task.status)}
         </span>
         <span className="dock-pipeline__elapsed">{elapsed}</span>
-        <span className="dock-pipeline__job">作业 {pipeline.jobId.slice(0, 10)}</span>
+        {headNote && <span className="dock-pipeline__job">{headNote}</span>}
       </div>
       <ol className="dock-pipeline__stages">
-        {pipeline.stages.map((st) => (
+        {(task.stages ?? []).map((st) => (
           <li
             key={st.key}
             className={`dock-pipeline__stage is-${st.status}`}
@@ -66,7 +78,30 @@ const PipelineCard: React.FC<{ pipeline: NonNullable<ChatDockProps["pipeline"]> 
           </li>
         ))}
       </ol>
-      {active?.detail && <p className="dock-pipeline__detail">{active.detail}</p>}
+      {detailLine && <p className="dock-pipeline__detail">{detailLine}</p>}
+    </div>
+  );
+};
+
+/** AI 分析细条(llm_answer):脉冲圆点 + 文案 + 计时;无阶段概念,不显示 stages */
+const AnalyzingBar: React.FC<{ task: LongTask }> = ({ task }) => {
+  const now = useTicker(task.status === "running");
+  const elapsed = formatElapsed(task.startedAt, now);
+  const label =
+    task.status === "running"
+      ? "AI 分析中"
+      : task.status === "done"
+        ? "AI 分析 · 已完成"
+        : "AI 分析 · 出错";
+  return (
+    <div
+      className={"dock-analyzing" + (task.status === "running" ? "" : ` is-${task.status}`)}
+      role="status"
+      aria-label={label}
+    >
+      <i className="dock-analyzing__dot" aria-hidden="true" />
+      <span className="dock-analyzing__label">{label}</span>
+      <span className="dock-analyzing__elapsed">{elapsed}</span>
     </div>
   );
 };
@@ -280,7 +315,7 @@ const DockMessage: React.FC<{
   };
   if (m.role === "user") {
     return (
-      <div className="dock-msg dock-msg--user">
+      <div className="dock-msg dock-msg--user" data-mid={m.id}>
         <div className="dock-bubble">
           {m.text}
           {label && <span className="dock-time dock-time--user">{label}</span>}
@@ -298,7 +333,7 @@ const DockMessage: React.FC<{
     );
   }
   return (
-    <div className="dock-msg dock-msg--system">
+    <div className="dock-msg dock-msg--system" data-mid={m.id}>
       <div className="dock-msgmeta">
         {label && <span className="dock-time">{label}</span>}
         <button
@@ -327,7 +362,7 @@ export const ChatDock: React.FC<ChatDockProps> = ({
   onSuggestion,
   blockNames,
   onOpenBlock,
-  pipeline = null,
+  tasks = null,
 }) => {
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -504,14 +539,32 @@ export const ChatDock: React.FC<ChatDockProps> = ({
               ))
             )}
           </div>
-          {pipeline && pipeline.stages.length > 0 && <PipelineCard pipeline={pipeline} />}
-          {pipeline && pipeline.stages.length === 0 && (
-            <div className="dock-pipeline dock-pipeline--starting" role="status">
-              <div className="dock-pipeline__head">
-                <span className="dock-pipeline__title">重构流水线 · 启动中</span>
+          {/* 长任务视图:数组顺序即渲染序(通常 0~2 个) */}
+          {(tasks ?? []).map((task) => {
+            // AI 分析(llm_answer):轻量细条,无阶段概念
+            if (task.kind === "llm_answer") return <AnalyzingBar key={task.id} task={task} />;
+            // 阶段型任务(重构流水线/编译回写):有 stages 走完整阶段卡
+            if (task.stages && task.stages.length > 0)
+              return <PipelineCard key={task.id} task={task} />;
+            // 刚启动(stages 未回来):「启动中」简化卡
+            return (
+              <div
+                key={task.id}
+                className={
+                  "dock-pipeline dock-pipeline--starting" +
+                  (task.status === "error" ? " is-error" : "")
+                }
+                role="status"
+              >
+                <div className="dock-pipeline__head">
+                  <span className="dock-pipeline__title">
+                    {task.title}
+                    {statusSuffix(task.status, true)}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })}
           <form
             className="dock-inputrow"
             data-ui="dock-input"

@@ -355,6 +355,120 @@ body {
   white-space: nowrap;
 }
 
+/* —— 长任务芯片 ——（shell/LongTaskChips.tsx；细顶栏段追加）
+   顶栏常驻"正在干活"指示：surface 底方角小条（24px 高）+ accent 文字与圆点；
+   running 圆点 1.1s 呼吸（IEC 信号灯），done 整枚转 --run，error 仅圆点转
+   --fault；与 .topbar__toggle 同级视觉，不占其样式。 */
+
+.ltc {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  min-width: 0;
+  overflow: hidden; /* 46px 顶栏内单行不换行 */
+}
+
+.ltc-chip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  max-width: 220px;
+  padding: 0 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 0; /* 方角模块 */
+  background: var(--surface);
+  color: var(--accent);
+  font-family: var(--sans);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  flex: none;
+  transition: background 0.12s var(--ease), border-color 0.12s var(--ease);
+}
+
+.ltc-chip:hover {
+  background: var(--surface-2);
+  border-color: var(--accent);
+}
+
+.ltc-chip__dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%; /* 状态灯例外：信号色圆点 */
+  background: var(--accent);
+}
+
+.ltc-chip__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.ltc-chip__elapsed {
+  flex: none;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
+
+/* 跨会话后缀小字：灰阶只给次要注记 */
+.ltc-chip__other {
+  flex: none;
+  font-size: 10px;
+  color: var(--ink-3);
+}
+
+/* done：整枚转绿（边框/文字/圆点），呼吸停 */
+.ltc-chip--done,
+.ltc-chip--done:hover {
+  border-color: var(--run);
+  color: var(--run);
+}
+
+.ltc-chip--done .ltc-chip__dot {
+  background: var(--run);
+  animation: none;
+}
+
+/* error：仅圆点转红，文字保持 accent */
+.ltc-chip--error .ltc-chip__dot {
+  background: var(--fault);
+  animation: none;
+}
+
+/* 溢出计数 "+N"：静态标签，不可点 */
+.ltc-overflow,
+.ltc-overflow:hover {
+  cursor: default;
+  color: var(--ink-2);
+  font-weight: 600;
+  background: var(--surface);
+  border-color: var(--line-2);
+}
+
+/* running 圆点呼吸；prefers-reduced-motion 下关动画 */
+@media (prefers-reduced-motion: no-preference) {
+  .ltc-chip__dot {
+    animation: ltc-pulse 1.1s var(--ease) infinite;
+  }
+}
+
+@keyframes ltc-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
 .tagchip {
   font-family: var(--sans);
   font-variant-numeric: tabular-nums;

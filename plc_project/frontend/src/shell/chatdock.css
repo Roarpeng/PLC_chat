@@ -241,7 +241,7 @@
   color: var(--ink-3);
 }
 
-/* ---- 重构流水线进度卡：阶段芯片 + 实时耗（App 轮询驱动） ---- */
+/* ---- 阶段型任务进度卡（重构流水线/编译回写）：阶段芯片 + 实时耗（App 轮询驱动） ---- */
 
 .dock-pipeline {
   flex: none;
@@ -368,6 +368,86 @@
 @media (prefers-reduced-motion: reduce) {
   .dock-pipeline__stage.is-running .dock-pipeline__dot,
   .dock-pipeline__stage.is-error .dock-pipeline__dot {
+    animation: none;
+  }
+}
+
+/* 阶段卡/启动卡出错态:左缘线与标题转故障色(detail 行内容取 errorText) */
+
+.dock-pipeline.is-error {
+  border-left-color: var(--fault, #b3261e);
+}
+
+.dock-pipeline.is-error .dock-pipeline__title {
+  color: var(--fault, #b3261e);
+}
+
+/* ---- AI 分析细条(llm_answer):一行轻量进度(surface-2 底 + accent 左缘,方角) ---- */
+
+.dock-analyzing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  height: 28px;
+  margin: 0 12px 8px;
+  padding: 0 10px 0 9px;
+  background: var(--surface-2, #e6e9ef);
+  border-left: 3px solid var(--accent, #1f2de6); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
+}
+
+.dock-analyzing__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, #1f2de6);
+  flex: none;
+  animation: dock-analyzing-pulse 1.1s ease-in-out infinite;
+}
+
+.dock-analyzing__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.dock-analyzing__elapsed {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent, #1f2de6);
+}
+
+/* 终态:脉冲停(出错态文案与左缘线一并转故障色) */
+.dock-analyzing.is-done .dock-analyzing__dot,
+.dock-analyzing.is-error .dock-analyzing__dot {
+  animation: none;
+}
+
+.dock-analyzing.is-error {
+  border-left-color: var(--fault, #b3261e);
+}
+
+.dock-analyzing.is-error .dock-analyzing__label,
+.dock-analyzing.is-error .dock-analyzing__elapsed {
+  color: var(--fault, #b3261e);
+}
+
+@keyframes dock-analyzing-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock-analyzing__dot {
     animation: none;
   }
 }
