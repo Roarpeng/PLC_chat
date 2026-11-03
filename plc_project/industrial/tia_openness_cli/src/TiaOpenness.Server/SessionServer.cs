@@ -164,6 +164,7 @@ public sealed class SessionServer : IDisposable
                 "/generate-from-source" => RunOnSta(() => GenerateFromSource(root)),
                 "/import-xml" => RunOnSta(() => ImportXml(root)),
                 "/hmi-unified-apply" => RunOnSta(() => HmiUnifiedApply(root)),
+                "/fast-writeback" => RunOnSta(() => FastWritebackRoute(root)),
                 _ => new { ok = false, error = $"unknown path {path}" },
             };
             WriteJson(ctx, 200, payload);
@@ -284,6 +285,14 @@ public sealed class SessionServer : IDisposable
         if (string.IsNullOrWhiteSpace(opsPath) || !File.Exists(opsPath))
             return new { ok = false, error = "ops file required" };
         return HmiUnifiedApplyOps.Apply(_projects!, hmiName, opsPath);
+    }
+
+    private object FastWritebackRoute(JsonElement root)
+    {
+        EnsureCore();
+        EnsureOpen(root);
+        var request = FastWritebackRequest.FromJson(root);
+        return FastWriteback.Execute(_connection!, _projects!, _blocks!, request);
     }
 
     private void EnsureOpen(JsonElement root)

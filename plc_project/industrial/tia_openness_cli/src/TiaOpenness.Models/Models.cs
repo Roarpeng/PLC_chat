@@ -22,6 +22,14 @@ public sealed class ToolError
     [JsonPropertyName("message")]
     public string Message { get; set; } = "";
 
+    /// <summary>InnerException 全链消息(每级一条)。行号级 SCL 诊断通常藏在这里。</summary>
+    [JsonPropertyName("innerMessages")]
+    public List<string>? InnerMessages { get; set; }
+
+    /// <summary>编译错误集合逐条(格式 "文件 行 N: 文本";EngineeringCompilerException 反射提取)。</summary>
+    [JsonPropertyName("compilerErrors")]
+    public List<string>? CompilerErrors { get; set; }
+
     [JsonPropertyName("retryable")]
     public bool Retryable { get; set; }
 }
@@ -253,6 +261,10 @@ public sealed class CompilePlcResult
 {
     [JsonPropertyName("ok")]
     public bool Ok { get; set; }
+
+    /// <summary>compile-block 目标块名(整机编译为空)。</summary>
+    [JsonPropertyName("blockName")]
+    public string? BlockName { get; set; }
 
     [JsonPropertyName("apiAvailable")]
     public bool ApiAvailable { get; set; }

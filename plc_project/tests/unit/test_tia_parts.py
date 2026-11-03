@@ -17,7 +17,7 @@ KNOWN = {
     "FC_Counters.xml": ("FC_Counters", ("CUp", "CDn", "CUd")),
     "FC_Move.xml": ("FC_Move", (":=", "ROUND", "Mux", "Demux")),
     "FC_Compare.xml": ("FC_Compare", ("#Ok",)),
-    "FC_Jump.xml": ("FC_Jump", ("JMP", "RETURN")),
+    "FC_Jump.xml": ("FC_Jump", ("GOTO", "SKIP:", "RETURN")),
     "FC_CallEno.xml": ("FC_CallEno", ("ENO", "MotorInst")),
     "FC_NativeScl.xml": ("FC_NativeScl", ("#Out := #In",)),
     "FC_Stl.xml": ("FC_Stl", ("#Start", "#Stop", "#Run")),

@@ -432,6 +432,38 @@ public static class Program
                 return compiled.Ok ? 0 : 6;
             }
 
+            if (command == "compile-block")
+            {
+                if (!opts.TryGetValue("project", out var project2) || string.IsNullOrWhiteSpace(project2))
+                {
+                    Console.Error.WriteLine("Missing --project");
+                    return 2;
+                }
+                if (!opts.TryGetValue("block", out var blockList) || string.IsNullOrWhiteSpace(blockList))
+                {
+                    Console.Error.WriteLine("Missing --block (支持 '|' 分隔多块)");
+                    return 2;
+                }
+
+                opts.TryGetValue("plc", out var plc2);
+                var opened2 = projects.OpenProject(project2, plc2, withoutUi: true);
+                if (!opened2.Ok)
+                {
+                    Console.WriteLine(JsonSerializer.Serialize(opened2, JsonDefaults.Options));
+                    return 3;
+                }
+
+                var compiledBlocks = blocks.CompileBlocksStrict(blockList);
+                var blocksPayload = new
+                {
+                    ok = compiledBlocks.All(r => r.Ok),
+                    project = opened2,
+                    results = compiledBlocks,
+                };
+                Console.WriteLine(JsonSerializer.Serialize(blocksPayload, JsonDefaults.Options));
+                return compiledBlocks.All(r => r.Ok) ? 0 : 6;
+            }
+
             if (command == "compile-hmi")
             {
                 if (!opts.TryGetValue("project", out var project) || string.IsNullOrWhiteSpace(project))

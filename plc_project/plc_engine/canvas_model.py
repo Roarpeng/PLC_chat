@@ -1908,11 +1908,33 @@ def _interface_damage_signals(block: "CanvasBlock") -> list[str]:
     return signals
 
 
+#: SCL 保留字/类型名集合——成员名撞车时必须引号化(真机 FB1061 ``AT : Word``
+#: 与 FB1081 ``Time : Struct`` 案例:TIA 报 "The specified value \"AT\" is invalid")
+_SCL_RESERVED_WORDS = {
+    "AT", "TIME", "DATE", "TIME_OF_DAY", "DATE_AND_TIME", "DT", "TOD", "DTL",
+    "BOOL", "BYTE", "WORD", "DWORD", "INT", "DINT", "SINT", "USINT", "UINT",
+    "UDINT", "REAL", "LREAL", "CHAR", "WCHAR", "STRING", "WSTRING", "TIMER",
+    "COUNTER", "ARRAY", "OF", "STRUCT", "ANY", "VOID", "POINTER", "REF_TO",
+    "VAR", "VAR_INPUT", "VAR_OUTPUT", "VAR_IN_OUT", "VAR_TEMP", "VAR_STAT",
+    "VAR_GLOBAL", "CONSTANT", "RETAIN", "NON_RETAIN", "BEGIN", "END_VAR",
+    "END_FUNCTION", "END_FUNCTION_BLOCK", "END_DATA_BLOCK", "END_TYPE",
+    "IF", "THEN", "ELSE", "ELSIF", "END_IF", "FOR", "TO", "BY", "DO",
+    "END_FOR", "WHILE", "END_WHILE", "REPEAT", "UNTIL", "END_REPEAT",
+    "CASE", "END_CASE", "RETURN", "EXIT", "GOTO", "TRUE", "FALSE",
+    "AND", "OR", "XOR", "NOT", "MOD", "REGION", "END_REGION", "SUPER", "THIS",
+}
+
+
 def _needs_quoting(ident: str) -> bool:
-    """标识符是否需要 SCL 引号包裹（含空格/非标识符字符——真机 FB2008 案例：
-    XML 成员名 ``A Station CoolingFan`` 原样渲染会被 TIA 拆词报
-    ``The specified value "Station" is invalid``）。"""
-    return not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", ident or "")
+    """标识符是否需要 SCL 引号包裹。
+
+    两类:①含空格/非标识符字符(真机 FB2008:``A Station CoolingFan`` 被拆词);
+    ②撞 SCL 保留字/类型名(真机 FB1061 ``AT``/FB1081 ``Time``:TIA 报
+    ``The specified value "AT" is invalid``)。引号化对声明与 body 引用
+    同步生效(R5 的路径收集共用本判定)。"""
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", ident or ""):
+        return True
+    return ident.upper() in _SCL_RESERVED_WORDS
 
 
 def _collect_quoted_member_paths(members: dict[str, Any], prefix: str = "") -> list[tuple[str, str]]:

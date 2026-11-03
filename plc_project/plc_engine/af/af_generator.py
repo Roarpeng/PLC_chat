@@ -30,6 +30,7 @@ def generate_af_project_blocks(
     *,
     self_contained: bool = False,
     tag_types: dict[str, str] | None = None,
+    af_io_drive: bool = True,
 ) -> dict[str, CanvasBlock]:
     """Generate all CanvasBlocks for an entire AF V1.2 project.
 
@@ -38,7 +39,9 @@ def generate_af_project_blocks(
     """
     blocks: dict[str, CanvasBlock] = {}
     for unit in project.units:
-        unit_blocks = generate_af_unit_blocks(unit, self_contained=self_contained, tag_types=tag_types)
+        unit_blocks = generate_af_unit_blocks(
+            unit, self_contained=self_contained, tag_types=tag_types, af_io_drive=af_io_drive
+        )
         blocks.update(unit_blocks)
     return blocks
 
@@ -48,6 +51,7 @@ def generate_af_unit_blocks(
     *,
     self_contained: bool = False,
     tag_types: dict[str, str] | None = None,
+    af_io_drive: bool = True,
 ) -> dict[str, CanvasBlock]:
     """Generate all Software Unit blocks for a Unit (U<n>_<UnitName>) and its EMs."""
     blocks: dict[str, CanvasBlock] = {}
@@ -264,7 +268,7 @@ END_DATA_BLOCK
         em.unit_idx = unit.unit_idx  # type: ignore[attr-defined]
         em_blocks = generate_af_em_blocks(
             unit.unit_idx, em, unit_namespace=unit.namespace,
-            self_contained=self_contained, tag_types=tag_types,
+            self_contained=self_contained, tag_types=tag_types, af_io_drive=af_io_drive,
         )
         blocks.update(em_blocks)
 
@@ -317,6 +321,7 @@ def generate_af_em_blocks(
     *,
     self_contained: bool = False,
     tag_types: dict[str, str] | None = None,
+    af_io_drive: bool = True,
 ) -> dict[str, CanvasBlock]:
     """Generate all Software Unit blocks for an Equipment Module."""
     blocks: dict[str, CanvasBlock] = {}
@@ -588,7 +593,8 @@ END_FUNCTION_BLOCK
     # 5. FB CallEquipment
     if self_contained:
         cm_drive_lines = "\n".join(
-            _self_contained_cm_drive_lines(cm, tag_types=tag_types or {}) for cm in em.control_modules
+            _self_contained_cm_drive_lines(cm, tag_types=tag_types or {}, af_io_drive=af_io_drive)
+            for cm in em.control_modules
         )
         fb_call_eq_scl = f"""FUNCTION_BLOCK "{call_eq_fb}"
 {'{ S7_Optimized_Access := \'TRUE\' }'}
@@ -784,7 +790,9 @@ def _self_contained_cm_struct(cm: AfCm) -> str:
     return f"    {cm.name} : Struct\n{body}\n    end_struct;"
 
 
-def _self_contained_cm_drive_lines(cm: AfCm, tag_types: dict[str, str] | None = None) -> str:
+def _self_contained_cm_drive_lines(
+    cm: AfCm, tag_types: dict[str, str] | None = None, af_io_drive: bool = True
+) -> str:
     """自举模式 CallEquipment 内的 CM 命令/状态直驱语句。
 
     命令字段 -> 物理输出(%Q/%QW),物理输入(%I/%IW)-> 状态字段;
@@ -811,6 +819,34 @@ def _self_contained_cm_drive_lines(cm: AfCm, tag_types: dict[str, str] | None = 
         return f'"{tag}"' if tag else str(addr)
 
     lines = [f"    // ---- CM {cm.name}({_strip_lbc_prefix(cm.cm_type)})自举内联直驱 ----"]
+    if not af_io_drive:
+        # af_scl 模式:输出由保留的旧逻辑块唯一驱动,AF 层只读输入进 ControlNodes
+        # (防双驱动=功能一致性铁律:同一 %Q 只允许一个写入者)
+        lines.append("    // [af_io_drive=off] 输出直驱让位:命令字段仅作 ControlNodes 数据枢纽")
+        t = str(cm.cm_type)
+        if t == "LBC_TwoWayActuator":
+            if io.get("workSensor") or io.get("workSensorTag"):
+                lines.append(
+                    f"    #controlNodes.{cm.name}.status.inWorkPosition := {_sym(io.get('workSensorTag', ''), io.get('workSensor', ''))};"
+                )
+            if io.get("homeSensor") or io.get("homeSensorTag"):
+                lines.append(
+                    f"    #controlNodes.{cm.name}.status.inHomePosition := {_sym(io.get('homeSensorTag', ''), io.get('homeSensor', ''))};"
+                )
+        elif t == "LBC_DigitalSignal":
+            if io.get("signal") or io.get("signalTag"):
+                lines.append(
+                    f"    #controlNodes.{cm.name}.status.signal := {_sym(io.get('signalTag', ''), io.get('signal', ''))};"
+                )
+        elif t == "LBC_AnalogInput":
+            if io.get("value") or io.get("tag"):
+                tag = str(io.get("tag", "") or "")
+                sym = _sym(tag, io.get("value", ""))
+                if tag and (types.get(tag) or "").strip().lower() == "bool":
+                    lines.append(f"    #controlNodes.{cm.name}.status.signal := {sym};")
+                else:
+                    lines.append(f"    #controlNodes.{cm.name}.status.value := {sym};")
+        return "\n".join(lines)
     t = str(cm.cm_type)
     if t == "LBC_TwoWayActuator":
         if io.get("workCmd") or io.get("workCmdTag"):

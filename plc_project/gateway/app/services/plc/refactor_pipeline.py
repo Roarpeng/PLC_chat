@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import shutil
 import tempfile
 import threading
@@ -69,6 +70,9 @@ _lock = threading.Lock()
 _jobs: dict[str, dict[str, Any]] = {}
 _pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="refactor-pipeline")
 _TTL_S = 3600.0
+#: 终态作业的保留时长(1h);running 作业绝不清扫——136 块全量写回实测
+#: 超 1h,中途清扫会让后台线程的结果无处落(真机 V33 案例:轮询 404)
+_JOB_RETENTION_S = 3600.0
 
 #: 固定五段阶段名（与前端契约一字不差）
 STAGES = ["refactor", "auto_fix", "compile", "fix_loop", "package"]
@@ -107,8 +111,12 @@ def _now() -> float:
 
 
 def _purge_locked() -> None:
-    cutoff = _now() - _TTL_S
-    dead = [k for k, v in _jobs.items() if float(v.get("updated_at") or 0) < cutoff]
+    cutoff = _now() - _JOB_RETENTION_S
+    dead = [
+        k
+        for k, v in _jobs.items()
+        if str(v.get("status")) != "running" and float(v.get("updated_at") or 0) < cutoff
+    ]
     for k in dead:
         _jobs.pop(k, None)
 
@@ -340,7 +348,7 @@ def settle_refactor_change(
 
 
 def _stage_refactor(
-    canvas: CanvasState, target: str, evidence_dir: str = ""
+    canvas: CanvasState, target: str, evidence_dir: str = "", af_io_drive: bool = True
 ) -> tuple[CanvasState, dict[str, Any], list[str]]:
     """调重构引擎；``self_contained`` kwarg 未支持时降级并记 warning。
 
@@ -352,7 +360,8 @@ def _stage_refactor(
     warnings: list[str] = []
     try:
         new_canvas, report = refactor_canvas_to_af(
-            canvas, target, self_contained=True, evidence_dir=evidence_dir or None
+            canvas, target, self_contained=True,
+            evidence_dir=evidence_dir or None, af_io_drive=af_io_drive,
         )
     except TypeError:
         # 引擎智能体正在加 self_contained kwarg；未支持时降级为无 kwarg 调用。
@@ -655,7 +664,7 @@ def _extract_compile_errors(
     return errors[:_ERRORS_LIMIT], warnings_count
 
 
-def _compile_write_scope(canvas: CanvasState) -> tuple[CanvasState, list[str]]:
+def _compile_write_scope(canvas: CanvasState, mode: str = "overlay") -> tuple[CanvasState, list[str]]:
     """编译写集裁剪：只写 AF 家族（重构新增块），旧块一律保留 TIA 原件。
 
     交付语义 = 原始工程 + AF 新块覆盖层。旧块(legacy_superseded /
@@ -673,7 +682,40 @@ def _compile_write_scope(canvas: CanvasState) -> tuple[CanvasState, list[str]]:
     scoped = deepcopy(canvas)
     excluded: list[str] = []
     for name, block in list(scoped.blocks.items()):
-        if getattr(block, "status", "") != "draft":
+        if getattr(block, "protected", False):
+            block.status = "synced"
+            excluded.append(name)
+            continue
+        if mode == "af_scl":
+            # 全量 SCL 化(要求2):synced 的旧块(导入后未被规则触碰,翻译体在
+            # 画布里)也要强制进写集——否则 staging 跳过 synced,LAD 原件不动
+            # (真机 GUI 实测:大量 LAD FB 未转 SCL 的根因)。
+            # 例外:FB 的实例 DB(DB<n>_<名> ↔ FB<n>_<名>)绝不写——TIA 在 FB
+            # 编译时自动对账实例 DB;手写伪造的全局 DB 版本既生成非法(V35 六
+            # 连败根因)更会切断 FB↔DB 关联破坏功能一致(要求4)。
+            nm = str(block.name or name)
+            m = re.match(r"^DB(\d+)_(.+?)(?:\[.*\])?$", nm)
+            if m and str(block.block_type).upper() == "DB":
+                fb_sibling = f"FB{m.group(1)}_{m.group(2)}"
+                has_fb = any(
+                    str(b.name or k) == fb_sibling or k == fb_sibling
+                    for k, b in scoped.blocks.items()
+                )
+                if has_fb:
+                    block.status = "synced"
+                    excluded.append(name)
+                    continue
+            if getattr(block, "status", "") != "draft":
+                block.status = "draft"
+            # 全量 SCL 化(要求2),但含翻译期 TODO 占位的块除外——TODO 是翻译器
+            # 无法翻译的 LAD 构造,硬写会 fail-closed 或丢逻辑;诚实边界:保原件。
+            text = "\n".join(
+                [str(block.scl_body or "")]
+                + [str(getattr(n, "scl_text", "") or "") for n in (block.networks or [])]
+            ).upper()
+            if "TODO" in text or "(* EMPTY NETWORK *)" in text:
+                block.status = "synced"
+                excluded.append(name)
             continue
         role = getattr(block, "af_role", "")
         is_af = role in af_roles or ("::" in name and role not in {"legacy_superseded", "af_pending_manual"})
@@ -688,6 +730,7 @@ def _temp_compile(
     *,
     project_source: str,
     plc_name: str = "",
+    mode: str = "overlay",
 ) -> dict[str, Any]:
     """临时副本编译（非破坏铁律的唯一编译通道）。
 
@@ -710,7 +753,8 @@ def _temp_compile(
         "attributions": [],
         "excluded_superseded": [],
     }
-    scoped, excluded = _compile_write_scope(canvas)
+    scoped, excluded = _compile_write_scope(canvas, mode=mode)
+    _ = excluded  # 名单已在 warnings 通道上报
     empty["excluded_superseded"] = excluded
     available, reason = _openness_available()
     if not available:
@@ -804,6 +848,7 @@ def _temp_compile(
 def _make_temp_compile_runner(
     project_source: str,
     plc_name: str,
+    mode: str = "overlay",
 ) -> Callable[..., dict[str, Any]]:
     """给 ``run_fix_loop`` 注入的编译 runner：default_compile_runner 同形返回，
     但写回/编译只发生在临时副本上（project_path 形参仅作信息，不落盘真实工程）。
@@ -821,7 +866,7 @@ def _make_temp_compile_runner(
         reset_work: bool = False,
     ) -> dict[str, Any]:
         canvas = CanvasState.from_dict(canvas_dict)
-        info = _temp_compile(canvas, project_source=project_source, plc_name=plc_name or "")
+        info = _temp_compile(canvas, project_source=project_source, plc_name=plc_name or "", mode=mode)
         error_text = "" if info["ok"] else ("；".join(info["errors"][:3]) or "compile failed")
         return {
             "ok": bool(info["ran"] and info["ok"]),
@@ -905,6 +950,7 @@ def create_refactor_pipeline_job(
     do_compile: bool = True,
     auto_fix: bool = True,
     evidence_dir: str = "",
+    mode: str = "overlay",
 ) -> dict[str, Any]:
     """创建并调度重构流水线作业；立即返回作业快照（后台线程执行）。
 
@@ -931,6 +977,7 @@ def create_refactor_pipeline_job(
             "do_compile": bool(do_compile),
             "auto_fix": bool(auto_fix),
             "evidence_dir": str(evidence_dir or ""),
+            "mode": str(mode or "overlay"),
         },
     }
     with _lock:
@@ -945,6 +992,7 @@ def create_refactor_pipeline_job(
         do_compile=bool(do_compile),
         auto_fix=bool(auto_fix),
         evidence_dir=str(evidence_dir or ""),
+        mode=str(mode or "overlay"),
     )
     return get_refactor_pipeline_job(job_id) or job
 
@@ -957,6 +1005,7 @@ def _run_job(
     do_compile: bool,
     auto_fix: bool,
     evidence_dir: str = "",
+    mode: str = "overlay",
 ) -> None:
     """流水线编排：五个阶段顺序推进，阶段边界检查取消，全程不泄漏线程。"""
     warnings: list[str] = []
@@ -972,7 +1021,10 @@ def _run_job(
         if _cancel_guard(job_id, list(STAGES)):
             return
         _set_stage(job_id, "refactor", "running", f"执行 AF V1.2 重构（target={target}）…")
-        canvas, report, stage_warnings = _stage_refactor(canvas, target, evidence_dir=evidence_dir)
+        af_io_drive = str(mode) != "af_scl"
+        canvas, report, stage_warnings = _stage_refactor(
+            canvas, target, evidence_dir=evidence_dir, af_io_drive=af_io_drive
+        )
         warnings.extend(stage_warnings)
         # 引擎完全降级（零 AF 块）：中间三段照契约跳过，降级证据转 warnings，
         # 流水线整体仍 ok（由 warnings 表达降级），package 段收据如实呈现。
@@ -1039,7 +1091,7 @@ def _run_job(
                 }
             else:
                 plc_name = str(getattr(canvas.source, "plc_name", "") or "") if canvas.source else ""
-                info = _temp_compile(canvas, project_source=source_path, plc_name=plc_name)
+                info = _temp_compile(canvas, project_source=source_path, plc_name=plc_name, mode=mode)
                 excluded_superseded = list(info.get("excluded_superseded") or [])
                 if excluded_superseded:
                     warnings.append(

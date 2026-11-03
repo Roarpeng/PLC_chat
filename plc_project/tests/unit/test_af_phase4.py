@@ -177,10 +177,13 @@ def test_legacy_to_af_mapper_hr001_mock():
     assert "LBC_TwoWayActuator" in cm_types
     assert "LBC_DigitalSignal" in cm_types
 
-    # Check 100% I/O Retention Rate
+    # Check 100% I/O Retention Rate(拆分:4 精确映射 + 2 兜底收编)
     assert analysis.total_ios_detected == 6
     assert analysis.retained_ios_count == 6
     assert analysis.io_retention_rate == 100.0
+    assert analysis.retained_direct_count == 4
+    assert analysis.retained_fallback_count == 2
+    assert analysis.degraded is False
 
     # Check Safety Interlocks
     assert len(analysis.interlocks_detected) >= 1
@@ -195,11 +198,21 @@ def test_refactor_canvas_to_af():
     # 1. Report verification
     assert report["status"] == "success"
     assert report["target_unit_name"] == "U1_HR001"
+    assert report["generator_mode"] == "library"
+    assert report["degraded"] is False
+    assert report["degrade_reasons"] == []
+    assert report["pending_blocks"] == []
     assert report["io_retention"]["percentage"] == 100.0
     assert report["io_retention"]["total_ios"] == 6
     assert report["io_retention"]["retained_ios"] == 6
+    assert report["io_retention"]["retained_direct"] == 4
+    assert report["io_retention"]["retained_fallback"] == 2
     assert len(report["ems"]) == 1
     assert len(report["block_mapping"]) == len(canvas.blocks)
+    # details 逐项带 fallback 标记,兜底 CM 收编的 IO 可辨别
+    fallback_details = [d for d in report["io_retention"]["details"] if d["fallback"]]
+    assert len(fallback_details) == 2
+    assert all(d["cm_type"] == "LBC_DigitalSignal" for d in fallback_details)
 
     # 2. Check that legacy blocks are marked superseded
     assert new_canvas.blocks["FB1000_MainControl"].af_role == "legacy_superseded"
@@ -314,14 +327,40 @@ def test_refactor_with_analog_and_motor():
         number=1,
         scl_body="// Main cyclic",
     )
+    # 步序块:真实可识别的 CASE 步进机(无它则走诚实降级,不再造假 EM)
+    canvas.blocks["FB10_Sequence"] = CanvasBlock(
+        name="FB10_Sequence",
+        block_type="FB",
+        number=10,
+        interface=[CanvasVariable(name="iStep", data_type="DInt", section="VAR")],
+        scl_body="""CASE #iStep OF
+    10: // START_CONVEYOR
+        "Q_Motor_Conveyor" := TRUE;
+        IF "AI_TankPressure" > 100 THEN
+            #iStep := 20;
+        END_IF;
+    20: // STOP_CONVEYOR
+        "Q_Motor_Conveyor" := FALSE;
+END_CASE;
+""",
+        status="synced",
+    )
 
     new_canvas, report = refactor_canvas_to_af(canvas, target_unit_name="U1_ConveyorLine")
 
+    assert report["status"] == "success"
+    assert report["degraded"] is False
     assert report["io_retention"]["total_ios"] == 2
     assert report["io_retention"]["retained_ios"] == 2
+    assert report["io_retention"]["retained_direct"] == 2
+    assert report["io_retention"]["retained_fallback"] == 0
     assert report["io_retention"]["percentage"] == 100.0
 
     em_cms = report["ems"][0]["cms"]
     types = {cm["cm_type"] for cm in em_cms}
     assert "LBC_AnalogInput" in types
     assert "LBC_AxisControl" in types
+
+    # 无安全联锁信号:不再注入 GlobalEmergencyStop 占位,改为记降级原因
+    assert report["interlocks"] == []
+    assert "no_interlock_detected" in report["degrade_reasons"]

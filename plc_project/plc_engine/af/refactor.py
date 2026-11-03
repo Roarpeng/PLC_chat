@@ -30,6 +30,7 @@ def refactor_canvas_to_af(
     *,
     self_contained: bool = False,
     evidence_dir: str | None = None,
+    af_io_drive: bool = True,
 ) -> tuple[CanvasState, dict[str, Any]]:
     """Refactor a legacy CanvasState into official AF V1.2 architecture.
 
@@ -93,7 +94,7 @@ def refactor_canvas_to_af(
     except Exception:  # noqa: BLE001 — 权威表缺失退画布推导
         pass
     af_blocks = generate_af_project_blocks(
-        af_project, self_contained=self_contained, tag_types=tag_types
+        af_project, self_contained=self_contained, tag_types=tag_types, af_io_drive=af_io_drive
     )
 
     # 5. Enrich CallEquipment blocks with hardware I/O and interlock bindings

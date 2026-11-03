@@ -441,7 +441,7 @@ def test_endpoint_canvas_required(client: TestClient) -> None:
 
 
 def test_compile_write_scope_excludes_superseded_draft() -> None:
-    """写集裁剪：legacy_superseded 的 draft 块移出写集；pending/普通 draft 保留。"""
+    """写集裁剪：只留 AF 家族——superseded/pending 移出(TIA 保留原件)。"""
     canvas = create_empty_canvas("DemoLine")
     superseded = CanvasBlock(name="FB720_KuKa_MainCtrl", block_type="FB", scl_body="// TODO[x] 翻译占位")
     superseded.status = "draft"
@@ -449,24 +449,26 @@ def test_compile_write_scope_excludes_superseded_draft() -> None:
     pending = CanvasBlock(name="FC2100_Modbus", block_type="FC", scl_body="// 原 SCL")
     pending.status = "draft"
     pending.af_role = "af_pending_manual"
-    af_block = CanvasBlock(name="U1_DemoLine_EM1", block_type="FB", scl_body="// AF 自举块")
+    af_block = CanvasBlock(name="Sequence", block_type="FB", scl_body="// AF 自举块")
     af_block.status = "draft"
+    af_block.af_role = "Sequence"
     canvas.blocks["FB720_KuKa_MainCtrl"] = superseded
     canvas.blocks["FC2100_Modbus"] = pending
-    canvas.blocks["U1_DemoLine_EM1"] = af_block
+    canvas.blocks["U1_DemoLine::Sequence"] = af_block
 
     scoped, excluded = rp._compile_write_scope(canvas)
 
-    assert excluded == ["FB720_KuKa_MainCtrl"]
+    assert "FB720_KuKa_MainCtrl" in excluded
+    assert "FC2100_Modbus" in excluded
     assert scoped.blocks["FB720_KuKa_MainCtrl"].status == "synced"
-    assert scoped.blocks["FC2100_Modbus"].status == "draft"
-    assert scoped.blocks["U1_DemoLine_EM1"].status == "draft"
+    assert scoped.blocks["FC2100_Modbus"].status == "synced"
+    assert scoped.blocks["U1_DemoLine::Sequence"].status == "draft"
     # 原画布不被裁剪污染（交付画布仍保留取代块的 draft 状态）
     assert canvas.blocks["FB720_KuKa_MainCtrl"].status == "draft"
 
 
 def test_compile_write_scope_excludes_todo_pending() -> None:
-    """含翻译期 TODO 的 pending 块移出写集;无 TODO 的 pending 保留。"""
+    """pending 块(含/不含 TODO)一律移出写集——TIA 保留原件,不写翻译体。"""
     canvas = create_empty_canvas("DemoLine")
     todo_pending = CanvasBlock(name="FB1142_TypeChangePrompt", block_type="FB", scl_body="// TODO[x] 未翻译元素")
     todo_pending.status = "draft"
@@ -480,6 +482,26 @@ def test_compile_write_scope_excludes_todo_pending() -> None:
     scoped, excluded = rp._compile_write_scope(canvas)
 
     assert "FB1142_TypeChangePrompt" in excluded
-    assert "FB1080_Component" not in excluded
+    assert "FB1080_Component" in excluded
     assert scoped.blocks["FB1142_TypeChangePrompt"].status == "synced"
-    assert scoped.blocks["FB1080_Component"].status == "draft"
+    assert scoped.blocks["FB1080_Component"].status == "synced"
+
+
+def test_compile_write_scope_keeps_af_family() -> None:
+    """AF 家族块(含 :: 键与各 AF 角色)保留 draft——交付=原件+AF 覆盖层。"""
+    canvas = create_empty_canvas("DemoLine")
+    af1 = CanvasBlock(name="Sequence", block_type="FB", scl_body='FUNCTION_BLOCK "U1Em1_Seq" END_FUNCTION_BLOCK')
+    af1.status = "draft"
+    af1.af_role = "Sequence"
+    af2 = CanvasBlock(name="CallEquipment_DB", block_type="DB", scl_body='DATA_BLOCK "U1_CE_DB" END_DATA_BLOCK')
+    af2.status = "draft"
+    af2.af_role = "CallEquipment_DB"
+    canvas.blocks["U1Em1_Seq::Sequence"] = af1
+    canvas.blocks["U1_CE::CallEquipment_DB"] = af2
+
+    scoped, excluded = rp._compile_write_scope(canvas)
+    # blank 画布自带的默认块(无 AF 角色)会被移出——只断言 AF 家族保留
+    assert "U1Em1_Seq::Sequence" not in excluded
+    assert "U1_CE::CallEquipment_DB" not in excluded
+    assert scoped.blocks["U1Em1_Seq::Sequence"].status == "draft"
+    assert scoped.blocks["U1_CE::CallEquipment_DB"].status == "draft"

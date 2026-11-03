@@ -2810,6 +2810,7 @@ async def create_refactor_pipeline_endpoint(
         do_compile=bool(body.get("do_compile", True)),
         auto_fix=bool(body.get("auto_fix", True)),
         evidence_dir=evidence_dir,
+        mode=str(body.get("mode") or "overlay"),
     )
     logger.info(
         "plc refactor pipeline queued id=%s project=%s do_compile=%s auto_fix=%s evidence=%s request_id=%s",

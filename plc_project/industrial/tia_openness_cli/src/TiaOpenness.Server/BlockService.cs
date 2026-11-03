@@ -664,19 +664,30 @@ public sealed class BlockService
         try
         {
             object? extGroup = null;
+            string? unitNote = null;
             if (!string.IsNullOrWhiteSpace(softwareUnit))
             {
+                // 优先落位到软件单元;不存在则 EnsureSoftwareUnit(find-or-create)。
+                // S7-1200 等经典 CPU 无 SoftwareUnitGroup(软件单元是 S7-1500 特性,
+                // EnsureSoftwareUnit 会失败)——此时回退 PLC 根目录放置:块名已全局
+                // 唯一,根目录合法落位(与旧构建行为一致),成功消息如实备注。
                 var unit = FindSoftwareUnit(softwareUnit);
                 if (unit is null)
                 {
-                    return FailGenerate("not_found", $"Software unit '{softwareUnit}' not found.");
+                    var ensured = EnsureSoftwareUnit(softwareUnit);
+                    if (ensured.Ok && ensured.Unit is not null)
+                    {
+                        unit = ensured.Unit;
+                    }
                 }
-                extGroup = GetProp(unit, "ExternalSourceGroup") ?? GetProp(unit, "ExternalSources");
+                if (unit is not null)
+                {
+                    extGroup = GetProp(unit, "ExternalSourceGroup") ?? GetProp(unit, "ExternalSources");
+                }
                 if (extGroup is null)
                 {
-                    return FailGenerate(
-                        "dependency_unavailable",
-                        $"Software unit '{softwareUnit}' does not expose ExternalSourceGroup.");
+                    unitNote = $"software unit '{softwareUnit}' unavailable on this PLC; generated at PLC root";
+                    extGroup = GetProp(_projects.PlcSoftware, "ExternalSourceGroup");
                 }
             }
             else
@@ -735,14 +746,15 @@ public sealed class BlockService
                 Overwrite = overwrite,
                 GeneratedNames = names,
                 Api = "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
-                Message = names.Count == 0
+                Message = (names.Count == 0
                     ? $"Generated blocks from {sourceName} (GenerateBlocksFromSource)."
-                    : $"Generated {names.Count} item(s) from {sourceName}: {string.Join(", ", names)}.",
+                    : $"Generated {names.Count} item(s) from {sourceName}: {string.Join(", ", names)}.")
+                    + (unitNote is null ? "" : $" ({unitNote})"),
             };
         }
         catch (Exception ex)
         {
-            return FailGenerate("openness_error", Unwrap(ex).Message);
+            return FailGenerateEx("openness_error", ex);
         }
     }
 
@@ -931,6 +943,101 @@ public sealed class BlockService
     /// Fail-closed compile for writeback. If ICompilable is unreachable, Ok=false
     /// with code compile_api_unavailable — callers must not archive .zap.
     /// </summary>
+    /// <summary>
+    /// 单块(或多块,'|' 分隔)编译:块对象自身实现 ICompilable,直接调其 Compile()。
+    /// PlcSoftware 整机编译的 CompilerResult.Messages 只有计数与总结(真机实测),
+    /// 单块编译的 Messages 才带逐条 Path/行号/文本——设备级编译排障的唯一通道。
+    /// </summary>
+    public List<CompilePlcResult> CompileBlocksStrict(string blockNames)
+    {
+        var results = new List<CompilePlcResult>();
+        if (_projects.PlcSoftware is null)
+        {
+            results.Add(new CompilePlcResult
+            {
+                Ok = false,
+                ApiAvailable = false,
+                Error = new ToolError { Code = "invalid_argument", Message = "No project open. Call tia.open_project first." },
+            });
+            return results;
+        }
+        // 收集全部块(名→对象),一次遍历复用
+        var byName = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (group, _) in EnumerateBlockRoots())
+        {
+            if (GetProp(group, "Blocks") is not IEnumerable blocks) continue;
+            foreach (var b in blocks)
+            {
+                var n = GetPropString(b, "Name");
+                if (!string.IsNullOrWhiteSpace(n) && !byName.ContainsKey(n!)) byName[n!] = b;
+            }
+        }
+        foreach (var raw in blockNames.Split('|'))
+        {
+            var name = raw.Trim();
+            if (name.Length == 0) continue;
+            if (!byName.TryGetValue(name, out var block))
+            {
+                results.Add(new CompilePlcResult
+                {
+                    Ok = false,
+                    ApiAvailable = false,
+                    BlockName = name,
+                    Error = new ToolError { Code = "not_found", Message = $"Block '{name}' not found." },
+                });
+                continue;
+            }
+            try
+            {
+                var compile = block.GetType().GetMethod("Compile", Type.EmptyTypes);
+                if (compile is null)
+                {
+                    results.Add(new CompilePlcResult
+                    {
+                        Ok = false,
+                        ApiAvailable = false,
+                        BlockName = name,
+                        Error = new ToolError { Code = "compile_api_unavailable", Message = $"Block '{name}' does not expose Compile()." },
+                    });
+                    continue;
+                }
+                var result = compile.Invoke(block, null);
+                var state = GetProp(result, "State")?.ToString() ?? "?";
+                var errCount = GetProp(result, "ErrorCount")?.ToString() ?? "?";
+                var warnCount = GetProp(result, "WarningCount")?.ToString() ?? "?";
+                var failed = ParseCount(errCount) is > 0
+                    || state.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0
+                    || state.IndexOf("Fail", StringComparison.OrdinalIgnoreCase) >= 0;
+                var message = $"Block '{name}' State={state} errors={errCount} warnings={warnCount}";
+                results.Add(new CompilePlcResult
+                {
+                    Ok = !failed,
+                    ApiAvailable = true,
+                    BlockName = name,
+                    State = state,
+                    ErrorCount = ParseCount(errCount),
+                    WarningCount = ParseCount(warnCount),
+                    InconsistentBlocks = ExtractInconsistentNames(result),
+                    Message = message,
+                    Error = failed
+                        ? new ToolError { Code = "block_compile_failed", Message = message, CompilerErrors = ExtractCompilerErrorEntries(result) }
+                        : null,
+                });
+            }
+            catch (Exception ex)
+            {
+                results.Add(new CompilePlcResult
+                {
+                    Ok = false,
+                    ApiAvailable = false,
+                    BlockName = name,
+                    Error = new ToolError { Code = "compile_api_unavailable", Message = $"Block '{name}' compile threw: {Unwrap(ex).Message}" },
+                });
+            }
+        }
+        return results;
+    }
+
     public CompilePlcResult CompilePlcSoftwareStrict()
     {
         if (_projects.PlcSoftware is null)
@@ -980,7 +1087,7 @@ public sealed class BlockService
                 State = state,
                 ErrorCount = errCount,
                 WarningCount = warnCount,
-                InconsistentBlocks = invoked.Inconsistent,
+                InconsistentBlocks = failed ? CollectInconsistentBlockNames() : invoked.Inconsistent,
                 Message = message,
                 Error = failed
                     ? new ToolError
@@ -990,6 +1097,9 @@ public sealed class BlockService
                             invoked.Inconsistent.Count == 0
                                 ? ""
                                 : " inconsistent=" + string.Join(", ", invoked.Inconsistent)),
+                        // 逐条编译错误(Path/行号/文本)——只有总数无从修起;
+                        // Python 提取层按 compilerErrors 键渲染(与 generate 同约定)
+                        CompilerErrors = invoked.ErrorEntries,
                     }
                     : null,
             };
@@ -1034,7 +1144,45 @@ public sealed class BlockService
         string? State,
         string? ErrorCount,
         string? WarningCount,
-        List<string> Inconsistent);
+        List<string> Inconsistent,
+        List<string>? ErrorEntries);
+
+    /// <summary>
+    /// 编译结果逐条错误(反射读 CompilerResult.Errors 集合,每条 Path/LineNumber/Text)。
+    /// 只有序号没有条目时,69 个错误无从修起(真机 V16 案例:inconsistentBlocks
+    /// 只含总结文本);与 GenerateBlocksFromSource 的 compilerErrors 同一约定。
+    /// </summary>
+    private static List<string>? ExtractCompilerErrorEntries(object? result)
+    {
+        if (result is null) return null;
+        var found = new List<string>();
+        foreach (var prop in result.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            if (!prop.CanRead || prop.GetIndexParameters().Length > 0) continue;
+            // Openness CompilerResult 的逐条消息集合叫 Messages(条目 Path/Description/
+            // Message;ExtractInconsistentNames 同源),兼容 Errors/CompilerMessages 别名
+            if (!string.Equals(prop.Name, "Messages", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(prop.Name, "CompilerMessages", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(prop.Name, "Errors", StringComparison.OrdinalIgnoreCase)) continue;
+            if (prop.PropertyType == typeof(string) || !typeof(IEnumerable).IsAssignableFrom(prop.PropertyType)) continue;
+            if (prop.GetValue(result) is not IEnumerable items) continue;
+            foreach (var item in items)
+            {
+                if (item is null || found.Count >= 100) break;
+                var path = StringProp(item, "Path");
+                var line = StringProp(item, "LineNumber") ?? StringProp(item, "Line");
+                var text = StringProp(item, "Description")
+                    ?? StringProp(item, "Message")
+                    ?? StringProp(item, "Text");
+                if (text is null) continue;
+                var file = string.IsNullOrEmpty(path) ? "" : System.IO.Path.GetFileName(path) + " ";
+                found.Add(string.IsNullOrEmpty(line)
+                    ? $"{file}{text}"
+                    : $"{file}行 {line}: {text}");
+            }
+        }
+        return found.Count > 0 ? found : null;
+    }
 
     private static CompileInvoke InvokeCompile(object plc)
     {
@@ -1049,7 +1197,7 @@ public sealed class BlockService
         }
         if (getService is null)
         {
-            return new CompileInvoke(false, "Compile skipped: GetService not found.", null, null, null, new());
+            return new CompileInvoke(false, "Compile skipped: GetService not found.", null, null, null, new(), null);
         }
 
         Type? iCompilable = plc.GetType().Assembly.GetType("Siemens.Engineering.Compiler.ICompilable");
@@ -1063,19 +1211,19 @@ public sealed class BlockService
         }
         if (iCompilable is null)
         {
-            return new CompileInvoke(false, "Compile skipped: ICompilable type not found.", null, null, null, new());
+            return new CompileInvoke(false, "Compile skipped: ICompilable type not found.", null, null, null, new(), null);
         }
 
         var service = getService.MakeGenericMethod(iCompilable).Invoke(plc, null);
         if (service is null)
         {
-            return new CompileInvoke(false, "Compile skipped: ICompilable service null.", null, null, null, new());
+            return new CompileInvoke(false, "Compile skipped: ICompilable service null.", null, null, null, new(), null);
         }
 
         var compile = service.GetType().GetMethod("Compile", Type.EmptyTypes);
         if (compile is null)
         {
-            return new CompileInvoke(false, "Compile skipped: Compile() not found.", null, null, null, new());
+            return new CompileInvoke(false, "Compile skipped: Compile() not found.", null, null, null, new(), null);
         }
 
         var result = compile.Invoke(service, null);
@@ -1089,7 +1237,47 @@ public sealed class BlockService
             state,
             errCount,
             warnCount,
-            inconsistent);
+            inconsistent,
+            ExtractCompilerErrorEntries(result));
+    }
+
+    /// <summary>
+    /// 编译失败后巡检全部块的 IsConsistent=false 名单。CompilerResult.Messages 只给
+    /// 计数与总结(真机实测:69 errors 仅 2 条汇总消息),逐块罪魁只能从这里拿。
+    /// 枚举姿势与 CollectBlocks 同款:Blocks/Groups 组合对象本身即 IEnumerable。
+    /// </summary>
+    private List<string> CollectInconsistentBlockNames()
+    {
+        var names = new List<string>();
+        foreach (var (group, _) in EnumerateBlockRoots())
+        {
+            CollectInconsistent(group, names);
+        }
+        return names;
+    }
+
+    private void CollectInconsistent(object group, List<string> sink)
+    {
+        if (GetProp(group, "Blocks") is IEnumerable blocks)
+        {
+            foreach (var block in blocks)
+            {
+                // 仅明确 IsConsistent==false 才记名:属性缺失(null)不视为不一致
+                if (GetProp(block, "IsConsistent") is not false) continue;
+                var name = GetPropString(block, "Name");
+                if (!string.IsNullOrWhiteSpace(name) && sink.Count < 200)
+                {
+                    sink.Add(name!);
+                }
+            }
+        }
+        if (GetProp(group, "Groups") is IEnumerable groups)
+        {
+            foreach (var child in groups)
+            {
+                CollectInconsistent(child, sink);
+            }
+        }
     }
 
     private IEnumerable<(object Group, string Prefix)> EnumerateBlockRoots()
@@ -1532,6 +1720,88 @@ public sealed class BlockService
         Error = new ToolError { Code = code, Message = message },
         Api = "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
     };
+
+    /// <summary>
+    /// GenerateBlocksFromSource 失败的增强序列化:除最外层 Message 外,携带
+    /// InnerException 全链(innerMessages)与编译错误集合(compilerErrors,
+    /// 反射提取,不依赖 Openness 编译期类型)。只发 Message 会把行号级 SCL
+    /// 诊断全部丢失(真机 FB1080 案例实测;Python 提取层按同名字段渲染)。
+    /// </summary>
+    private static GenerateFromSourceResult FailGenerateEx(string code, Exception ex)
+    {
+        var root = Unwrap(ex);
+        return new GenerateFromSourceResult
+        {
+            Ok = false,
+            Error = new ToolError
+            {
+                Code = code,
+                Message = root.Message,
+                InnerMessages = InnerChain(root),
+                CompilerErrors = CollectCompilerErrors(root),
+            },
+            Api = "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
+        };
+    }
+
+    private static List<string>? InnerChain(Exception root)
+    {
+        var messages = new List<string>();
+        for (var cur = root.InnerException; cur is not null && messages.Count < 8; cur = cur.InnerException)
+        {
+            messages.Add(cur.Message);
+        }
+        if (messages.Count == 0)
+        {
+            // 无内部链时兜底附完整 ToString(含异常类型/消息/堆栈,截尾防膨胀):
+            // TIA 部分生成失败不抛 EngineeringCompilerException,真实原因只在
+            // 异常类型与堆栈里(真机 FB1080 案例:Message 戛然而止无任何诊断)。
+            var full = root.ToString();
+            if (full.Length > 2000)
+            {
+                full = full.Substring(0, 2000) + " …(截尾)";
+            }
+            messages.Add(full);
+        }
+        return messages.Count > 0 ? messages : null;
+    }
+
+    private static List<string>? CollectCompilerErrors(Exception root)
+    {
+        var found = new List<string>();
+        for (Exception? cur = root; cur is not null && found.Count < 50; cur = cur.InnerException)
+        {
+            foreach (var prop in cur.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (!prop.CanRead || prop.GetIndexParameters().Length > 0) continue;
+                if (!string.Equals(prop.Name, "CompilerErrors", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(prop.Name, "Errors", StringComparison.OrdinalIgnoreCase)) continue;
+                if (prop.PropertyType == typeof(string) || !typeof(IEnumerable).IsAssignableFrom(prop.PropertyType)) continue;
+                if (prop.GetValue(cur) is not IEnumerable items) continue;
+                foreach (var item in items)
+                {
+                    if (item is null || found.Count >= 50) break;
+                    var path = StringProp(item, "Path");
+                    var line = StringProp(item, "LineNumber") ?? StringProp(item, "Line");
+                    var text = StringProp(item, "Text") ?? StringProp(item, "Description") ?? StringProp(item, "Message");
+                    if (text is null) continue;
+                    var file = string.IsNullOrEmpty(path) ? "" : System.IO.Path.GetFileName(path) + " ";
+                    found.Add(string.IsNullOrEmpty(line)
+                        ? $"{file}{text}"
+                        : $"{file}行 {line}: {text}");
+                }
+            }
+        }
+        return found.Count > 0 ? found : null;
+    }
+
+    private static string? StringProp(object obj, string name)
+    {
+        var p = obj.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+        return p is not null && p.CanRead && p.GetIndexParameters().Length == 0
+            ? p.GetValue(obj)?.ToString()
+            : null;
+    }
 
     private static GenerateSourceFromBlockResult FailGenerateSource(string code, string message) => new()
     {
