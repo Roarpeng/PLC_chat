@@ -1,0 +1,46 @@
+FUNCTION_BLOCK "CallUnit"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_IN_OUT
+    emNodes : "EmNodes";
+END_VAR
+VAR
+    instStatusCollector : "LUC_StatusCollector";
+    instInterfaceManager : "LUC_InterfaceManager";
+    instModeStateManager : "LPMLV2022_UnitModeStateManager";
+    instSetUnitStatus : "LUC_SetUnitStatus";
+    instUpdateHistory : "LUC_UpdateModeStateHistory";
+    instStateTimes : "LPMLV2022_UnitModeStateTimes";
+    instSignalStack : "LUC_SignalStack";
+END_VAR
+BEGIN
+    // Step 1: Collect Alarms
+    // "CollectAlarms"();
+
+    // Step 2: LUC_StatusCollector
+    #instStatusCollector(
+        status := #emNodes.unitStatus,
+        emFeedback := #emNodes.emFeedback
+    );
+
+    // Step 3: LUC_InterfaceManager
+    #instInterfaceManager(
+        status := #emNodes.unitStatus
+    );
+
+    // Step 4: LPMLV2022_UnitModeStateManager
+    #instModeStateManager(
+        status := #emNodes.unitStatus
+    );
+
+    // Step 5: LUC_SetUnitStatus
+    #instSetUnitStatus(
+        unitStatus => #emNodes.unitStatus
+    );
+
+    // Step 6: Mode and State Times & History
+    #instUpdateHistory(
+        currentMode := #emNodes.unitStatus.mode.currentMode,
+        currentState := #emNodes.unitStatus.state.currentState
+    );
+END_FUNCTION_BLOCK

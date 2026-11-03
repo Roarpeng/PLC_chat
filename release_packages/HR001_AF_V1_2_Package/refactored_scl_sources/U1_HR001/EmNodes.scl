@@ -1,0 +1,12 @@
+DATA_BLOCK "EmNodes"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+STRUCT
+    unitStatus : "LUC_typeUnitStatus";
+    emFeedback : Array[0..15] of "LAF_typeEmFeedback";
+    emRelations : Array[0..15] of "LAF_typeEmRelations";
+    signalStack : "LUC_typeSignalStack";
+END_STRUCT;
+BEGIN
+END_DATA_BLOCK

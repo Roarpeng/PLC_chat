@@ -1,0 +1,229 @@
+FUNCTION_BLOCK "CallEquipment"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_IN_OUT
+    controlNodes : "ControlNodes";
+END_VAR
+VAR
+    statUnitStatus : "LUC_typeUnitStatus";
+    instInterlink : "LUC_InterlinkToParent";
+    instControlEm : "LAF_ControlEm";
+    instMapStatus : "LAF_MapUnitStatusToSequence";
+    instSequence : "Sequence";
+    inst_cylIZ02ExtPos : "LBC_TwoWayActuator";
+    inst_cylIZ02RetPos : "LBC_TwoWayActuator";
+    inst_cylQCamCoverExt : "LBC_TwoWayActuator";
+    inst_cylQCamCoverRet : "LBC_TwoWayActuator";
+    inst_sensorIToolAtPos : "LBC_DigitalSignal";
+    inst_sensorIFixtureStuckSensor : "LBC_DigitalSignal";
+END_VAR
+BEGIN
+    // Step 1: Interlink to Parent Unit
+    #instInterlink(
+        unitStatus => #statUnitStatus
+    );
+    #instControlEm(
+        unitStatus := #statUnitStatus
+    );
+
+    // Step 2 & 3: Map Unit Status to Sequence
+    #instMapStatus(
+        unitStatus := #statUnitStatus,
+        sequenceCommands => #controlNodes.sequence.commands
+    );
+
+    // Step 4: Call FB Sequence
+    #instSequence(
+        controlNodes := #controlNodes
+    );
+
+    // Step 5: Call Control Modules
+    // Call CM: cylIZ02ExtPos (LBC_TwoWayActuator)
+    #inst_cylIZ02ExtPos(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylIZ02ExtPos
+    );
+
+    // Call CM: cylIZ02RetPos (LBC_TwoWayActuator)
+    #inst_cylIZ02RetPos(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylIZ02RetPos
+    );
+
+    // Call CM: cylQCamCoverExt (LBC_TwoWayActuator)
+    #inst_cylQCamCoverExt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQCamCoverExt
+    );
+
+    // Call CM: cylQCamCoverRet (LBC_TwoWayActuator)
+    #inst_cylQCamCoverRet(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQCamCoverRet
+    );
+
+    // Call CM: sensorIToolAtPos (LBC_DigitalSignal)
+    #inst_sensorIToolAtPos(
+        controlNodes := #controlNodes.sensorIToolAtPos
+    );
+
+    // Call CM: sensorIFixtureStuckSensor (LBC_DigitalSignal)
+    #inst_sensorIFixtureStuckSensor(
+        controlNodes := #controlNodes.sensorIFixtureStuckSensor
+    );
+
+    // Step 6: Determine State Complete (SC)
+    // #emFeedback.stateComplete := #controlNodes.sequence.status.stateComplete;
+
+    // ==========================================
+    // Hardware I/O Binding & Safety Interlocks
+    // ==========================================
+    // CM sensorIEMOK.signal: %I0.0 (IEMOK)
+    // CM sensorIAirPressOK.signal: %I0.1 (IAirPressOK)
+    // CM sensorIMan.signal: %I0.2 (IMan)
+    // CM sensorIAuto.signal: %I0.3 (IAuto)
+    // CM sensorIAutoModeStart.signal: %I0.4 (IAutoModeStart)
+    // CM sensorIErrRst.signal: %I0.5 (IErrRst)
+    // CM sensorICurtainsOK.signal: %I0.6 (ICurtainsOK)
+    // CM sensorIEMOK1.signal: %I0.7 (IEMOK1)
+    // CM sensorICurtainErrRst.signal: %I1.0 (ICurtainErrRst)
+    // CM sensorIDoorOverRide.signal: %I1.1 (IDoorOverRide)
+    // CM sensorIDoor1Unlocked.signal: %I1.2 (IDoor1Unlocked)
+    // CM sensorIDoor1Insert.signal: %I1.3 (IDoor1Insert)
+    // CM sensorIDoor2Unlocked.signal: %I1.4 (IDoor2Unlocked)
+    // CM sensorIDoor2Insert.signal: %I1.5 (IDoor2Insert)
+    // CM sensorIDoor3Unlocked.signal: %I2.0 (IDoor3Unlocked)
+    // CM sensorIDoor3Insert.signal: %I2.1 (IDoor3Insert)
+    // CM sensorBStationToolOn1.signal: %I2.2 (BStation_ToolOn1)
+    // CM sensorBStationToolOn2.signal: %I2.3 (BStation_ToolOn2)
+    // CM sensorAStationToolOn1.signal: %I2.4 (AStation_ToolOn1)
+    // CM sensorAStationToolOn2.signal: %I2.5 (AStation_ToolOn2)
+    // CM sensorBStationIZ04RetPos.signal: %I2.6 (BStation_IZ04RetPos)
+    // CM sensorBStationIZ04ExtPos.signal: %I2.7 (BStation_IZ04ExtPos)
+    // CM sensorAStationIZ03ExtPos.signal: %I3.0 (AStation_IZ03ExtPos)
+    // CM sensorAStationIZ03RetPos.signal: %I3.1 (AStation_IZ03RetPos)
+    // CM cylIZ02ExtPos.workSensor: %I3.2 (IZ02ExtPos)
+    // CM cylIZ02RetPos.homeSensor: %I3.3 (IZ02RetPos)
+    // CM sensorIZ07RetPos.signal: %I3.4 (IZ07RetPos)
+    // CM cylIZ07ExtPos.workSensor: %I3.5 (IZ07ExtPos)
+    // CM sensorIToolAtPos.signal: %I3.6 (IToolAtPos)
+    // CM sensorIFixtureCode01.signal: %I3.7 (IFixtureCode01)
+    // CM sensorIFixtureCode02.signal: %I4.0 (IFixtureCode02)
+    // CM sensorIFixtureCode03.signal: %I4.1 (IFixtureCode03)
+    // CM sensorIFixtureIOCode01.signal: %I4.2 (IFixtureIOCode01)
+    // CM sensorIFixtureIOCode02.signal: %I4.3 (IFixtureIOCode02)
+    // CM sensorIFixtureIOCode03.signal: %I4.4 (IFixtureIOCode03)
+    // CM cylIEMClamp.workSensor: %I4.5 (IEMClamp)
+    // CM sensorIFixtureStuckSensor.signal: %I4.6 (IFixtureStuckSensor)
+    // CM sensorISp47.signal: %I4.7 (ISp4_7)
+    // CM sensorIAllDoorClose.signal: %I5.0 (IAllDoorClose)
+    // CM sensorIRobotEMOK.signal: %I5.1 (IRobotEMOK)
+    // CM analogITempErr.value: %I5.2 (ITempErr)
+    // CM sensorIInsideEMOK.signal: %I5.3 (IInsideEMOK)
+    // CM sensorIInsideEMOK1.signal: %I5.4 (IInsideEMOK1)
+    // CM sensorISp055.signal: %I5.5 (ISp055)
+    // CM sensorISp056.signal: %I5.6 (ISp056)
+    // CM sensorISp057.signal: %I5.7 (ISp057)
+    // CM sensorISp060.signal: %I6.0 (ISp060)
+    // CM sensorISp061.signal: %I6.1 (ISp061)
+    // CM sensorISp062.signal: %I6.2 (ISp062)
+    // CM sensorISp063.signal: %I6.3 (ISp063)
+    // CM sensorISp064.signal: %I6.4 (ISp064)
+    // CM sensorISp065.signal: %I6.5 (ISp065)
+    // CM sensorISp066.signal: %I6.6 (ISp066)
+    // CM sensorISp067.signal: %I6.7 (ISp067)
+    // CM sensorICoreBlockDectLeftTool.signal: %I7.0 (ICoreBlockDect_LeftTool)
+    // CM sensorICoreBlockDectRightTool.signal: %I7.1 (ICoreBlockDect_RightTool)
+    // CM sensorIWaterToolAtDectPos.signal: %I7.2 (IWaterToolAtDectPos)
+    // CM sensorICoreBlockDropDectLeftTool.signal: %I7.3 (ICoreBlockDropDect_LeftTool)
+    // CM sensorICoreBlockDropDectRightTool.signal: %I7.4 (ICoreBlockDropDect_RightTool)
+    // CM sensorISp075.signal: %I7.5 (ISp075)
+    // CM sensorISp076.signal: %I7.6 (ISp076)
+    // CM sensorISp077.signal: %I7.7 (ISp077)
+    // CM analogIW10.value: %IW10 (IW10)
+    // CM analogIW12.value: %IW12 (IW12)
+    // CM actQPanelG.command: %Q0.0 (QPanelG)
+    // CM actQPanelRed.command: %Q0.1 (QPanelRed)
+    // CM sensorQBeeper.signal: %Q0.2 (QBeeper)
+    // CM actQTLR.command: %Q0.3 (QTLR)
+    // CM actQTLY.command: %Q0.4 (QTLY)
+    // CM actQTLG.command: %Q0.5 (QTLG)
+    // CM actQTLB.command: %Q0.6 (QTLB)
+    // CM actQTLW.command: %Q0.7 (QTLW)
+    // CM actQSpairMode.command: %Q1.0 (QSpairMode)
+    // CM actQLampCtr.command: %Q1.1 (QLampCtr)
+    // CM sensorOOpenCamCover.signal: %Q1.2 (OOpenCamCover)
+    // CM actOCloseCamCover.command: %Q1.3 (OCloseCamCover)
+    // CM actQSp014.command: %Q1.4 (QSp014)
+    // CM actQSp015.command: %Q1.5 (QSp015)
+    // CM actQSp016.command: %Q1.6 (QSp016)
+    // CM actQSp017.command: %Q1.7 (QSp017)
+    // CM actQDoorClose.command: %Q2.0 (QDoorClose)
+    // CM actQCurtainLight.command: %Q2.1 (QCurtainLight)
+    // CM actQCurtainRst.command: %Q2.2 (QCurtainRst)
+    // CM actQSpare023.command: %Q2.3 (QSpare023)
+    // CM actQSpare024.command: %Q2.4 (QSpare024)
+    // CM actQSpare025.command: %Q2.5 (QSpare025)
+    // CM actQSpare026.command: %Q2.6 (QSpare026)
+    // CM actQSpare027.command: %Q2.7 (QSpare027)
+    // CM actQSpare028.command: %Q3.0 (QSpare028)
+    // CM actQSpare029.command: %Q3.1 (QSpare029)
+    // CM actQSpare030.command: %Q3.2 (QSpare030)
+    // CM cylQWaterValve.workCmd: %Q3.3 (QWaterValve)
+    // CM actQWaterContactor.command: %Q3.4 (QWaterContactor)
+    // CM actQAStationFan.command: %Q3.5 (QAStationFan)
+    // CM actQBStationFan.command: %Q3.6 (QBStationFan)
+    // CM actQCStationFan.command: %Q3.7 (QCStationFan)
+    // CM cylQZ01ExtEvt.workCmd: %Q4.0 (QZ01ExtEvt)
+    // CM cylQZ01RetEvt.homeCmd: %Q4.1 (QZ01RetEvt)
+    // CM cylQZ02ExtEvt.workCmd: %Q4.2 (QZ02ExtEvt)
+    // CM cylQZ02RetEvt.homeCmd: %Q4.3 (QZ02RetEvt)
+    // CM cylQZ03ExtEvt.workCmd: %Q4.4 (QZ03ExtEvt)
+    // CM cylQZ03RetEvt.homeCmd: %Q4.5 (QZ03RetEvt)
+    // CM cylQZ04ExtEvt.workCmd: %Q4.6 (QZ04ExtEvt)
+    // CM cylQZ04RetEvt.homeCmd: %Q4.7 (QZ04RetEvt)
+    // CM actQSpare050.command: %Q5.0 (QSpare050)
+    // CM cylDiamondVibCylinder.workCmd: %Q5.1 (DiamondVibCylinder)
+    // CM cylQCamCoverExt.workCmd: %Q5.2 (QCamCoverExt)
+    // CM cylQCamCoverRet.homeCmd: %Q5.3 (QCamCoverRet)
+    // CM cylQZ14ExtEvt.workCmd: %Q5.4 (QZ14ExtEvt)
+    // CM cylQZ14RetEvt.homeCmd: %Q5.5 (QZ14RetEvt)
+    // CM cylQZ07RetEvt.workCmd: %Q5.6 (QZ07RetEvt)
+    // CM cylQZ07ExtEvt.workCmd: %Q5.7 (QZ07ExtEvt)
+    // CM actQW10.command: %QW10 (QW10)
+    // Active Interlocks:
+    // - EMMode_M: NOT "EMMode_M"
+    // - IDoor3Unlocked: NOT "IDoor3Unlocked"
+    // - IDoor3Insert: NOT "IDoor3Insert"
+    // - ICurtainErrRst: NOT "ICurtainErrRst"
+    // - IDoorOverRide: NOT "IDoorOverRide"
+    // - IDoor1Unlocked: NOT "IDoor1Unlocked"
+    // - IDoor1Insert: NOT "IDoor1Insert"
+    // - IDoor2Unlocked: NOT "IDoor2Unlocked"
+    // - IDoor2Insert: NOT "IDoor2Insert"
+    // - IEMClamp: NOT "IEMClamp"
+    // - IRobotEMOK: NOT "IRobotEMOK"
+    // - ICurtainsOK: NOT "ICurtainsOK"
+    // - IEMOK: NOT "IEMOK"
+    // - IAllDoorClose: NOT "IAllDoorClose"
+    // - IEMOK1: NOT "IEMOK1"
+    // - IInsideEMOK: NOT "IInsideEMOK"
+    // - IInsideEMOK1: NOT "IInsideEMOK1"
+    // - QSpairMode: NOT "QSpairMode"
+    // - QDoorClose: NOT "QDoorClose"
+    // - QCurtainLight: NOT "QCurtainLight"
+    // - QCurtainRst: NOT "QCurtainRst"
+    // - i_DoorOverRide: NOT #i_DoorOverRide
+    // - i_OpenDoorPmt: NOT #i_OpenDoorPmt
+    // - EMMode: NOT #EMMode
+    // - o_DoorOverRideRelayOn: NOT #o_DoorOverRideRelayOn
+    // - o_DoorLockRelayON: NOT #o_DoorLockRelayON
+    // - o_DoorOverRideLight: NOT #o_DoorOverRideLight
+    // - o_PromptDoorOverRideStartIng: NOT #o_PromptDoorOverRideStartIng
+    // - o_PromptDoorOveRideStarted: NOT #o_PromptDoorOveRideStarted
+    // - o_PromptDoorLockFail: NOT #o_PromptDoorLockFail
+    // - TP_DoorInsert: NOT #TP_DoorInsert
+    // - TP_DoorUnLock: NOT #TP_DoorUnLock
+    // - AtDoorUnLock: NOT #AtDoorUnLock
+
+END_FUNCTION_BLOCK

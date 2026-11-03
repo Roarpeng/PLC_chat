@@ -1,0 +1,16 @@
+DATA_BLOCK "ControlNodes"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+STRUCT
+    sequence : "LAF_typeSequence";
+    jobs : "LAF_typeJobs";
+    cylQWaterValve : "LBC_TwoWayActuatorControlNodes";
+    cylDiamondVibCylinder : "LBC_TwoWayActuatorControlNodes";
+    cylQCamCoverExt : "LBC_TwoWayActuatorControlNodes";
+    cylQCamCoverRet : "LBC_TwoWayActuatorControlNodes";
+    sensorICoreBlockDectLeftTool : "LBC_DigitalSignalControlNodes";
+    sensorICoreBlockDectRightTool : "LBC_DigitalSignalControlNodes";
+END_STRUCT;
+BEGIN
+END_DATA_BLOCK

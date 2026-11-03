@@ -1,0 +1,14 @@
+FUNCTION "StepToString" : String
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_INPUT
+    step : DInt;
+END_VAR
+BEGIN
+    CASE #step OF
+        10: "StepToString" := 'STEP_10_WAIT';
+        20: "StepToString" := 'STEP_20_EXEC';
+        ELSE
+            "StepToString" := 'UNKNOWN';
+    END_CASE;
+END_FUNCTION

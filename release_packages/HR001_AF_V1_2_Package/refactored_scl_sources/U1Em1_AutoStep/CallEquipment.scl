@@ -1,0 +1,859 @@
+FUNCTION_BLOCK "CallEquipment"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_IN_OUT
+    controlNodes : "ControlNodes";
+END_VAR
+VAR
+    statUnitStatus : "LUC_typeUnitStatus";
+    instInterlink : "LUC_InterlinkToParent";
+    instControlEm : "LAF_ControlEm";
+    instMapStatus : "LAF_MapUnitStatusToSequence";
+    instSequence : "Sequence";
+    inst_cylDiamondVibCylinder : "LBC_TwoWayActuator";
+    inst_sensorIAuto : "LBC_DigitalSignal";
+    inst_sensorIAutoModeStart : "LBC_DigitalSignal";
+    inst_cylIZ07ExtPos : "LBC_TwoWayActuator";
+    inst_cylIEMClamp : "LBC_TwoWayActuator";
+    inst_cylQZ01ExtEvt : "LBC_TwoWayActuator";
+    inst_cylQZ01RetEvt : "LBC_TwoWayActuator";
+    inst_cylQZ02ExtEvt : "LBC_TwoWayActuator";
+    inst_cylQZ02RetEvt : "LBC_TwoWayActuator";
+    inst_cylQZ03ExtEvt : "LBC_TwoWayActuator";
+    inst_cylQZ03RetEvt : "LBC_TwoWayActuator";
+    inst_cylQZ04ExtEvt : "LBC_TwoWayActuator";
+    inst_cylQZ04RetEvt : "LBC_TwoWayActuator";
+    inst_cylQZ14ExtEvt : "LBC_TwoWayActuator";
+    inst_cylQZ14RetEvt : "LBC_TwoWayActuator";
+    inst_cylQZ07RetEvt : "LBC_TwoWayActuator";
+    inst_cylQZ07ExtEvt : "LBC_TwoWayActuator";
+    inst_analogITempErr : "LBC_AnalogInput";
+    inst_analogIW10 : "LBC_AnalogInput";
+    inst_analogIW12 : "LBC_AnalogInput";
+    inst_sensorIEMOK : "LBC_DigitalSignal";
+    inst_sensorIAirPressOK : "LBC_DigitalSignal";
+    inst_sensorIMan : "LBC_DigitalSignal";
+    inst_sensorIErrRst : "LBC_DigitalSignal";
+    inst_sensorICurtainsOK : "LBC_DigitalSignal";
+    inst_sensorIEMOK1 : "LBC_DigitalSignal";
+    inst_sensorICurtainErrRst : "LBC_DigitalSignal";
+    inst_sensorIDoorOverRide : "LBC_DigitalSignal";
+    inst_sensorIDoor1Unlocked : "LBC_DigitalSignal";
+    inst_sensorIDoor1Insert : "LBC_DigitalSignal";
+    inst_sensorIDoor2Unlocked : "LBC_DigitalSignal";
+    inst_sensorIDoor2Insert : "LBC_DigitalSignal";
+    inst_sensorIDoor3Unlocked : "LBC_DigitalSignal";
+    inst_sensorIDoor3Insert : "LBC_DigitalSignal";
+    inst_sensorBStationToolOn1 : "LBC_DigitalSignal";
+    inst_sensorBStationToolOn2 : "LBC_DigitalSignal";
+    inst_sensorAStationToolOn1 : "LBC_DigitalSignal";
+    inst_sensorAStationToolOn2 : "LBC_DigitalSignal";
+    inst_sensorBStationIZ04RetPos : "LBC_DigitalSignal";
+    inst_sensorBStationIZ04ExtPos : "LBC_DigitalSignal";
+    inst_sensorAStationIZ03ExtPos : "LBC_DigitalSignal";
+    inst_sensorAStationIZ03RetPos : "LBC_DigitalSignal";
+    inst_sensorIZ07RetPos : "LBC_DigitalSignal";
+    inst_sensorIFixtureCode01 : "LBC_DigitalSignal";
+    inst_sensorIFixtureCode02 : "LBC_DigitalSignal";
+    inst_sensorIFixtureCode03 : "LBC_DigitalSignal";
+    inst_sensorIFixtureIOCode01 : "LBC_DigitalSignal";
+    inst_sensorIFixtureIOCode02 : "LBC_DigitalSignal";
+    inst_sensorIFixtureIOCode03 : "LBC_DigitalSignal";
+    inst_sensorISp47 : "LBC_DigitalSignal";
+    inst_sensorIAllDoorClose : "LBC_DigitalSignal";
+    inst_sensorIRobotEMOK : "LBC_DigitalSignal";
+    inst_sensorIInsideEMOK : "LBC_DigitalSignal";
+    inst_sensorIInsideEMOK1 : "LBC_DigitalSignal";
+    inst_sensorISp055 : "LBC_DigitalSignal";
+    inst_sensorISp056 : "LBC_DigitalSignal";
+    inst_sensorISp057 : "LBC_DigitalSignal";
+    inst_sensorISp060 : "LBC_DigitalSignal";
+    inst_sensorISp061 : "LBC_DigitalSignal";
+    inst_sensorISp062 : "LBC_DigitalSignal";
+    inst_sensorISp063 : "LBC_DigitalSignal";
+    inst_sensorISp064 : "LBC_DigitalSignal";
+    inst_sensorISp065 : "LBC_DigitalSignal";
+    inst_sensorISp066 : "LBC_DigitalSignal";
+    inst_sensorISp067 : "LBC_DigitalSignal";
+    inst_sensorIWaterToolAtDectPos : "LBC_DigitalSignal";
+    inst_sensorICoreBlockDropDectLeftTool : "LBC_DigitalSignal";
+    inst_sensorICoreBlockDropDectRightTool : "LBC_DigitalSignal";
+    inst_sensorISp075 : "LBC_DigitalSignal";
+    inst_sensorISp076 : "LBC_DigitalSignal";
+    inst_sensorISp077 : "LBC_DigitalSignal";
+    inst_sensorQBeeper : "LBC_DigitalSignal";
+    inst_sensorOOpenCamCover : "LBC_DigitalSignal";
+    inst_actQPanelG : "LBC_SimpleActuator";
+    inst_actQPanelRed : "LBC_SimpleActuator";
+    inst_actQTLR : "LBC_SimpleActuator";
+    inst_actQTLY : "LBC_SimpleActuator";
+    inst_actQTLG : "LBC_SimpleActuator";
+    inst_actQTLB : "LBC_SimpleActuator";
+    inst_actQTLW : "LBC_SimpleActuator";
+    inst_actQSpairMode : "LBC_SimpleActuator";
+    inst_actQLampCtr : "LBC_SimpleActuator";
+    inst_actOCloseCamCover : "LBC_SimpleActuator";
+    inst_actQSp014 : "LBC_SimpleActuator";
+    inst_actQSp015 : "LBC_SimpleActuator";
+    inst_actQSp016 : "LBC_SimpleActuator";
+    inst_actQSp017 : "LBC_SimpleActuator";
+    inst_actQDoorClose : "LBC_SimpleActuator";
+    inst_actQCurtainLight : "LBC_SimpleActuator";
+    inst_actQCurtainRst : "LBC_SimpleActuator";
+    inst_actQSpare023 : "LBC_SimpleActuator";
+    inst_actQSpare024 : "LBC_SimpleActuator";
+    inst_actQSpare025 : "LBC_SimpleActuator";
+    inst_actQSpare026 : "LBC_SimpleActuator";
+    inst_actQSpare027 : "LBC_SimpleActuator";
+    inst_actQSpare028 : "LBC_SimpleActuator";
+    inst_actQSpare029 : "LBC_SimpleActuator";
+    inst_actQSpare030 : "LBC_SimpleActuator";
+    inst_actQWaterContactor : "LBC_SimpleActuator";
+    inst_actQAStationFan : "LBC_SimpleActuator";
+    inst_actQBStationFan : "LBC_SimpleActuator";
+    inst_actQCStationFan : "LBC_SimpleActuator";
+    inst_actQSpare050 : "LBC_SimpleActuator";
+    inst_actQW10 : "LBC_SimpleActuator";
+END_VAR
+BEGIN
+    // Step 1: Interlink to Parent Unit
+    #instInterlink(
+        unitStatus => #statUnitStatus
+    );
+    #instControlEm(
+        unitStatus := #statUnitStatus
+    );
+
+    // Step 2 & 3: Map Unit Status to Sequence
+    #instMapStatus(
+        unitStatus := #statUnitStatus,
+        sequenceCommands => #controlNodes.sequence.commands
+    );
+
+    // Step 4: Call FB Sequence
+    #instSequence(
+        controlNodes := #controlNodes
+    );
+
+    // Step 5: Call Control Modules
+    // Call CM: cylDiamondVibCylinder (LBC_TwoWayActuator)
+    #inst_cylDiamondVibCylinder(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylDiamondVibCylinder
+    );
+
+    // Call CM: sensorIAuto (LBC_DigitalSignal)
+    #inst_sensorIAuto(
+        controlNodes := #controlNodes.sensorIAuto
+    );
+
+    // Call CM: sensorIAutoModeStart (LBC_DigitalSignal)
+    #inst_sensorIAutoModeStart(
+        controlNodes := #controlNodes.sensorIAutoModeStart
+    );
+
+    // Call CM: cylIZ07ExtPos (LBC_TwoWayActuator)
+    #inst_cylIZ07ExtPos(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylIZ07ExtPos
+    );
+
+    // Call CM: cylIEMClamp (LBC_TwoWayActuator)
+    #inst_cylIEMClamp(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylIEMClamp
+    );
+
+    // Call CM: cylQZ01ExtEvt (LBC_TwoWayActuator)
+    #inst_cylQZ01ExtEvt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQZ01ExtEvt
+    );
+
+    // Call CM: cylQZ01RetEvt (LBC_TwoWayActuator)
+    #inst_cylQZ01RetEvt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQZ01RetEvt
+    );
+
+    // Call CM: cylQZ02ExtEvt (LBC_TwoWayActuator)
+    #inst_cylQZ02ExtEvt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQZ02ExtEvt
+    );
+
+    // Call CM: cylQZ02RetEvt (LBC_TwoWayActuator)
+    #inst_cylQZ02RetEvt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQZ02RetEvt
+    );
+
+    // Call CM: cylQZ03ExtEvt (LBC_TwoWayActuator)
+    #inst_cylQZ03ExtEvt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQZ03ExtEvt
+    );
+
+    // Call CM: cylQZ03RetEvt (LBC_TwoWayActuator)
+    #inst_cylQZ03RetEvt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQZ03RetEvt
+    );
+
+    // Call CM: cylQZ04ExtEvt (LBC_TwoWayActuator)
+    #inst_cylQZ04ExtEvt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQZ04ExtEvt
+    );
+
+    // Call CM: cylQZ04RetEvt (LBC_TwoWayActuator)
+    #inst_cylQZ04RetEvt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQZ04RetEvt
+    );
+
+    // Call CM: cylQZ14ExtEvt (LBC_TwoWayActuator)
+    #inst_cylQZ14ExtEvt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQZ14ExtEvt
+    );
+
+    // Call CM: cylQZ14RetEvt (LBC_TwoWayActuator)
+    #inst_cylQZ14RetEvt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQZ14RetEvt
+    );
+
+    // Call CM: cylQZ07RetEvt (LBC_TwoWayActuator)
+    #inst_cylQZ07RetEvt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQZ07RetEvt
+    );
+
+    // Call CM: cylQZ07ExtEvt (LBC_TwoWayActuator)
+    #inst_cylQZ07ExtEvt(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.cylQZ07ExtEvt
+    );
+
+    // Call CM: analogITempErr (LBC_AnalogInput)
+    #inst_analogITempErr(
+        controlNodes := #controlNodes.analogITempErr
+    );
+
+    // Call CM: analogIW10 (LBC_AnalogInput)
+    #inst_analogIW10(
+        controlNodes := #controlNodes.analogIW10
+    );
+
+    // Call CM: analogIW12 (LBC_AnalogInput)
+    #inst_analogIW12(
+        controlNodes := #controlNodes.analogIW12
+    );
+
+    // Call CM: sensorIEMOK (LBC_DigitalSignal)
+    #inst_sensorIEMOK(
+        controlNodes := #controlNodes.sensorIEMOK
+    );
+
+    // Call CM: sensorIAirPressOK (LBC_DigitalSignal)
+    #inst_sensorIAirPressOK(
+        controlNodes := #controlNodes.sensorIAirPressOK
+    );
+
+    // Call CM: sensorIMan (LBC_DigitalSignal)
+    #inst_sensorIMan(
+        controlNodes := #controlNodes.sensorIMan
+    );
+
+    // Call CM: sensorIErrRst (LBC_DigitalSignal)
+    #inst_sensorIErrRst(
+        controlNodes := #controlNodes.sensorIErrRst
+    );
+
+    // Call CM: sensorICurtainsOK (LBC_DigitalSignal)
+    #inst_sensorICurtainsOK(
+        controlNodes := #controlNodes.sensorICurtainsOK
+    );
+
+    // Call CM: sensorIEMOK1 (LBC_DigitalSignal)
+    #inst_sensorIEMOK1(
+        controlNodes := #controlNodes.sensorIEMOK1
+    );
+
+    // Call CM: sensorICurtainErrRst (LBC_DigitalSignal)
+    #inst_sensorICurtainErrRst(
+        controlNodes := #controlNodes.sensorICurtainErrRst
+    );
+
+    // Call CM: sensorIDoorOverRide (LBC_DigitalSignal)
+    #inst_sensorIDoorOverRide(
+        controlNodes := #controlNodes.sensorIDoorOverRide
+    );
+
+    // Call CM: sensorIDoor1Unlocked (LBC_DigitalSignal)
+    #inst_sensorIDoor1Unlocked(
+        controlNodes := #controlNodes.sensorIDoor1Unlocked
+    );
+
+    // Call CM: sensorIDoor1Insert (LBC_DigitalSignal)
+    #inst_sensorIDoor1Insert(
+        controlNodes := #controlNodes.sensorIDoor1Insert
+    );
+
+    // Call CM: sensorIDoor2Unlocked (LBC_DigitalSignal)
+    #inst_sensorIDoor2Unlocked(
+        controlNodes := #controlNodes.sensorIDoor2Unlocked
+    );
+
+    // Call CM: sensorIDoor2Insert (LBC_DigitalSignal)
+    #inst_sensorIDoor2Insert(
+        controlNodes := #controlNodes.sensorIDoor2Insert
+    );
+
+    // Call CM: sensorIDoor3Unlocked (LBC_DigitalSignal)
+    #inst_sensorIDoor3Unlocked(
+        controlNodes := #controlNodes.sensorIDoor3Unlocked
+    );
+
+    // Call CM: sensorIDoor3Insert (LBC_DigitalSignal)
+    #inst_sensorIDoor3Insert(
+        controlNodes := #controlNodes.sensorIDoor3Insert
+    );
+
+    // Call CM: sensorBStationToolOn1 (LBC_DigitalSignal)
+    #inst_sensorBStationToolOn1(
+        controlNodes := #controlNodes.sensorBStationToolOn1
+    );
+
+    // Call CM: sensorBStationToolOn2 (LBC_DigitalSignal)
+    #inst_sensorBStationToolOn2(
+        controlNodes := #controlNodes.sensorBStationToolOn2
+    );
+
+    // Call CM: sensorAStationToolOn1 (LBC_DigitalSignal)
+    #inst_sensorAStationToolOn1(
+        controlNodes := #controlNodes.sensorAStationToolOn1
+    );
+
+    // Call CM: sensorAStationToolOn2 (LBC_DigitalSignal)
+    #inst_sensorAStationToolOn2(
+        controlNodes := #controlNodes.sensorAStationToolOn2
+    );
+
+    // Call CM: sensorBStationIZ04RetPos (LBC_DigitalSignal)
+    #inst_sensorBStationIZ04RetPos(
+        controlNodes := #controlNodes.sensorBStationIZ04RetPos
+    );
+
+    // Call CM: sensorBStationIZ04ExtPos (LBC_DigitalSignal)
+    #inst_sensorBStationIZ04ExtPos(
+        controlNodes := #controlNodes.sensorBStationIZ04ExtPos
+    );
+
+    // Call CM: sensorAStationIZ03ExtPos (LBC_DigitalSignal)
+    #inst_sensorAStationIZ03ExtPos(
+        controlNodes := #controlNodes.sensorAStationIZ03ExtPos
+    );
+
+    // Call CM: sensorAStationIZ03RetPos (LBC_DigitalSignal)
+    #inst_sensorAStationIZ03RetPos(
+        controlNodes := #controlNodes.sensorAStationIZ03RetPos
+    );
+
+    // Call CM: sensorIZ07RetPos (LBC_DigitalSignal)
+    #inst_sensorIZ07RetPos(
+        controlNodes := #controlNodes.sensorIZ07RetPos
+    );
+
+    // Call CM: sensorIFixtureCode01 (LBC_DigitalSignal)
+    #inst_sensorIFixtureCode01(
+        controlNodes := #controlNodes.sensorIFixtureCode01
+    );
+
+    // Call CM: sensorIFixtureCode02 (LBC_DigitalSignal)
+    #inst_sensorIFixtureCode02(
+        controlNodes := #controlNodes.sensorIFixtureCode02
+    );
+
+    // Call CM: sensorIFixtureCode03 (LBC_DigitalSignal)
+    #inst_sensorIFixtureCode03(
+        controlNodes := #controlNodes.sensorIFixtureCode03
+    );
+
+    // Call CM: sensorIFixtureIOCode01 (LBC_DigitalSignal)
+    #inst_sensorIFixtureIOCode01(
+        controlNodes := #controlNodes.sensorIFixtureIOCode01
+    );
+
+    // Call CM: sensorIFixtureIOCode02 (LBC_DigitalSignal)
+    #inst_sensorIFixtureIOCode02(
+        controlNodes := #controlNodes.sensorIFixtureIOCode02
+    );
+
+    // Call CM: sensorIFixtureIOCode03 (LBC_DigitalSignal)
+    #inst_sensorIFixtureIOCode03(
+        controlNodes := #controlNodes.sensorIFixtureIOCode03
+    );
+
+    // Call CM: sensorISp47 (LBC_DigitalSignal)
+    #inst_sensorISp47(
+        controlNodes := #controlNodes.sensorISp47
+    );
+
+    // Call CM: sensorIAllDoorClose (LBC_DigitalSignal)
+    #inst_sensorIAllDoorClose(
+        controlNodes := #controlNodes.sensorIAllDoorClose
+    );
+
+    // Call CM: sensorIRobotEMOK (LBC_DigitalSignal)
+    #inst_sensorIRobotEMOK(
+        controlNodes := #controlNodes.sensorIRobotEMOK
+    );
+
+    // Call CM: sensorIInsideEMOK (LBC_DigitalSignal)
+    #inst_sensorIInsideEMOK(
+        controlNodes := #controlNodes.sensorIInsideEMOK
+    );
+
+    // Call CM: sensorIInsideEMOK1 (LBC_DigitalSignal)
+    #inst_sensorIInsideEMOK1(
+        controlNodes := #controlNodes.sensorIInsideEMOK1
+    );
+
+    // Call CM: sensorISp055 (LBC_DigitalSignal)
+    #inst_sensorISp055(
+        controlNodes := #controlNodes.sensorISp055
+    );
+
+    // Call CM: sensorISp056 (LBC_DigitalSignal)
+    #inst_sensorISp056(
+        controlNodes := #controlNodes.sensorISp056
+    );
+
+    // Call CM: sensorISp057 (LBC_DigitalSignal)
+    #inst_sensorISp057(
+        controlNodes := #controlNodes.sensorISp057
+    );
+
+    // Call CM: sensorISp060 (LBC_DigitalSignal)
+    #inst_sensorISp060(
+        controlNodes := #controlNodes.sensorISp060
+    );
+
+    // Call CM: sensorISp061 (LBC_DigitalSignal)
+    #inst_sensorISp061(
+        controlNodes := #controlNodes.sensorISp061
+    );
+
+    // Call CM: sensorISp062 (LBC_DigitalSignal)
+    #inst_sensorISp062(
+        controlNodes := #controlNodes.sensorISp062
+    );
+
+    // Call CM: sensorISp063 (LBC_DigitalSignal)
+    #inst_sensorISp063(
+        controlNodes := #controlNodes.sensorISp063
+    );
+
+    // Call CM: sensorISp064 (LBC_DigitalSignal)
+    #inst_sensorISp064(
+        controlNodes := #controlNodes.sensorISp064
+    );
+
+    // Call CM: sensorISp065 (LBC_DigitalSignal)
+    #inst_sensorISp065(
+        controlNodes := #controlNodes.sensorISp065
+    );
+
+    // Call CM: sensorISp066 (LBC_DigitalSignal)
+    #inst_sensorISp066(
+        controlNodes := #controlNodes.sensorISp066
+    );
+
+    // Call CM: sensorISp067 (LBC_DigitalSignal)
+    #inst_sensorISp067(
+        controlNodes := #controlNodes.sensorISp067
+    );
+
+    // Call CM: sensorIWaterToolAtDectPos (LBC_DigitalSignal)
+    #inst_sensorIWaterToolAtDectPos(
+        controlNodes := #controlNodes.sensorIWaterToolAtDectPos
+    );
+
+    // Call CM: sensorICoreBlockDropDectLeftTool (LBC_DigitalSignal)
+    #inst_sensorICoreBlockDropDectLeftTool(
+        controlNodes := #controlNodes.sensorICoreBlockDropDectLeftTool
+    );
+
+    // Call CM: sensorICoreBlockDropDectRightTool (LBC_DigitalSignal)
+    #inst_sensorICoreBlockDropDectRightTool(
+        controlNodes := #controlNodes.sensorICoreBlockDropDectRightTool
+    );
+
+    // Call CM: sensorISp075 (LBC_DigitalSignal)
+    #inst_sensorISp075(
+        controlNodes := #controlNodes.sensorISp075
+    );
+
+    // Call CM: sensorISp076 (LBC_DigitalSignal)
+    #inst_sensorISp076(
+        controlNodes := #controlNodes.sensorISp076
+    );
+
+    // Call CM: sensorISp077 (LBC_DigitalSignal)
+    #inst_sensorISp077(
+        controlNodes := #controlNodes.sensorISp077
+    );
+
+    // Call CM: sensorQBeeper (LBC_DigitalSignal)
+    #inst_sensorQBeeper(
+        controlNodes := #controlNodes.sensorQBeeper
+    );
+
+    // Call CM: sensorOOpenCamCover (LBC_DigitalSignal)
+    #inst_sensorOOpenCamCover(
+        controlNodes := #controlNodes.sensorOOpenCamCover
+    );
+
+    // Call CM: actQPanelG (LBC_SimpleActuator)
+    #inst_actQPanelG(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQPanelG
+    );
+
+    // Call CM: actQPanelRed (LBC_SimpleActuator)
+    #inst_actQPanelRed(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQPanelRed
+    );
+
+    // Call CM: actQTLR (LBC_SimpleActuator)
+    #inst_actQTLR(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQTLR
+    );
+
+    // Call CM: actQTLY (LBC_SimpleActuator)
+    #inst_actQTLY(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQTLY
+    );
+
+    // Call CM: actQTLG (LBC_SimpleActuator)
+    #inst_actQTLG(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQTLG
+    );
+
+    // Call CM: actQTLB (LBC_SimpleActuator)
+    #inst_actQTLB(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQTLB
+    );
+
+    // Call CM: actQTLW (LBC_SimpleActuator)
+    #inst_actQTLW(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQTLW
+    );
+
+    // Call CM: actQSpairMode (LBC_SimpleActuator)
+    #inst_actQSpairMode(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSpairMode
+    );
+
+    // Call CM: actQLampCtr (LBC_SimpleActuator)
+    #inst_actQLampCtr(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQLampCtr
+    );
+
+    // Call CM: actOCloseCamCover (LBC_SimpleActuator)
+    #inst_actOCloseCamCover(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actOCloseCamCover
+    );
+
+    // Call CM: actQSp014 (LBC_SimpleActuator)
+    #inst_actQSp014(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSp014
+    );
+
+    // Call CM: actQSp015 (LBC_SimpleActuator)
+    #inst_actQSp015(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSp015
+    );
+
+    // Call CM: actQSp016 (LBC_SimpleActuator)
+    #inst_actQSp016(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSp016
+    );
+
+    // Call CM: actQSp017 (LBC_SimpleActuator)
+    #inst_actQSp017(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSp017
+    );
+
+    // Call CM: actQDoorClose (LBC_SimpleActuator)
+    #inst_actQDoorClose(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQDoorClose
+    );
+
+    // Call CM: actQCurtainLight (LBC_SimpleActuator)
+    #inst_actQCurtainLight(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQCurtainLight
+    );
+
+    // Call CM: actQCurtainRst (LBC_SimpleActuator)
+    #inst_actQCurtainRst(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQCurtainRst
+    );
+
+    // Call CM: actQSpare023 (LBC_SimpleActuator)
+    #inst_actQSpare023(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSpare023
+    );
+
+    // Call CM: actQSpare024 (LBC_SimpleActuator)
+    #inst_actQSpare024(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSpare024
+    );
+
+    // Call CM: actQSpare025 (LBC_SimpleActuator)
+    #inst_actQSpare025(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSpare025
+    );
+
+    // Call CM: actQSpare026 (LBC_SimpleActuator)
+    #inst_actQSpare026(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSpare026
+    );
+
+    // Call CM: actQSpare027 (LBC_SimpleActuator)
+    #inst_actQSpare027(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSpare027
+    );
+
+    // Call CM: actQSpare028 (LBC_SimpleActuator)
+    #inst_actQSpare028(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSpare028
+    );
+
+    // Call CM: actQSpare029 (LBC_SimpleActuator)
+    #inst_actQSpare029(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSpare029
+    );
+
+    // Call CM: actQSpare030 (LBC_SimpleActuator)
+    #inst_actQSpare030(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSpare030
+    );
+
+    // Call CM: actQWaterContactor (LBC_SimpleActuator)
+    #inst_actQWaterContactor(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQWaterContactor
+    );
+
+    // Call CM: actQAStationFan (LBC_SimpleActuator)
+    #inst_actQAStationFan(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQAStationFan
+    );
+
+    // Call CM: actQBStationFan (LBC_SimpleActuator)
+    #inst_actQBStationFan(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQBStationFan
+    );
+
+    // Call CM: actQCStationFan (LBC_SimpleActuator)
+    #inst_actQCStationFan(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQCStationFan
+    );
+
+    // Call CM: actQSpare050 (LBC_SimpleActuator)
+    #inst_actQSpare050(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQSpare050
+    );
+
+    // Call CM: actQW10 (LBC_SimpleActuator)
+    #inst_actQW10(
+        enableManualCmds := #statUnitStatus.mode.manual,
+        controlNodes := #controlNodes.actQW10
+    );
+
+    // Step 6: Determine State Complete (SC)
+    // #emFeedback.stateComplete := #controlNodes.sequence.status.stateComplete;
+
+    // ==========================================
+    // Hardware I/O Binding & Safety Interlocks
+    // ==========================================
+    // CM sensorIEMOK.signal: %I0.0 (IEMOK)
+    // CM sensorIAirPressOK.signal: %I0.1 (IAirPressOK)
+    // CM sensorIMan.signal: %I0.2 (IMan)
+    // CM sensorIAuto.signal: %I0.3 (IAuto)
+    // CM sensorIAutoModeStart.signal: %I0.4 (IAutoModeStart)
+    // CM sensorIErrRst.signal: %I0.5 (IErrRst)
+    // CM sensorICurtainsOK.signal: %I0.6 (ICurtainsOK)
+    // CM sensorIEMOK1.signal: %I0.7 (IEMOK1)
+    // CM sensorICurtainErrRst.signal: %I1.0 (ICurtainErrRst)
+    // CM sensorIDoorOverRide.signal: %I1.1 (IDoorOverRide)
+    // CM sensorIDoor1Unlocked.signal: %I1.2 (IDoor1Unlocked)
+    // CM sensorIDoor1Insert.signal: %I1.3 (IDoor1Insert)
+    // CM sensorIDoor2Unlocked.signal: %I1.4 (IDoor2Unlocked)
+    // CM sensorIDoor2Insert.signal: %I1.5 (IDoor2Insert)
+    // CM sensorIDoor3Unlocked.signal: %I2.0 (IDoor3Unlocked)
+    // CM sensorIDoor3Insert.signal: %I2.1 (IDoor3Insert)
+    // CM sensorBStationToolOn1.signal: %I2.2 (BStation_ToolOn1)
+    // CM sensorBStationToolOn2.signal: %I2.3 (BStation_ToolOn2)
+    // CM sensorAStationToolOn1.signal: %I2.4 (AStation_ToolOn1)
+    // CM sensorAStationToolOn2.signal: %I2.5 (AStation_ToolOn2)
+    // CM sensorBStationIZ04RetPos.signal: %I2.6 (BStation_IZ04RetPos)
+    // CM sensorBStationIZ04ExtPos.signal: %I2.7 (BStation_IZ04ExtPos)
+    // CM sensorAStationIZ03ExtPos.signal: %I3.0 (AStation_IZ03ExtPos)
+    // CM sensorAStationIZ03RetPos.signal: %I3.1 (AStation_IZ03RetPos)
+    // CM cylIZ02ExtPos.workSensor: %I3.2 (IZ02ExtPos)
+    // CM cylIZ02RetPos.homeSensor: %I3.3 (IZ02RetPos)
+    // CM sensorIZ07RetPos.signal: %I3.4 (IZ07RetPos)
+    // CM cylIZ07ExtPos.workSensor: %I3.5 (IZ07ExtPos)
+    // CM sensorIToolAtPos.signal: %I3.6 (IToolAtPos)
+    // CM sensorIFixtureCode01.signal: %I3.7 (IFixtureCode01)
+    // CM sensorIFixtureCode02.signal: %I4.0 (IFixtureCode02)
+    // CM sensorIFixtureCode03.signal: %I4.1 (IFixtureCode03)
+    // CM sensorIFixtureIOCode01.signal: %I4.2 (IFixtureIOCode01)
+    // CM sensorIFixtureIOCode02.signal: %I4.3 (IFixtureIOCode02)
+    // CM sensorIFixtureIOCode03.signal: %I4.4 (IFixtureIOCode03)
+    // CM cylIEMClamp.workSensor: %I4.5 (IEMClamp)
+    // CM sensorIFixtureStuckSensor.signal: %I4.6 (IFixtureStuckSensor)
+    // CM sensorISp47.signal: %I4.7 (ISp4_7)
+    // CM sensorIAllDoorClose.signal: %I5.0 (IAllDoorClose)
+    // CM sensorIRobotEMOK.signal: %I5.1 (IRobotEMOK)
+    // CM analogITempErr.value: %I5.2 (ITempErr)
+    // CM sensorIInsideEMOK.signal: %I5.3 (IInsideEMOK)
+    // CM sensorIInsideEMOK1.signal: %I5.4 (IInsideEMOK1)
+    // CM sensorISp055.signal: %I5.5 (ISp055)
+    // CM sensorISp056.signal: %I5.6 (ISp056)
+    // CM sensorISp057.signal: %I5.7 (ISp057)
+    // CM sensorISp060.signal: %I6.0 (ISp060)
+    // CM sensorISp061.signal: %I6.1 (ISp061)
+    // CM sensorISp062.signal: %I6.2 (ISp062)
+    // CM sensorISp063.signal: %I6.3 (ISp063)
+    // CM sensorISp064.signal: %I6.4 (ISp064)
+    // CM sensorISp065.signal: %I6.5 (ISp065)
+    // CM sensorISp066.signal: %I6.6 (ISp066)
+    // CM sensorISp067.signal: %I6.7 (ISp067)
+    // CM sensorICoreBlockDectLeftTool.signal: %I7.0 (ICoreBlockDect_LeftTool)
+    // CM sensorICoreBlockDectRightTool.signal: %I7.1 (ICoreBlockDect_RightTool)
+    // CM sensorIWaterToolAtDectPos.signal: %I7.2 (IWaterToolAtDectPos)
+    // CM sensorICoreBlockDropDectLeftTool.signal: %I7.3 (ICoreBlockDropDect_LeftTool)
+    // CM sensorICoreBlockDropDectRightTool.signal: %I7.4 (ICoreBlockDropDect_RightTool)
+    // CM sensorISp075.signal: %I7.5 (ISp075)
+    // CM sensorISp076.signal: %I7.6 (ISp076)
+    // CM sensorISp077.signal: %I7.7 (ISp077)
+    // CM analogIW10.value: %IW10 (IW10)
+    // CM analogIW12.value: %IW12 (IW12)
+    // CM actQPanelG.command: %Q0.0 (QPanelG)
+    // CM actQPanelRed.command: %Q0.1 (QPanelRed)
+    // CM sensorQBeeper.signal: %Q0.2 (QBeeper)
+    // CM actQTLR.command: %Q0.3 (QTLR)
+    // CM actQTLY.command: %Q0.4 (QTLY)
+    // CM actQTLG.command: %Q0.5 (QTLG)
+    // CM actQTLB.command: %Q0.6 (QTLB)
+    // CM actQTLW.command: %Q0.7 (QTLW)
+    // CM actQSpairMode.command: %Q1.0 (QSpairMode)
+    // CM actQLampCtr.command: %Q1.1 (QLampCtr)
+    // CM sensorOOpenCamCover.signal: %Q1.2 (OOpenCamCover)
+    // CM actOCloseCamCover.command: %Q1.3 (OCloseCamCover)
+    // CM actQSp014.command: %Q1.4 (QSp014)
+    // CM actQSp015.command: %Q1.5 (QSp015)
+    // CM actQSp016.command: %Q1.6 (QSp016)
+    // CM actQSp017.command: %Q1.7 (QSp017)
+    // CM actQDoorClose.command: %Q2.0 (QDoorClose)
+    // CM actQCurtainLight.command: %Q2.1 (QCurtainLight)
+    // CM actQCurtainRst.command: %Q2.2 (QCurtainRst)
+    // CM actQSpare023.command: %Q2.3 (QSpare023)
+    // CM actQSpare024.command: %Q2.4 (QSpare024)
+    // CM actQSpare025.command: %Q2.5 (QSpare025)
+    // CM actQSpare026.command: %Q2.6 (QSpare026)
+    // CM actQSpare027.command: %Q2.7 (QSpare027)
+    // CM actQSpare028.command: %Q3.0 (QSpare028)
+    // CM actQSpare029.command: %Q3.1 (QSpare029)
+    // CM actQSpare030.command: %Q3.2 (QSpare030)
+    // CM cylQWaterValve.workCmd: %Q3.3 (QWaterValve)
+    // CM actQWaterContactor.command: %Q3.4 (QWaterContactor)
+    // CM actQAStationFan.command: %Q3.5 (QAStationFan)
+    // CM actQBStationFan.command: %Q3.6 (QBStationFan)
+    // CM actQCStationFan.command: %Q3.7 (QCStationFan)
+    // CM cylQZ01ExtEvt.workCmd: %Q4.0 (QZ01ExtEvt)
+    // CM cylQZ01RetEvt.homeCmd: %Q4.1 (QZ01RetEvt)
+    // CM cylQZ02ExtEvt.workCmd: %Q4.2 (QZ02ExtEvt)
+    // CM cylQZ02RetEvt.homeCmd: %Q4.3 (QZ02RetEvt)
+    // CM cylQZ03ExtEvt.workCmd: %Q4.4 (QZ03ExtEvt)
+    // CM cylQZ03RetEvt.homeCmd: %Q4.5 (QZ03RetEvt)
+    // CM cylQZ04ExtEvt.workCmd: %Q4.6 (QZ04ExtEvt)
+    // CM cylQZ04RetEvt.homeCmd: %Q4.7 (QZ04RetEvt)
+    // CM actQSpare050.command: %Q5.0 (QSpare050)
+    // CM cylDiamondVibCylinder.workCmd: %Q5.1 (DiamondVibCylinder)
+    // CM cylQCamCoverExt.workCmd: %Q5.2 (QCamCoverExt)
+    // CM cylQCamCoverRet.homeCmd: %Q5.3 (QCamCoverRet)
+    // CM cylQZ14ExtEvt.workCmd: %Q5.4 (QZ14ExtEvt)
+    // CM cylQZ14RetEvt.homeCmd: %Q5.5 (QZ14RetEvt)
+    // CM cylQZ07RetEvt.workCmd: %Q5.6 (QZ07RetEvt)
+    // CM cylQZ07ExtEvt.workCmd: %Q5.7 (QZ07ExtEvt)
+    // CM actQW10.command: %QW10 (QW10)
+    // Active Interlocks:
+    // - EMMode_M: NOT "EMMode_M"
+    // - IDoor3Unlocked: NOT "IDoor3Unlocked"
+    // - IDoor3Insert: NOT "IDoor3Insert"
+    // - ICurtainErrRst: NOT "ICurtainErrRst"
+    // - IDoorOverRide: NOT "IDoorOverRide"
+    // - IDoor1Unlocked: NOT "IDoor1Unlocked"
+    // - IDoor1Insert: NOT "IDoor1Insert"
+    // - IDoor2Unlocked: NOT "IDoor2Unlocked"
+    // - IDoor2Insert: NOT "IDoor2Insert"
+    // - IEMClamp: NOT "IEMClamp"
+    // - IRobotEMOK: NOT "IRobotEMOK"
+    // - ICurtainsOK: NOT "ICurtainsOK"
+    // - IEMOK: NOT "IEMOK"
+    // - IAllDoorClose: NOT "IAllDoorClose"
+    // - IEMOK1: NOT "IEMOK1"
+    // - IInsideEMOK: NOT "IInsideEMOK"
+    // - IInsideEMOK1: NOT "IInsideEMOK1"
+    // - QSpairMode: NOT "QSpairMode"
+    // - QDoorClose: NOT "QDoorClose"
+    // - QCurtainLight: NOT "QCurtainLight"
+    // - QCurtainRst: NOT "QCurtainRst"
+    // - i_DoorOverRide: NOT #i_DoorOverRide
+    // - i_OpenDoorPmt: NOT #i_OpenDoorPmt
+    // - EMMode: NOT #EMMode
+    // - o_DoorOverRideRelayOn: NOT #o_DoorOverRideRelayOn
+    // - o_DoorLockRelayON: NOT #o_DoorLockRelayON
+    // - o_DoorOverRideLight: NOT #o_DoorOverRideLight
+    // - o_PromptDoorOverRideStartIng: NOT #o_PromptDoorOverRideStartIng
+    // - o_PromptDoorOveRideStarted: NOT #o_PromptDoorOveRideStarted
+    // - o_PromptDoorLockFail: NOT #o_PromptDoorLockFail
+    // - TP_DoorInsert: NOT #TP_DoorInsert
+    // - TP_DoorUnLock: NOT #TP_DoorUnLock
+    // - AtDoorUnLock: NOT #AtDoorUnLock
+
+END_FUNCTION_BLOCK

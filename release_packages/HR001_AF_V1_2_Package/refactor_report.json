@@ -1,0 +1,3876 @@
+{
+  "status": "success",
+  "project_name": "HR001",
+  "target_unit_name": "U1_HR001",
+  "legacy_blocks_count": 89,
+  "af_blocks_count": 64,
+  "block_mapping": {
+    "DB1000_StdSignal": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1001_SysMode": "U1_HR001::CallUnit (Unit Mode & State Manager)",
+    "DB1003_CR": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1009_Constant": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1010_Parameter": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1040_HomePos": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1042_Timer": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1060_AutoStep": "U1Em1_AutoStep::Sequence + StepToString (EM State Machine)",
+    "DB1080_Component": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1081_ValveCall": "U1Em1_AutoStep::CallEquipment (Control Modules Hub)",
+    "DB1089_AddrRegister": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1140_Message": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1142_TypeChangePrompt": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1146_PromptFree": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1147_PromptStartNotPmt": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1148_PromptBeeper": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1200_FB_std_Switch": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1202_IOCheck": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1210_DPRD_DPWR": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1900_Communication_PC": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB1910_DrillData": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB2008_CoolingFan[DB2008]": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB2100 Modbus Value": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB2300 Point Value": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB2400 Visual Calibration": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB2500 Visual Chiseling": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB2600 FT Control": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB2700 Visual Point Reset": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB5000_ParameterLoadMemory": "U1_HR001::EmNodes / U1Em1_Station1::ControlNodes",
+    "DB720_KuKa_MainCtrl": "U1_HR001::CallUnit (Unit Mode & State Manager)",
+    "FB1000_StdSignal": "U1_HR001::CallUnit (Unit Mode & State Manager)",
+    "FB1001_SysMode": "U1_HR001::CallUnit (Unit Mode & State Manager)",
+    "FB1002_subSysMode": "U1_HR001::CallUnit (Unit Mode & State Manager)",
+    "FB1003_CR": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1010_Parameter": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1021_Prompt_Object": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1022_Prompt_ObjectV2": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1040_HomePos": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1060_AutoStep": "U1Em1_AutoStep::Sequence + StepToString (EM State Machine)",
+    "FB1061_RobotAutoStep": "U1Em1_AutoStep::Sequence + StepToString (EM State Machine)",
+    "FB1062_HorDrillAutoStep": "U1Em1_AutoStep::Sequence + StepToString (EM State Machine)",
+    "FB1063_DownDrillAutoStep": "U1Em1_AutoStep::Sequence + StepToString (EM State Machine)",
+    "FB1064_DiamondAutostep": "U1Em1_AutoStep::Sequence + StepToString (EM State Machine)",
+    "FB1080_Component": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1081_ValveCall": "U1Em1_AutoStep::CallEquipment (Control Modules Hub)",
+    "FB1089_AddrRegister": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1140_Message": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1141_Prompt": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1142_TypeChangePrompt": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1200_std_Switch": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1202_IOCheck_": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1210_DPRD_DPWR": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB1910_DrillData": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB2008_CoolingFan": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB2009_CoolingFanFunction": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB5002_SafetyDoorV1": "U1Em0_General (Safety Boundary & Interlocks)",
+    "FB5003_FixtureID": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB5004_ProdCycleTime": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB5005_ProdCounter": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB5006_Analog_IN_V4": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB5007_Analog_Out_V3": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB5008_CycleTime": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB5009_AnalOut": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB5019_stringSegment": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB5020_TypeConvert_4ByteDWORD_Real": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB5021_TypeConvert_Real_4ByteDWord": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB5699_RandomDemoTest": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB5715_Kuka_General": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB720_KuKa_MainCtrl": "U1_HR001::CallUnit (Unit Mode & State Manager)",
+    "FB950_SDTimer": "Legacy_Superseded (Preserved in backup namespace)",
+    "FB951_SDTimerV2": "Legacy_Superseded (Preserved in backup namespace)",
+    "FC1003_CR": "Legacy_Superseded (Preserved in backup namespace)",
+    "FC1900_Communication_PC": "Legacy_Superseded (Preserved in backup namespace)",
+    "FC2100 Modbus TCP": "Legacy_Superseded (Preserved in backup namespace)",
+    "FC2300 Time Calculation": "Legacy_Superseded (Preserved in backup namespace)",
+    "FC2400 Visual Calibration": "Legacy_Superseded (Preserved in backup namespace)",
+    "FC2500 Visual Chiseling": "Legacy_Superseded (Preserved in backup namespace)",
+    "FC2600 FT Control": "Legacy_Superseded (Preserved in backup namespace)",
+    "FC_BlockMove": "Legacy_Superseded (Preserved in backup namespace)",
+    "OB1Main": "U1_HR001::CallUnit (Unit Mode & State Manager)",
+    "OB30_Cyclic interrupt": "Legacy_Superseded (Preserved in backup namespace)",
+    "Pull or plug of modules": "Legacy_Superseded (Preserved in backup namespace)",
+    "Rack or station failure": "Legacy_Superseded (Preserved in backup namespace)",
+    "Startup": "Legacy_Superseded (Preserved in backup namespace)",
+    "System Err": "Legacy_Superseded (Preserved in backup namespace)",
+    "UDT_DrillData": "Legacy_Superseded (Preserved in backup namespace)",
+    "UDT_Step": "Legacy_Superseded (Preserved in backup namespace)",
+    "UDT_SystemPara": "Legacy_Superseded (Preserved in backup namespace)",
+    "UDT_TypePara": "Legacy_Superseded (Preserved in backup namespace)"
+  },
+  "ems": [
+    {
+      "em_idx": 1,
+      "name": "AutoStep",
+      "steps_count": 2,
+      "cms_count": 104,
+      "cms": [
+        {
+          "name": "cylDiamondVibCylinder",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylDiamondVibCylinder",
+          "io_mapping": {
+            "workCmd": "%Q5.1",
+            "workCmdTag": "DiamondVibCylinder"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "sensorIAuto",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIAuto",
+          "io_mapping": {
+            "signal": "%I0.3",
+            "signalTag": "IAuto"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIAutoModeStart",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIAutoModeStart",
+          "io_mapping": {
+            "signal": "%I0.4",
+            "signalTag": "IAutoModeStart"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "cylIZ07ExtPos",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylIZ07ExtPos",
+          "io_mapping": {
+            "workSensor": "%I3.5",
+            "workSensorTag": "IZ07ExtPos"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylIEMClamp",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylIEMClamp",
+          "io_mapping": {
+            "workSensor": "%I4.5",
+            "workSensorTag": "IEMClamp"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQZ01ExtEvt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQZ01ExtEvt",
+          "io_mapping": {
+            "workCmd": "%Q4.0",
+            "workCmdTag": "QZ01ExtEvt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQZ01RetEvt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQZ01RetEvt",
+          "io_mapping": {
+            "homeCmd": "%Q4.1",
+            "homeCmdTag": "QZ01RetEvt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQZ02ExtEvt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQZ02ExtEvt",
+          "io_mapping": {
+            "workCmd": "%Q4.2",
+            "workCmdTag": "QZ02ExtEvt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQZ02RetEvt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQZ02RetEvt",
+          "io_mapping": {
+            "homeCmd": "%Q4.3",
+            "homeCmdTag": "QZ02RetEvt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQZ03ExtEvt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQZ03ExtEvt",
+          "io_mapping": {
+            "workCmd": "%Q4.4",
+            "workCmdTag": "QZ03ExtEvt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQZ03RetEvt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQZ03RetEvt",
+          "io_mapping": {
+            "homeCmd": "%Q4.5",
+            "homeCmdTag": "QZ03RetEvt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQZ04ExtEvt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQZ04ExtEvt",
+          "io_mapping": {
+            "workCmd": "%Q4.6",
+            "workCmdTag": "QZ04ExtEvt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQZ04RetEvt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQZ04RetEvt",
+          "io_mapping": {
+            "homeCmd": "%Q4.7",
+            "homeCmdTag": "QZ04RetEvt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQZ14ExtEvt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQZ14ExtEvt",
+          "io_mapping": {
+            "workCmd": "%Q5.4",
+            "workCmdTag": "QZ14ExtEvt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQZ14RetEvt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQZ14RetEvt",
+          "io_mapping": {
+            "homeCmd": "%Q5.5",
+            "homeCmdTag": "QZ14RetEvt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQZ07RetEvt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQZ07RetEvt",
+          "io_mapping": {
+            "workCmd": "%Q5.6",
+            "workCmdTag": "QZ07RetEvt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQZ07ExtEvt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQZ07ExtEvt",
+          "io_mapping": {
+            "workCmd": "%Q5.7",
+            "workCmdTag": "QZ07ExtEvt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "analogITempErr",
+          "cm_type": "LBC_AnalogInput",
+          "description": "Analog Input analogITempErr",
+          "io_mapping": {
+            "value": "%I5.2",
+            "tag": "ITempErr"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "analogIW10",
+          "cm_type": "LBC_AnalogInput",
+          "description": "Analog Input analogIW10",
+          "io_mapping": {
+            "value": "%IW10",
+            "tag": "IW10"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "analogIW12",
+          "cm_type": "LBC_AnalogInput",
+          "description": "Analog Input analogIW12",
+          "io_mapping": {
+            "value": "%IW12",
+            "tag": "IW12"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIEMOK",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIEMOK",
+          "io_mapping": {
+            "signal": "%I0.0",
+            "signalTag": "IEMOK"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIAirPressOK",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIAirPressOK",
+          "io_mapping": {
+            "signal": "%I0.1",
+            "signalTag": "IAirPressOK"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIMan",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIMan",
+          "io_mapping": {
+            "signal": "%I0.2",
+            "signalTag": "IMan"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIErrRst",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIErrRst",
+          "io_mapping": {
+            "signal": "%I0.5",
+            "signalTag": "IErrRst"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorICurtainsOK",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorICurtainsOK",
+          "io_mapping": {
+            "signal": "%I0.6",
+            "signalTag": "ICurtainsOK"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIEMOK1",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIEMOK1",
+          "io_mapping": {
+            "signal": "%I0.7",
+            "signalTag": "IEMOK1"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorICurtainErrRst",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorICurtainErrRst",
+          "io_mapping": {
+            "signal": "%I1.0",
+            "signalTag": "ICurtainErrRst"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIDoorOverRide",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIDoorOverRide",
+          "io_mapping": {
+            "signal": "%I1.1",
+            "signalTag": "IDoorOverRide"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIDoor1Unlocked",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIDoor1Unlocked",
+          "io_mapping": {
+            "signal": "%I1.2",
+            "signalTag": "IDoor1Unlocked"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIDoor1Insert",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIDoor1Insert",
+          "io_mapping": {
+            "signal": "%I1.3",
+            "signalTag": "IDoor1Insert"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIDoor2Unlocked",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIDoor2Unlocked",
+          "io_mapping": {
+            "signal": "%I1.4",
+            "signalTag": "IDoor2Unlocked"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIDoor2Insert",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIDoor2Insert",
+          "io_mapping": {
+            "signal": "%I1.5",
+            "signalTag": "IDoor2Insert"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIDoor3Unlocked",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIDoor3Unlocked",
+          "io_mapping": {
+            "signal": "%I2.0",
+            "signalTag": "IDoor3Unlocked"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIDoor3Insert",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIDoor3Insert",
+          "io_mapping": {
+            "signal": "%I2.1",
+            "signalTag": "IDoor3Insert"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorBStationToolOn1",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorBStationToolOn1",
+          "io_mapping": {
+            "signal": "%I2.2",
+            "signalTag": "BStation_ToolOn1"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorBStationToolOn2",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorBStationToolOn2",
+          "io_mapping": {
+            "signal": "%I2.3",
+            "signalTag": "BStation_ToolOn2"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorAStationToolOn1",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorAStationToolOn1",
+          "io_mapping": {
+            "signal": "%I2.4",
+            "signalTag": "AStation_ToolOn1"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorAStationToolOn2",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorAStationToolOn2",
+          "io_mapping": {
+            "signal": "%I2.5",
+            "signalTag": "AStation_ToolOn2"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorBStationIZ04RetPos",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorBStationIZ04RetPos",
+          "io_mapping": {
+            "signal": "%I2.6",
+            "signalTag": "BStation_IZ04RetPos"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorBStationIZ04ExtPos",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorBStationIZ04ExtPos",
+          "io_mapping": {
+            "signal": "%I2.7",
+            "signalTag": "BStation_IZ04ExtPos"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorAStationIZ03ExtPos",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorAStationIZ03ExtPos",
+          "io_mapping": {
+            "signal": "%I3.0",
+            "signalTag": "AStation_IZ03ExtPos"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorAStationIZ03RetPos",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorAStationIZ03RetPos",
+          "io_mapping": {
+            "signal": "%I3.1",
+            "signalTag": "AStation_IZ03RetPos"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIZ07RetPos",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIZ07RetPos",
+          "io_mapping": {
+            "signal": "%I3.4",
+            "signalTag": "IZ07RetPos"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIFixtureCode01",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIFixtureCode01",
+          "io_mapping": {
+            "signal": "%I3.7",
+            "signalTag": "IFixtureCode01"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIFixtureCode02",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIFixtureCode02",
+          "io_mapping": {
+            "signal": "%I4.0",
+            "signalTag": "IFixtureCode02"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIFixtureCode03",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIFixtureCode03",
+          "io_mapping": {
+            "signal": "%I4.1",
+            "signalTag": "IFixtureCode03"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIFixtureIOCode01",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIFixtureIOCode01",
+          "io_mapping": {
+            "signal": "%I4.2",
+            "signalTag": "IFixtureIOCode01"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIFixtureIOCode02",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIFixtureIOCode02",
+          "io_mapping": {
+            "signal": "%I4.3",
+            "signalTag": "IFixtureIOCode02"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIFixtureIOCode03",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIFixtureIOCode03",
+          "io_mapping": {
+            "signal": "%I4.4",
+            "signalTag": "IFixtureIOCode03"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp47",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp47",
+          "io_mapping": {
+            "signal": "%I4.7",
+            "signalTag": "ISp4_7"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIAllDoorClose",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIAllDoorClose",
+          "io_mapping": {
+            "signal": "%I5.0",
+            "signalTag": "IAllDoorClose"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIRobotEMOK",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIRobotEMOK",
+          "io_mapping": {
+            "signal": "%I5.1",
+            "signalTag": "IRobotEMOK"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIInsideEMOK",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIInsideEMOK",
+          "io_mapping": {
+            "signal": "%I5.3",
+            "signalTag": "IInsideEMOK"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIInsideEMOK1",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIInsideEMOK1",
+          "io_mapping": {
+            "signal": "%I5.4",
+            "signalTag": "IInsideEMOK1"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp055",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp055",
+          "io_mapping": {
+            "signal": "%I5.5",
+            "signalTag": "ISp055"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp056",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp056",
+          "io_mapping": {
+            "signal": "%I5.6",
+            "signalTag": "ISp056"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp057",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp057",
+          "io_mapping": {
+            "signal": "%I5.7",
+            "signalTag": "ISp057"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp060",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp060",
+          "io_mapping": {
+            "signal": "%I6.0",
+            "signalTag": "ISp060"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp061",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp061",
+          "io_mapping": {
+            "signal": "%I6.1",
+            "signalTag": "ISp061"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp062",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp062",
+          "io_mapping": {
+            "signal": "%I6.2",
+            "signalTag": "ISp062"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp063",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp063",
+          "io_mapping": {
+            "signal": "%I6.3",
+            "signalTag": "ISp063"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp064",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp064",
+          "io_mapping": {
+            "signal": "%I6.4",
+            "signalTag": "ISp064"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp065",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp065",
+          "io_mapping": {
+            "signal": "%I6.5",
+            "signalTag": "ISp065"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp066",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp066",
+          "io_mapping": {
+            "signal": "%I6.6",
+            "signalTag": "ISp066"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp067",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp067",
+          "io_mapping": {
+            "signal": "%I6.7",
+            "signalTag": "ISp067"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIWaterToolAtDectPos",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIWaterToolAtDectPos",
+          "io_mapping": {
+            "signal": "%I7.2",
+            "signalTag": "IWaterToolAtDectPos"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorICoreBlockDropDectLeftTool",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorICoreBlockDropDectLeftTool",
+          "io_mapping": {
+            "signal": "%I7.3",
+            "signalTag": "ICoreBlockDropDect_LeftTool"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorICoreBlockDropDectRightTool",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorICoreBlockDropDectRightTool",
+          "io_mapping": {
+            "signal": "%I7.4",
+            "signalTag": "ICoreBlockDropDect_RightTool"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp075",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp075",
+          "io_mapping": {
+            "signal": "%I7.5",
+            "signalTag": "ISp075"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp076",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp076",
+          "io_mapping": {
+            "signal": "%I7.6",
+            "signalTag": "ISp076"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorISp077",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorISp077",
+          "io_mapping": {
+            "signal": "%I7.7",
+            "signalTag": "ISp077"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorQBeeper",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorQBeeper",
+          "io_mapping": {
+            "signal": "%Q0.2",
+            "signalTag": "QBeeper"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorOOpenCamCover",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorOOpenCamCover",
+          "io_mapping": {
+            "signal": "%Q1.2",
+            "signalTag": "OOpenCamCover"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQPanelG",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQPanelG",
+          "io_mapping": {
+            "command": "%Q0.0",
+            "commandTag": "QPanelG"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQPanelRed",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQPanelRed",
+          "io_mapping": {
+            "command": "%Q0.1",
+            "commandTag": "QPanelRed"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQTLR",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQTLR",
+          "io_mapping": {
+            "command": "%Q0.3",
+            "commandTag": "QTLR"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQTLY",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQTLY",
+          "io_mapping": {
+            "command": "%Q0.4",
+            "commandTag": "QTLY"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQTLG",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQTLG",
+          "io_mapping": {
+            "command": "%Q0.5",
+            "commandTag": "QTLG"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQTLB",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQTLB",
+          "io_mapping": {
+            "command": "%Q0.6",
+            "commandTag": "QTLB"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQTLW",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQTLW",
+          "io_mapping": {
+            "command": "%Q0.7",
+            "commandTag": "QTLW"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSpairMode",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSpairMode",
+          "io_mapping": {
+            "command": "%Q1.0",
+            "commandTag": "QSpairMode"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQLampCtr",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQLampCtr",
+          "io_mapping": {
+            "command": "%Q1.1",
+            "commandTag": "QLampCtr"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actOCloseCamCover",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actOCloseCamCover",
+          "io_mapping": {
+            "command": "%Q1.3",
+            "commandTag": "OCloseCamCover"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSp014",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSp014",
+          "io_mapping": {
+            "command": "%Q1.4",
+            "commandTag": "QSp014"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSp015",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSp015",
+          "io_mapping": {
+            "command": "%Q1.5",
+            "commandTag": "QSp015"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSp016",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSp016",
+          "io_mapping": {
+            "command": "%Q1.6",
+            "commandTag": "QSp016"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSp017",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSp017",
+          "io_mapping": {
+            "command": "%Q1.7",
+            "commandTag": "QSp017"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQDoorClose",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQDoorClose",
+          "io_mapping": {
+            "command": "%Q2.0",
+            "commandTag": "QDoorClose"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQCurtainLight",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQCurtainLight",
+          "io_mapping": {
+            "command": "%Q2.1",
+            "commandTag": "QCurtainLight"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQCurtainRst",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQCurtainRst",
+          "io_mapping": {
+            "command": "%Q2.2",
+            "commandTag": "QCurtainRst"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSpare023",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSpare023",
+          "io_mapping": {
+            "command": "%Q2.3",
+            "commandTag": "QSpare023"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSpare024",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSpare024",
+          "io_mapping": {
+            "command": "%Q2.4",
+            "commandTag": "QSpare024"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSpare025",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSpare025",
+          "io_mapping": {
+            "command": "%Q2.5",
+            "commandTag": "QSpare025"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSpare026",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSpare026",
+          "io_mapping": {
+            "command": "%Q2.6",
+            "commandTag": "QSpare026"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSpare027",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSpare027",
+          "io_mapping": {
+            "command": "%Q2.7",
+            "commandTag": "QSpare027"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSpare028",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSpare028",
+          "io_mapping": {
+            "command": "%Q3.0",
+            "commandTag": "QSpare028"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSpare029",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSpare029",
+          "io_mapping": {
+            "command": "%Q3.1",
+            "commandTag": "QSpare029"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSpare030",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSpare030",
+          "io_mapping": {
+            "command": "%Q3.2",
+            "commandTag": "QSpare030"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQWaterContactor",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQWaterContactor",
+          "io_mapping": {
+            "command": "%Q3.4",
+            "commandTag": "QWaterContactor"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQAStationFan",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQAStationFan",
+          "io_mapping": {
+            "command": "%Q3.5",
+            "commandTag": "QAStationFan"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQBStationFan",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQBStationFan",
+          "io_mapping": {
+            "command": "%Q3.6",
+            "commandTag": "QBStationFan"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQCStationFan",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQCStationFan",
+          "io_mapping": {
+            "command": "%Q3.7",
+            "commandTag": "QCStationFan"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQSpare050",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQSpare050",
+          "io_mapping": {
+            "command": "%Q5.0",
+            "commandTag": "QSpare050"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "actQW10",
+          "cm_type": "LBC_SimpleActuator",
+          "description": "Actuator actQW10",
+          "io_mapping": {
+            "command": "%QW10",
+            "commandTag": "QW10"
+          },
+          "parameters": {}
+        }
+      ],
+      "steps": [
+        {
+          "step_id": 10,
+          "name": "STEP_10_WAIT",
+          "actions": [
+            "// Wait"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 20
+        },
+        {
+          "step_id": 20,
+          "name": "STEP_20_EXEC",
+          "actions": [
+            "// Exec"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 1
+        }
+      ]
+    },
+    {
+      "em_idx": 2,
+      "name": "RobotAutoStep",
+      "steps_count": 2,
+      "cms_count": 2,
+      "cms": [
+        {
+          "name": "cylRobotAutoStepFeed",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "RobotAutoStep feed cylinder",
+          "io_mapping": {},
+          "parameters": {}
+        },
+        {
+          "name": "sensorRobotAutoStepReady",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "RobotAutoStep ready sensor",
+          "io_mapping": {},
+          "parameters": {}
+        }
+      ],
+      "steps": [
+        {
+          "step_id": 10,
+          "name": "STEP_10_WAIT",
+          "actions": [
+            "// Wait"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 20
+        },
+        {
+          "step_id": 20,
+          "name": "STEP_20_EXEC",
+          "actions": [
+            "// Exec"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 1
+        }
+      ]
+    },
+    {
+      "em_idx": 3,
+      "name": "HorDrillAutoStep",
+      "steps_count": 2,
+      "cms_count": 6,
+      "cms": [
+        {
+          "name": "cylIZ02ExtPos",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylIZ02ExtPos",
+          "io_mapping": {
+            "workSensor": "%I3.2",
+            "workSensorTag": "IZ02ExtPos"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylIZ02RetPos",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylIZ02RetPos",
+          "io_mapping": {
+            "homeSensor": "%I3.3",
+            "homeSensorTag": "IZ02RetPos"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQCamCoverExt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQCamCoverExt",
+          "io_mapping": {
+            "workCmd": "%Q5.2",
+            "workCmdTag": "QCamCoverExt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQCamCoverRet",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQCamCoverRet",
+          "io_mapping": {
+            "homeCmd": "%Q5.3",
+            "homeCmdTag": "QCamCoverRet"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "sensorIToolAtPos",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIToolAtPos",
+          "io_mapping": {
+            "signal": "%I3.6",
+            "signalTag": "IToolAtPos"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorIFixtureStuckSensor",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorIFixtureStuckSensor",
+          "io_mapping": {
+            "signal": "%I4.6",
+            "signalTag": "IFixtureStuckSensor"
+          },
+          "parameters": {}
+        }
+      ],
+      "steps": [
+        {
+          "step_id": 10,
+          "name": "STEP_10_WAIT",
+          "actions": [
+            "// Wait"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 20
+        },
+        {
+          "step_id": 20,
+          "name": "STEP_20_EXEC",
+          "actions": [
+            "// Exec"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 1
+        }
+      ]
+    },
+    {
+      "em_idx": 4,
+      "name": "DownDrillAutoStep",
+      "steps_count": 2,
+      "cms_count": 4,
+      "cms": [
+        {
+          "name": "cylIZ02ExtPos",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylIZ02ExtPos",
+          "io_mapping": {
+            "workSensor": "%I3.2",
+            "workSensorTag": "IZ02ExtPos"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylIZ02RetPos",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylIZ02RetPos",
+          "io_mapping": {
+            "homeSensor": "%I3.3",
+            "homeSensorTag": "IZ02RetPos"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQCamCoverExt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQCamCoverExt",
+          "io_mapping": {
+            "workCmd": "%Q5.2",
+            "workCmdTag": "QCamCoverExt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQCamCoverRet",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQCamCoverRet",
+          "io_mapping": {
+            "homeCmd": "%Q5.3",
+            "homeCmdTag": "QCamCoverRet"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        }
+      ],
+      "steps": [
+        {
+          "step_id": 10,
+          "name": "STEP_10_WAIT",
+          "actions": [
+            "// Wait"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 20
+        },
+        {
+          "step_id": 20,
+          "name": "STEP_20_EXEC",
+          "actions": [
+            "// Exec"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 1
+        }
+      ]
+    },
+    {
+      "em_idx": 5,
+      "name": "DiamondAutostep",
+      "steps_count": 2,
+      "cms_count": 6,
+      "cms": [
+        {
+          "name": "cylQWaterValve",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQWaterValve",
+          "io_mapping": {
+            "workCmd": "%Q3.3",
+            "workCmdTag": "QWaterValve"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylDiamondVibCylinder",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylDiamondVibCylinder",
+          "io_mapping": {
+            "workCmd": "%Q5.1",
+            "workCmdTag": "DiamondVibCylinder"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQCamCoverExt",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQCamCoverExt",
+          "io_mapping": {
+            "workCmd": "%Q5.2",
+            "workCmdTag": "QCamCoverExt"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "cylQCamCoverRet",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Pneumatic Actuator cylQCamCoverRet",
+          "io_mapping": {
+            "homeCmd": "%Q5.3",
+            "homeCmdTag": "QCamCoverRet"
+          },
+          "parameters": {
+            "interlocks": [
+              "NOT \"EMMode_M\"",
+              "NOT \"IDoor3Unlocked\"",
+              "NOT \"IDoor3Insert\"",
+              "NOT \"ICurtainErrRst\"",
+              "NOT \"IDoorOverRide\"",
+              "NOT \"IDoor1Unlocked\"",
+              "NOT \"IDoor1Insert\"",
+              "NOT \"IDoor2Unlocked\"",
+              "NOT \"IDoor2Insert\"",
+              "NOT \"IEMClamp\"",
+              "NOT \"IRobotEMOK\"",
+              "NOT \"ICurtainsOK\"",
+              "NOT \"IEMOK\"",
+              "NOT \"IAllDoorClose\"",
+              "NOT \"IEMOK1\"",
+              "NOT \"IInsideEMOK\"",
+              "NOT \"IInsideEMOK1\"",
+              "NOT \"QSpairMode\"",
+              "NOT \"QDoorClose\"",
+              "NOT \"QCurtainLight\"",
+              "NOT \"QCurtainRst\"",
+              "NOT #i_DoorOverRide",
+              "NOT #i_OpenDoorPmt",
+              "NOT #EMMode",
+              "NOT #o_DoorOverRideRelayOn",
+              "NOT #o_DoorLockRelayON",
+              "NOT #o_DoorOverRideLight",
+              "NOT #o_PromptDoorOverRideStartIng",
+              "NOT #o_PromptDoorOveRideStarted",
+              "NOT #o_PromptDoorLockFail",
+              "NOT #TP_DoorInsert",
+              "NOT #TP_DoorUnLock",
+              "NOT #AtDoorUnLock"
+            ]
+          }
+        },
+        {
+          "name": "sensorICoreBlockDectLeftTool",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorICoreBlockDectLeftTool",
+          "io_mapping": {
+            "signal": "%I7.0",
+            "signalTag": "ICoreBlockDect_LeftTool"
+          },
+          "parameters": {}
+        },
+        {
+          "name": "sensorICoreBlockDectRightTool",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Digital Sensor sensorICoreBlockDectRightTool",
+          "io_mapping": {
+            "signal": "%I7.1",
+            "signalTag": "ICoreBlockDect_RightTool"
+          },
+          "parameters": {}
+        }
+      ],
+      "steps": [
+        {
+          "step_id": 10,
+          "name": "STEP_10_WAIT",
+          "actions": [
+            "// Wait"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 20
+        },
+        {
+          "step_id": 20,
+          "name": "STEP_20_EXEC",
+          "actions": [
+            "// Exec"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 1
+        }
+      ]
+    },
+    {
+      "em_idx": 6,
+      "name": "Kuka_General",
+      "steps_count": 2,
+      "cms_count": 2,
+      "cms": [
+        {
+          "name": "cylKuka_GeneralFeed",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "Kuka_General feed cylinder",
+          "io_mapping": {},
+          "parameters": {}
+        },
+        {
+          "name": "sensorKuka_GeneralReady",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "Kuka_General ready sensor",
+          "io_mapping": {},
+          "parameters": {}
+        }
+      ],
+      "steps": [
+        {
+          "step_id": 10,
+          "name": "STEP_10_WAIT",
+          "actions": [
+            "// Wait"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 20
+        },
+        {
+          "step_id": 20,
+          "name": "STEP_20_EXEC",
+          "actions": [
+            "// Exec"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 1
+        }
+      ]
+    },
+    {
+      "em_idx": 7,
+      "name": "FC2400VisualCalibration",
+      "steps_count": 2,
+      "cms_count": 2,
+      "cms": [
+        {
+          "name": "cylFC2400VisualCalibrationFeed",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "FC2400VisualCalibration feed cylinder",
+          "io_mapping": {},
+          "parameters": {}
+        },
+        {
+          "name": "sensorFC2400VisualCalibrationReady",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "FC2400VisualCalibration ready sensor",
+          "io_mapping": {},
+          "parameters": {}
+        }
+      ],
+      "steps": [
+        {
+          "step_id": 10,
+          "name": "STEP_10_WAIT",
+          "actions": [
+            "// Wait"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 20
+        },
+        {
+          "step_id": 20,
+          "name": "STEP_20_EXEC",
+          "actions": [
+            "// Exec"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 1
+        }
+      ]
+    },
+    {
+      "em_idx": 8,
+      "name": "FC2600FTControl",
+      "steps_count": 2,
+      "cms_count": 2,
+      "cms": [
+        {
+          "name": "cylFC2600FTControlFeed",
+          "cm_type": "LBC_TwoWayActuator",
+          "description": "FC2600FTControl feed cylinder",
+          "io_mapping": {},
+          "parameters": {}
+        },
+        {
+          "name": "sensorFC2600FTControlReady",
+          "cm_type": "LBC_DigitalSignal",
+          "description": "FC2600FTControl ready sensor",
+          "io_mapping": {},
+          "parameters": {}
+        }
+      ],
+      "steps": [
+        {
+          "step_id": 10,
+          "name": "STEP_10_WAIT",
+          "actions": [
+            "// Wait"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 20
+        },
+        {
+          "step_id": 20,
+          "name": "STEP_20_EXEC",
+          "actions": [
+            "// Exec"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 1
+        }
+      ]
+    }
+  ],
+  "io_retention": {
+    "total_ios": 113,
+    "retained_ios": 113,
+    "percentage": 100.0,
+    "details": [
+      {
+        "address": "%I0.0",
+        "tag_name": "IEMOK",
+        "data_type": "Bool",
+        "cm_name": "sensorIEMOK",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I0.1",
+        "tag_name": "IAirPressOK",
+        "data_type": "Bool",
+        "cm_name": "sensorIAirPressOK",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I0.2",
+        "tag_name": "IMan",
+        "data_type": "Bool",
+        "cm_name": "sensorIMan",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I0.3",
+        "tag_name": "IAuto",
+        "data_type": "Bool",
+        "cm_name": "sensorIAuto",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I0.4",
+        "tag_name": "IAutoModeStart",
+        "data_type": "Bool",
+        "cm_name": "sensorIAutoModeStart",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I0.5",
+        "tag_name": "IErrRst",
+        "data_type": "Bool",
+        "cm_name": "sensorIErrRst",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I0.6",
+        "tag_name": "ICurtainsOK",
+        "data_type": "Bool",
+        "cm_name": "sensorICurtainsOK",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I0.7",
+        "tag_name": "IEMOK1",
+        "data_type": "Bool",
+        "cm_name": "sensorIEMOK1",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I1.0",
+        "tag_name": "ICurtainErrRst",
+        "data_type": "Bool",
+        "cm_name": "sensorICurtainErrRst",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I1.1",
+        "tag_name": "IDoorOverRide",
+        "data_type": "Bool",
+        "cm_name": "sensorIDoorOverRide",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I1.2",
+        "tag_name": "IDoor1Unlocked",
+        "data_type": "Bool",
+        "cm_name": "sensorIDoor1Unlocked",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I1.3",
+        "tag_name": "IDoor1Insert",
+        "data_type": "Bool",
+        "cm_name": "sensorIDoor1Insert",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I1.4",
+        "tag_name": "IDoor2Unlocked",
+        "data_type": "Bool",
+        "cm_name": "sensorIDoor2Unlocked",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I1.5",
+        "tag_name": "IDoor2Insert",
+        "data_type": "Bool",
+        "cm_name": "sensorIDoor2Insert",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I2.0",
+        "tag_name": "IDoor3Unlocked",
+        "data_type": "Bool",
+        "cm_name": "sensorIDoor3Unlocked",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I2.1",
+        "tag_name": "IDoor3Insert",
+        "data_type": "Bool",
+        "cm_name": "sensorIDoor3Insert",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I2.2",
+        "tag_name": "BStation_ToolOn1",
+        "data_type": "Bool",
+        "cm_name": "sensorBStationToolOn1",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I2.3",
+        "tag_name": "BStation_ToolOn2",
+        "data_type": "Bool",
+        "cm_name": "sensorBStationToolOn2",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I2.4",
+        "tag_name": "AStation_ToolOn1",
+        "data_type": "Bool",
+        "cm_name": "sensorAStationToolOn1",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I2.5",
+        "tag_name": "AStation_ToolOn2",
+        "data_type": "Bool",
+        "cm_name": "sensorAStationToolOn2",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I2.6",
+        "tag_name": "BStation_IZ04RetPos",
+        "data_type": "Bool",
+        "cm_name": "sensorBStationIZ04RetPos",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I2.7",
+        "tag_name": "BStation_IZ04ExtPos",
+        "data_type": "Bool",
+        "cm_name": "sensorBStationIZ04ExtPos",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I3.0",
+        "tag_name": "AStation_IZ03ExtPos",
+        "data_type": "Bool",
+        "cm_name": "sensorAStationIZ03ExtPos",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I3.1",
+        "tag_name": "AStation_IZ03RetPos",
+        "data_type": "Bool",
+        "cm_name": "sensorAStationIZ03RetPos",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I3.2",
+        "tag_name": "IZ02ExtPos",
+        "data_type": "Bool",
+        "cm_name": "cylIZ02ExtPos",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workSensor",
+        "em_name": ""
+      },
+      {
+        "address": "%I3.3",
+        "tag_name": "IZ02RetPos",
+        "data_type": "Bool",
+        "cm_name": "cylIZ02RetPos",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "homeSensor",
+        "em_name": ""
+      },
+      {
+        "address": "%I3.4",
+        "tag_name": "IZ07RetPos",
+        "data_type": "Bool",
+        "cm_name": "sensorIZ07RetPos",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I3.5",
+        "tag_name": "IZ07ExtPos",
+        "data_type": "Bool",
+        "cm_name": "cylIZ07ExtPos",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workSensor",
+        "em_name": ""
+      },
+      {
+        "address": "%I3.6",
+        "tag_name": "IToolAtPos",
+        "data_type": "Bool",
+        "cm_name": "sensorIToolAtPos",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I3.7",
+        "tag_name": "IFixtureCode01",
+        "data_type": "Bool",
+        "cm_name": "sensorIFixtureCode01",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I4.0",
+        "tag_name": "IFixtureCode02",
+        "data_type": "Bool",
+        "cm_name": "sensorIFixtureCode02",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I4.1",
+        "tag_name": "IFixtureCode03",
+        "data_type": "Bool",
+        "cm_name": "sensorIFixtureCode03",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I4.2",
+        "tag_name": "IFixtureIOCode01",
+        "data_type": "Bool",
+        "cm_name": "sensorIFixtureIOCode01",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I4.3",
+        "tag_name": "IFixtureIOCode02",
+        "data_type": "Bool",
+        "cm_name": "sensorIFixtureIOCode02",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I4.4",
+        "tag_name": "IFixtureIOCode03",
+        "data_type": "Bool",
+        "cm_name": "sensorIFixtureIOCode03",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I4.5",
+        "tag_name": "IEMClamp",
+        "data_type": "Bool",
+        "cm_name": "cylIEMClamp",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workSensor",
+        "em_name": ""
+      },
+      {
+        "address": "%I4.6",
+        "tag_name": "IFixtureStuckSensor",
+        "data_type": "Bool",
+        "cm_name": "sensorIFixtureStuckSensor",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I4.7",
+        "tag_name": "ISp4_7",
+        "data_type": "Bool",
+        "cm_name": "sensorISp47",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I5.0",
+        "tag_name": "IAllDoorClose",
+        "data_type": "Bool",
+        "cm_name": "sensorIAllDoorClose",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I5.1",
+        "tag_name": "IRobotEMOK",
+        "data_type": "Bool",
+        "cm_name": "sensorIRobotEMOK",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I5.2",
+        "tag_name": "ITempErr",
+        "data_type": "Bool",
+        "cm_name": "analogITempErr",
+        "cm_type": "LBC_AnalogInput",
+        "cm_field": "value",
+        "em_name": ""
+      },
+      {
+        "address": "%I5.3",
+        "tag_name": "IInsideEMOK",
+        "data_type": "Bool",
+        "cm_name": "sensorIInsideEMOK",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I5.4",
+        "tag_name": "IInsideEMOK1",
+        "data_type": "Bool",
+        "cm_name": "sensorIInsideEMOK1",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I5.5",
+        "tag_name": "ISp055",
+        "data_type": "Bool",
+        "cm_name": "sensorISp055",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I5.6",
+        "tag_name": "ISp056",
+        "data_type": "Bool",
+        "cm_name": "sensorISp056",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I5.7",
+        "tag_name": "ISp057",
+        "data_type": "Bool",
+        "cm_name": "sensorISp057",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I6.0",
+        "tag_name": "ISp060",
+        "data_type": "Bool",
+        "cm_name": "sensorISp060",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I6.1",
+        "tag_name": "ISp061",
+        "data_type": "Bool",
+        "cm_name": "sensorISp061",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I6.2",
+        "tag_name": "ISp062",
+        "data_type": "Bool",
+        "cm_name": "sensorISp062",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I6.3",
+        "tag_name": "ISp063",
+        "data_type": "Bool",
+        "cm_name": "sensorISp063",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I6.4",
+        "tag_name": "ISp064",
+        "data_type": "Bool",
+        "cm_name": "sensorISp064",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I6.5",
+        "tag_name": "ISp065",
+        "data_type": "Bool",
+        "cm_name": "sensorISp065",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I6.6",
+        "tag_name": "ISp066",
+        "data_type": "Bool",
+        "cm_name": "sensorISp066",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I6.7",
+        "tag_name": "ISp067",
+        "data_type": "Bool",
+        "cm_name": "sensorISp067",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I7.0",
+        "tag_name": "ICoreBlockDect_LeftTool",
+        "data_type": "Bool",
+        "cm_name": "sensorICoreBlockDectLeftTool",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I7.1",
+        "tag_name": "ICoreBlockDect_RightTool",
+        "data_type": "Bool",
+        "cm_name": "sensorICoreBlockDectRightTool",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I7.2",
+        "tag_name": "IWaterToolAtDectPos",
+        "data_type": "Bool",
+        "cm_name": "sensorIWaterToolAtDectPos",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I7.3",
+        "tag_name": "ICoreBlockDropDect_LeftTool",
+        "data_type": "Bool",
+        "cm_name": "sensorICoreBlockDropDectLeftTool",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I7.4",
+        "tag_name": "ICoreBlockDropDect_RightTool",
+        "data_type": "Bool",
+        "cm_name": "sensorICoreBlockDropDectRightTool",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I7.5",
+        "tag_name": "ISp075",
+        "data_type": "Bool",
+        "cm_name": "sensorISp075",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I7.6",
+        "tag_name": "ISp076",
+        "data_type": "Bool",
+        "cm_name": "sensorISp076",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%I7.7",
+        "tag_name": "ISp077",
+        "data_type": "Bool",
+        "cm_name": "sensorISp077",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%IW10",
+        "tag_name": "IW10",
+        "data_type": "Int",
+        "cm_name": "analogIW10",
+        "cm_type": "LBC_AnalogInput",
+        "cm_field": "value",
+        "em_name": ""
+      },
+      {
+        "address": "%IW12",
+        "tag_name": "IW12",
+        "data_type": "Int",
+        "cm_name": "analogIW12",
+        "cm_type": "LBC_AnalogInput",
+        "cm_field": "value",
+        "em_name": ""
+      },
+      {
+        "address": "%Q0.0",
+        "tag_name": "QPanelG",
+        "data_type": "Bool",
+        "cm_name": "actQPanelG",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q0.1",
+        "tag_name": "QPanelRed",
+        "data_type": "Bool",
+        "cm_name": "actQPanelRed",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q0.2",
+        "tag_name": "QBeeper",
+        "data_type": "Bool",
+        "cm_name": "sensorQBeeper",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%Q0.3",
+        "tag_name": "QTLR",
+        "data_type": "Bool",
+        "cm_name": "actQTLR",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q0.4",
+        "tag_name": "QTLY",
+        "data_type": "Bool",
+        "cm_name": "actQTLY",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q0.5",
+        "tag_name": "QTLG",
+        "data_type": "Bool",
+        "cm_name": "actQTLG",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q0.6",
+        "tag_name": "QTLB",
+        "data_type": "Bool",
+        "cm_name": "actQTLB",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q0.7",
+        "tag_name": "QTLW",
+        "data_type": "Bool",
+        "cm_name": "actQTLW",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q1.0",
+        "tag_name": "QSpairMode",
+        "data_type": "Bool",
+        "cm_name": "actQSpairMode",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q1.1",
+        "tag_name": "QLampCtr",
+        "data_type": "Bool",
+        "cm_name": "actQLampCtr",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q1.2",
+        "tag_name": "OOpenCamCover",
+        "data_type": "Bool",
+        "cm_name": "sensorOOpenCamCover",
+        "cm_type": "LBC_DigitalSignal",
+        "cm_field": "signal",
+        "em_name": ""
+      },
+      {
+        "address": "%Q1.3",
+        "tag_name": "OCloseCamCover",
+        "data_type": "Bool",
+        "cm_name": "actOCloseCamCover",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q1.4",
+        "tag_name": "QSp014",
+        "data_type": "Bool",
+        "cm_name": "actQSp014",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q1.5",
+        "tag_name": "QSp015",
+        "data_type": "Bool",
+        "cm_name": "actQSp015",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q1.6",
+        "tag_name": "QSp016",
+        "data_type": "Bool",
+        "cm_name": "actQSp016",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q1.7",
+        "tag_name": "QSp017",
+        "data_type": "Bool",
+        "cm_name": "actQSp017",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q2.0",
+        "tag_name": "QDoorClose",
+        "data_type": "Bool",
+        "cm_name": "actQDoorClose",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q2.1",
+        "tag_name": "QCurtainLight",
+        "data_type": "Bool",
+        "cm_name": "actQCurtainLight",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q2.2",
+        "tag_name": "QCurtainRst",
+        "data_type": "Bool",
+        "cm_name": "actQCurtainRst",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q2.3",
+        "tag_name": "QSpare023",
+        "data_type": "Bool",
+        "cm_name": "actQSpare023",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q2.4",
+        "tag_name": "QSpare024",
+        "data_type": "Bool",
+        "cm_name": "actQSpare024",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q2.5",
+        "tag_name": "QSpare025",
+        "data_type": "Bool",
+        "cm_name": "actQSpare025",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q2.6",
+        "tag_name": "QSpare026",
+        "data_type": "Bool",
+        "cm_name": "actQSpare026",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q2.7",
+        "tag_name": "QSpare027",
+        "data_type": "Bool",
+        "cm_name": "actQSpare027",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q3.0",
+        "tag_name": "QSpare028",
+        "data_type": "Bool",
+        "cm_name": "actQSpare028",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q3.1",
+        "tag_name": "QSpare029",
+        "data_type": "Bool",
+        "cm_name": "actQSpare029",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q3.2",
+        "tag_name": "QSpare030",
+        "data_type": "Bool",
+        "cm_name": "actQSpare030",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q3.3",
+        "tag_name": "QWaterValve",
+        "data_type": "Bool",
+        "cm_name": "cylQWaterValve",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q3.4",
+        "tag_name": "QWaterContactor",
+        "data_type": "Bool",
+        "cm_name": "actQWaterContactor",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q3.5",
+        "tag_name": "QAStationFan",
+        "data_type": "Bool",
+        "cm_name": "actQAStationFan",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q3.6",
+        "tag_name": "QBStationFan",
+        "data_type": "Bool",
+        "cm_name": "actQBStationFan",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q3.7",
+        "tag_name": "QCStationFan",
+        "data_type": "Bool",
+        "cm_name": "actQCStationFan",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q4.0",
+        "tag_name": "QZ01ExtEvt",
+        "data_type": "Bool",
+        "cm_name": "cylQZ01ExtEvt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q4.1",
+        "tag_name": "QZ01RetEvt",
+        "data_type": "Bool",
+        "cm_name": "cylQZ01RetEvt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "homeCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q4.2",
+        "tag_name": "QZ02ExtEvt",
+        "data_type": "Bool",
+        "cm_name": "cylQZ02ExtEvt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q4.3",
+        "tag_name": "QZ02RetEvt",
+        "data_type": "Bool",
+        "cm_name": "cylQZ02RetEvt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "homeCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q4.4",
+        "tag_name": "QZ03ExtEvt",
+        "data_type": "Bool",
+        "cm_name": "cylQZ03ExtEvt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q4.5",
+        "tag_name": "QZ03RetEvt",
+        "data_type": "Bool",
+        "cm_name": "cylQZ03RetEvt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "homeCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q4.6",
+        "tag_name": "QZ04ExtEvt",
+        "data_type": "Bool",
+        "cm_name": "cylQZ04ExtEvt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q4.7",
+        "tag_name": "QZ04RetEvt",
+        "data_type": "Bool",
+        "cm_name": "cylQZ04RetEvt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "homeCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q5.0",
+        "tag_name": "QSpare050",
+        "data_type": "Bool",
+        "cm_name": "actQSpare050",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      },
+      {
+        "address": "%Q5.1",
+        "tag_name": "DiamondVibCylinder",
+        "data_type": "Bool",
+        "cm_name": "cylDiamondVibCylinder",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q5.2",
+        "tag_name": "QCamCoverExt",
+        "data_type": "Bool",
+        "cm_name": "cylQCamCoverExt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q5.3",
+        "tag_name": "QCamCoverRet",
+        "data_type": "Bool",
+        "cm_name": "cylQCamCoverRet",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "homeCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q5.4",
+        "tag_name": "QZ14ExtEvt",
+        "data_type": "Bool",
+        "cm_name": "cylQZ14ExtEvt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q5.5",
+        "tag_name": "QZ14RetEvt",
+        "data_type": "Bool",
+        "cm_name": "cylQZ14RetEvt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "homeCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q5.6",
+        "tag_name": "QZ07RetEvt",
+        "data_type": "Bool",
+        "cm_name": "cylQZ07RetEvt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%Q5.7",
+        "tag_name": "QZ07ExtEvt",
+        "data_type": "Bool",
+        "cm_name": "cylQZ07ExtEvt",
+        "cm_type": "LBC_TwoWayActuator",
+        "cm_field": "workCmd",
+        "em_name": ""
+      },
+      {
+        "address": "%QW10",
+        "tag_name": "QW10",
+        "data_type": "Int",
+        "cm_name": "actQW10",
+        "cm_type": "LBC_SimpleActuator",
+        "cm_field": "command",
+        "em_name": ""
+      }
+    ]
+  },
+  "interlocks": [
+    {
+      "name": "EMMode_M",
+      "expression": "NOT \"EMMode_M\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag EMMode_M: 急停"
+    },
+    {
+      "name": "IDoor3Unlocked",
+      "expression": "NOT \"IDoor3Unlocked\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IDoor3Unlocked: 垂直击打门锁未锁定"
+    },
+    {
+      "name": "IDoor3Insert",
+      "expression": "NOT \"IDoor3Insert\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IDoor3Insert: 垂直击打门锁已插入"
+    },
+    {
+      "name": "ICurtainErrRst",
+      "expression": "NOT \"ICurtainErrRst\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag ICurtainErrRst: 光幕复位按钮"
+    },
+    {
+      "name": "IDoorOverRide",
+      "expression": "NOT \"IDoorOverRide\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IDoorOverRide: 安全门旁路"
+    },
+    {
+      "name": "IDoor1Unlocked",
+      "expression": "NOT \"IDoor1Unlocked\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IDoor1Unlocked: 产品上料门锁未锁定"
+    },
+    {
+      "name": "IDoor1Insert",
+      "expression": "NOT \"IDoor1Insert\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IDoor1Insert: 产品上料门锁已插入"
+    },
+    {
+      "name": "IDoor2Unlocked",
+      "expression": "NOT \"IDoor2Unlocked\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IDoor2Unlocked: 水平击打门锁未锁定"
+    },
+    {
+      "name": "IDoor2Insert",
+      "expression": "NOT \"IDoor2Insert\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IDoor2Insert: 水平击打门锁已插入"
+    },
+    {
+      "name": "IEMClamp",
+      "expression": "NOT \"IEMClamp\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IEMClamp: 夹具侧急停按钮"
+    },
+    {
+      "name": "IRobotEMOK",
+      "expression": "NOT \"IRobotEMOK\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IRobotEMOK: 机器人急停按钮OK"
+    },
+    {
+      "name": "ICurtainsOK",
+      "expression": "NOT \"ICurtainsOK\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag ICurtainsOK: 光幕OK信号"
+    },
+    {
+      "name": "IEMOK",
+      "expression": "NOT \"IEMOK\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IEMOK: 紧急停止OK"
+    },
+    {
+      "name": "IAllDoorClose",
+      "expression": "NOT \"IAllDoorClose\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IAllDoorClose: 上电&所有\n安全门关闭"
+    },
+    {
+      "name": "IEMOK1",
+      "expression": "NOT \"IEMOK1\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IEMOK1: 操作盒急停OK"
+    },
+    {
+      "name": "IInsideEMOK",
+      "expression": "NOT \"IInsideEMOK\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IInsideEMOK: 围栏内侧急停信号"
+    },
+    {
+      "name": "IInsideEMOK1",
+      "expression": "NOT \"IInsideEMOK1\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag IInsideEMOK1: 水泥块击打框架急停信号"
+    },
+    {
+      "name": "QSpairMode",
+      "expression": "NOT \"QSpairMode\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag QSpairMode: 安全门旁路"
+    },
+    {
+      "name": "QDoorClose",
+      "expression": "NOT \"QDoorClose\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag QDoorClose: 门锁电源中继"
+    },
+    {
+      "name": "QCurtainLight",
+      "expression": "NOT \"QCurtainLight\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag QCurtainLight: 光幕复位指示灯"
+    },
+    {
+      "name": "QCurtainRst",
+      "expression": "NOT \"QCurtainRst\"",
+      "source_block": "",
+      "associated_cms": [],
+      "description": "Safety interlock from tag QCurtainRst: 光幕复位to安继"
+    },
+    {
+      "name": "i_DoorOverRide",
+      "expression": "NOT #i_DoorOverRide",
+      "source_block": "FB5002_SafetyDoorV1",
+      "associated_cms": [],
+      "description": "Safety condition in FB5002_SafetyDoorV1: 安全门旁路输入请求信号"
+    },
+    {
+      "name": "i_OpenDoorPmt",
+      "expression": "NOT #i_OpenDoorPmt",
+      "source_block": "FB5002_SafetyDoorV1",
+      "associated_cms": [],
+      "description": "Safety condition in FB5002_SafetyDoorV1: 开门/旁路条件"
+    },
+    {
+      "name": "EMMode",
+      "expression": "NOT #EMMode",
+      "source_block": "FB5002_SafetyDoorV1",
+      "associated_cms": [],
+      "description": "Safety condition in FB5002_SafetyDoorV1: 紧急停止模式"
+    },
+    {
+      "name": "o_DoorOverRideRelayOn",
+      "expression": "NOT #o_DoorOverRideRelayOn",
+      "source_block": "FB5002_SafetyDoorV1",
+      "associated_cms": [],
+      "description": "Safety condition in FB5002_SafetyDoorV1: 安全门旁路继电器输出"
+    },
+    {
+      "name": "o_DoorLockRelayON",
+      "expression": "NOT #o_DoorLockRelayON",
+      "source_block": "FB5002_SafetyDoorV1",
+      "associated_cms": [],
+      "description": "Safety condition in FB5002_SafetyDoorV1: 安全门线圈锁定继电器输出"
+    },
+    {
+      "name": "o_DoorOverRideLight",
+      "expression": "NOT #o_DoorOverRideLight",
+      "source_block": "FB5002_SafetyDoorV1",
+      "associated_cms": [],
+      "description": "Safety condition in FB5002_SafetyDoorV1: 安全门旁路指示灯"
+    },
+    {
+      "name": "o_PromptDoorOverRideStartIng",
+      "expression": "NOT #o_PromptDoorOverRideStartIng",
+      "source_block": "FB5002_SafetyDoorV1",
+      "associated_cms": [],
+      "description": "Safety condition in FB5002_SafetyDoorV1: 开始安全门旁路,等待各流程结束!"
+    },
+    {
+      "name": "o_PromptDoorOveRideStarted",
+      "expression": "NOT #o_PromptDoorOveRideStarted",
+      "source_block": "FB5002_SafetyDoorV1",
+      "associated_cms": [],
+      "description": "Safety condition in FB5002_SafetyDoorV1: 安全门旁路，注意安全！"
+    },
+    {
+      "name": "o_PromptDoorLockFail",
+      "expression": "NOT #o_PromptDoorLockFail",
+      "source_block": "FB5002_SafetyDoorV1",
+      "associated_cms": [],
+      "description": "Safety condition in FB5002_SafetyDoorV1: 安全门电磁线圈锁定失败！"
+    },
+    {
+      "name": "TP_DoorInsert",
+      "expression": "NOT #TP_DoorInsert",
+      "source_block": "FB5002_SafetyDoorV1",
+      "associated_cms": [],
+      "description": "Safety condition in FB5002_SafetyDoorV1: "
+    },
+    {
+      "name": "TP_DoorUnLock",
+      "expression": "NOT #TP_DoorUnLock",
+      "source_block": "FB5002_SafetyDoorV1",
+      "associated_cms": [],
+      "description": "Safety condition in FB5002_SafetyDoorV1: "
+    },
+    {
+      "name": "AtDoorUnLock",
+      "expression": "NOT #AtDoorUnLock",
+      "source_block": "FB5002_SafetyDoorV1",
+      "associated_cms": [],
+      "description": "Safety condition in FB5002_SafetyDoorV1: "
+    }
+  ],
+  "lint_findings": [],
+  "af_blocks_created": [
+    "U1Em0_General::Main",
+    "U1Em0_General::ProDiag",
+    "U1Em0_General::Startup",
+    "U1Em1_AutoStep::CallEquipment",
+    "U1Em1_AutoStep::ControlNodes",
+    "U1Em1_AutoStep::Main",
+    "U1Em1_AutoStep::ProDiag",
+    "U1Em1_AutoStep::Sequence",
+    "U1Em1_AutoStep::Startup",
+    "U1Em1_AutoStep::StepToString",
+    "U1Em2_RobotAutoStep::CallEquipment",
+    "U1Em2_RobotAutoStep::ControlNodes",
+    "U1Em2_RobotAutoStep::Main",
+    "U1Em2_RobotAutoStep::ProDiag",
+    "U1Em2_RobotAutoStep::Sequence",
+    "U1Em2_RobotAutoStep::Startup",
+    "U1Em2_RobotAutoStep::StepToString",
+    "U1Em3_HorDrillAutoStep::CallEquipment",
+    "U1Em3_HorDrillAutoStep::ControlNodes",
+    "U1Em3_HorDrillAutoStep::Main",
+    "U1Em3_HorDrillAutoStep::ProDiag",
+    "U1Em3_HorDrillAutoStep::Sequence",
+    "U1Em3_HorDrillAutoStep::Startup",
+    "U1Em3_HorDrillAutoStep::StepToString",
+    "U1Em4_DownDrillAutoStep::CallEquipment",
+    "U1Em4_DownDrillAutoStep::ControlNodes",
+    "U1Em4_DownDrillAutoStep::Main",
+    "U1Em4_DownDrillAutoStep::ProDiag",
+    "U1Em4_DownDrillAutoStep::Sequence",
+    "U1Em4_DownDrillAutoStep::Startup",
+    "U1Em4_DownDrillAutoStep::StepToString",
+    "U1Em5_DiamondAutostep::CallEquipment",
+    "U1Em5_DiamondAutostep::ControlNodes",
+    "U1Em5_DiamondAutostep::Main",
+    "U1Em5_DiamondAutostep::ProDiag",
+    "U1Em5_DiamondAutostep::Sequence",
+    "U1Em5_DiamondAutostep::Startup",
+    "U1Em5_DiamondAutostep::StepToString",
+    "U1Em6_Kuka_General::CallEquipment",
+    "U1Em6_Kuka_General::ControlNodes",
+    "U1Em6_Kuka_General::Main",
+    "U1Em6_Kuka_General::ProDiag",
+    "U1Em6_Kuka_General::Sequence",
+    "U1Em6_Kuka_General::Startup",
+    "U1Em6_Kuka_General::StepToString",
+    "U1Em7_FC2400VisualCalibration::CallEquipment",
+    "U1Em7_FC2400VisualCalibration::ControlNodes",
+    "U1Em7_FC2400VisualCalibration::Main",
+    "U1Em7_FC2400VisualCalibration::ProDiag",
+    "U1Em7_FC2400VisualCalibration::Sequence",
+    "U1Em7_FC2400VisualCalibration::Startup",
+    "U1Em7_FC2400VisualCalibration::StepToString",
+    "U1Em8_FC2600FTControl::CallEquipment",
+    "U1Em8_FC2600FTControl::ControlNodes",
+    "U1Em8_FC2600FTControl::Main",
+    "U1Em8_FC2600FTControl::ProDiag",
+    "U1Em8_FC2600FTControl::Sequence",
+    "U1Em8_FC2600FTControl::Startup",
+    "U1Em8_FC2600FTControl::StepToString",
+    "U1_HR001::CallUnit",
+    "U1_HR001::EmNodes",
+    "U1_HR001::Main",
+    "U1_HR001::ProDiag",
+    "U1_HR001::Startup"
+  ]
+}

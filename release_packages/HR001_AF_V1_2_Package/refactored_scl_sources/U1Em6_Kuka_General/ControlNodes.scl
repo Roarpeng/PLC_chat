@@ -1,0 +1,12 @@
+DATA_BLOCK "ControlNodes"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+STRUCT
+    sequence : "LAF_typeSequence";
+    jobs : "LAF_typeJobs";
+    cylKuka_GeneralFeed : "LBC_TwoWayActuatorControlNodes";
+    sensorKuka_GeneralReady : "LBC_DigitalSignalControlNodes";
+END_STRUCT;
+BEGIN
+END_DATA_BLOCK

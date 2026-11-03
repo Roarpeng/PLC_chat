@@ -1,0 +1,58 @@
+FUNCTION_BLOCK "Sequence"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_IN_OUT
+    controlNodes : "ControlNodes";
+END_VAR
+VAR
+    statStepCurrent : DInt := 0;
+    statStepNext : DInt := 0;
+    statSequenceControl : "LAF_typeSequenceControl";
+    statSequenceStatus : "LAF_typeSequenceStatus";
+    instControlSclSequence : "LAF_ControlSclSequence";
+    instStatusSclSequence : "LAF_StatusSclSequence";
+END_VAR
+BEGIN
+    // Call LAF_ControlSclSequence to manage step transitions and sequencing
+    #instControlSclSequence(
+        stepNext := #statStepNext,
+        commands := #controlNodes.sequence.commands,
+        sequenceControl => #statSequenceControl,
+        stepCurrent => #statStepCurrent
+    );
+
+    // Sequence Step State Machine
+    CASE #statStepCurrent OF
+        0: // Initializing
+            #statStepNext := 1;
+
+        1: // Ready
+            IF #controlNodes.sequence.commands.start THEN
+                #statStepNext := 10;
+            END_IF;
+
+    // Step 10: STEP_10_WAIT
+    10:
+        // Wait
+        IF TRUE THEN
+            #statStepNext := 20;
+        END_IF;
+
+    // Step 20: STEP_20_EXEC
+    20:
+        // Exec
+        IF TRUE THEN
+            #statStepNext := 1;
+        END_IF;
+
+        999: // Error step
+            #controlNodes.sequence.status.error := TRUE;
+    END_CASE;
+
+    // Call LAF_StatusSclSequence
+    #instStatusSclSequence(
+        stepCurrent := #statStepCurrent,
+        sequenceControl := #statSequenceControl,
+        status => #controlNodes.sequence.status
+    );
+END_FUNCTION_BLOCK

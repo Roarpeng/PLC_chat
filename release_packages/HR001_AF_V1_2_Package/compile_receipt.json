@@ -1,0 +1,34 @@
+{
+  "ok": true,
+  "project_name": "HR001_PLC_20260509",
+  "target_architecture": "Siemens Automation Framework (AF) V1.2",
+  "af_compliance": {
+    "total_fbs": 41,
+    "pure_scl_fbs": 41,
+    "lad_fbs": 0,
+    "af_equipment_modules": [
+      "U1_HR001",
+      "U1Em0_General",
+      "U1Em1_AutoStep",
+      "U1Em2_RobotAutoStep",
+      "U1Em3_HorDrillAutoStep",
+      "U1Em4_VerDrillAutoStep",
+      "U1Em5_FeedAutoStep",
+      "U1Em6_Kuka_General",
+      "U1Em7_FC2600CCControl",
+      "U1Em8_FC2600FTControl",
+      "001_KL_Standard_Lib",
+      "002_Err_Prompt",
+      "099_System_OB"
+    ],
+    "io_retention_ratio": "100.0%",
+    "io_channels_preserved": 113,
+    "db_offsets_preserved": true
+  },
+  "openness_compile_result": "Success",
+  "error_count": 0,
+  "warning_count": 92,
+  "verification": "TIA Portal V19 Openness native compile passed with exactly 0 errors. All 41 FBs verified 100% pure SCL (0 LAD).",
+  "archive_zap19": "PLC_Openness_data/hr001/HR001_AF_V1_2.zap19",
+  "archive_size_bytes": 15647358
+}
