@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { ChatMessage } from "../state/sessions";
+import {
+  pipelineActiveStage,
+  pipelineSettled,
+  type PipelineStageView,
+} from "../state/refactorPipeline";
 import MarkdownBody from "../MarkdownBody";
 import { linkifyBlockNames } from "./blockRefs";
 import "./chatdock.css";
@@ -18,7 +23,53 @@ export interface ChatDockProps {
   blockNames?: string[];
   /** 点击块引用 → 画布打开对应功能块 */
   onOpenBlock?(name: string): void;
+  /** 重构流水线进度卡(App 侧轮询驱动;null=无在飞/终态已清) */
+  pipeline?: {
+    jobId: string;
+    startedAt: number;
+    stages: PipelineStageView[];
+  } | null;
 }
+
+/** 重构流水线进度卡:阶段芯片(完成/进行/待开始/跳过/出错) + 作业号 + 实时时耗 */
+const PipelineCard: React.FC<{ pipeline: NonNullable<ChatDockProps["pipeline"]> }> = ({
+  pipeline,
+}) => {
+  const [now, setNow] = useState(() => Date.now());
+  const settled = pipelineSettled(pipeline.stages);
+  useEffect(() => {
+    if (settled) return;
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [settled]);
+  const active = pipelineActiveStage(pipeline.stages);
+  const secs = Math.max(0, Math.floor((now - pipeline.startedAt) / 1000));
+  const elapsed = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+  return (
+    <div className="dock-pipeline" role="status" aria-label="重构流水线进度">
+      <div className="dock-pipeline__head">
+        <span className="dock-pipeline__title">
+          重构流水线{settled ? " · 已结束" : ""}
+        </span>
+        <span className="dock-pipeline__elapsed">{elapsed}</span>
+        <span className="dock-pipeline__job">作业 {pipeline.jobId.slice(0, 10)}</span>
+      </div>
+      <ol className="dock-pipeline__stages">
+        {pipeline.stages.map((st) => (
+          <li
+            key={st.key}
+            className={`dock-pipeline__stage is-${st.status}`}
+            title={st.detail || st.label}
+          >
+            <i className="dock-pipeline__dot" aria-hidden="true" />
+            {st.label}
+          </li>
+        ))}
+      </ol>
+      {active?.detail && <p className="dock-pipeline__detail">{active.detail}</p>}
+    </div>
+  );
+};
 
 /** HH:MM 时间标签（无时间戳的旧消息显示 "—"） */
 function timeLabel(ts: number | undefined): string {
@@ -276,6 +327,7 @@ export const ChatDock: React.FC<ChatDockProps> = ({
   onSuggestion,
   blockNames,
   onOpenBlock,
+  pipeline = null,
 }) => {
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -452,6 +504,14 @@ export const ChatDock: React.FC<ChatDockProps> = ({
               ))
             )}
           </div>
+          {pipeline && pipeline.stages.length > 0 && <PipelineCard pipeline={pipeline} />}
+          {pipeline && pipeline.stages.length === 0 && (
+            <div className="dock-pipeline dock-pipeline--starting" role="status">
+              <div className="dock-pipeline__head">
+                <span className="dock-pipeline__title">重构流水线 · 启动中</span>
+              </div>
+            </div>
+          )}
           <form
             className="dock-inputrow"
             data-ui="dock-input"

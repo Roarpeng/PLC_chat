@@ -139,11 +139,13 @@ export function newConversationId(): string {
 
 /* ---------------- Project ---------------- */
 
-/** 工程列表 meta;网关不可达 / 404 → [](不抛错) */
+/** 工程列表 meta;网关不可达 / 404 → [](不抛错)。
+ *  过滤空 id 条目:后端会把 legacy 会话聚合成无 id 的伪工程(如旧 HR001/HR002),
+ *  它们无法被选中/回写,进侧栏只会产生死条目。 */
 export async function fetchProjects(): Promise<ProjectMeta[]> {
   try {
     const data = await requestPlc<Wire[]>("/api/v1/plc/canvas/projects");
-    return Array.isArray(data) ? data.map(toProjectMeta) : [];
+    return (Array.isArray(data) ? data.map(toProjectMeta) : []).filter((p) => p.id);
   } catch {
     return [];
   }

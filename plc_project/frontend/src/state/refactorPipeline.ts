@@ -133,6 +133,49 @@ export const REFACTOR_STAGE_NAMES: Record<string, string> = {
   package: "打包",
 };
 
+/* ---- 阶段进度视图模型(供 ChatDock 进度卡渲染) ---- */
+
+/** 单阶段视图:label 已中文化,status 原样(联态放宽) */
+export type PipelineStageView = {
+  key: string;
+  label: string;
+  status: RefactorPipelineStage["status"];
+  detail?: string;
+};
+
+/** stages → 视图模型(空安全;未知段名原样透出,与 pipelineProgressText 同口径) */
+export function pipelineStageViews(
+  stages: RefactorPipelineStage[] | null | undefined,
+  stageNameMap?: Record<string, string>,
+): PipelineStageView[] {
+  const names = stageNameMap ?? REFACTOR_STAGE_NAMES;
+  const list = Array.isArray(stages) ? stages : [];
+  return list.map((s) => ({
+    key: String(s?.name ?? ""),
+    label: names[s?.name] ?? String(s?.name ?? ""),
+    status: s?.status ?? "pending",
+    detail: typeof s?.detail === "string" ? s.detail : undefined,
+  }));
+}
+
+/** 当前活跃阶段:优先 running;无 running 取最后一个非 pending(收尾态可见);全空 → null */
+export function pipelineActiveStage(views: PipelineStageView[]): PipelineStageView | null {
+  const running = views.find((v) => v.status === "running");
+  if (running) return running;
+  for (let i = views.length - 1; i >= 0; i--) {
+    if (views[i].status !== "pending") return views[i];
+  }
+  return null;
+}
+
+/** 全部阶段抵达终态(ok/skipped/error) → true(进度卡据此停在完成态) */
+export function pipelineSettled(views: PipelineStageView[]): boolean {
+  return (
+    views.length > 0 &&
+    views.every((v) => v.status === "ok" || v.status === "skipped" || v.status === "error")
+  );
+}
+
 const STAGE_STATUS_TEXT: Record<string, string> = {
   pending: "待开始",
   running: "进行中…",

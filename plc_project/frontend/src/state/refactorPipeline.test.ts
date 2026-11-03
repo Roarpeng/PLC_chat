@@ -2,12 +2,61 @@ import { describe, expect, it } from "vitest";
 import {
   REFACTOR_STAGE_NAMES,
   parseRefactorIntent,
+  pipelineActiveStage,
   pipelineProgressText,
   pipelineResultMessage,
+  pipelineSettled,
+  pipelineStageViews,
   refactorPipelinePackageUrl,
   type RefactorPipelineResult,
   type RefactorPipelineStage,
 } from "./refactorPipeline";
+
+describe("pipelineStageViews / pipelineActiveStage / pipelineSettled(进度卡视图层)", () => {
+  it("阶段名中文化,未知段名原样透出,detail 透传", () => {
+    const views = pipelineStageViews([
+      { name: "refactor", status: "ok" },
+      { name: "compile", status: "running", detail: "TIA 编译中" },
+      { name: "custom_stage", status: "pending" },
+    ]);
+    expect(views.map((v) => v.label)).toEqual(["重构", "编译", "custom_stage"]);
+    expect(views[1].status).toBe("running");
+    expect(views[1].detail).toBe("TIA 编译中");
+    expect(views[2].status).toBe("pending");
+  });
+
+  it("空输入空安全:null/undefined/[] → []", () => {
+    expect(pipelineStageViews(null)).toEqual([]);
+    expect(pipelineStageViews(undefined)).toEqual([]);
+    expect(pipelineStageViews([])).toEqual([]);
+  });
+
+  it("活跃阶段:优先 running;无 running 取最后一个非 pending;全空 → null", () => {
+    expect(pipelineActiveStage(pipelineStageViews([
+      { name: "refactor", status: "ok" },
+      { name: "compile", status: "running" },
+    ]))?.key).toBe("compile");
+    expect(pipelineActiveStage(pipelineStageViews([
+      { name: "refactor", status: "ok" },
+      { name: "compile", status: "pending" },
+    ]))?.key).toBe("refactor");
+    expect(pipelineActiveStage([])).toBeNull();
+    expect(pipelineActiveStage(pipelineStageViews([{ name: "x", status: "pending" }]))).toBeNull();
+  });
+
+  it("settled:全终态(ok/skipped/error)才 true;running/pending 或空 → false", () => {
+    expect(pipelineSettled(pipelineStageViews([
+      { name: "refactor", status: "ok" },
+      { name: "compile", status: "skipped" },
+      { name: "fix_loop", status: "error" },
+    ]))).toBe(true);
+    expect(pipelineSettled(pipelineStageViews([
+      { name: "refactor", status: "ok" },
+      { name: "compile", status: "running" },
+    ]))).toBe(false);
+    expect(pipelineSettled([])).toBe(false);
+  });
+});
 
 describe("parseRefactorIntent", () => {
   it("中文'重构'命中,默认要编译、不打包", () => {

@@ -42,8 +42,12 @@ import { ProjectSidebar } from "./shell/ProjectSidebar";
 import { OnboardingScreen } from "./shell/OnboardingScreen";
 import {
   fetchProjects,
+  fetchProject,
+  fetchConversations,
+  fetchConversation,
   createProject,
   createConversation,
+  putProject,
   deleteProject as apiDeleteProject,
   type ProjectMeta,
   type ConversationMeta,
@@ -92,6 +96,8 @@ import {
   parseRefactorIntent,
   pipelineProgressText,
   pipelineResultMessage,
+  pipelineStageViews,
+  type PipelineStageView,
   type RefactorIntent,
   type RefactorPipelineJob,
   type RefactorPipelineRequestBody,
@@ -258,6 +264,24 @@ const App: React.FC = () => {
   const [conversationList, setConversationList] = useState<ConversationMeta[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  /** P 线接线(契约 25 §1):activeProjectId 的 ref 镜像——commitSession 等闭包里
+   *  读最新值做画布回写,与 activeSessionIdRef 同一手法 */
+  const activeProjectIdRef = React.useRef<string | null>(null);
+  const setActiveProject = (pid: string | null) => {
+    activeProjectIdRef.current = pid;
+    setActiveProjectId(pid);
+  };
+  /** 会话 ↔ P 线对话映射:本地会话 id → conversation_id(导入/新建注册时写入,
+   *  侧栏选中服务端对话时反查本地会话;服务端对话水合进来后两端同 id) */
+  const sessionConvMapRef = React.useRef<Map<string, string>>(new Map());
+  /** 画布权威回写防抖句柄(putProject fire-and-forget,800ms 合并高频提交) */
+  const projectCanvasSyncTimer = React.useRef<number | null>(null);
+  /** 重构流水线进度卡(轮询期间实时刷新;终态保留到下次启动/切会话) */
+  const [pipeline, setPipeline] = useState<{
+    jobId: string;
+    startedAt: number;
+    stages: PipelineStageView[];
+  } | null>(null);
   /** split 态画布宽度占主区百分比:初始 55%,拖拽调整,最小 20% */
   const [canvasPct, setCanvasPct] = useState(55);
   const [draggingCanvas, setDraggingCanvas] = useState(false);
@@ -581,12 +605,75 @@ const App: React.FC = () => {
       persistAndSync(list);
       return list;
     });
+    scheduleProjectCanvasSync(nextCanvas);
     if (!activeSessionIdRef.current) {
       setActiveSession(pendingId);
       return pendingId;
     }
     return activeSessionIdRef.current;
   };
+
+  /* ---------------- P 线接线(契约 25 §1):工程一等实体 ---------------- */
+
+  /** 画布权威回写(防抖 800ms 合并):活跃工程存在时 fire-and-forget putProject,
+   *  失败静默——本地 localStorage 仍是第一层,服务端画布只是工程容器权威副本 */
+  const scheduleProjectCanvasSync = (nextCanvas: CanvasStateData) => {
+    const pid = activeProjectIdRef.current;
+    if (!pid) return;
+    if (projectCanvasSyncTimer.current != null) window.clearTimeout(projectCanvasSyncTimer.current);
+    projectCanvasSyncTimer.current = window.setTimeout(() => {
+      projectCanvasSyncTimer.current = null;
+      void putProject({
+        id: pid,
+        name: nextCanvas.project_name || pid,
+        updatedAt: Date.now(),
+        canvas: nextCanvas,
+      });
+    }, 800);
+  };
+
+  /** 导入/新建后把工程与首对话注册到服务端(P 线),并接进侧栏:
+   *  - createProject(name, canvas) + createConversation → 两个列表即时更新;
+   *  - 本地会话 id ↔ conversation_id 记入映射,侧栏选中可反查;
+   *  - 网关缺席/失败全部静默(mock-first):本地会话照常工作,只是不出现在工程树下 */
+  const registerProjectForSession = async (
+    name: string,
+    canvasToRegister: CanvasStateData,
+    conversationTitle: string,
+    localSessionId: string,
+  ): Promise<void> => {
+    try {
+      const proj = await createProject(name, canvasToRegister);
+      if (!proj?.id) return;
+      const conv = await createConversation(proj.id, conversationTitle);
+      setProjectList((prev) => (prev.some((p) => p.id === proj.id) ? prev : [proj, ...prev]));
+      if (conv?.id) {
+        setConversationList((prev) => (prev.some((c) => c.id === conv.id) ? prev : [...prev, conv]));
+        sessionConvMapRef.current.set(localSessionId, conv.id);
+        sessionConvMapRef.current.set(conv.id, localSessionId);
+      }
+      setActiveProject(proj.id);
+    } catch {
+      /* mock-first:注册失败不阻塞本地流程 */
+    }
+  };
+
+  /* 启动水合:拉工程树 + 各工程对话,侧栏从此反映服务端真实状态
+     (projects.ts 全部 mock-first,网关缺席得空列表,侧栏保持空态提示) */
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const projects = await fetchProjects();
+      if (cancelled || !projects.length) return;
+      const convLists = await Promise.all(projects.map((p) => fetchConversations(p.id)));
+      if (cancelled) return;
+      setProjectList(projects);
+      setConversationList(convLists.flat());
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /* 原位更新某条消息文本（流式回答逐段刷新用）；persist=false 时只改内存，
      流结束再落 localStorage，避免逐 token 写盘 */
@@ -832,7 +919,8 @@ const App: React.FC = () => {
       return false;
     }
 
-    // 进度占位(轮询期间只改内存不落盘,收敛时统一 persist)
+    // 进度占位(轮询期间只改内存不落盘,收敛时统一 persist);
+    // 同步驱动对话坞进度卡:阶段芯片实时刷新,终态保留展示
     let lastStages: RefactorPipelineStage[] | undefined;
     const paint = (job: RefactorPipelineJob) => {
       lastStages = job.stages;
@@ -841,6 +929,10 @@ const App: React.FC = () => {
         `### 重构流水线\n\n${pipelineProgressText(job.stages)}\n\n> 作业 ${job.id} · 完成后自动更新结果`,
         false,
       );
+    };
+    setPipeline({ jobId, startedAt: Date.now(), stages: [] });
+    const paintCard = (stages: RefactorPipelineStage[] | undefined) => {
+      setPipeline((p) => (p ? { ...p, stages: pipelineStageViews(stages) } : p));
     };
     updateMessageText(phId, "已启动重构流水线…", false);
 
@@ -858,11 +950,15 @@ const App: React.FC = () => {
           intervalMs: REFACTOR_PIPELINE_POLL_INTERVAL_MS,
           timeoutMs: REFACTOR_PIPELINE_POLL_TIMEOUT_MS,
           signal: controller.signal,
-          onProgress: paint,
+          onProgress: (j) => {
+            paint(j);
+            paintCard(j.stages);
+          },
         },
       );
       // 中止可能落在最后一次探测与收敛之间：结果已过期，按中止处理
       if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+      paintCard(job.stages); // 终态阶段也进卡(完成/出错态可见)
 
       if (job.status === "ok" && job.result?.canvas) {
         setCanvas(job.result.canvas);
@@ -884,6 +980,7 @@ const App: React.FC = () => {
     } catch (err) {
       if (isAbortError(err)) {
         // 会话切换/卸载中止：在占位消息上留下结论，不留悬挂的"进行中"
+        paintCard(lastStages);
         updateMessageText(
           phId,
           `### 重构流水线\n\n${pipelineProgressText(lastStages)}\n\n> 已停止等待流水线结果（切换会话或离开页面）；网关侧作业可能仍在运行。作业 ${jobId}`,
@@ -1050,8 +1147,13 @@ const App: React.FC = () => {
     if (!s) return;
     abortCompilePoll(); // 别让上一个会话的编译结果盖掉这份画布
     abortRefactorPoll(); // 重构流水线同理:中止轮询,过期结果不进新会话
+    setPipeline(null); // 进度卡随会话走,过期进度不跨会话残留
     dispatchNewProjectFlow({ type: "RESET" }); // 离开新建工程流
     setActiveSession(id);
+    /* P 线:切回挂靠工程的会话时恢复活跃工程上下文(画布回写依赖它) */
+    const convId = sessionConvMapRef.current.get(id);
+    const conv = convId ? conversationList.find((c) => c.id === convId) : undefined;
+    if (conv) setActiveProject(conv.projectId);
     if (s.pendingRemote) {
       // 占位会话:正文还在服务端,拉全量后再进画布(失败保留占位并提示)
       void hydrateRemoteSession(s).then((full) => {
@@ -1082,13 +1184,67 @@ const App: React.FC = () => {
   const handleNewSession = () => {
     abortCompilePoll();
     abortRefactorPoll();
+    setPipeline(null);
     dispatchNewProjectFlow({ type: "RESET" }); // 离开新建工程流
     setActiveSession(null);
+    setActiveProject(null);
     setCanvas(blankCanvas(""));
     setSelectedBlockName(null);
     setFocus(null);
     setChatInput("");
     setDockCollapsed(false);
+  };
+
+  /** 侧栏选中 P 线对话(按 conversation_id):优先映射到本地会话;服务端有而本地无
+   *  (刷新后/别的机器创建)时水合——拉对话消息 + 工程画布,物化为本地会话后进画布。
+   *  水合失败静默返回(网关缺席时侧栏本就拉不到对话,此分支常态不可达)。 */
+  const handleSelectConversation = (cid: string) => {
+    const conv = conversationList.find((c) => c.id === cid);
+    if (!conv) return;
+    const mapped = sessionConvMapRef.current.get(cid);
+    const localId =
+      mapped && sessions.some((s) => s.id === mapped) ? mapped : (
+        sessions.some((s) => s.id === cid) ? cid : null
+      );
+    if (localId) {
+      setActiveProject(conv.projectId);
+      handleSelectSession(localId);
+      return;
+    }
+    void (async () => {
+      const [remote, proj] = await Promise.all([
+        fetchConversation(cid),
+        fetchProject(conv.projectId),
+      ]);
+      if (!remote || !proj) {
+        // 水合失败不再静默:工程师看得见为什么点了没反应
+        setWritebackNotice(`无法从服务端加载对话「${conv.title}」(网关不可达或数据缺失)`);
+        setTimeout(() => setWritebackNotice(null), 6000);
+        return;
+      }
+      const s = makeSession(proj.canvas, remote.title);
+      s.id = cid; // 与服务端对话同 id:二次选中走本地快路径
+      s.messages = remote.messages ?? [];
+      setSessions((prev) => {
+        const list = [s, ...prev.filter((x) => x.id !== cid)];
+        persistAndSync(list);
+        return list;
+      });
+      /* 不回查 handleSelectSession:setSessions 是异步的,此刻闭包里的 sessions
+         还没有这条新会话,find 会落空静默 return(真机复现:刷新后点侧栏对话
+         画布仍空白)。这里直接内联设置激活态与画布。 */
+      abortCompilePoll();
+      abortRefactorPoll();
+      setPipeline(null);
+      dispatchNewProjectFlow({ type: "RESET" });
+      setActiveSession(cid);
+      setActiveProject(conv.projectId);
+      setCanvas(proj.canvas);
+      setSelectedBlockName(
+        Object.values(proj.canvas.blocks).find((b) => b.block_type !== "DB")?.name ?? null
+      );
+      setFocus(null);
+    })();
   };
 
   const handleDeleteSession = (id: string) => {
@@ -1155,6 +1311,14 @@ const App: React.FC = () => {
     setFocus(null);
     setWritebackNotice(`已导入项目 ${sourceName}`);
     setTimeout(() => setWritebackNotice(null), 3000);
+    /* P 线注册:导入的工程成为一等实体,对话挂进工程树(侧栏立即可见);
+       mock-first——网关缺席时静默,本地会话照常 */
+    void registerProjectForSession(
+      imported.project_name || sourceName,
+      imported,
+      s.title,
+      s.id,
+    );
   };
 
   const pollImportProgress = (
@@ -1353,7 +1517,7 @@ const App: React.FC = () => {
         Object.values(finalCanvas.blocks).find((b) => b.block_type !== "DB")?.name ?? null,
       );
     }
-    commitSession(finalCanvas, [
+    const sessionId = commitSession(finalCanvas, [
       {
         id: msgId(),
         role: "system",
@@ -1362,6 +1526,8 @@ const App: React.FC = () => {
       },
     ]);
     dispatchNewProjectFlow({ type: "CREATE_SETTLED" });
+    /* P 线注册:新建工程与既有导入路径同构——工程一等实体 + 首对话入树 */
+    void registerProjectForSession(name, finalCanvas, `工程 · ${name}`, sessionId);
   };
 
   const handleCreateBlock = async (spec: {
@@ -2002,11 +2168,11 @@ const App: React.FC = () => {
           activeConversationId={activeSessionId}
           collapsed={sidebarCollapsed || layoutMode === "fullscreen"}
           onSelectProject={(pid) => {
-            setActiveProjectId(pid);
+            setActiveProject(pid);
             const conv = conversationList.find((c) => c.projectId === pid);
-            if (conv) handleSelectSession(conv.id);
+            if (conv) handleSelectConversation(conv.id);
           }}
-          onSelectConversation={handleSelectSession}
+          onSelectConversation={handleSelectConversation}
           onNewConversation={() => handleNewSession()}
           onNewProject={() => setShowOnboarding(true)}
           onDeleteProject={(pid) => {
@@ -2109,6 +2275,7 @@ const App: React.FC = () => {
                   }}
                   blockNames={blockNameList}
                   onOpenBlock={handleOpenBlockFromChat}
+                  pipeline={pipeline}
                 />
               </div>
               <div
@@ -2183,6 +2350,7 @@ const App: React.FC = () => {
                 }}
                 blockNames={blockNameList}
                 onOpenBlock={handleOpenBlockFromChat}
+                pipeline={pipeline}
               />
             </div>
           )}
