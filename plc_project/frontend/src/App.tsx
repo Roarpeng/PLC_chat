@@ -161,15 +161,41 @@ type CompileJobPayload = CompileJobData & {
   precheck?: PrecheckReport | null;
 };
 
-/** 网关侧作业硬超时默认 900s（COMPILE_JOB_TIMEOUT_S）；前端多给 60s 让 timeout 结论先落地 */
-const COMPILE_POLL_TIMEOUT_MS = 960_000;
-const COMPILE_POLL_INTERVAL_MS = 1000;
+/** 作业轮询·两段式(真机实测:HR002 带编译流水线 27min,136 块全量写回 >1h;
+ *  网关作业终态保留 1h(_JOB_RETENTION_S)。快段保交互灵敏,慢段撑满长编译,
+ *  慢段总窗 60min 对齐保留期——超窗作业已被网关回收,再等也无结果)。
+ *  旧 960s 单段上限会把仍在跑的作业误报成"等待失败"(真机案例 c0b2f7ff…)。 */
+const POLL_FAST_INTERVAL_MS = 1_800;
+const POLL_FAST_TIMEOUT_MS = 300_000; // 快段:前 5 分钟 1.8s/拍
+const POLL_SLOW_INTERVAL_MS = 6_000; // 慢段:之后 6s/拍
+const POLL_SLOW_TIMEOUT_MS = 3_600_000; // 慢段总窗 60min
 const COMPILE_PROBE_TIMEOUT_MS = 15_000;
-
-/** 重构流水线轮询节奏:1.8s 一拍;总上限对齐编译作业(网关硬超时 900s + 60s 余量) */
-const REFACTOR_PIPELINE_POLL_INTERVAL_MS = 1_800;
-const REFACTOR_PIPELINE_POLL_TIMEOUT_MS = 960_000;
 const REFACTOR_PIPELINE_PROBE_TIMEOUT_MS = 15_000;
+
+/** 两段式轮询:快段超时(非中止)自动续慢段;慢段超时才真正抛错。
+ *  中止(AbortError)原样上抛,保证会话切换/卸载语义不变。 */
+async function pollUntilTwoPhase<T>(
+  probe: () => Promise<T>,
+  isDone: (value: T) => boolean,
+  opts: { signal?: AbortSignal; onProgress?: (value: T) => void },
+): Promise<T> {
+  try {
+    return await pollUntil(probe, isDone, {
+      intervalMs: POLL_FAST_INTERVAL_MS,
+      timeoutMs: POLL_FAST_TIMEOUT_MS,
+      signal: opts.signal,
+      onProgress: opts.onProgress,
+    });
+  } catch (err) {
+    if (isAbortError(err)) throw err;
+    return pollUntil(probe, isDone, {
+      intervalMs: POLL_SLOW_INTERVAL_MS,
+      timeoutMs: POLL_SLOW_TIMEOUT_MS,
+      signal: opts.signal,
+      onProgress: opts.onProgress,
+    });
+  }
+}
 
 /** 网关错误码 → 人话提示；未登记的 code 仍退回网关 message */
 const GATEWAY_ERROR_HINTS: Record<string, string> = {
@@ -1059,7 +1085,7 @@ const App: React.FC = () => {
     const controller = new AbortController();
     refactorAbortRef.current = controller;
     try {
-      const job = await pollUntil<RefactorPipelineJob>(
+      const job = await pollUntilTwoPhase<RefactorPipelineJob>(
         () =>
           requestPlc<RefactorPipelineJob>(
             `/api/v1/plc/canvas/refactor-pipeline/${encodeURIComponent(jobId)}`,
@@ -1067,8 +1093,6 @@ const App: React.FC = () => {
           ),
         (j) => j.status === "ok" || j.status === "error" || j.status === "cancelled",
         {
-          intervalMs: REFACTOR_PIPELINE_POLL_INTERVAL_MS,
-          timeoutMs: REFACTOR_PIPELINE_POLL_TIMEOUT_MS,
           signal: controller.signal,
           onProgress: (j) => {
             paint(j);
@@ -1127,7 +1151,7 @@ const App: React.FC = () => {
       finishLongTask(phId, "error", explainGatewayError(err, "轮询失败"));
       updateMessageText(
         phId,
-        `### 重构流水线等待失败\n\n${explainGatewayError(err, "网关未返回错误详情")}\n\n> 作业 ${jobId}`,
+        `### 重构流水线等待超时\n\n${explainGatewayError(err, "网关未返回错误详情")}\n\n> 作业 ${jobId} · 已等待 65 分钟仍未收敛。真实 TIA 编译通常 30 分钟内完成;若网关侧仍在运行,作业号保留(终态保留 1 小时),稍后刷新可查;若博图被弹窗阻塞,请先处理弹窗后重新发起。`,
       );
       return true;
     } finally {
@@ -2157,7 +2181,7 @@ const App: React.FC = () => {
     const controller = new AbortController();
     compileAbortRef.current = controller;
     try {
-      const job = await pollUntil<CompileJobPayload>(
+      const job = await pollUntilTwoPhase<CompileJobPayload>(
         () =>
           requestPlc<CompileJobPayload>(
             `/api/v1/plc/canvas/compile-jobs/${encodeURIComponent(jobId)}`,
@@ -2165,8 +2189,6 @@ const App: React.FC = () => {
           ),
         (j) => j.status === "ok" || j.status === "error" || j.status === "cancelled",
         {
-          intervalMs: COMPILE_POLL_INTERVAL_MS,
-          timeoutMs: COMPILE_POLL_TIMEOUT_MS,
           signal: controller.signal,
           onProgress: (j) => {
             setCompileJob(j);
@@ -2251,9 +2273,7 @@ const App: React.FC = () => {
           const detail =
             err instanceof GatewayError
               ? `读取编译作业状态失败：${explainGatewayError(err, "网关未返回错误详情")}`
-              : `等待编译结果超时（总上限 ${COMPILE_POLL_TIMEOUT_MS / 1000}s / 单次探测 ${
-                  COMPILE_PROBE_TIMEOUT_MS / 1000
-                }s）：网关未在预期时间内结束作业，请检查博图是否弹窗阻塞`;
+              : `等待编译结果超时（总上限 65 分钟：快段 5 分钟 + 慢段 60 分钟）：网关未在预期时间内结束作业，请检查博图是否弹窗阻塞`;
           setWritebackNotice(detail);
           setTimeout(() => setWritebackNotice(null), 10000);
           finishLongTask(compileTaskId, "error", "等待编译结果失败");
