@@ -1,4 +1,5 @@
 import type { CanvasStateData } from "../canvas/types";
+import type { OpsReview } from "./opsReview";
 
 /** 单条聊天消息 */
 export interface ChatMessage {
@@ -6,6 +7,9 @@ export interface ChatMessage {
   role: "user" | "system";
   text: string;
   ts: number;
+  /** 修改确认块(对话内人工确认):存在时消息渲染为确认卡;轻量 items,
+   *  原始 ops 由 App ref 持有(刷新后 pending 批次标记 expired) */
+  opsReview?: OpsReview;
 }
 
 /** 一个会话 = 消息流 + 画布快照 */

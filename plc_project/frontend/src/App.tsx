@@ -117,6 +117,7 @@ import {
   type LongTask,
   type LongTaskStatus,
 } from "./state/longTasks";
+import { buildOpsReview, type OpsReview } from "./state/opsReview";
 import { LongTaskChips } from "./shell/LongTaskChips";
 
 /** 一条解析降级告警（coverage.py `warnings[]` 的元素，或 review 截断提示） */
@@ -1140,6 +1141,8 @@ const App: React.FC = () => {
      多条消息可并行处理——问答/分析/流水线天然并行;**编辑类 ops 段由
      opsBusyRef 串行**(防画布写竞态,决策点 2)。 */
   const opsBusyRef = React.useRef(false);
+  /** 待确认 ops 批次:消息 id → 原始 ops(只在内存;刷新即失效→确认卡标 expired) */
+  const opsByMsgRef = React.useRef<Map<string, any[]>>(new Map());
   const handleSend = async () => {
     const prompt = chatInput.trim();
     if (!prompt || isSubmitting) return;
@@ -1287,16 +1290,37 @@ const App: React.FC = () => {
         settle("暂未识别出可执行的画布操作。分析类问题（如运行逻辑/原理）请选中画布中的块后查看深度解释；编辑指令示例：创建 FB ConveyorCtrl / 在 ConveyorCtrl 中添加变量 Speed Real / 添加急停按钮。");
         return;
       }
-      // 编辑类 ops 段:全局串行锁(决策点 2)——问答/分析/流水线可并行,但
-      // 画布写操作一次只允许一条在飞,防竞态互相覆盖
-      if (opsBusyRef.current) {
-        settle("上一条编辑指令还在执行中，请等它完成后再发编辑类指令；提问类消息不受影响。");
-        return;
-      }
-      opsBusyRef.current = true;
+      // 修改确认块(人工确认门禁):对话产出的 ops 不再直接应用——渲染确认卡,
+      // 每条附"内容理解";工程师点「确认应用」才走 预检→写画布(锁内)。
+      // 原始 ops 存 ref(消息里只存轻量 items);预检挪到确认时执行。
+      opsByMsgRef.current.set(phId, ops);
+      const review = buildOpsReview(ops, previewNote || undefined);
+      updateMessageText(
+        phId,
+        `已解析出 **${review.items.length} 项修改**，等待确认：请核对每条的"内容理解"后选择应用或放弃。`,
+      );
+      updateMessageOps(phId, review);
+      return;
+    }
+  };
+
+  /** 确认应用修改确认块:ops 仍在 ref(刷新即失效);预检 + 串行锁内写画布 */
+  const handleConfirmOps = (mid: string) => {
+    const ops = opsByMsgRef.current.get(mid);
+    if (!ops?.length) {
+      patchOpsReviewStatus(mid, "expired");
+      updateMessageText(mid, "该批修改已失效（页面刷新后待确认批次不保留），请重新发送指令。");
+      return;
+    }
+    if (opsBusyRef.current) {
+      setWritebackNotice("上一条编辑还在执行中，请稍候再确认");
+      setTimeout(() => setWritebackNotice(null), 4000);
+      return;
+    }
+    opsBusyRef.current = true;
+    void (async () => {
       try {
-        // Local precheck when ops touch SCL（只检查 ops 触及的块——导入产生的
-        // synced 占位块不会被写回，不该拦住无关编辑；与编译门禁同语义）
+        // 预检(与编译门禁同语义:只查 ops 触及的块)
         try {
           const pre = await requestPlc<{ ok?: boolean; errors?: Array<{ message?: string }> }>(
             `/api/v1/plc/canvas/precheck`,
@@ -1304,7 +1328,7 @@ const App: React.FC = () => {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                canvas: applyOpsLocally(canvas, ops),
+                canvas: applyOpsLocally(canvasRef.current, ops),
                 block_names: touchedBlockNames(ops),
               }),
               signal: AbortSignal.timeout?.(10000),
@@ -1312,20 +1336,85 @@ const App: React.FC = () => {
           );
           if (pre && pre.ok === false) {
             const unique = [...new Set((pre.errors || []).map((e: any) => e.message))];
-            settle(`本地预检未通过，未应用修改：${unique.join("；") || "未知错误"}`);
+            patchOpsReviewStatus(mid, "rejected");
+            updateMessageText(mid, `本地预检未通过，未应用修改：${unique.join("；") || "未知错误"}`);
             return;
           }
         } catch {
           /* precheck optional */
         }
-        await applyOpsAndCommit(ops, null, `${summarizeOps(ops)}${previewNote}`, {
-          reuseSystemId: phId,
-        });
+        await applyOpsAndCommit(ops, null, summarizeOps(ops), { reuseSystemId: mid });
+        patchOpsReviewStatus(mid, "applied");
+        opsByMsgRef.current.delete(mid);
+      } catch (err) {
+        patchOpsReviewStatus(mid, "rejected");
+        updateMessageText(mid, `应用失败：${explainGatewayError(err, "未知错误")}`);
       } finally {
         opsBusyRef.current = false;
       }
-    }
+    })();
   };
+
+  /** 放弃修改确认块:不动画布,卡片转已放弃 */
+  const handleRejectOps = (mid: string) => {
+    opsByMsgRef.current.delete(mid);
+    patchOpsReviewStatus(mid, "rejected");
+    updateMessageText(mid, "已放弃该批修改（画布未做任何改动）。");
+  };
+
+  /** 消息上 opsReview 状态补丁(跨会话按 id 定位) */
+  const patchOpsReviewStatus = (mid: string, status: OpsReview["status"]) => {
+    setSessions((prev) => {
+      let hit = false;
+      const list = prev.map((s) => ({
+        ...s,
+        messages: s.messages.map((m) => {
+          if (m.id !== mid || !m.opsReview || m.opsReview.status === status) return m;
+          hit = true;
+          return { ...m, opsReview: { ...m.opsReview, status } };
+        }),
+      }));
+      return hit ? (persistAndSync(list), list) : prev;
+    });
+  };
+
+  /** 消息挂载/替换 opsReview(确认卡本体) */
+  const updateMessageOps = (mid: string, review: OpsReview) => {
+    setSessions((prev) => {
+      let hit = false;
+      const list = prev.map((s) => ({
+        ...s,
+        messages: s.messages.map((m) => {
+          if (m.id !== mid) return m;
+          hit = true;
+          return { ...m, opsReview: review };
+        }),
+      }));
+      return hit ? (persistAndSync(list), list) : prev;
+    });
+  };
+
+  /* 刷新后待确认批次过期:原始 ops 只在内存 ref,刷新即失——挂载时把所有
+     pending 确认卡标记 expired,按钮消失并说明原因,不冒充可确认 */
+  useEffect(() => {
+    const stale = sessionsRef.current.some((s) =>
+      s.messages.some((m) => m.opsReview?.status === "pending"),
+    );
+    if (!stale) return;
+    setSessions((prev) => {
+      const list = prev.map((s) => ({
+        ...s,
+        messages: s.messages.map((m) =>
+          m.opsReview?.status === "pending"
+            ? { ...m, opsReview: { ...m.opsReview, status: "expired" as const } }
+            : m,
+        ),
+      }));
+      persistAndSync(list);
+      return list;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* 会话切换 / 新建 / 删除 —— LongTaskCenter 语义:长任务跟随自己的会话
      继续跑(不因切换中止),完成时写回所属会话;此处不再 abort。 */
@@ -2562,6 +2651,8 @@ const App: React.FC = () => {
                   blockNames={blockNameList}
                   onOpenBlock={handleOpenBlockFromChat}
                   tasks={tasksBySession(longTasks, activeSessionId ?? "")}
+                  onConfirmOps={handleConfirmOps}
+                  onRejectOps={handleRejectOps}
                 />
               </div>
               <div
@@ -2637,6 +2728,8 @@ const App: React.FC = () => {
                 blockNames={blockNameList}
                 onOpenBlock={handleOpenBlockFromChat}
                 tasks={tasksBySession(longTasks, activeSessionId ?? "")}
+                onConfirmOps={handleConfirmOps}
+                onRejectOps={handleRejectOps}
               />
             </div>
           )}

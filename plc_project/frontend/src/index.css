@@ -3,30 +3,31 @@
    冷灰车间地面 + 钴蓝制图墨水；界面即产品正在干活的碎片——对话是呼叫、
    SCL 是应答、编译门禁是读数。用户以 sans 说话，机器以 serif 草拟工程文件；
    mono 只属于真实代码。IEC 60204 信号色只做状态灯。方角模块，一个圆角值 0。
-   字体：Libre Franklin（界面/展示）+ Source Serif 4（机器回答的阅读面）
+   字体：Libre Franklin 单一无衬线(科技感/工业简约;机器回答同面),mono 只属于真实代码
    + Noto Sans/Serif SC（中文同族）+ IBM Plex Mono（代码）。
    ========================================================================== */
 
 :root {
-  /* 面层：冷灰地面 → 侧栏一档 → 工作台面板（浅一档，工程可读性）→ 内嵌槽 */
-  --bg: #eef0f3;
-  --sidebar-bg: #e4e7ec;
-  --surface: #f8f9fb;
-  --surface-2: #e6e9ef;
+  /* 面层：灰白科技——机加工车间的 bare-metal 图纸灰白,四档:
+     地面(浅灰白) → 侧栏深轨(唯一深色场) → 面板(近白) → 内嵌槽(回浅灰) */
+  --bg: #f4f5f7;
+  --sidebar-bg: #e9ebef;
+  --surface: #fdfdfe;
+  --surface-2: #eef0f3;
 
-  /* 墨水：正文全墨；灰阶只给次要注记 */
-  --ink: #0b0c0e;
-  --ink-2: #454b55;
-  --ink-3: #6b727e;
+  /* 墨水：石墨近黑；灰阶只给次要注记 */
+  --ink: #15181d;
+  --ink-2: #4a5058;
+  --ink-3: #6d747d;
 
   /* 功能线：仅用于真实表格 / 表单 / 代码槽（data-ui 界面惯例） */
-  --line: #d7dbe2;
-  --line-2: #bcc2cc;
+  --line: #dce0e5;
+  --line-2: #c3c9d1;
 
-  /* 钴蓝制图墨水：唯一强调，落在主操作与选中态 */
+  /* 电光蓝制图墨水：唯一强调(科技感),落在主操作与选中态;工业克制用量 */
   --accent: #1f2de6;
   --accent-2: #1a25c4;
-  --accent-soft: #e8eafd;
+  --accent-soft: #eaedfd;
 
   /* IEC 60204 面板信号色：只做状态灯语义，不做装饰 */
   --run: #1e7a33;
@@ -46,7 +47,7 @@
 
   /* 字体：界面 sans / 机器回答 serif / 代码 mono */
   --sans: "Libre Franklin", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-  --serif: "Source Serif 4", "Noto Serif SC", "Songti SC", Georgia, serif;
+  --serif: var(--sans); /* 科技感:机器回答统一无衬线(令牌保留别名,零下游改动) */
   --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
 
   /* 方角模块：全应用一个圆角值 */

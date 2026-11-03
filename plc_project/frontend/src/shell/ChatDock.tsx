@@ -20,6 +20,9 @@ export interface ChatDockProps {
   blockNames?: string[];
   /** 点击块引用 → 画布打开对应功能块 */
   onOpenBlock?(name: string): void;
+  /** 修改确认块:确认应用/放弃(仅 pending 态渲染按钮) */
+  onConfirmOps?(mid: string): void;
+  onRejectOps?(mid: string): void;
   /** 长任务视图(当前会话的任务子集,App 侧统一驱动;null/空=无在飞或终态已清) */
   tasks?: LongTask[] | null;
 }
@@ -238,6 +241,51 @@ const MermaidBlock: React.FC<{ code: string }> = ({ code }) => {
   );
 };
 
+/** 修改确认块:每条 op 一枚徽标+标题+内容理解,确认/放弃由上层接线 */
+const OpsReviewCard: React.FC<{
+  review: NonNullable<ChatMessage["opsReview"]>;
+  onConfirm?: (mid: string) => void;
+  onReject?: (mid: string) => void;
+  mid: string;
+}> = ({ review, onConfirm, onReject, mid }) => {
+  const pending = review.status === "pending";
+  const statusText =
+    review.status === "applied" ? "已确认并应用"
+    : review.status === "rejected" ? "已放弃"
+    : review.status === "expired" ? "已失效(页面刷新,请重新发送指令)"
+    : "等待确认";
+  return (
+    <div className={"dock-opsreview" + (pending ? "" : ` is-${review.status}`)} data-ui="ops-confirm">
+      <div className="dock-opsreview__head">
+        <span className="dock-opsreview__title">修改确认 · {review.items.length} 项</span>
+        <span className="dock-opsreview__status">{statusText}</span>
+      </div>
+      {review.note && <p className="dock-opsreview__note">{review.note}</p>}
+      <ul className="dock-opsreview__items">
+        {review.items.map((it, i) => (
+          <li className="dock-opsreview__item" key={`op-${i}`}>
+            <div className="dock-opsreview__itemhead">
+              <span className="dock-opsreview__badge">{it.badge}</span>
+              <span className="dock-opsreview__itemtitle">{it.title}</span>
+            </div>
+            <p className="dock-opsreview__understanding">{it.understanding}</p>
+          </li>
+        ))}
+      </ul>
+      {pending && (
+        <div className="dock-opsreview__actions">
+          <button type="button" className="dock-opsreview__reject" onClick={() => onReject?.(mid)}>
+            放弃
+          </button>
+          <button type="button" className="dock-opsreview__confirm" onClick={() => onConfirm?.(mid)}>
+            确认应用
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 /** 从系统消息中提取建议问题(编号列表行),渲染为可点击按钮 */
 const SuggestionList: React.FC<{ text: string; onSuggestion?: (t: string) => void }> = ({
   text,
@@ -304,7 +352,9 @@ const DockMessage: React.FC<{
   onSuggestion?: (t: string) => void;
   blockNames?: string[];
   onOpenBlock?: (name: string) => void;
-}> = ({ m, onSuggestion, blockNames, onOpenBlock }) => {
+  onConfirmOps?: (mid: string) => void;
+  onRejectOps?: (mid: string) => void;
+}> = ({ m, onSuggestion, blockNames, onOpenBlock, onConfirmOps, onRejectOps }) => {
   const [copied, setCopied] = useState(false);
   const label = timeLabel(m.ts);
   const onCopy = async () => {
@@ -347,6 +397,9 @@ const DockMessage: React.FC<{
         </button>
       </div>
       <SystemMessageBody text={m.text} blockNames={blockNames} onOpenBlock={onOpenBlock} />
+      {m.opsReview && (
+        <OpsReviewCard review={m.opsReview} mid={m.id} onConfirm={onConfirmOps} onReject={onRejectOps} />
+      )}
       <SuggestionList text={m.text} onSuggestion={onSuggestion} />
     </div>
   );
@@ -362,6 +415,8 @@ export const ChatDock: React.FC<ChatDockProps> = ({
   onSuggestion,
   blockNames,
   onOpenBlock,
+  onConfirmOps,
+  onRejectOps,
   tasks = null,
 }) => {
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -535,7 +590,7 @@ export const ChatDock: React.FC<ChatDockProps> = ({
               </div>
             ) : (
               messages.map((m) => (
-                <DockMessage key={m.id} m={m} onSuggestion={onSuggestion} blockNames={blockNames} onOpenBlock={onOpenBlock} />
+                <DockMessage key={m.id} m={m} onSuggestion={onSuggestion} blockNames={blockNames} onOpenBlock={onOpenBlock} onConfirmOps={onConfirmOps} onRejectOps={onRejectOps} />
               ))
             )}
           </div>
