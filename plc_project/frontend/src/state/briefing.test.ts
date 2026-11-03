@@ -131,7 +131,7 @@ describe("buildBriefing", () => {
 });
 
 describe("briefingToMessage", () => {
-  it("包含 📋 表头、关键数字与编号建议", () => {
+  it("包含工程简报表头、关键数字与编号建议", () => {
     const b = buildBriefing({
       project_name: "HR002",
       blocks: {
@@ -157,7 +157,7 @@ describe("briefingToMessage", () => {
       },
     });
     const msg = briefingToMessage(b);
-    expect(msg).toContain("📋");
+    expect(msg).toContain("工程简报");
     expect(msg).toContain("HR002");
     expect(msg).toContain("2 个"); // blockCount
     expect(msg).toContain("2 段"); // networkCount
@@ -171,6 +171,6 @@ describe("briefingToMessage", () => {
   it("未命名工程回落默认名,不抛错", () => {
     const msg = briefingToMessage(buildBriefing(blank()));
     expect(msg).toContain("未命名工程");
-    expect(msg).toContain("📋");
+    expect(msg).toContain("工程简报");
   });
 });

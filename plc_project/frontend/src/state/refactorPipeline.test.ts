@@ -53,9 +53,9 @@ describe("pipelineProgressText", () => {
     { name: "package", status: "pending" },
   ];
 
-  it("五段固定清单:完成 ✓ / 进行中… / 待开始", () => {
+  it("五段固定清单:完成 / 进行中… / 待开始", () => {
     expect(pipelineProgressText(stages)).toBe(
-      ["▸ 重构 完成 ✓", "▸ 自动修复 进行中…", "▸ 编译 待开始", "▸ 编译修复循环 待开始", "▸ 打包 待开始"].join(
+      ["▸ 重构 完成", "▸ 自动修复 进行中…", "▸ 编译 待开始", "▸ 编译修复循环 待开始", "▸ 打包 待开始"].join(
         "\n",
       ),
     );
@@ -73,7 +73,7 @@ describe("pipelineProgressText", () => {
 
   it("error 附带失败原因", () => {
     expect(pipelineProgressText([{ name: "refactor", status: "error", detail: "映射失败" }])).toBe(
-      "▸ 重构 出错 ✗（映射失败）",
+      "▸ 重构 出错（映射失败）",
     );
   });
 
@@ -81,7 +81,7 @@ describe("pipelineProgressText", () => {
     expect(pipelineProgressText([{ name: "compile", status: "running" }], { compile: "编译校验" })).toBe(
       "▸ 编译校验 进行中…",
     );
-    expect(pipelineProgressText([{ name: "deploy", status: "ok" }])).toBe("▸ deploy 完成 ✓");
+    expect(pipelineProgressText([{ name: "deploy", status: "ok" }])).toBe("▸ deploy 完成");
   });
 
   it("stages 为空/缺失 → 启动占位文案", () => {
@@ -122,7 +122,7 @@ describe("pipelineResultMessage", () => {
 
   it("摘要自适应读取:EM 数/生成块数/I-O 保全/联锁/静态合规计数", () => {
     const msg = pipelineResultMessage(fullResult);
-    expect(msg).toContain("### 🎯 西门子标准重构完成");
+    expect(msg).toContain("### 西门子标准重构完成");
     expect(msg).toContain("`U1_HR001`");
     expect(msg).toContain("共 2 个标准 EM");
     expect(msg).toContain("**EM1_装配**: 5 个步序，2 个控制模块 (CM)");
@@ -209,7 +209,7 @@ describe("pipelineResultMessage", () => {
 
   it("空 result 也能渲染,不抛异常", () => {
     const msg = pipelineResultMessage(null);
-    expect(msg).toContain("### 🎯 西门子标准重构完成");
+    expect(msg).toContain("### 西门子标准重构完成");
     expect(msg).toContain("画布已即时切换为标准结构视图");
   });
 

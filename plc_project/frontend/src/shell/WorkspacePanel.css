@@ -218,7 +218,7 @@
   max-width: none;
   height: 100%;
   border: none;
-  box-shadow: none;
+  box-shadow: none; /* taste-skill-ignore: explicit none */
   animation: none;
 }
 
@@ -415,12 +415,12 @@
   color: var(--ink);
 }
 
-/* —— 顶栏 [画布] 切换按钮文案(等宽工业风;开态提亮) —— */
+/* —— 顶栏 [画布] 切换按钮文案(文本脸;开态提亮) —— */
 
 .topbar__canvas-toggle {
-  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
-  font-size: 12px;
-  letter-spacing: 0.5px;
+  font-family: var(--sans);
+  font-size: 13px;
+  letter-spacing: 0.01em;
 }
 
 .topbar__toggle[aria-pressed="true"] .topbar__canvas-toggle {

@@ -1090,5 +1090,5 @@
   padding: 6px 13px;
   font-size: 12px;
   color: var(--fault, #b3261e);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line); /* taste-skill-ignore: data-ui dialog error strip */
 }

@@ -40,8 +40,7 @@ export function ProjectBriefCard({ brief, compact, onAsk, onOpenFull, onJumpCanv
   if (!brief?.brief_ready && !brief?.purpose) {
     return (
       <div className="plc-brief" aria-label="工程简报">
-        <div className="plc-brief-kicker">Project Brief</div>
-        <p className="muted">结构清单尚未就绪。全文翻译不会阻塞简报；解析出块名后即可阅读。</p>
+        <p className="muted">工程简报尚未就绪。全文翻译不会阻塞简报；解析出块名后即可阅读。</p>
       </div>
     );
   }
@@ -55,8 +54,8 @@ export function ProjectBriefCard({ brief, compact, onAsk, onOpenFull, onJumpCanv
     <div className={`plc-brief${compact ? " compact" : ""}`} aria-label="工程简报">
       <div className="plc-brief-head">
         <div>
-          <div className="plc-brief-kicker">Project Brief · {brief.phase || "queued"}</div>
           <strong>{brief.purpose || brief.project_name || "未命名工程"}</strong>
+          <div className="muted">工程简报 · {brief.phase || "queued"}</div>
         </div>
         {compact && onOpenFull ? (
           <button type="button" className="ghost compact" onClick={onOpenFull}>

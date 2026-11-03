@@ -3,3 +3,8 @@
 .mimosa/
 .taste-skill/
 assets/
+
+# graphflow/构建产物
+.graphflow-cache/
+graphflow-out/
+*.tsbuildinfo

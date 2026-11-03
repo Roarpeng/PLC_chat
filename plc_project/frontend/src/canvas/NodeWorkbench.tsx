@@ -113,7 +113,6 @@ export function NodeWorkbench({
     <aside className="kg-workbench" aria-label="节点工作台">
       <div className="kg-wb-head">
         <div>
-          <div className="kg-wb-kicker">当前节点</div>
           <strong>{view.name}</strong>
           <div className="kg-wb-sub">
             {view.typeLabel}

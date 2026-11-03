@@ -237,7 +237,7 @@ export const RequirementCardDrawer: FC<RequirementCardDrawerProps> = ({
                     aria-disabled="true"
                     title="工艺意图已确认（确认不产生任何工程修改）"
                   >
-                    ✓ 工艺意图已确认
+                    工艺意图已确认
                   </button>
                   {onGenerateAf && (
                     <button
@@ -247,7 +247,7 @@ export const RequirementCardDrawer: FC<RequirementCardDrawerProps> = ({
                       onClick={() => onGenerateAf(requirement)}
                       title="根据已确认的工艺意图自动生成标准工程块"
                     >
-                      ⚡ 一键生成 PLC 逻辑方案
+                      一键生成 PLC 逻辑方案
                     </button>
                   )}
                 </>

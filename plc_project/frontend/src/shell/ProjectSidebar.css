@@ -8,10 +8,10 @@
    ========================================================================== */
 
 .psb {
-  /* 深色场局部令牌:钢蓝高光 / 钢蓝晕染底 */
-  --psb-accent: var(--accent, #1d5a90);
-  --psb-accent-hi: #6fa8dc;
-  --psb-accent-wash: rgba(29, 90, 144, 0.32);
+  /* 深色场局部令牌:钴蓝高光 / 钴蓝晕染底 */
+  --psb-accent: var(--accent, #1f2de6);
+  --psb-accent-hi: #8f97ff;
+  --psb-accent-wash: rgba(31, 45, 230, 0.32);
 
   display: flex;
   flex-direction: column;
@@ -101,12 +101,10 @@
 }
 
 .psb-new:hover {
-  background: var(--accent-2, #164a78);
+  background: var(--accent-2, #1a25c4);
 }
 
-.psb-new:active {
-  transform: translateY(1px);
-}
+/* 按压反馈统一走 index.css 的 btn-press 动效 */
 
 /* ---- 工程 + 对话树 ---- */
 
@@ -115,6 +113,8 @@
   min-height: 0;
   overflow-y: auto;
   padding: 0 8px 10px;
+  display: flex;
+  flex-direction: column;
 }
 
 .psb-list::-webkit-scrollbar {
@@ -134,10 +134,11 @@
 }
 
 .psb-empty {
+  margin: auto; /* 深轨空态垂直居中，不悬在死区 */
   padding: 28px 12px;
   text-align: center;
   font-size: 13px;
-  color: var(--scr-dim, #8d97a3);
+  color: #9aa4b2;
   line-height: 1.9;
 }
 

@@ -80,11 +80,11 @@ export interface WorkspacePanelProps {
 const TABS: Array<{ key: CanvasTab; glyph: string; label: string }> = [
   { key: "graph", glyph: "▣", label: "全局图" },
   { key: "scl", glyph: "▤", label: "SCL" },
-  { key: "hmi", glyph: "⚡", label: "HMI" },
+  { key: "hmi", glyph: "▨", label: "HMI" },
   { key: "vars", glyph: "⊞", label: "变量" },
   { key: "mermaid", glyph: "⏱", label: "时序图" },
-  { key: "req", glyph: "📋", label: "需求卡" },
-  { key: "review", glyph: "🧾", label: "变更审查" },
+  { key: "req", glyph: "▥", label: "需求卡" },
+  { key: "review", glyph: "▦", label: "变更审查" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -207,7 +207,7 @@ export const WorkspacePanel: React.FC<WorkspacePanelProps> = ({
         ))}
       </nav>
 
-      <div className="wsp-main">
+      <div className="wsp-main" data-ui="workbench-panels">
         {/* 顶栏：当前标签名 + 最大化 + 关闭 */}
         <header className="wsp-head">
           <span className="wsp-head__title">{activeLabel}</span>
@@ -228,7 +228,7 @@ export const WorkspacePanel: React.FC<WorkspacePanelProps> = ({
             aria-label="关闭画布"
             title="关闭画布（回到纯对话）"
           >
-            ✕
+            ×
           </button>
         </header>
 

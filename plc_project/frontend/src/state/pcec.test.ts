@@ -72,9 +72,9 @@ describe("V 等级四态文案", () => {
     expect(vStatusOf("weird")).toBe("skipped");
   });
 
-  it("前置符号：✓ 已通过 / ✗ 未通过 / · 待执行与未运行", () => {
-    expect(vStatusMark("pass")).toBe("✓");
-    expect(vStatusMark("fail")).toBe("✗");
+  it("前置词：通过 / 未通过 / · 待执行与未运行", () => {
+    expect(vStatusMark("pass")).toBe("通过");
+    expect(vStatusMark("fail")).toBe("未通过");
     expect(vStatusMark("pending")).toBe("·");
     expect(vStatusMark("skipped")).toBe("·");
     expect(vStatusMark(undefined)).toBe("·");

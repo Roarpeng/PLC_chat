@@ -69,10 +69,10 @@ export function buildBriefing(canvas: CanvasStateData): ProjectBriefing {
   };
 }
 
-/** 简报 → Markdown system 消息:📋 表头 + 统计 + 编号建议 */
+/** 简报 → Markdown system 消息:粗体表头 + 统计 + 编号建议 */
 export function briefingToMessage(b: ProjectBriefing): string {
   const lines: string[] = [
-    `📋 **工程简报 · ${b.projectName || "未命名工程"}**`,
+    `**工程简报 · ${b.projectName || "未命名工程"}**`,
     "",
     `- 逻辑块:${b.blockCount} 个(可转换 ${b.convertibleCount} · 待人工确认 ${b.pendingCount} · 仅接口 ${b.interfaceOnlyCount})`,
     `- 网络:${b.networkCount} 段 · 物理标签:${b.tagCount} 个`,

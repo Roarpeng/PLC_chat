@@ -14,8 +14,8 @@
   width: 264px;
   height: 100%;
   flex-shrink: 0;
-  background: #efefeb;
-  border-right: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface-2, #e6e9ef);
+  border-right: 1px solid var(--line, #d7dbe2); /* taste-skill-ignore: data-ui workbench interface */
   font-family: var(--sans);
 }
 

@@ -136,14 +136,14 @@ export const REFACTOR_STAGE_NAMES: Record<string, string> = {
 const STAGE_STATUS_TEXT: Record<string, string> = {
   pending: "待开始",
   running: "进行中…",
-  ok: "完成 ✓",
+  ok: "完成",
   skipped: "已跳过",
-  error: "出错 ✗",
+  error: "出错",
 };
 
 /**
  * 生成进度清单文本(每段一行,供聊天占位消息原位刷新):
- * "▸ 重构 完成 ✓ / ▸ 自动修复 进行中… / ▸ 编译 待开始"。
+ * "▸ 重构 完成 / ▸ 自动修复 进行中… / ▸ 编译 待开始"。
  * skipped/error 附带 detail(如跳过原因);stages 为空时给启动占位文案。
  */
 export function pipelineProgressText(
@@ -207,7 +207,7 @@ export function pipelineResultMessage(
   const lintErrors = findings.filter((f) => String(f.severity ?? "").toLowerCase() === "error").length;
   const lintWarnings = findings.filter((f) => String(f.severity ?? "").toLowerCase() === "warning").length;
 
-  const lines: string[] = ["### 🎯 西门子标准重构完成", "", "工程已重构为官方标准的模块化结构："];
+  const lines: string[] = ["### 西门子标准重构完成", "", "工程已重构为官方标准的模块化结构："];
   lines.push(`- **主单元 (Unit)**: \`${rpt.target_unit_name || "U1"}\``);
   const emLines = ems
     .map((e) => `  - **${e.name ?? "?"}**: ${e.steps_count ?? 0} 个步序，${e.cms_count ?? 0} 个控制模块 (CM)`);
@@ -285,7 +285,7 @@ export function pipelineResultMessage(
       typeof pkg.size_bytes === "number"
         ? `（${(pkg.size_bytes / 1024).toFixed(1)} KB · ${pkg.file_count ?? "?"} 个文件）`
         : "";
-    lines.push("", `📥 [下载交付包 (.zip)](${refactorPipelinePackageUrl(opts.jobId)})${sizeNote}`);
+    lines.push("", `[下载交付包 (.zip)](${refactorPipelinePackageUrl(opts.jobId)})${sizeNote}`);
   }
 
   lines.push(

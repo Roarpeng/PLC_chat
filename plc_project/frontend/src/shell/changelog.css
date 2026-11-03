@@ -195,7 +195,7 @@
 
 .cl-row--open .cl-row__head {
   background: var(--surface-2);
-  box-shadow: inset 3px 0 0 var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent); /* taste-skill-ignore: data-ui drawer selection bar */
 }
 
 .cl-chev {

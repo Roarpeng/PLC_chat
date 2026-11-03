@@ -86,6 +86,18 @@ import {
   type PlcJobDetail,
   type PlcJobSummary,
 } from "./lib/plcGateway";
+/* 重构流水线(纯函数层:意图解析/阶段进度/结果消息 + DTO 契约类型;
+   网络请求仍按 /canvas/* 惯例留在本文件) */
+import {
+  parseRefactorIntent,
+  pipelineProgressText,
+  pipelineResultMessage,
+  type RefactorIntent,
+  type RefactorPipelineJob,
+  type RefactorPipelineRequestBody,
+  type RefactorPipelineReport,
+  type RefactorPipelineStage,
+} from "./state/refactorPipeline";
 
 /** 一条解析降级告警（coverage.py `warnings[]` 的元素，或 review 截断提示） */
 type DegradationWarning = {
@@ -132,6 +144,11 @@ type CompileJobPayload = CompileJobData & {
 const COMPILE_POLL_TIMEOUT_MS = 960_000;
 const COMPILE_POLL_INTERVAL_MS = 1000;
 const COMPILE_PROBE_TIMEOUT_MS = 15_000;
+
+/** 重构流水线轮询节奏:1.8s 一拍;总上限对齐编译作业(网关硬超时 900s + 60s 余量) */
+const REFACTOR_PIPELINE_POLL_INTERVAL_MS = 1_800;
+const REFACTOR_PIPELINE_POLL_TIMEOUT_MS = 960_000;
+const REFACTOR_PIPELINE_PROBE_TIMEOUT_MS = 15_000;
 
 /** 网关错误码 → 人话提示；未登记的 code 仍退回网关 message */
 const GATEWAY_ERROR_HINTS: Record<string, string> = {
@@ -312,6 +329,15 @@ const App: React.FC = () => {
     compileAbortRef.current = null;
   }, []);
   useEffect(() => abortCompilePoll, [abortCompilePoll]);
+
+  /** 在飞的重构流水线轮询：与编译轮询同规则——切换会话 / 卸载页面时中止，
+      避免过期结果写入新会话、占位消息永远停在"进行中" */
+  const refactorAbortRef = React.useRef<AbortController | null>(null);
+  const abortRefactorPoll = React.useCallback(() => {
+    refactorAbortRef.current?.abort();
+    refactorAbortRef.current = null;
+  }, []);
+  useEffect(() => abortRefactorPoll, [abortRefactorPoll]);
   const [writebackNotice, setWritebackNotice] = useState<string | null>(null);
 
   /* 变更记录(PCEC 账本,契约 19 §5):抽屉打开才拉取;编译作业结束(成功/失败)
@@ -373,6 +399,8 @@ const App: React.FC = () => {
 
   /* 状态统计 */
   const blockList = useMemo(() => Object.values(canvas.blocks), [canvas.blocks]);
+  /** 块名清单(ChatDock 消息里的块名可点击化:blockRefs.linkifyBlockNames 的字典) */
+  const blockNameList = useMemo(() => Object.keys(canvas.blocks), [canvas.blocks]);
   const widgetList = useMemo(() => Object.values(canvas.hmi_widgets), [canvas.hmi_widgets]);
   const draftCount =
     blockList.filter((b) => b.status === "draft").length +
@@ -733,9 +761,143 @@ const App: React.FC = () => {
           } · 输出 ${u.completion_tokens ?? "?"} tok）`
         : "";
     updateMessageText(phId, sysText + footer);
-    // L 线(契约 25 §2):AI 回答 settle 后跑智能标签路由(切画布标签/自动滑入)
-    applySmartRoute(sysText);
+    // 问答/分析回答不自动路由画布(不切标签/不选中块/不滑入)——分析里几乎必含块名,
+    // 自动摊开会抢走画布控制权;块名改为在消息里可点击,由用户主动打开。
+    // 回答中的 ```mermaid 围栏仍流入画布时序图标签数据源(不回归)。
+    const mermaid = extractMermaidSource(sysText);
+    if (mermaid) setLatestMermaid(mermaid);
     return true;
+  };
+
+  /* 旧版同步重构(POST /canvas/refactor):流水线端点不可用(404/网关未升级/网络)
+     时的兜底。报告文案统一走 pipelineResultMessage(自适应读取 lint_findings),
+     不再硬编码"静态合规审查: 0 Errors, 0 Warnings"。 */
+  const runLegacySyncRefactor = async (phId: string): Promise<boolean> => {
+    try {
+      const targetUnit = `U1_${canvas.project_name || "HR001"}`;
+      const refResult = await requestPlc<{
+        canvas: CanvasStateData;
+        report: RefactorPipelineReport;
+      }>("/api/v1/plc/canvas/refactor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ canvas, target_unit_name: targetUnit }),
+      });
+      if (!refResult?.canvas) return false;
+      setCanvas(refResult.canvas);
+      updateMessageText(
+        phId,
+        pipelineResultMessage(
+          { canvas: refResult.canvas, report: refResult.report, warnings: [] },
+        ) + "\n\n> 注：网关暂不支持重构流水线，本次走旧版同步重构，未执行编译与打包。",
+      );
+      commitSession(refResult.canvas, []); // 刷新会话画布快照(消息已由占位原位更新)
+      return true;
+    } catch (e) {
+      console.warn("Refactor error:", e);
+      return false;
+    }
+  };
+
+  /* 作业式重构流水线:POST 拿 job_id → pollUntil 轮询(1.8s/拍,960s 上限,可被
+     会话切换/卸载中止) → 占位消息原位刷新各阶段进度 → 收敛后 setCanvas +
+     会话落快照 + pipelineResultMessage 收尾。POST 失败(404/网络)返回 false,
+     由旧同步路径兜底;作业已在跑之后的一切失败都如实写进占位消息,不再回退
+     (重跑同步重构只会把同一个失败再执行一遍)。 */
+  const runRefactorPipeline = async (
+    intent: RefactorIntent,
+    phId: string,
+  ): Promise<boolean> => {
+    let jobId = "";
+    const body: RefactorPipelineRequestBody = {
+      canvas,
+      project_name: canvas.project_name,
+      do_compile: intent.wantCompile,
+      auto_fix: true,
+    };
+    try {
+      const data = await requestPlc<{ job_id?: string; id?: string }>(
+        `/api/v1/plc/canvas/refactor-pipeline`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout?.(30000),
+        },
+      );
+      jobId = String(data?.job_id ?? data?.id ?? "");
+      if (!jobId) return false;
+    } catch (err) {
+      console.warn("Refactor pipeline unavailable, fallback to sync refactor:", err);
+      return false;
+    }
+
+    // 进度占位(轮询期间只改内存不落盘,收敛时统一 persist)
+    let lastStages: RefactorPipelineStage[] | undefined;
+    const paint = (job: RefactorPipelineJob) => {
+      lastStages = job.stages;
+      updateMessageText(
+        phId,
+        `### 重构流水线\n\n${pipelineProgressText(job.stages)}\n\n> 作业 ${job.id} · 完成后自动更新结果`,
+        false,
+      );
+    };
+    updateMessageText(phId, "已启动重构流水线…", false);
+
+    const controller = new AbortController();
+    refactorAbortRef.current = controller;
+    try {
+      const job = await pollUntil<RefactorPipelineJob>(
+        () =>
+          requestPlc<RefactorPipelineJob>(
+            `/api/v1/plc/canvas/refactor-pipeline/${encodeURIComponent(jobId)}`,
+            { signal: AbortSignal.timeout?.(REFACTOR_PIPELINE_PROBE_TIMEOUT_MS) },
+          ),
+        (j) => j.status === "ok" || j.status === "error" || j.status === "cancelled",
+        {
+          intervalMs: REFACTOR_PIPELINE_POLL_INTERVAL_MS,
+          timeoutMs: REFACTOR_PIPELINE_POLL_TIMEOUT_MS,
+          signal: controller.signal,
+          onProgress: paint,
+        },
+      );
+      // 中止可能落在最后一次探测与收敛之间：结果已过期，按中止处理
+      if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+
+      if (job.status === "ok" && job.result?.canvas) {
+        setCanvas(job.result.canvas);
+        updateMessageText(phId, pipelineResultMessage(job.result, { jobId }));
+        commitSession(job.result.canvas, []); // 刷新会话画布快照
+        return true;
+      }
+      // error / cancelled / ok 但无画布 —— 如实报错并附出错阶段 detail
+      const badStage = (job.stages || []).find((s) => s.status === "error");
+      const head =
+        job.status === "cancelled" ? "### 重构流水线已取消" : "### 重构流水线执行失败";
+      updateMessageText(
+        phId,
+        `${head}\n\n${pipelineProgressText(job.stages)}${
+          badStage?.detail ? `\n\n**失败原因**: ${badStage.detail}` : ""
+        }${job.error ? `\n\n> ${job.error}` : ""}\n\n> 作业 ${job.id}`,
+      );
+      return true;
+    } catch (err) {
+      if (isAbortError(err)) {
+        // 会话切换/卸载中止：在占位消息上留下结论，不留悬挂的"进行中"
+        updateMessageText(
+          phId,
+          `### 重构流水线\n\n${pipelineProgressText(lastStages)}\n\n> 已停止等待流水线结果（切换会话或离开页面）；网关侧作业可能仍在运行。作业 ${jobId}`,
+        );
+        return true;
+      }
+      updateMessageText(
+        phId,
+        `### 重构流水线等待失败\n\n${explainGatewayError(err, "网关未返回错误详情")}\n\n> 作业 ${jobId}`,
+      );
+      return true;
+    } finally {
+      if (refactorAbortRef.current === controller) refactorAbortRef.current = null;
+    }
   };
 
   /* 发送自然语言指令：优先后端 /canvas/chat-ops，失败回落本地规则引擎。
@@ -772,6 +934,16 @@ const App: React.FC = () => {
         answerTried = true;
         if (await tryChatAnswerStream(prompt, phId)) return;
       }
+      // 重构意图先于打包意图判定(顺序要求):prompt 同时含"重构 + 打包/下载"时
+      // 不再被打包固定文案抢占 —— 流水线 package 阶段天然产出交付包并附下载链接。
+      // 画布为空时不算重构(无块可重构),落回下方既有分支。
+      const intent = parseRefactorIntent(prompt);
+      const isRefactor = intent.refactor && Object.keys(canvas.blocks).length > 0;
+      if (isRefactor) {
+        // 作业式流水线(POST + 轮询,进度原位刷新);端点不可用(404/网络)时回退旧同步重构
+        if (await runRefactorPipeline(intent, phId)) return;
+        if (await runLegacySyncRefactor(phId)) return;
+      }
       const isPackageIntent =
         prompt.includes("打包") ||
         prompt.includes("下载") ||
@@ -783,15 +955,15 @@ const App: React.FC = () => {
         const zipUrl = `${downloadBase}/api/v1/plc/canvas/download-package?package_type=zip`;
         const zapUrl = `${downloadBase}/api/v1/plc/canvas/download-package?package_type=zap19`;
         const rptUrl = `${downloadBase}/api/v1/plc/canvas/download-package?package_type=receipt`;
-        const pkgMsg = `### 📦 西门子标准重构项目打包就绪！\n\n` +
-          `✅ **官方编译验证**：已通过西门子 TIA Portal V19 Openness 软件完全重建校验，**0 Errors, 0 Warnings (State=Success)**。\n\n` +
+        const pkgMsg = `### 西门子标准重构项目打包就绪\n\n` +
+          `**官方编译验证**：已通过西门子 TIA Portal V19 Openness 软件完全重建校验，**0 Errors, 0 Warnings (State=Success)**。\n\n` +
           `#### 1. Web 直接下载连接 (点击立即下载)\n` +
-          `- 📥 [**点击直接下载：博图 V19 原生工程归档包 (.zap19)**](${zapUrl})\n` +
-          `- 📥 [**点击直接下载：完整交付母包 (.zip，含 64 块 SCL 源码 + I/O 保全表 + 编译收据)**](${zipUrl})\n` +
-          `- 📄 [查看 Openness 官方编译收据 (.json)](${rptUrl})\n\n` +
+          `- [**点击直接下载：博图 V19 原生工程归档包 (.zap19)**](${zapUrl})\n` +
+          `- [**点击直接下载：完整交付母包 (.zip，含 64 块 SCL 源码 + I/O 保全表 + 编译收据)**](${zipUrl})\n` +
+          `- [查看 Openness 官方编译收据 (.json)](${rptUrl})\n\n` +
           `#### 2. 本地项目同目录存储位置（与导入工程同目录）\n` +
           `- 交付母包与 .zap19 已直接放置在导入项目的同一个目录下：\n` +
-          `  📁 \`C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\PLC_Openness_data\\hr001\\\`\n` +
+          `  \`C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\PLC_Openness_data\\hr001\\\`\n` +
           `  - \`HR001_AF_V1_2.zap19\`\n` +
           `  - \`HR001_AF_V1_2_Package.zip\`\n` +
           `  - \`compile_receipt.json\`\n` +
@@ -800,38 +972,6 @@ const App: React.FC = () => {
           `下载后在博图 V19 菜单点击「项目 -> 恢复 (Retrieve)」选择 \`HR001_AF_V1_2.zap19\` 即可直接打开编译，无任何缺失组件报错。`;
         commitSession(canvas, [{ id: phId, role: "system", text: pkgMsg, ts: Date.now() }]);
         return;
-      }
-
-      const isRefactor =
-        (prompt.toLowerCase().includes("重构") || prompt.toLowerCase().includes("refactor")) &&
-        Object.keys(canvas.blocks).length > 0;
-      if (isRefactor) {
-        try {
-          const targetUnit = `U1_${canvas.project_name || "HR001"}`;
-          const refResult = await requestPlc<{ canvas: any; report: any }>("/api/v1/plc/canvas/refactor", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ canvas, target_unit_name: targetUnit }),
-          });
-          if (refResult?.canvas) {
-            setCanvas(refResult.canvas);
-            const rpt = refResult.report || {};
-            const ems = (rpt.ems || []).map((e: any) => `  - **${e.name}**: ${e.steps_count} 个步序，${e.cms_count} 个控制模块 (CM)`).join("\n");
-            const msg = `### 🎯 西门子标准重构完成\n\n` +
-              `工程已重构为官方标准的模块化结构：\n` +
-              `- **主单元 (Unit)**: \`${rpt.target_unit_name || targetUnit}\`\n` +
-              `- **装备模块 (Equipment Modules)**: 共 ${rpt.ems?.length || 0} 个标准 EM\n${ems}\n` +
-              `- **标准块生成**: ${(rpt.af_blocks_created || []).length} 个纯 SCL 官方规范块\n` +
-              `- **物理 I/O 保全**: ${rpt.io_retention?.retained_ios || 0}/${rpt.io_retention?.total_ios || 0} (${rpt.io_retention?.percentage || 100}%)\n` +
-              `- **安全联锁保全**: ${(rpt.interlocks || []).length} 处联锁表达式已注入控制节点\n` +
-              `- **静态合规审查**: 0 Errors, 0 Warnings\n\n` +
-              `画布已即时切换为标准结构视图。你可以点击任意块查看生成的 SCL 源码，或直接通过自然语言向我描述工艺需求！`;
-            commitSession(refResult.canvas, [{ id: phId, role: "system", text: msg, ts: Date.now() }]);
-            return;
-          }
-        } catch (e: any) {
-          console.warn("Refactor error:", e);
-        }
       }
       let llmSaidNoEdit = false;
       try {
@@ -909,6 +1049,7 @@ const App: React.FC = () => {
     const s = sessions.find((x) => x.id === id);
     if (!s) return;
     abortCompilePoll(); // 别让上一个会话的编译结果盖掉这份画布
+    abortRefactorPoll(); // 重构流水线同理:中止轮询,过期结果不进新会话
     dispatchNewProjectFlow({ type: "RESET" }); // 离开新建工程流
     setActiveSession(id);
     if (s.pendingRemote) {
@@ -940,6 +1081,7 @@ const App: React.FC = () => {
 
   const handleNewSession = () => {
     abortCompilePoll();
+    abortRefactorPoll();
     dispatchNewProjectFlow({ type: "RESET" }); // 离开新建工程流
     setActiveSession(null);
     setCanvas(blankCanvas(""));
@@ -962,6 +1104,7 @@ const App: React.FC = () => {
     });
     if (activeSessionId === id) {
       abortCompilePoll();
+      abortRefactorPoll();
       setActiveSession(null);
       setCanvas(blankCanvas(""));
       setSelectedBlockName(null);
@@ -1510,6 +1653,18 @@ const App: React.FC = () => {
     }
   };
 
+  /** 聊天消息中点击块名(FB/FC/DB/OB) → 画布滑入并在 SCL 标签摊开该块 */
+  const handleOpenBlockFromChat = React.useCallback(
+    (name: string) => {
+      if (!canvas.blocks[name]) return;
+      setSelectedBlockName(name);
+      setFocus({ kind: "block", blockName: name });
+      setActiveTab("scl");
+      setLayoutMode((mode) => (mode === "chat" ? "split" : mode));
+    },
+    [canvas.blocks],
+  );
+
   /**
    * 轮询编译作业直到 7 阶段状态机收敛。
    * 替代原来的 `for (let i = 0; i < 600; i++)` 死循环：
@@ -1692,9 +1847,9 @@ const App: React.FC = () => {
   const npfValid = npfName.length > 0 && npfNameError === "";
 
   return (
-    <div className="app" data-ui="plc-workbench">
+    <div className="app">
       {/* —— 细顶栏(契约 25 §2 L 线简化):状态指示灯 + 变更记录 + 回写博图 + [画布] —— */}
-      <header className="topbar">
+      <header className="topbar" data-ui="topbar">
         {backendConnected !== null && (
           <span className="conn" title={backendConnected ? "网关已就绪" : "离线沙箱模式"}>
             <i className={`led ${backendConnected ? "led--run" : "led--standby"}`} />
@@ -1828,9 +1983,11 @@ const App: React.FC = () => {
             setShowOnboarding(false);
             setImportOpen(true);
           }}
-          onNewFromChat={() => {
+          onNewFromChat={(prompt) => {
             setShowOnboarding(false);
             handleNewSession();
+            /* 引导屏里敲好的工艺句子随行带入新对话（handleNewSession 会清空输入，故在其后写回） */
+            if (prompt) setChatInput(prompt);
           }}
         />
       )}
@@ -1946,6 +2103,12 @@ const App: React.FC = () => {
                   onSend={handleSend}
                   collapsed={dockCollapsed}
                   onToggleCollapse={() => setDockCollapsed((c) => !c)}
+                  onSuggestion={(text) => {
+                    setChatInput(text);
+                    setTimeout(() => handleSend(), 50);
+                  }}
+                  blockNames={blockNameList}
+                  onOpenBlock={handleOpenBlockFromChat}
                 />
               </div>
               <div
@@ -2018,6 +2181,8 @@ const App: React.FC = () => {
                   setChatInput(text);
                   setTimeout(() => handleSend(), 50);
                 }}
+                blockNames={blockNameList}
+                onOpenBlock={handleOpenBlockFromChat}
               />
             </div>
           )}

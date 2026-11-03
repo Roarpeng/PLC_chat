@@ -53,10 +53,10 @@ export function vStatusText(value: unknown): string {
   return V_STATUS_TEXT[vStatusOf(value)];
 }
 
-/** 徽章前置符号：✓ 已通过 / ✗ 未通过 / · 待执行与未运行 */
+/** 徽章前置词：通过 / 未通过 / · 待执行与未运行 */
 export function vStatusMark(value: unknown): string {
   const st = vStatusOf(value);
-  return st === "pass" ? "✓" : st === "fail" ? "✗" : "·";
+  return st === "pass" ? "通过" : st === "fail" ? "未通过" : "·";
 }
 
 /** 事务状态机九态文案（契约 §2）；未登记的值原样透出（后端新增状态不丢信息） */

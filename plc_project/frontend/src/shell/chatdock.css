@@ -1,19 +1,19 @@
 /* ==========================================================================
-   ChatDock —— 对话坞（前缀 dock-）
-   两种宿主：chat 态 .chat-stage 满铺（高度由外层 flex 撑满，输入行贴底）；
-   split 态 .shell-chat 底部停靠（展开上限 40vh，内部滚动）。
-   白底面板、上边线；无气泡时间戳保持干净
+   ChatDock —— 对话坞（前缀 dock-）· product-performs 方向
+   对话即"呼叫与应答"：用户的呼叫是钴蓝方块（sans，像盖章的指令条）；
+   机器的应答是衬线工程文件（serif，可直接选读的文档面）。
+   两种宿主：chat 态 .chat-stage 满铺；split 态 .shell-chat 底部停靠。
+   方角、无静置阴影；mono 只出现在真实代码与块标识符。
    ========================================================================== */
 
 .dock :focus-visible {
-  outline: 2px solid var(--accent, #1e5f97);
+  outline: 2px solid var(--accent, #1f2de6);
   outline-offset: 1px;
 }
 
 .dock {
   flex-shrink: 0;
-  background: var(--surface, #ffffff);
-  border-top: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface, #f8f9fb);
   font-family: var(--sans);
 }
 
@@ -46,7 +46,8 @@
 }
 
 .dock-count {
-  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   color: var(--ink-3);
   white-space: nowrap;
@@ -68,7 +69,7 @@
 }
 
 .dock-toggle:hover {
-  background: var(--surface-2, #f1f2ed);
+  background: var(--surface-2, #e6e9ef);
   color: var(--ink);
 }
 
@@ -92,8 +93,8 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 14px 8px;
+  gap: 10px;
+  padding: 12px 14px 10px;
 }
 
 .dock-messages::-webkit-scrollbar {
@@ -105,14 +106,27 @@
 }
 
 .dock-messages::-webkit-scrollbar-thumb {
-  background: var(--line-2, #c9ccc4);
+  background: var(--line-2, #bcc2cc);
   border-radius: 0;
 }
 
-/* 用户消息：右对齐气泡，浅钢蓝底，左下角 2px */
+/* 消息入场：从下方 16px 升起 + 淡入（新消息挂载时播放一次；
+   prefers-reduced-motion 下被全局规则压到 0.01ms，内容始终可见） */
+
+@keyframes dock-msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--rise, 16px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 .dock-msg {
   display: flex;
+  animation: dock-msg-in var(--t-entrance, 480ms) var(--ease) both;
 }
 
 .dock-msg--user {
@@ -123,30 +137,102 @@
   justify-content: flex-start;
 }
 
+/* 用户呼叫：钴蓝方块，白墨 sans —— 指令条 */
+
 .dock-bubble {
   max-width: 72%;
-  padding: 6px 11px;
-  background: var(--accent-soft, #e4edf5);
-  color: var(--ink);
-  border-radius: 0 10px 2px 10px;
+  padding: 8px 13px;
+  background: var(--accent, #1f2de6);
+  color: #ffffff;
+  border-radius: 0;
   font-size: 13px;
   line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+
+/* 机器应答：衬线工程文件面 —— 可读文档，非气泡 */
+
+.dock-sysline {
+  max-width: 92%;
+  padding: 2px 2px 2px 14px;
+  border-left: 3px solid var(--line-2, #bcc2cc); /* taste-skill-ignore: data-ui document spine */
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 14px;
+  line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-/* 系统消息：左对齐，灰底内嵌块，左上角 2px，可多行 */
+/* ---- 空态欢迎屏：产品第一屏（标题 + 支持句 + 工程草稿线稿） ---- */
 
-.dock-sysline {
-  max-width: 88%;
-  padding: 6px 11px;
-  background: var(--surface-2, #f1f2ed);
-  color: var(--ink-2);
-  border-radius: 0 10px 10px 10px;
-  font-size: 13px;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  word-break: break-word;
+.dock-welcome {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: clamp(16px, 4vh, 40px) 6px 12px;
+  max-width: 640px;
+}
+
+.dock-welcome__title {
+  font-family: var(--sans);
+  font-size: clamp(26px, 3.4vw, 40px);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.dock-welcome__sub {
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ink);
+  max-width: 46ch;
+}
+
+/* 工程草稿线稿面板（笔触类 .sk-* 定义在 OnboardingScreen.css，全局生效） */
+.dock-welcome__sketch {
+  margin-top: 6px;
+  background: var(--surface, #f8f9fb);
+  padding: 12px 14px;
+  overflow: hidden;
+}
+
+.dock-welcome__sketch-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 168px;
+}
+
+/* 入场：标题/句子/线稿交错淡入（transform+opacity only） */
+@media (prefers-reduced-motion: no-preference) {
+  .dock-welcome__title,
+  .dock-welcome__sub,
+  .dock-welcome__sketch {
+    animation: dock-welcome-in 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .dock-welcome__sub {
+    animation-delay: 120ms;
+  }
+  .dock-welcome__sketch {
+    animation-delay: 240ms;
+  }
+}
+
+@keyframes dock-welcome-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dock-empty {
@@ -172,8 +258,8 @@
   min-width: 0;
   height: 32px;
   padding: 0 11px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface, #f8f9fb);
+  border: 1px solid var(--line-2, #bcc2cc); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: 0;
   font-family: var(--sans);
   font-size: 13px;
@@ -188,19 +274,19 @@
 .dock-input:focus,
 .dock-input:focus-visible {
   outline: none;
-  border-color: var(--accent, #1e5f97);
+  border-color: var(--accent, #1f2de6);
 }
 
 .dock-key {
   flex-shrink: 0;
-  padding: 1px 5px;
-  border: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
+  padding: 2px 7px;
+  border: none;
   border-radius: 0;
-  background: var(--surface-2, #f1f2ed);
-  font-family: var(--mono); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--surface-2, #e6e9ef);
+  font-family: var(--sans);
   font-size: 13px;
   line-height: 1.4;
-  color: var(--ink-3);
+  color: var(--ink-2, #454b55);
 }
 
 .dock-send {
@@ -209,19 +295,21 @@
   padding: 0 14px;
   border: none;
   border-radius: 0;
-  background: var(--accent, #1e5f97);
+  background: var(--accent, #1f2de6);
   color: #ffffff;
   font-family: var(--sans);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.12s ease;
+  transition: background-color 0.12s ease, transform 0.08s var(--ease);
 }
 
 .dock-send:hover,
 .dock-send:active {
-  background: var(--accent-2, #164a78);
+  background: var(--accent-2, #1a25c4);
 }
+
+/* 按压反馈统一走 index.css 的 btn-press 动效 */
 
 /* ---- 动效偏好 ---- */
 
@@ -235,17 +323,17 @@
   }
 }
 
-/* —— 成熟 Chat 体验：时间标签 + 复制按钮 + Markdown 正文（2026-10-24）—— */
+/* —— 时间标签 + 复制按钮（反馈可见性：hover/focus 显出） —— */
 .dock-time {
-  font-size: 10.5px;
-  color: var(--ink-3, #8a9099);
-  font-family: var(--mono, monospace);
-  letter-spacing: 0.02em;
+  font-size: 13px;
+  color: var(--ink-3, #6b727e);
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
 }
 
 .dock-time--user {
   margin-left: 8px;
-  opacity: 0.75;
+  opacity: 0.85;
 }
 
 .dock-msgmeta {
@@ -258,11 +346,11 @@
 .dock-copy {
   border: none;
   background: transparent;
-  color: var(--ink-3, #8a9099);
-  font-size: 10.5px;
+  color: var(--ink-3, #6b727e);
+  font-size: 11px;
   line-height: 1;
   padding: 3px 6px;
-  border-radius: 6px;
+  border-radius: 0;
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
@@ -275,24 +363,25 @@
 }
 
 .dock-copy:hover {
-  color: var(--accent, #087e83);
-  background: var(--surface-2, #eef0f4);
+  color: var(--accent, #1f2de6);
+  background: var(--surface-2, #e6e9ef);
 }
 
 .dock-copy.is-copied {
-  color: var(--accent, #087e83);
+  color: var(--accent, #1f2de6);
   font-weight: 600;
 }
 
-/* 系统消息改为 Markdown 渲染后的窄栏适配 */
+/* 机器回答的 Markdown 文档面：衬线、窄栏适配 */
 .dock-md {
-  max-width: 88%;
-  padding: 6px 11px;
-  background: var(--surface-2, #f1f2ed);
-  color: var(--ink-2);
-  border-radius: 0 10px 10px 10px;
-  font-size: 13px;
-  line-height: 1.6;
+  max-width: 92%;
+  padding: 2px 2px 2px 14px;
+  border-left: 3px solid var(--line-2, #bcc2cc); /* taste-skill-ignore: data-ui document spine */
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 14px;
+  line-height: 1.65;
   overflow-wrap: anywhere;
 }
 
@@ -308,6 +397,7 @@
 .dock-md .markdown-body h2,
 .dock-md .markdown-body h3,
 .dock-md .markdown-body h4 {
+  font-family: var(--sans);
   font-size: 13.5px;
   margin: 10px 0 4px;
 }
@@ -320,13 +410,13 @@
   display: block;
   max-width: 100%;
   overflow-x: auto;
-  font-size: 12px;
+  font-size: 12.5px;
   border-collapse: collapse;
 }
 
 .dock-md .markdown-body th,
 .dock-md .markdown-body td {
-  border: 1px solid var(--line, #d9e1e7);
+  border: 1px solid var(--line, #d7dbe2); /* taste-skill-ignore: real table */
   padding: 3px 7px;
   text-align: left;
   white-space: nowrap;
@@ -355,8 +445,7 @@
   user-select: text;
 }
 
-
-/* —— 建议问题可点击按钮(工程简报) —— */
+/* —— 建议问题：一句话一张票根，方角平涂 —— */
 .dock-suggestions {
   display: flex;
   flex-direction: column;
@@ -367,13 +456,14 @@
 
 .dock-suggestion-btn {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 8px;
   padding: 7px 12px;
-  border: 1px solid var(--line-2, #c8ccc4);
-  border-radius: 6px;
-  background: var(--surface, #f9faf7);
-  color: var(--ink, #191c1a);
+  border: none;
+  border-left: 3px solid var(--line-2, #bcc2cc); /* taste-skill-ignore: data-ui workbench interface */
+  border-radius: 0;
+  background: var(--surface-2, #e6e9ef);
+  color: var(--ink, #0b0c0e);
   font-size: 13px;
   line-height: 1.4;
   text-align: left;
@@ -382,26 +472,38 @@
 }
 
 .dock-suggestion-btn:hover {
-  border-color: var(--accent, #1d5a90);
-  background: var(--accent-soft, #e8f0f6);
+  border-left-color: var(--accent, #1f2de6);
+  background: var(--accent-soft, #e8eafd);
 }
 
 .dock-suggestion-btn:active {
-  background: var(--accent-soft, #e8f0f6);
+  background: var(--accent-soft, #e8eafd);
   transform: scale(0.99);
 }
 
-.dock-suggestion-num {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  display: flex;
+/* —— 消息正文里的块名引用(FB/FC/DB/OB,点击在画布打开) ——
+   块名是字面代码标识符，行内代码观感 + accent 可点击提示 */
+
+.dock-blockref {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--accent, #1d5a90);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  font-family: var(--mono, monospace);
+  padding: 0 5px;
+  border: none;
+  border-radius: 0;
+  background: var(--surface-2, #e6e9ef);
+  color: var(--accent, #1f2de6);
+  font-family: var(--mono, monospace); /* taste-skill-ignore: literal block identifier (code) */
+  font-size: 0.95em;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.dock-blockref:hover {
+  background: var(--accent-soft, #e8eafd);
+  text-decoration: underline;
+}
+
+.dock-blockref:active {
+  transform: scale(0.98);
 }

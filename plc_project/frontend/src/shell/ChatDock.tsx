@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { ChatMessage } from "../state/sessions";
 import MarkdownBody from "../MarkdownBody";
+import { linkifyBlockNames } from "./blockRefs";
 import "./chatdock.css";
 
 export interface ChatDockProps {
@@ -13,6 +14,10 @@ export interface ChatDockProps {
   onToggleCollapse(): void;
   /** 点击建议问题直接发送(工程简报的建议条目) */
   onSuggestion?(text: string): void;
+  /** 已知块名清单(canvas.blocks 键):消息里的块名渲染为可点击块引用 */
+  blockNames?: string[];
+  /** 点击块引用 → 画布打开对应功能块 */
+  onOpenBlock?(name: string): void;
 }
 
 /** HH:MM 时间标签（无时间戳的旧消息显示 "—"） */
@@ -128,7 +133,7 @@ const MermaidBlock: React.FC<{ code: string }> = ({ code }) => {
   };
 
   return (
-    <div className="dock-mermaid">
+    <div className="dock-mermaid" data-ui="mermaid-output">
       {ready && svg ? (
         <div className="dock-mermaid-svg" dangerouslySetInnerHTML={{ __html: svg }} />
       ) : (
@@ -170,7 +175,6 @@ const SuggestionList: React.FC<{ text: string; onSuggestion?: (t: string) => voi
           title="点击发送此问题"
           onClick={() => onSuggestion(s)}
         >
-          <span className="dock-suggestion-num">{i + 1}</span>
           {s}
         </button>
       ))}
@@ -178,8 +182,17 @@ const SuggestionList: React.FC<{ text: string; onSuggestion?: (t: string) => voi
   );
 };
 
-/** 系统消息正文：文本段照旧 Markdown 渲染，mermaid 围栏段替换为 MermaidBlock。 */
-const SystemMessageBody: React.FC<{ text: string }> = ({ text }) => {
+/** 系统消息正文:文本段照旧 Markdown 渲染,mermaid 围栏段替换为 MermaidBlock。
+    传入块名清单时,文本段先做块名 linkify,块名在 MarkdownBody 里渲染为可点击块引用。 */
+const SystemMessageBody: React.FC<{
+  text: string;
+  blockNames?: string[];
+  onOpenBlock?: (name: string) => void;
+}> = ({ text, blockNames, onOpenBlock }) => {
+  const nameSet = useMemo(
+    () => (blockNames?.length ? new Set(blockNames) : undefined),
+    [blockNames],
+  );
   const segments = splitMermaidSegments(text);
   return (
     <div className="dock-md">
@@ -187,15 +200,25 @@ const SystemMessageBody: React.FC<{ text: string }> = ({ text }) => {
         seg.kind === "mermaid" ? (
           <MermaidBlock key={`mmd-${i}`} code={seg.body} />
         ) : seg.body.trim() ? (
-          <MarkdownBody key={`txt-${i}`} content={seg.body} />
+          <MarkdownBody
+            key={`txt-${i}`}
+            content={nameSet ? linkifyBlockNames(seg.body, nameSet) : seg.body}
+            blockNames={nameSet}
+            onOpenBlock={onOpenBlock}
+          />
         ) : null,
       )}
     </div>
   );
 };
 
-/** 单条消息：时间标签 + 正文（系统消息渲染 Markdown）+ 悬停复制按钮 */
-const DockMessage: React.FC<{ m: ChatMessage; onSuggestion?: (t: string) => void }> = ({ m, onSuggestion }) => {
+/** 单条消息:时间标签 + 正文(系统消息渲染 Markdown) + 悬停复制按钮 */
+const DockMessage: React.FC<{
+  m: ChatMessage;
+  onSuggestion?: (t: string) => void;
+  blockNames?: string[];
+  onOpenBlock?: (name: string) => void;
+}> = ({ m, onSuggestion, blockNames, onOpenBlock }) => {
   const [copied, setCopied] = useState(false);
   const label = timeLabel(m.ts);
   const onCopy = async () => {
@@ -237,7 +260,7 @@ const DockMessage: React.FC<{ m: ChatMessage; onSuggestion?: (t: string) => void
           {copied ? "已复制" : "复制"}
         </button>
       </div>
-      <SystemMessageBody text={m.text} />
+      <SystemMessageBody text={m.text} blockNames={blockNames} onOpenBlock={onOpenBlock} />
       <SuggestionList text={m.text} onSuggestion={onSuggestion} />
     </div>
   );
@@ -251,6 +274,8 @@ export const ChatDock: React.FC<ChatDockProps> = ({
   collapsed,
   onToggleCollapse,
   onSuggestion,
+  blockNames,
+  onOpenBlock,
 }) => {
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -328,7 +353,7 @@ export const ChatDock: React.FC<ChatDockProps> = ({
   }
 }
 `}</style>
-      <header className="dock-head">
+      <header className="dock-head" data-ui="dock-header">
         <div className="dock-headinfo">
           <span className="dock-title">当前对话</span>
           <span className="dock-count">{messages.length} 条消息</span>
@@ -358,13 +383,78 @@ export const ChatDock: React.FC<ChatDockProps> = ({
         <div className="dock-body">
           <div className="dock-messages" ref={listRef}>
             {messages.length === 0 ? (
-              <p className="dock-empty">输入指令，画布会实时更新，可随时在历史中找回。</p>
+              <div className="dock-welcome" aria-label="开始对话">
+                <h3 className="dock-welcome__title">
+                  把工艺说清楚，
+                  <br />
+                  逻辑交给我。
+                </h3>
+                <p className="dock-welcome__sub">
+                  一句话工艺意图，Co-Pilot
+                  生成可编译的 SCL 逻辑并回写博图：新增信号与安全联锁、重构功能块、生成 HMI
+                  画面。输入指令后画布实时更新，全部变更带证据入账，可随时在历史中找回。
+                </p>
+                <div className="dock-welcome__sketch" aria-label="急停回路工程草稿线稿">
+                  <svg
+                    className="dock-welcome__sketch-svg"
+                    viewBox="0 0 640 120"
+                    role="img"
+                    aria-label="工程草稿：急停按钮经接触器切断电机控制回路"
+                  >
+                    {/* 梯级母线（左） */}
+                    <g className="sk-ink">
+                      <line x1="24" y1="18" x2="24" y2="102" />
+                    </g>
+                    {/* 急停按钮：蘑菇头 + 断开触点 */}
+                    <g className="sk-ink" transform="rotate(-0.6 70 44)">
+                      <line x1="24" y1="44" x2="56" y2="44" />
+                      <circle cx="70" cy="44" r="12" />
+                      <circle cx="70" cy="44" r="5" />
+                      <line x1="58" y1="30" x2="82" y2="58" strokeDasharray="3 4" />
+                      <line x1="84" y1="44" x2="120" y2="44" />
+                    </g>
+                    <text className="sk-label" x="50" y="24">%I0.0 急停</text>
+                    {/* 接触器触点 */}
+                    <g className="sk-ink" transform="rotate(0.5 160 44)">
+                      <line x1="120" y1="44" x2="146" y2="44" />
+                      <line x1="146" y1="44" x2="162" y2="34" />
+                      <line x1="176" y1="44" x2="212" y2="44" />
+                    </g>
+                    <text className="sk-label" x="128" y="24">K1</text>
+                    {/* 线圈/输出（钴蓝，虚线直连电机） */}
+                    <g className="sk-accent">
+                      <line x1="212" y1="44" x2="236" y2="44" />
+                      <path d="M236 32 q14 12 0 24 q-14 -12 0 -24" />
+                      <line x1="252" y1="44" x2="520" y2="44" strokeDasharray="7 6" />
+                      <path d="M512 36 l8 8 -8 8" />
+                    </g>
+                    <text className="sk-label sk-label--accent" x="226" y="24">%Q0.1 运行</text>
+                    {/* 电机 M（右） */}
+                    <g className="sk-ink" transform="rotate(-0.4 560 60)">
+                      <circle cx="560" cy="60" r="30" />
+                      <text className="sk-m" x="551" y="70">M</text>
+                      <line x1="590" y1="60" x2="616" y2="60" />
+                    </g>
+                    <text className="sk-label" x="536" y="16">M1 电机</text>
+                    {/* 底部标注：草稿尺寸线 */}
+                    <g className="sk-construct">
+                      <line x1="24" y1="108" x2="300" y2="108" />
+                      <line x1="24" y1="103" x2="24" y2="113" />
+                      <line x1="300" y1="103" x2="300" y2="113" />
+                    </g>
+                    <text className="sk-label" x="120" y="118">急停回路 · 草稿</text>
+                  </svg>
+                </div>
+              </div>
             ) : (
-              messages.map((m) => <DockMessage key={m.id} m={m} onSuggestion={onSuggestion} />)
+              messages.map((m) => (
+                <DockMessage key={m.id} m={m} onSuggestion={onSuggestion} blockNames={blockNames} onOpenBlock={onOpenBlock} />
+              ))
             )}
           </div>
           <form
             className="dock-inputrow"
+            data-ui="dock-input"
             onSubmit={(e) => {
               e.preventDefault();
               onSend();

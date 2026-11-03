@@ -33,7 +33,7 @@ const SESSION_CARD_STYLE: React.CSSProperties = {
   width: 320,
   padding: "14px 16px",
   background: "var(--surface)",
-  border: "1px solid var(--line)",
+  borderLeft: "3px solid var(--line-2)",
   cursor: "pointer",
   textAlign: "left",
   font: "inherit",
@@ -49,7 +49,7 @@ const ENTRY_STYLE: React.CSSProperties = {
   minWidth: 240,
   padding: "20px 20px",
   background: "var(--surface)",
-  border: "1px solid var(--line)",
+  borderTop: "3px solid var(--line-2)",
   cursor: "pointer",
   textAlign: "left",
   font: "inherit",
@@ -57,7 +57,7 @@ const ENTRY_STYLE: React.CSSProperties = {
 };
 
 const hoverCss = `
-.launch-entry:hover, .launch-session:hover { border-color: var(--line-2); background: var(--surface-2); }
+.launch-entry:hover, .launch-session:hover { border-color: var(--accent); background: var(--surface-2); }
 `;
 
 /** ms epoch → "MM-DD HH:mm"(与会话列表口径一致) */
@@ -98,10 +98,10 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
       <style>{hoverCss}</style>
 
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 20, color: "var(--ink)", fontWeight: 600 }}>
+        <div style={{ fontSize: 22, color: "var(--ink)", fontWeight: 700, letterSpacing: "-0.01em" }}>
           开始你的 PLC 工程
         </div>
-        <div style={{ marginTop: 6, fontSize: 13, color: "var(--ink-2)" }}>
+        <div style={{ marginTop: 6, fontSize: 13.5, color: "var(--ink-2)" }}>
           导入既有博图工程,或从工艺需求开始新建 —— 需求先行,确认不产生任何修改
         </div>
       </div>
@@ -154,10 +154,10 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
         <button
           type="button"
           className="launch-entry"
-          style={{ ...ENTRY_STYLE, borderColor: "var(--accent, #0066cc)" }}
+          style={{ ...ENTRY_STYLE, borderTopColor: "var(--accent, #1f2de6)" }}
           onClick={onNewProject}
         >
-          <span style={{ fontSize: 15, color: "var(--accent, #0066cc)", fontWeight: 600 }}>
+          <span style={{ fontSize: 15, color: "var(--accent, #1f2de6)", fontWeight: 600 }}>
             新建工程
           </span>
           <span style={{ fontSize: 13, color: "var(--ink-2)" }}>

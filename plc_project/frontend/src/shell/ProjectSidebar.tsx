@@ -228,7 +228,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
 
   if (collapsed) {
     return (
-      <aside className="psb psb--rail" aria-label="工程栏(已折叠)">
+      <aside className="psb psb--rail" data-ui="project-sidebar" aria-label="工程栏(已折叠)">
         <div className="psb-rail-head">
           <BrandMark />
         </div>
@@ -278,7 +278,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
   /* ---- 展开态:~240px ---- */
 
   return (
-    <aside className="psb" aria-label="工程栏">
+    <aside className="psb" data-ui="project-sidebar" aria-label="工程栏">
       <div className="psb-top">
         <div className="psb-brand">
           <BrandMark />
