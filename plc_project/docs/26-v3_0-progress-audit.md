@@ -101,6 +101,9 @@
 4. `docs`：本审计
 5. `fix(security)`（2026-11-03 后续）：Mimosa 深扫 21 项 finding 三泳道修复（21→12，剩余逐项豁免）、
    agents 层 XML 守卫接线 9 处、`test_pcec_gateway` 账本隔离缺陷修复——详见 `docs/27-security-remediation.md`
+6. 对话体验线（2026-11-03，`4791e99`→`f40cdcc`）：P 线死接线修复+工程树、流水线进度卡、
+   编译/重构期间可提问（摘锁+脏守卫）、历史会话迁移可进入+1970 时间修正、对话一键删除、
+   **LongTaskCenter 统一长任务中心**——详见 `docs/28-longtask-center.md`
 
 ## 7. 架构谱系补充（2026-11-03）
 
