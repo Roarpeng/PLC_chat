@@ -1,20 +1,20 @@
-import glob
-import os
 import re
+from pathlib import Path
 
-fbs_dir = 'PLC_Openness_data/hr001/pure_scl_fbs'
-files = glob.glob(os.path.join(fbs_dir, '*.scl'))
+ROOT = Path(__file__).resolve().parent
+fbs_dir = ROOT / 'PLC_Openness_data' / 'hr001' / 'pure_scl_fbs'
+files = sorted(fbs_dir.glob('*.scl'))
 
 dep_graph = {}
 block_contents = {}
 
 for fp in files:
-    name = os.path.splitext(os.path.basename(fp))[0]
+    name = Path(fp).stem
     txt = open(fp, 'r', encoding='utf-8-sig').read().strip()
     block_contents[name] = txt
-    
+
     callees = set()
-    for other in [os.path.splitext(os.path.basename(f))[0] for f in files]:
+    for other in [Path(f).stem for f in files]:
         if other != name and (f'"{other}"' in txt or f'{other}.' in txt or f'"{other}"(' in txt):
             callees.add(other)
     dep_graph[name] = callees
@@ -43,7 +43,7 @@ print(f"Topologically ordered {len(ordered)} blocks (excluding FB1003_CR which i
 for i, b in enumerate(ordered, 1):
     print(f"{i:2d}. {b} (callees: {list(dep_graph[b])})")
 
-out_path = 'PLC_Openness_data/hr001/All_40_Refactored_FBs.scl'
+out_path = ROOT / 'PLC_Openness_data' / 'hr001' / 'All_40_Refactored_FBs.scl'
 with open(out_path, 'w', encoding='utf-8-sig', newline='\r\n') as out_f:
     for b in ordered:
         out_f.write(f'// ============================================================\r\n')
@@ -51,4 +51,4 @@ with open(out_path, 'w', encoding='utf-8-sig', newline='\r\n') as out_f:
         out_f.write(f'// ============================================================\r\n')
         out_f.write(block_contents[b] + '\r\n\r\n')
 
-print(f"Successfully wrote {len(ordered)} blocks to {out_path} ({os.path.getsize(out_path)} bytes).")
+print(f"Successfully wrote {len(ordered)} blocks to {out_path} ({out_path.stat().st_size} bytes).")

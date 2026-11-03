@@ -1,4 +1,8 @@
-with open(r'PLC_Openness_data\hr001\pure_scl_fbs\FB1060_AutoStep.scl', 'r', encoding='utf-8') as f:
+from pathlib import Path
+
+SCL_PATH = Path(__file__).resolve().parent / 'PLC_Openness_data' / 'hr001' / 'pure_scl_fbs' / 'FB1060_AutoStep.scl'
+
+with open(SCL_PATH, 'r', encoding='utf-8') as f:
     txt = f.read()
 
 body_start = txt.find('BEGIN')
@@ -38,7 +42,7 @@ END_VAR
 """
 
 new_content = new_header + body
-with open(r'PLC_Openness_data\hr001\pure_scl_fbs\FB1060_AutoStep.scl', 'w', encoding='utf-8', newline='\r\n') as f:
+with open(SCL_PATH, 'w', encoding='utf-8', newline='\r\n') as f:
     f.write(new_content)
 
 print(f"Updated FB1060_AutoStep.scl successfully ({len(new_content)} bytes).")

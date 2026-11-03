@@ -269,12 +269,17 @@ def _block_flgnet_xml(block: Any) -> str:
     try:
         import xml.etree.ElementTree as ET
 
-        from agents.plc.tia.simaticml import _BLOCK_ROOT_TAGS, _strip_ns
+        from defusedxml.ElementTree import fromstring as safe_fromstring
 
+        from agents.plc.tia.simaticml import _BLOCK_ROOT_TAGS, _strip_ns
+        from plc_engine.xml_guard import assert_no_dtd
+
+        # 双保险拒实体扩展（CWE-776）：文本守卫 + defusedxml（禁 DTD 的标准实现）
+        assert_no_dtd(text)
         roots = [
-            el for el in ET.fromstring(text).iter() if _strip_ns(el.tag) in _BLOCK_ROOT_TAGS
+            el for el in safe_fromstring(text).iter() if _strip_ns(el.tag) in _BLOCK_ROOT_TAGS
         ]
-    except Exception:  # noqa: BLE001 — malformed XML: keep raw text as-is
+    except Exception:  # noqa: BLE001 — malformed XML/含 DTD：保持原文回落
         return text
     if len(roots) <= 1:
         return text

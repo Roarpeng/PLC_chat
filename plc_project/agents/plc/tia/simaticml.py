@@ -42,6 +42,7 @@ from agents.plc.tia.ir import (
     WireEndpoint,
 )
 from agents.plc.tia.parallel import map_parallel
+from agents.plc.tia.xml_safe import parse_xml_tree_no_dtd
 
 _SECTION_MAP = {
     "Input": InterfaceSection.INPUT,
@@ -1012,7 +1013,7 @@ def _extract_source_text(sw_object: ET.Element) -> str:
 # ---------------------------------------------------------------------------
 
 def parse_block_xml(path: Path) -> Block | None:
-    tree = ET.parse(path)
+    tree = parse_xml_tree_no_dtd(path)  # DTD/实体拒绝(CWE-776)
     root = tree.getroot()
     doc_type = _detect_document_type(root)
     sw_obj, inferred_type = _find_block_root(root)
@@ -1130,7 +1131,7 @@ def parse_block_xml(path: Path) -> Block | None:
 
 
 def parse_tag_table_xml(path: Path) -> TagTable | None:
-    tree = ET.parse(path)
+    tree = parse_xml_tree_no_dtd(path)  # DTD/实体拒绝(CWE-776)
     root = tree.getroot()
     doc_type = _detect_document_type(root)
     has_tag_table = any(_strip_ns(n.tag) == "SW.Tags.PlcTagTable" for n in root.iter())

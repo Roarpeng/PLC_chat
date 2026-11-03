@@ -21,12 +21,15 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
+import shutil
 import socket
 import subprocess
 import sys
 import time
 import urllib.request
 from pathlib import Path
+from urllib.parse import urlparse
 
 try:
     import tomllib
@@ -46,6 +49,12 @@ CREATE_NO_WINDOW = 0x08000000
 if sys.platform == "win32":
     CREATE_NEW_PROCESS_GROUP = 0x00000200
     CREATE_FLAGS = CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
+
+# 健康检查/探活 URL 只允许 loopback 主机（本地服务探活，SSRF 兜底）
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+# pythonw（无控制台）重定向用的空设备路径（Windows: nul，POSIX: /dev/null）
+DEVNULL_PATH = Path(os.devnull)
 
 
 # ---------------------------------------------------------------- 基础设施
@@ -111,13 +120,26 @@ def kill_tree(pid: int) -> None:
 
 # ---------------------------------------------------------------- 健康检查
 
+def _assert_loopback_http(url: str) -> str:
+    """断言探活 URL 为 http(s) 且主机为 loopback；不符抛 ValueError。"""
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme not in {"http", "https"} or host not in LOOPBACK_HOSTS:
+        raise ValueError(f"健康检查 URL 必须指向 loopback 主机: {url!r}")
+    return url
+
+
 def probe_health(health: str, timeout: float = 2.0) -> tuple[bool, str]:
     """health 形如 http://127.0.0.1:8000/health 或 tcp:5173；空 = 不检查。"""
     if not health:
         return True, "无健康检查"
     if health.startswith("http"):
         try:
-            with urllib.request.urlopen(health, timeout=timeout) as resp:
+            url = _assert_loopback_http(health)
+        except ValueError as exc:
+            return False, str(exc)[:60]
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as resp:
                 return resp.status == 200, f"HTTP {resp.status}"
         except Exception as exc:  # noqa: BLE001
             return False, str(exc)[:60]
@@ -132,6 +154,22 @@ def probe_health(health: str, timeout: float = 2.0) -> tuple[bool, str]:
 
 
 # ---------------------------------------------------------------- 子命令
+
+def _start_argv(start: str | list[str]) -> list[str]:
+    """把 services.toml 的 start 命令解析成 argv 列表（不走 shell）。
+
+    shell=True 会把配置串里的任何元字符交给 cmd 解释；改为逐参数列表传参后，
+    元字符只能是普通参数。字符串按 shlex 拆分（现有配置无引号/反斜杠路径），
+    列表原样采用。Windows 下 CreateProcess 不做 PATHEXT 搜索（找不到 npm.cmd），
+    先用 shutil.which 把 argv[0] 解析成完整可执行路径。
+    """
+    argv = list(start) if isinstance(start, list) else shlex.split(start)
+    if argv:
+        exe = shutil.which(argv[0])
+        if exe:
+            argv[0] = exe
+    return argv
+
 
 def cmd_up(name: str) -> int:
     services = load_services()
@@ -155,9 +193,8 @@ def cmd_up(name: str) -> int:
         env = {**os.environ, **spec["env"]}
     with log.open("ab") as lf:
         proc = subprocess.Popen(
-            spec["start"],
+            _start_argv(spec["start"]),
             cwd=str(cwd),
-            shell=True,
             stdout=lf,
             stderr=subprocess.STDOUT,
             creationflags=CREATE_FLAGS,
@@ -239,9 +276,9 @@ def cmd_prune() -> int:
 def main(argv: list[str]) -> int:
     # pythonw（无控制台）运行时 stdout/stderr 为 None，print 会抛异常 → 引到空设备
     if sys.stdout is None:
-        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+        sys.stdout = DEVNULL_PATH.open("w", encoding="utf-8")
     if sys.stderr is None:
-        sys.stderr = open(os.devnull, "w", encoding="utf-8")
+        sys.stderr = DEVNULL_PATH.open("w", encoding="utf-8")
     if len(argv) < 2:
         print(__doc__)
         return 2

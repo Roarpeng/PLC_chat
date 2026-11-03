@@ -13,10 +13,19 @@ import sys
 import time
 import webbrowser
 from pathlib import Path
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 URL = "http://127.0.0.1:5173"
+
+
+def _assert_loopback(url: str) -> str:
+    """探活/打开的 URL 主机必须是 loopback（本地前端探活，SSRF 兜底）。"""
+    host = (urlparse(url).hostname or "").lower()
+    if host not in {"127.0.0.1", "localhost", "::1"}:
+        raise ValueError(f"URL 必须指向 loopback 主机: {url!r}")
+    return url
 
 
 def devctl(*args: str, timeout: float = 240) -> int:
@@ -42,14 +51,15 @@ def main() -> None:
     # 等前端可访问后打开界面（最多 30s）
     import urllib.request
 
+    url = _assert_loopback(URL)
     for _ in range(15):
         try:
-            with urllib.request.urlopen(URL, timeout=1):
+            with urllib.request.urlopen(url, timeout=1):
                 break
         except OSError:
             time.sleep(2)
     try:
-        webbrowser.open(URL)
+        webbrowser.open(url)
     except Exception:
         pass
 

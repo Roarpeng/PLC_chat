@@ -1,10 +1,10 @@
-import os
 import re
+from pathlib import Path
 
-fbs_dir = 'PLC_Openness_data/hr001/pure_scl_fbs'
+fbs_dir = Path(__file__).resolve().parent / 'PLC_Openness_data' / 'hr001' / 'pure_scl_fbs'
 
 def update_file(filename, fn):
-    path = os.path.join(fbs_dir, filename)
+    path = fbs_dir / filename
     txt = open(path, 'r', encoding='utf-8-sig').read()
     new_txt = fn(txt)
     with open(path, 'w', encoding='utf-8-sig', newline='\r\n') as f:

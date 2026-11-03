@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from plc_engine.canvas_model import CanvasState
+from plc_engine.xml_guard import assert_no_dtd
 
 
 def apply_hmi_diff(
@@ -249,9 +250,10 @@ def _patch_classic_baseline(
                 continue
             src = candidates[0]
         try:
+            assert_no_dtd(src.read_text(encoding="utf-8", errors="replace"))
             tree = ET.parse(src)
             root = tree.getroot()
-        except ET.ParseError:
+        except (ET.ParseError, ValueError):
             continue
         for w in items:
             if not w.supported and w.source_name:

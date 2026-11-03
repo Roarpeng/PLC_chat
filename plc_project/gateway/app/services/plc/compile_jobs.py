@@ -65,7 +65,7 @@ _pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="compile-job")
 _TTL_S = 3600.0
 
 # 子进程句柄（单独存放：_jobs 会被 deepcopy 出去，不能放 Process 对象）
-_children: dict[str, "_ChildHandle"] = {}
+_children: dict[str, _ChildHandle] = {}
 
 # 作业总超时（秒）：环境变量 COMPILE_JOB_TIMEOUT_S 可配，<=0 表示不限制
 _DEFAULT_JOB_TIMEOUT_S = 900.0
@@ -118,7 +118,7 @@ _TERMINAL_CHANGE_STATUSES = {"applied", "failed", "expired", "rejected", "rolled
 def _pcec() -> Any | None:
     """惰性加载 ``plc_engine.pcec``（并行线 A 交付）；不可用时返回 None。"""
     try:
-        import plc_engine.pcec as pcec
+        from plc_engine import pcec
 
         return pcec
     except Exception:  # noqa: BLE001 - 线 A 未交付/损坏时静默降级为不记账
@@ -649,7 +649,7 @@ class _ChildBridge:
     父进程侧 ``_bridge`` 恒为 None，所有写状态函数照旧直接改 ``_jobs``。
     """
 
-    __slots__ = ("_conn", "_cancel")
+    __slots__ = ("_cancel", "_conn")
 
     def __init__(self, conn: Any, cancel: Any) -> None:
         self._conn = conn
@@ -683,7 +683,7 @@ class _ChildBridge:
 class _ChildHandle:
     """父进程持有的子进程句柄（进程 + 取消信号）。"""
 
-    __slots__ = ("proc", "cancel")
+    __slots__ = ("cancel", "proc")
 
     def __init__(self, proc: Any, cancel: Any) -> None:
         self.proc = proc
@@ -711,6 +711,10 @@ def _kill_process_tree(pid: int) -> None:
     POSIX 下退化为进程组 kill（仅当子进程不在父进程组内时，避免自杀）。
     """
     try:
+        # pid 直接进入 taskkill 命令行：只接受正整数（bool 也是 int，显式排除），
+        # 任何其他形态一律拒绝执行，杜绝外部数据混入进程执行接口。
+        if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
+            return
         if os.name == "nt":
             subprocess.run(
                 ["taskkill", "/F", "/T", "/PID", str(pid)],

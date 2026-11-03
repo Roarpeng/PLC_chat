@@ -19,6 +19,9 @@ from typing import Any
 _lock = threading.Lock()
 _session_proc: subprocess.Popen[str] | None = None
 
+_DEFAULT_SESSION_URL = "http://127.0.0.1:8791"
+_LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
 
 def session_enabled() -> bool:
     return os.getenv("RESEARCHOS_TIA_SESSION", "1").strip().lower() not in {
@@ -29,11 +32,29 @@ def session_enabled() -> bool:
     }
 
 
+def _validated_worker_url() -> str:
+    """校验后的会话/worker 基址（SSRF 收口，_post/_get 统一取用）。
+
+    scheme 限 http/https 且必须带主机名；默认基址必须 loopback——
+    非 loopback 主机仅当操作者通过 RESEARCHOS_TIA_SESSION_URL 显式配置时
+    放行（本机/局域网 openness worker 是合法拓扑，不硬禁私网）。
+    不符抛 ValueError（调用方按「会话不可达 → 一次性 CLI 回退」降级）。
+    """
+    from urllib.parse import urlparse
+
+    explicit = os.getenv("RESEARCHOS_TIA_SESSION_URL", "").strip()
+    url = (explicit or _DEFAULT_SESSION_URL).rstrip("/")
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme not in {"http", "https"} or not host:
+        raise ValueError(f"会话基址非法（需 http(s)://host[:port]）: {url!r}")
+    if not explicit and host not in _LOOPBACK_HOSTS:
+        raise ValueError(f"会话基址必须指向 loopback 主机: {url!r}")
+    return url
+
+
 def session_base_url() -> str:
-    return (
-        os.getenv("RESEARCHOS_TIA_SESSION_URL", "").strip()
-        or "http://127.0.0.1:8791"
-    ).rstrip("/")
+    return _validated_worker_url()
 
 
 def session_token() -> str:
@@ -52,8 +73,12 @@ def _post(path: str, body: dict[str, Any], timeout_s: float = 120.0) -> dict[str
     import urllib.error
     import urllib.request
 
+    try:
+        base = _validated_worker_url()
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc), "unreachable": True}
     req = urllib.request.Request(
-        f"{session_base_url()}{path}",
+        f"{base}{path}",
         data=json.dumps(body).encode("utf-8"),
         headers=_headers(),
         method="POST",
@@ -83,8 +108,12 @@ def _post(path: str, body: dict[str, Any], timeout_s: float = 120.0) -> dict[str
 def _get(path: str, timeout_s: float = 10.0) -> dict[str, Any]:
     import urllib.request
 
+    try:
+        base = _validated_worker_url()
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc), "unreachable": True}
     req = urllib.request.Request(
-        f"{session_base_url()}{path}",
+        f"{base}{path}",
         headers=_headers(),
         method="GET",
     )

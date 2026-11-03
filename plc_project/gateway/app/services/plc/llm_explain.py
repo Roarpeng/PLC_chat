@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any
 
@@ -64,6 +65,21 @@ def _resolve_deepseek_key() -> str:
     return os.getenv("DEEPSEEK_API_KEY", "").strip() or _registry_env_value("DEEPSEEK_API_KEY")
 
 
+def _validated_base_url(base: str) -> str:
+    """校验 LLM 兼容端点根地址，防御配置异常导致的 SSRF（CWE-918）。
+
+    只要求 http/https scheme 且 host 非空；刻意不封禁私网/回环地址——本地
+    Ollama（http://127.0.0.1:11434/v1）是模块头注释文档支持的合法用法，且
+    base_url 仅来自运维设置的环境变量（PLC_LLM_BASE_URL / DeepSeek 回退缺省），
+    并非任何 HTTP 请求参数，无攻击者可控注入面。
+    """
+    candidate = (base or "").strip()
+    parsed = urllib.parse.urlparse(candidate)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise RuntimeError(f"LLM 端点地址非法（需 http(s)://host[:port]）：{candidate!r}")
+    return candidate
+
+
 def llm_settings() -> dict[str, str] | None:
     base = os.getenv("PLC_LLM_BASE_URL", "").strip().rstrip("/")
     key = os.getenv("PLC_LLM_API_KEY", "").strip()
@@ -78,7 +94,9 @@ def llm_settings() -> dict[str, str] | None:
 
     if not (base and key and model):
         return None
-    return {"base_url": base, "api_key": key, "model": model}
+    # 下方 chat_completion_raw / chat_completion_stream 两处 urlopen 共享本 settings
+    # 流，在此单一入口校验即覆盖全部出网请求。
+    return {"base_url": _validated_base_url(base), "api_key": key, "model": model}
 
 
 def build_explain_prompt(block: dict[str, Any], scaffold: dict[str, Any]) -> list[dict[str, str]]:

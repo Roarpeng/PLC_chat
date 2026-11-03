@@ -44,6 +44,8 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
+from plc_engine.xml_guard import assert_no_dtd
+
 #: SimaticML Interface 子树命名空间（V19 导出为 v5）
 INTERFACE_NS: str = "http://www.siemens.com/automation/Openness/SW/Interface/v5"
 
@@ -167,8 +169,9 @@ def parse_block_xml_text(xml_text: str) -> tuple[str, dict[str, InterfaceMember]
     缺块名 / XML 非法）返回 None，绝不抛出。
     """
     try:
+        assert_no_dtd(xml_text)  # 导出 XML 属半信任输入，先拒 DTD/实体声明
         root = ET.fromstring(xml_text)
-    except ET.ParseError:
+    except (ET.ParseError, ValueError):
         return None
     for tag in _BLOCK_ELEMENT_NAMES:
         blk = root.find(tag)

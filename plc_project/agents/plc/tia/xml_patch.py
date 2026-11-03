@@ -5,6 +5,8 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from agents.plc.tia.xml_safe import parse_xml_tree_no_dtd
+
 
 def _local_name(tag: str) -> str:
     if "}" in tag:
@@ -16,8 +18,8 @@ def read_block_name_from_xml(xml_path: str | Path) -> str:
     """Best-effort block Name from SimaticML AttributeList."""
     path = Path(xml_path)
     try:
-        root = ET.parse(path).getroot()
-    except ET.ParseError:
+        root = parse_xml_tree_no_dtd(path).getroot()  # DTD/实体拒绝(CWE-776)
+    except (ET.ParseError, ValueError):
         return path.stem
     for node in root.iter():
         if _local_name(node.tag) != "Name":
@@ -67,7 +69,7 @@ def patch_block_header_comment(
     out = Path(dest).expanduser().resolve() if dest else src
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    tree = ET.parse(src)
+    tree = parse_xml_tree_no_dtd(src)  # DTD/实体拒绝(CWE-776)
     root = tree.getroot()
     text_els = _find_header_comment_text_els(root)
     new_comment = (comment or "").strip()

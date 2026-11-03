@@ -682,7 +682,7 @@ def _resolve_ipv4(host: str, *, tries: int = 5) -> str | None:
 
 def _dns_udp_a_record(host: str) -> str | None:
     """Minimal DNS A lookup over UDP (bypasses flaky Windows getaddrinfo)."""
-    import random
+    import secrets
     import socket
     import struct
 
@@ -713,7 +713,8 @@ def _dns_udp_a_record(host: str) -> str | None:
         "8.8.8.8",
         "1.1.1.1",
     ]
-    txid = random.randint(0, 65535)
+    # 事务 ID 用于匹配应答，可预测会被离路径攻击者伪造响应（DNS 欺骗），须用加密随机。
+    txid = secrets.randbelow(65536)
     header = struct.pack("!HHHHHH", txid, 0x0100, 1, 0, 0, 0)
     question = qname + struct.pack("!HH", 1, 1)  # A IN
     packet = header + question

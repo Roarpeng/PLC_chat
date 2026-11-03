@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from agents.plc.tia.xml_safe import parse_xml_tree_no_dtd
 from plc_engine.canvas_model import (
     CanvasHmiDevice,
     CanvasHmiScreen,
@@ -380,8 +381,8 @@ def parse_classic_screen_xml(
 ) -> list[CanvasHmiWidget]:
     """Best-effort parse of Hmi.Screen Openness XML into widgets."""
     try:
-        root = ET.parse(path).getroot()
-    except ET.ParseError:
+        root = parse_xml_tree_no_dtd(path).getroot()  # DTD/实体拒绝(CWE-776)
+    except (ET.ParseError, ValueError):
         return []
 
     parents = _parent_map(root)
@@ -538,8 +539,8 @@ def parse_connections(device_dir: Path) -> list[HmiConnection]:
     found: list[HmiConnection] = []
     for xml in sorted(conn_dir.rglob("*.xml")):
         try:
-            root = ET.parse(xml).getroot()
-        except ET.ParseError:
+            root = parse_xml_tree_no_dtd(xml).getroot()  # DTD/实体拒绝(CWE-776)
+        except (ET.ParseError, ValueError):
             continue
         nodes = [
             el
@@ -600,8 +601,8 @@ def parse_hmi_tag_tables(device_dir: Path) -> dict[str, dict[str, str]]:
         return result
     for xml in sorted(tags_dir.rglob("*.xml")):
         try:
-            root = ET.parse(xml).getroot()
-        except ET.ParseError:
+            root = parse_xml_tree_no_dtd(xml).getroot()  # DTD/实体拒绝(CWE-776)
+        except (ET.ParseError, ValueError):
             continue
         for el in root.iter():
             if _local(el.tag).lower() not in {"tag", "hmi.tag", "hmitag", "plctag"}:

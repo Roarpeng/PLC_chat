@@ -21,6 +21,7 @@ import time
 import types
 import uuid
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -179,13 +180,17 @@ def fake_pcec(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
 
 
 @pytest.fixture(autouse=True)
-def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def _clean_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """隔离环境开关：不许子进程模式/allowlist 干扰，也不残留 fake 模块。"""
     monkeypatch.delenv("PLC_COMPILE_JOB_SUBPROCESS", raising=False)
     monkeypatch.delenv("PLC_COMPILE_JOB_SUBPROCESS_ALL", raising=False)
     monkeypatch.delenv("PLC_ALLOWED_PROJECT_DIRS", raising=False)
     # 兜底：上个用例若真实装过 pcec（线 A 交付后），恢复前先摘除
     monkeypatch.setitem(sys.modules, "plc_engine.pcec", None)
+    # 账本落盘隔离：pcec 缺席时 /changes 回落读 <PLC_WORK_DIR>/changes 真盘，
+    # 共享默认目录会被其它套件/前次运行的残留击穿 "==[]" 断言（真机复现：
+    # 连续第二次全量跑必挂）。指向每用例独立 tmp 目录，保全测试意图。
+    monkeypatch.setenv("PLC_WORK_DIR", str(tmp_path))
     # 单测里绝不碰真实 Openness
     monkeypatch.setattr(
         "gateway.app.services.plc.openness_session.ensure_project_open",

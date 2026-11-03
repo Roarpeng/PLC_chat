@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from agents.plc.tia.ir import HardwareDevice, PlcProject
+from agents.plc.tia.xml_safe import parse_xml_tree_no_dtd
 
 _DEVICE_TAGS = {
     "Device",
@@ -92,9 +93,9 @@ def _aml_attr(el: ET.Element, name: str) -> str:
 def parse_hardware_xml(path: Path) -> list[HardwareDevice]:
     """Extract device/rack/Profinet rows; empty list on unrecognized XML."""
     try:
-        tree = ET.parse(path)
+        tree = parse_xml_tree_no_dtd(path)  # DTD/实体拒绝(CWE-776)
         root = tree.getroot()
-    except ET.ParseError:
+    except (ET.ParseError, ValueError):
         return []
     devices: list[HardwareDevice] = []
     seen: set[tuple[str, str]] = set()

@@ -23,6 +23,7 @@ from agents.plc.tia.ir import (
     WatchEntry,
     WatchTable,
 )
+from agents.plc.tia.xml_safe import parse_xml_tree_no_dtd
 
 OFFICIAL_CATEGORIES = (
     "blocks",
@@ -200,9 +201,9 @@ def try_parse_surface(xml_file: Path, export_path: Path, rel: str) -> SurfaceHit
         return SurfaceHit(kind="hardware", hardware=devices)
 
     try:
-        tree = ET.parse(xml_file)
+        tree = parse_xml_tree_no_dtd(xml_file)  # DTD/实体拒绝(CWE-776)
         root = tree.getroot()
-    except ET.ParseError as exc:
+    except (ET.ParseError, ValueError) as exc:
         return SurfaceHit(kind="error", note=f"surface parse error in {rel}: {exc}")
 
     parsers = {

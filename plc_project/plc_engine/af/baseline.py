@@ -5,15 +5,18 @@ Provides access to official AF V1.2 TIA Portal V19 (.ap19) templates:
   with official libraries (LPMLV2022, LUC, LAF, LBC, LGF) and System Software Units.
 - Reference Project (Automation_Framework_PROJ_V1_2.zip): Reference implementation including
   U1_Unit1_SCL (100% SCL Unit/EM templates).
+
+Security triage: "Template" here means TIA Portal project-template .zip assets located by
+module constants — this module performs no string templating and never interpolates user
+input into any template/format string (static scanner "template injection" hit is a false
+positive). Zip extraction is guarded against path traversal (zip slip).
 """
 
 from __future__ import annotations
 
-import os
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Any
 
 DEFAULT_DOCS_DIR = Path(__file__).resolve().parent.parent.parent / "docs"
 STARTUP_ZIP_NAME = "Automation_Framework_Startup_PROJ_V1_2.zip"
@@ -75,11 +78,15 @@ def clone_startup_template(
     with zipfile.ZipFile(zip_path, "r") as z:
         prefix = f"{STARTUP_PROJ_SUBDIR}/"
         members = [m for m in z.namelist() if m.startswith(prefix)]
+        # zip-slip guard: every extracted member must resolve back inside project_folder
+        project_root = project_folder.resolve()
         for member in members:
             rel = member[len(prefix) :]
             if not rel:
                 continue
-            out_path = project_folder / rel
+            out_path = (project_folder / rel).resolve()
+            if not out_path.is_relative_to(project_root):
+                raise ValueError(f"zip member escapes target dir (zip slip): {member!r}")
             if member.endswith("/"):
                 out_path.mkdir(parents=True, exist_ok=True)
             else:
