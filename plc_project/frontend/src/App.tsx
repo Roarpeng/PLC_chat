@@ -1440,6 +1440,123 @@ const App: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ---- 迟到结果回填:轮询超时/中止 ≠ 作业失败——网关侧可能仍在跑并最终成功
+     (真机案例 c0b2f7ff…:27min 收敛 ok,但前端 16min 已写"等待失败",结果
+     从未送达)。延迟 6s 等 bootstrapRemoteMerge(挂载即跑的远程会话合并,会用
+     自己的快照整体覆盖 sessions)落地后再扫,避免回填被合并冲掉;再扫描
+     会话里"等待超时/等待失败/已停止等待"消息中保留的作业号逐一探测:
+     终态 ok → 重构画布+报告回填该会话(活跃会话同步上屏);
+     其余终态/404(过 1h 保留期) → 标记已处理不再探测;running → 下次再探。
+     作业号经 16 位 hex 白名单校验后才进 URL(防消息文本注入)。 */
+  useEffect(() => {
+    const JOB_ID_RE = /^[0-9a-f]{16}$/;
+    const done = new Set<string>(
+      (localStorage.getItem("plc-copilot.reconciledJobs.v1") || "")
+        .split(",")
+        .filter((x) => JOB_ID_RE.test(x)),
+    );
+    const markDone = (id: string) => {
+      done.add(id);
+      try {
+        localStorage.setItem("plc-copilot.reconciledJobs.v1", [...done].join(","));
+      } catch {
+        /* 静默 */
+      }
+    };
+    const pending: Array<{ sessionId: string; mid: string; jobId: string }> = [];
+    for (const s of sessionsRef.current) {
+      for (const m of s.messages) {
+        if (m.role !== "system") continue;
+        const t = m.text || "";
+        if (
+          !(
+            t.includes("### 重构流水线等待超时") ||
+            t.includes("### 重构流水线等待失败") ||
+            t.includes("已停止等待流水线结果")
+          )
+        ) {
+          continue;
+        }
+        const jm = t.match(/作业 ([0-9a-f]{16})/);
+        const jid = Array.isArray(jm) ? (jm[1] ?? "") : "";
+        if (jid && JOB_ID_RE.test(jid) && !done.has(jid)) {
+          pending.push({ sessionId: s.id, mid: m.id, jobId: jid });
+        }
+      }
+    }
+    if (!pending.length) return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      void runReconcile(pending, markDone, () => cancelled);
+    }, 6000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** 迟到回填的实际探测/写回(由挂载 effect 延迟 6s 触发,避开启动合并窗口) */
+  const runReconcile = async (
+    pending: Array<{ sessionId: string; mid: string; jobId: string }>,
+    markDone: (id: string) => void,
+    isCancelled: () => boolean,
+  ) => {
+    for (const { sessionId, mid, jobId } of pending) {
+      if (isCancelled()) return;
+      try {
+        const job = await requestPlc<RefactorPipelineJob>(
+          "/api/v1/plc/canvas/refactor-pipeline/" + encodeURIComponent(jobId),
+          { signal: AbortSignal.timeout?.(10000) },
+        );
+        if (job.status === "ok" && job.result?.canvas) {
+          commitSessionFor(sessionId, job.result.canvas, [
+            {
+              id: msgId(),
+              role: "system",
+              text:
+                pipelineResultMessage(job.result, { jobId }) +
+                `\n\n> 迟到回填：此前“等待超时”的作业 ${jobId} 已在网关侧完成，结果现已补回本会话。`,
+              ts: Date.now(),
+            },
+          ]);
+          setSessions((prev) => {
+            const list = prev.map((s) =>
+              s.id === sessionId
+                ? {
+                    ...s,
+                    messages: s.messages.map((m) =>
+                      m.id === mid && !m.text.includes("迟到回填")
+                        ? {
+                            ...m,
+                            text: m.text + `\n\n> 迟到回填：作业 ${jobId} 稍后完成，结果已补回（见下一条消息）。`,
+                          }
+                        : m,
+                    ),
+                  }
+                : s,
+            );
+            persistAndSync(list);
+            return list;
+          });
+          if (activeSessionIdRef.current === sessionId) {
+            setCanvas(job.result.canvas);
+            setSelectedBlockName(
+              Object.values(job.result.canvas.blocks).find((b) => b.block_type !== "DB")?.name ?? null,
+            );
+          }
+          markDone(jobId);
+        } else if (job.status === "error" || job.status === "cancelled") {
+          markDone(jobId);
+        }
+        /* running → 留待下次加载再探 */
+      } catch {
+        markDone(jobId); /* 404(过保留期)/网络错:不再探测 */
+      }
+    }
+  };
+
   /* 会话切换 / 新建 / 删除 —— LongTaskCenter 语义:长任务跟随自己的会话
      继续跑(不因切换中止),完成时写回所属会话;此处不再 abort。 */
   const handleSelectSession = (id: string) => {
