@@ -460,6 +460,13 @@ const App: React.FC = () => {
     projectNameRef.current = canvas.project_name;
   }, [canvas.project_name]);
 
+  /* 画布最新引用镜像:长任务(编译/重构流水线)完成时读它做"脏守卫"——
+   * 任务运行期间用户又改了画布(对象已换)时,结果不再自动覆盖画布。 */
+  const canvasRef = React.useRef(canvas);
+  canvasRef.current = canvas;
+  /** 回写在飞防重入(独立于对话输入锁:编译耗时可达数十分钟,不许占住聊天) */
+  const writebackInFlightRef = React.useRef(false);
+
   const refreshDegradations = React.useCallback(async () => {
     try {
       const res = await requestPlc<PlcJobSummary[] | null>(`/api/v1/plc/jobs?limit=10`, {
@@ -896,6 +903,7 @@ const App: React.FC = () => {
     phId: string,
   ): Promise<boolean> => {
     let jobId = "";
+    const canvasAtStart = canvasRef.current; // 脏守卫基准:完成后画布被改过则不自动覆盖
     const body: RefactorPipelineRequestBody = {
       canvas,
       project_name: canvas.project_name,
@@ -961,6 +969,15 @@ const App: React.FC = () => {
       paintCard(job.stages); // 终态阶段也进卡(完成/出错态可见)
 
       if (job.status === "ok" && job.result?.canvas) {
+        if (canvasRef.current !== canvasAtStart) {
+          // 脏守卫:流水线跑的几十分钟里用户又改了画布——结果不自动覆盖
+          updateMessageText(
+            phId,
+            pipelineResultMessage(job.result, { jobId }) +
+              "\n\n> 注意：流水线运行期间画布又有新的修改，结果未自动应用到画布（避免覆盖你的改动）；确认后可重新发起。",
+          );
+          return true;
+        }
         setCanvas(job.result.canvas);
         updateMessageText(phId, pipelineResultMessage(job.result, { jobId }));
         commitSession(job.result.canvas, []); // 刷新会话画布快照
@@ -1037,9 +1054,17 @@ const App: React.FC = () => {
       const intent = parseRefactorIntent(prompt);
       const isRefactor = intent.refactor && Object.keys(canvas.blocks).length > 0;
       if (isRefactor) {
-        // 作业式流水线(POST + 轮询,进度原位刷新);端点不可用(404/网络)时回退旧同步重构
-        if (await runRefactorPipeline(intent, phId)) return;
-        if (await runLegacySyncRefactor(phId)) return;
+        // 后台执行:流水线可长达数十分钟,不许占住对话输入锁(真机反馈:编译/
+        // 重构期间提问无法发送且无任何反应)。进度由进度卡+占位消息双通道呈现;
+        // 期间用户再编辑画布由完成处的脏守卫兜底(不自动覆盖)。
+        void (async () => {
+          // 作业式流水线(POST + 轮询,进度原位刷新);端点不可用(404/网络)时回退旧同步重构
+          if (await runRefactorPipeline(intent, phId)) return;
+          if (await runLegacySyncRefactor(phId)) return;
+          // 两级都未接手(网关缺席等):占位不留"正在思考…"
+          updateMessageText(phId, "重构未执行：网关不可达或端点暂不可用，请稍后重试。");
+        })();
+        return;
       }
       const isPackageIntent =
         prompt.includes("打包") ||
@@ -1865,9 +1890,13 @@ const App: React.FC = () => {
     }
   };
 
-  /* 人工确认门禁回写：异步编译作业 + 轮询；路径取自 canvas.source */
+  /* 人工确认门禁回写：异步编译作业 + 轮询；路径取自 canvas.source。
+   * 不占对话输入锁:编译轮询可达数十分钟,期间必须还能提问(真机反馈:
+   * 编译中提问无法发送且无反应);防重入用独立 ref。 */
   const handleExecuteWriteback = async () => {
-    setIsSubmitting(true);
+    if (writebackInFlightRef.current) return;
+    writebackInFlightRef.current = true;
+    const canvasAtStart = canvasRef.current;
     setShowConfirmModal(false);
     try {
       const projectPath = canvas.source?.project_path || `${canvas.project_name}.ap19`;
@@ -1931,15 +1960,33 @@ const App: React.FC = () => {
         });
 
         if (job.canvas) {
-          setCanvas(job.canvas);
-          commitSession(job.canvas, [
-            {
-              id: msgId(),
-              role: "system",
-              text: [`编译作业 ${job.status}`, ...notes].join("："),
-              ts: Date.now(),
-            },
-          ]);
+          if (canvasRef.current !== canvasAtStart) {
+            // 脏守卫:编译期间用户又改了画布——结果不自动覆盖,消息照记
+            commitSession(canvasRef.current, [
+              {
+                id: msgId(),
+                role: "system",
+                text: [
+                  `编译作业 ${job.status}`,
+                  ...notes,
+                  "（编译期间画布有新的修改，结果未自动覆盖画布，确认后可重新回写）",
+                ].join("："),
+                ts: Date.now(),
+              },
+            ]);
+            setWritebackNotice("编译期间画布又有修改：结果保留在对话中，未自动覆盖画布");
+            setTimeout(() => setWritebackNotice(null), 10000);
+          } else {
+            setCanvas(job.canvas);
+            commitSession(job.canvas, [
+              {
+                id: msgId(),
+                role: "system",
+                text: [`编译作业 ${job.status}`, ...notes].join("："),
+                ts: Date.now(),
+              },
+            ]);
+          }
         }
         setAttributions((job.attributions || []) as CompilerAttribution[]);
         let notice =
@@ -1968,7 +2015,11 @@ const App: React.FC = () => {
               signal: AbortSignal.timeout?.(600000),
             });
             if (fdata?.canvas) {
-              setCanvas(fdata.canvas);
+              if (canvasRef.current !== canvasAtStart) {
+                notice += "（期间画布又有修改，修正结果未自动覆盖画布）";
+              } else {
+                setCanvas(fdata.canvas);
+              }
               setAttributions((fdata.attributions || []) as CompilerAttribution[]);
               notice = fdata.ok
                 ? `自动修正后编译通过（${(fdata.rounds || []).length} 轮）`
@@ -1997,7 +2048,7 @@ const App: React.FC = () => {
       setTimeout(() => setWritebackNotice(null), 8000);
       bumpChangesRefresh(); // 确认/预检阶段失败也可能落账 → 尽力刷新
     } finally {
-      setIsSubmitting(false);
+      writebackInFlightRef.current = false; // 释放防重入(不占对话锁)
     }
   };
 
