@@ -49,24 +49,31 @@ beforeEach(() => {
 });
 
 describe("读接口:wire snake_case → 前端 camelCase", () => {
-  it("fetchProjects 映射 meta 列表", async () => {
+  it("fetchProjects 映射 meta 列表(秒级时间戳归一为毫秒;空 id 伪工程过滤)", async () => {
     mockedRequest.mockResolvedValueOnce([
-      { id: "prj-1", name: "HR001", updated_at: 200, conversation_count: 3 },
+      { id: "prj-1", name: "HR001", updated_at: 1790000000, conversation_count: 3 },
+      { name: "legacy-pseudo-no-id", updated_at: 1790000000 },
     ] as never);
     const metas = await fetchProjects();
     expect(mockedRequest.mock.calls[0][0]).toBe("/api/v1/plc/canvas/projects");
     expect(metas).toEqual([
-      { id: "prj-1", name: "HR001", createdAt: 0, updatedAt: 200, conversationCount: 3 },
+      {
+        id: "prj-1",
+        name: "HR001",
+        createdAt: 0,
+        updatedAt: 1790000000 * 1000,
+        conversationCount: 3,
+      },
     ]);
   });
 
-  it("fetchProject / fetchConversation 映射完整对象", async () => {
+  it("fetchProject / fetchConversation 映射完整对象(毫秒直通;消息 ts 秒级归一)", async () => {
     mockedRequest.mockResolvedValueOnce({
       id: "prj-1",
       project_name: "HR001",
       canvas: { project_name: "HR001", blocks: {}, hmi_widgets: {}, tags: {} },
-      created_at: 100,
-      updated_at: 200,
+      created_at: 1790000000,
+      updated_at: 1790000100,
       conversation_count: 1,
     } as never);
     const p = await fetchProject("prj-1");
@@ -74,26 +81,28 @@ describe("读接口:wire snake_case → 前端 camelCase", () => {
     expect(p!.name).toBe("HR001");
     expect(p!.canvas.project_name).toBe("HR001");
     expect(p!.conversationCount).toBe(1);
+    expect(p!.updatedAt).toBe(1790000100 * 1000);
 
     mockedRequest.mockResolvedValueOnce({
       id: "cv-1",
       project_id: "prj-1",
       title: "t",
-      created_at: 1,
-      updated_at: 2,
-      messages: [{ id: "m1", role: "user", text: "x", ts: 1 }],
+      created_at: 1790000000,
+      updated_at: 1790000050,
+      messages: [{ id: "m1", role: "user", text: "x", ts: 1790000050 }],
     } as never);
     const c = await fetchConversation("cv-1");
     expect(c).not.toBeNull();
     expect(c!.projectId).toBe("prj-1");
     expect(c!.messages.length).toBe(1);
+    expect(c!.messages[0].ts).toBe(1790000050 * 1000);
 
     mockedRequest.mockResolvedValueOnce([
-      { id: "cv-1", project_id: "prj-1", title: "t", updated_at: 9 },
+      { id: "cv-1", project_id: "prj-1", title: "t", updated_at: 1790000000 },
     ] as never);
     const metas = await fetchConversations("prj-1");
     expect(metas).toEqual([
-      { id: "cv-1", projectId: "prj-1", title: "t", createdAt: 0, updatedAt: 9 },
+      { id: "cv-1", projectId: "prj-1", title: "t", createdAt: 0, updatedAt: 1790000000 * 1000 },
     ]);
   });
 });
@@ -119,7 +128,7 @@ describe("写接口:调用契约与 camel → snake body", () => {
     mockedRequest.mockResolvedValueOnce({
       id: "prj-aaa111bbb222",
       name: "HR001",
-      updated_at: 2000,
+      updated_at: 1790002000,
       conversation_count: 0,
     } as never);
     const meta = await putProject(proj());
@@ -137,7 +146,7 @@ describe("写接口:调用契约与 camel → snake body", () => {
       id: "prj-aaa111bbb222",
       name: "HR001",
       createdAt: 0,
-      updatedAt: 2000,
+      updatedAt: 1790002000 * 1000,
       conversationCount: 0,
     });
   });

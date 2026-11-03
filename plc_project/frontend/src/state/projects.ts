@@ -58,12 +58,19 @@ function num(v: unknown): number {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
+/** 时间戳归一:服务端时间单位混杂(POST 新建的 meta 是 epoch 秒,legacy 会话
+ *  迁移来的是毫秒),前端一律用毫秒——<1e12 视为秒 ×1000(修正侧栏 1970 日期)。 */
+function tsMs(v: unknown): number {
+  const n = num(v);
+  return n > 0 && n < 1e12 ? n * 1000 : n;
+}
+
 function toProjectMeta(raw: Wire): ProjectMeta {
   return {
     id: str(raw.id),
     name: str(raw.name ?? raw.project_name),
-    createdAt: num(raw.created_at ?? raw.createdAt),
-    updatedAt: num(raw.updated_at ?? raw.updatedAt),
+    createdAt: tsMs(raw.created_at ?? raw.createdAt),
+    updatedAt: tsMs(raw.updated_at ?? raw.updatedAt),
     conversationCount: num(raw.conversation_count ?? raw.conversationCount),
   };
 }
@@ -81,16 +88,21 @@ function toConversationMeta(raw: Wire): ConversationMeta {
     id: str(raw.id),
     projectId: str(raw.project_id ?? raw.projectId),
     title: str(raw.title),
-    createdAt: num(raw.created_at ?? raw.createdAt),
-    updatedAt: num(raw.updated_at ?? raw.updatedAt),
+    createdAt: tsMs(raw.created_at ?? raw.createdAt),
+    updatedAt: tsMs(raw.updated_at ?? raw.updatedAt),
   };
 }
 
 function toConversation(raw: Wire): Conversation | null {
   if (!str(raw.id)) return null;
+  const messages = Array.isArray(raw.messages) ? (raw.messages as ChatMessage[]) : [];
   return {
     ...toConversationMeta(raw),
-    messages: Array.isArray(raw.messages) ? (raw.messages as ChatMessage[]) : [],
+    // 消息 ts 同样归一到毫秒(防御服务端秒级 ts 混入,时间标签才不会 1970)
+    messages: messages.map((m) => ({
+      ...m,
+      ts: typeof m?.ts === "number" && m.ts > 0 && m.ts < 1e12 ? m.ts * 1000 : (m?.ts ?? 0),
+    })),
   };
 }
 
@@ -148,6 +160,18 @@ export async function fetchProjects(): Promise<ProjectMeta[]> {
     return (Array.isArray(data) ? data.map(toProjectMeta) : []).filter((p) => p.id);
   } catch {
     return [];
+  }
+}
+
+/** 触发 legacy sessions → projects/conversations 迁移(后端幂等,可重复调)。
+ *  迁移沿用原 session id 作 conversation id → 本地 localStorage 里同 id 的
+ *  历史会话点开即命中,消息/画布完整。失败静默(网关缺席不阻塞启动)。 */
+export async function migrateProjects(): Promise<boolean> {
+  try {
+    await requestPlc("/api/v1/plc/canvas/projects/migrate", { method: "POST" });
+    return true;
+  } catch {
+    return false;
   }
 }
 

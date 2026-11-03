@@ -48,6 +48,8 @@ import {
   createProject,
   createConversation,
   putProject,
+  putConversation,
+  migrateProjects,
   deleteProject as apiDeleteProject,
   type ProjectMeta,
   type ConversationMeta,
@@ -464,6 +466,9 @@ const App: React.FC = () => {
    * 任务运行期间用户又改了画布(对象已换)时,结果不再自动覆盖画布。 */
   const canvasRef = React.useRef(canvas);
   canvasRef.current = canvas;
+  /** 会话列表镜像:P 线对话消息同步读最新会话(标题/消息/updatedAt) */
+  const sessionsRef = React.useRef(sessions);
+  sessionsRef.current = sessions;
   /** 回写在飞防重入(独立于对话输入锁:编译耗时可达数十分钟,不许占住聊天) */
   const writebackInFlightRef = React.useRef(false);
 
@@ -623,7 +628,9 @@ const App: React.FC = () => {
   /* ---------------- P 线接线(契约 25 §1):工程一等实体 ---------------- */
 
   /** 画布权威回写(防抖 800ms 合并):活跃工程存在时 fire-and-forget putProject,
-   *  失败静默——本地 localStorage 仍是第一层,服务端画布只是工程容器权威副本 */
+   *  同时把活跃会话的消息 upsert 进 P 线对话(putConversation)——没有这步,
+   *  侧栏工程树里的对话永远是空壳,点进去(尤其跨设备水合)看不到历史消息。
+   *  失败静默——本地 localStorage 仍是第一层,服务端只是工程容器权威副本。 */
   const scheduleProjectCanvasSync = (nextCanvas: CanvasStateData) => {
     const pid = activeProjectIdRef.current;
     if (!pid) return;
@@ -636,6 +643,19 @@ const App: React.FC = () => {
         updatedAt: Date.now(),
         canvas: nextCanvas,
       });
+      const sid = activeSessionIdRef.current;
+      const convId = sid ? sessionConvMapRef.current.get(sid) : undefined;
+      const session = sid ? sessionsRef.current.find((s) => s.id === sid) : undefined;
+      if (convId && session) {
+        void putConversation({
+          id: convId,
+          projectId: pid,
+          title: session.title || "新对话",
+          createdAt: session.createdAt ?? session.updatedAt,
+          updatedAt: Date.now(),
+          messages: session.messages,
+        });
+      }
     }, 800);
   };
 
@@ -648,6 +668,7 @@ const App: React.FC = () => {
     canvasToRegister: CanvasStateData,
     conversationTitle: string,
     localSessionId: string,
+    initialMessages?: ChatMessage[],
   ): Promise<void> => {
     try {
       const proj = await createProject(name, canvasToRegister);
@@ -658,6 +679,18 @@ const App: React.FC = () => {
         setConversationList((prev) => (prev.some((c) => c.id === conv.id) ? prev : [...prev, conv]));
         sessionConvMapRef.current.set(localSessionId, conv.id);
         sessionConvMapRef.current.set(conv.id, localSessionId);
+        /* 首批消息即刻入对话:不等下一次 commit——否则刚导入的工程,对话是空壳,
+           点进去(尤其刷新/跨设备水合)看不到导入消息与简报 */
+        if (initialMessages?.length) {
+          void putConversation({
+            id: conv.id,
+            projectId: proj.id,
+            title: conversationTitle,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            messages: initialMessages,
+          });
+        }
       }
       setActiveProject(proj.id);
     } catch {
@@ -665,16 +698,20 @@ const App: React.FC = () => {
     }
   };
 
-  /* 启动水合:拉工程树 + 各工程对话,侧栏从此反映服务端真实状态
-     (projects.ts 全部 mock-first,网关缺席得空列表,侧栏保持空态提示) */
+  /* 启动水合:先触发 legacy 会话迁移(幂等,沿用原 session id 作对话 id →
+     本地同 id 历史会话点开即命中,跨设备也有完整消息/画布),再拉工程树 +
+     各工程对话,侧栏从此反映服务端真实状态(mock-first,网关缺席不阻塞)。 */
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      await migrateProjects();
+      if (cancelled) return;
       const projects = await fetchProjects();
-      if (cancelled || !projects.length) return;
-      const convLists = await Promise.all(projects.map((p) => fetchConversations(p.id)));
       if (cancelled) return;
       setProjectList(projects);
+      if (!projects.length) return;
+      const convLists = await Promise.all(projects.map((p) => fetchConversations(p.id)));
+      if (cancelled) return;
       setConversationList(convLists.flat());
     })();
     return () => {
@@ -1336,13 +1373,14 @@ const App: React.FC = () => {
     setFocus(null);
     setWritebackNotice(`已导入项目 ${sourceName}`);
     setTimeout(() => setWritebackNotice(null), 3000);
-    /* P 线注册:导入的工程成为一等实体,对话挂进工程树(侧栏立即可见);
-       mock-first——网关缺席时静默,本地会话照常 */
+    /* P 线注册:导入的工程成为一等实体,对话挂进工程树(侧栏立即可见),
+       导入消息+简报即刻写入对话;mock-first——网关缺席时静默,本地会话照常 */
     void registerProjectForSession(
       imported.project_name || sourceName,
       imported,
       s.title,
       s.id,
+      s.messages,
     );
   };
 
