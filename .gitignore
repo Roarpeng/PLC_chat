@@ -8,3 +8,17 @@ assets/
 .graphflow-cache/
 graphflow-out/
 *.tsbuildinfo
+
+# 工具运行状态与本地产物(2026-11-03 增补:push 后仍显示新文件的根因——未跟踪,非未推送)
+.graphflow/
+.devctl/
+.researchos/
+.workbuddy/
+.ruff_cache/
+PLC_Openness_data/
+node_modules/
+__pycache__/
+
+# AF 参考归档(docs/17-18 引用的下载件,大文件按需本地下载,不入库)
+plc_project/docs/*.zip
+plc_project/docs/*.pdf
