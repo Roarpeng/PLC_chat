@@ -29,6 +29,8 @@ export interface ProjectSidebarProps {
   onNewConversation(): void;
   onNewProject(): void;
   onDeleteProject(pid: string): void;
+  /** 删除对话(悬停垃圾桶 + 确认弹窗后回调;cid = conversation_id) */
+  onDeleteConversation?(cid: string): void;
   onToggleCollapse(): void;
 }
 
@@ -159,21 +161,29 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
   onNewConversation,
   onNewProject,
   onDeleteProject,
+  onDeleteConversation,
   onToggleCollapse,
 }) => {
   /** 待确认删除的工程 id(非空 = 弹窗打开) */
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingDelete = projects.find((p) => p.id === pendingDeleteId) ?? null;
+  /** 待确认删除的对话 id(与工程共用确认弹窗,Esc/遮罩同规则) */
+  const [pendingDeleteConvId, setPendingDeleteConvId] = useState<string | null>(null);
+  const pendingDeleteConv =
+    conversations.find((c) => c.id === pendingDeleteConvId) ?? null;
 
   // Esc 关闭确认弹窗(与遮罩点击、取消按钮等价)
   useEffect(() => {
-    if (!pendingDeleteId) return;
+    if (!pendingDeleteId && !pendingDeleteConvId) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setPendingDeleteId(null);
+      if (e.key === "Escape") {
+        setPendingDeleteId(null);
+        setPendingDeleteConvId(null);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [pendingDeleteId]);
+  }, [pendingDeleteId, pendingDeleteConvId]);
 
   // 防御:只保留当前工程的对话,并按 updatedAt 降序(新对话在上)
   const activeConversations = useMemo(
@@ -185,41 +195,78 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
     [conversations, activeProjectId],
   );
 
-  const confirmDialog = pendingDelete ? (
+  const confirmDialog = (pendingDelete || pendingDeleteConv) ? (
     <div
       className="psb-confirm-overlay"
       onClick={(e) => {
-        if (e.target === e.currentTarget) setPendingDeleteId(null);
+        if (e.target === e.currentTarget) {
+          setPendingDeleteId(null);
+          setPendingDeleteConvId(null);
+        }
       }}
     >
       <div className="psb-confirm" role="dialog" aria-modal="true" aria-labelledby="psb-confirm-title">
-        <div className="psb-confirm-head">
-          <span className="psb-confirm-mark" aria-hidden="true">
-            <IconWarn />
-          </span>
-          <div className="psb-confirm-heading">
-            <div className="psb-confirm-title" id="psb-confirm-title">
-              删除工程「{pendingDelete.name}」?
+        {pendingDelete ? (
+          <>
+            <div className="psb-confirm-head">
+              <span className="psb-confirm-mark" aria-hidden="true">
+                <IconWarn />
+              </span>
+              <div className="psb-confirm-heading">
+                <div className="psb-confirm-title" id="psb-confirm-title">
+                  删除工程「{pendingDelete.name}」?
+                </div>
+                <p className="psb-confirm-text">将删除该工程下的所有对话和画布,不可恢复。</p>
+              </div>
             </div>
-            <p className="psb-confirm-text">将删除该工程下的所有对话和画布,不可恢复。</p>
-          </div>
-        </div>
-        <div className="psb-confirm-actions">
-          <button type="button" className="btn btn--ghost" onClick={() => setPendingDeleteId(null)}>
-            取消
-          </button>
-          <button
-            type="button"
-            className="btn btn--danger"
-            onClick={() => {
-              const id = pendingDelete.id;
-              setPendingDeleteId(null);
-              onDeleteProject(id);
-            }}
-          >
-            删除工程
-          </button>
-        </div>
+            <div className="psb-confirm-actions">
+              <button type="button" className="btn btn--ghost" onClick={() => setPendingDeleteId(null)}>
+                取消
+              </button>
+              <button
+                type="button"
+                className="btn btn--danger"
+                onClick={() => {
+                  const id = pendingDelete.id;
+                  setPendingDeleteId(null);
+                  onDeleteProject(id);
+                }}
+              >
+                删除工程
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="psb-confirm-head">
+              <span className="psb-confirm-mark" aria-hidden="true">
+                <IconWarn />
+              </span>
+              <div className="psb-confirm-heading">
+                <div className="psb-confirm-title" id="psb-confirm-title">
+                  删除对话「{pendingDeleteConv?.title || "未命名对话"}」?
+                </div>
+                <p className="psb-confirm-text">将删除该对话的全部消息,不可恢复;工程画布保留。</p>
+              </div>
+            </div>
+            <div className="psb-confirm-actions">
+              <button type="button" className="btn btn--ghost" onClick={() => setPendingDeleteConvId(null)}>
+                取消
+              </button>
+              <button
+                type="button"
+                className="btn btn--danger"
+                onClick={() => {
+                  const cid = pendingDeleteConv?.id;
+                  setPendingDeleteConvId(null);
+                  if (cid) onDeleteConversation?.(cid);
+                }}
+              >
+                删除对话
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   ) : null;
@@ -353,6 +400,15 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                           <span className="psb-conv-dot" aria-hidden="true" />
                           <span className="psb-conv-title">{c.title || "未命名对话"}</span>
                           <span className="psb-conv-time">{relativeTime(c.updatedAt)}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="psb-conv-del"
+                          aria-label={`删除对话 ${c.title || "未命名对话"}`}
+                          title="删除对话"
+                          onClick={() => setPendingDeleteConvId(c.id)}
+                        >
+                          <IconTrash />
                         </button>
                       </div>
                     );

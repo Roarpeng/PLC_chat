@@ -51,6 +51,7 @@ import {
   putConversation,
   migrateProjects,
   deleteProject as apiDeleteProject,
+  deleteConversation as apiDeleteConversation,
   type ProjectMeta,
   type ConversationMeta,
 } from "./state/projects";
@@ -1329,9 +1330,49 @@ const App: React.FC = () => {
     }
   };
 
+  /** 侧栏删除对话:服务端 P 线对话 + 映射到的本地会话一起删;删的是活跃会话
+   *  则复位到空白态(镜像 handleDeleteSession 的活跃分支);工程计数本地扣减。 */
+  const handleDeleteConversation = (cid: string) => {
+    const conv = conversationList.find((c) => c.id === cid);
+    const localId = sessionConvMapRef.current.get(cid) ?? cid;
+    sessionConvMapRef.current.delete(cid);
+    sessionConvMapRef.current.delete(localId);
+    setConversationList((prev) => prev.filter((c) => c.id !== cid));
+    if (conv) {
+      setProjectList((prev) =>
+        prev.map((p) =>
+          p.id === conv.projectId
+            ? { ...p, conversationCount: Math.max(0, (p.conversationCount ?? 1) - 1) }
+            : p,
+        ),
+      );
+    }
+    void apiDeleteConversation(cid).then((ok) => {
+      if (!ok) {
+        setWritebackNotice("对话在服务端删除失败(网关不可达),刷新后可能重新出现");
+        setTimeout(() => setWritebackNotice(null), 8000);
+      }
+    });
+    // 本地会话存在则同步删除(legacy 同步通道一并清)
+    if (sessions.some((s) => s.id === localId)) {
+      const list = sessions.filter((s) => s.id !== localId);
+      setSessions(list);
+      persistAndSync(list);
+      void syncSessionDelete(localId);
+      if (activeSessionIdRef.current === localId) {
+        abortCompilePoll();
+        abortRefactorPoll();
+        setPipeline(null);
+        setActiveSession(null);
+        setCanvas(blankCanvas(""));
+        setSelectedBlockName(null);
+        setFocus(null);
+      }
+    }
+  };
+
   /* 变量引用跳转 */
-  const handleJumpToRef = (ref: VarRef) => {
-    if (ref.kind === "network") {
+  const handleJumpToRef = (ref: VarRef) => {    if (ref.kind === "network") {
       if (ref.blockName) setSelectedBlockName(ref.blockName);
       setFocus({ kind: "network", blockName: ref.blockName, networkId: ref.networkId });
     } else {
@@ -2262,6 +2303,7 @@ const App: React.FC = () => {
             if (conv) handleSelectConversation(conv.id);
           }}
           onSelectConversation={handleSelectConversation}
+          onDeleteConversation={handleDeleteConversation}
           onNewConversation={() => handleNewSession()}
           onNewProject={() => setShowOnboarding(true)}
           onDeleteProject={(pid) => {
