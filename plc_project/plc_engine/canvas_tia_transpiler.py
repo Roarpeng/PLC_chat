@@ -21,16 +21,51 @@ from plc_engine.canvas_model import CanvasState, attribute_compiler_errors
 
 
 def precheck_canvas_for_writeback(canvas: CanvasState) -> dict[str, Any]:
-    """写回前的本地 SCL 预检门禁（复用 plc_engine.scl_precheck 的规则）。
+    """写回前的本地 SCL 预检门禁（复用 plc_engine.scl_precheck 并接入 writeback_linter.lint_bundle）。
 
+    执行 R1~R5（作用域 #、单线圈 %Q、CASE 内禁状态指令、数据类型隐式转换、BOM 头等）静态规则检查。
     归一化返回 {ok, errors, warnings, findings, summary}：
-    - ok=False（存在 error 级问题）→ 调用方必须 fail-closed，不得写 TIA；
+    - ok=False（存在 error 级问题）→ 调用方必须 fail-closed 严格拦截，不得写 TIA；
     - 仅 warning 不阻断，但要带进结果供前端展示。
     """
     from plc_engine.scl_precheck import precheck_canvas
+    from plc_engine.writeback_contract import BlockArtifact
+    from plc_engine.writeback_linter import lint_bundle
 
-    report = precheck_canvas(canvas)
+    # 只预检真正准备写回的 draft 块；未改动的 synced 原件块不进入写集，不应误拦写回
+    draft_names = [
+        name for name, block in canvas.blocks.items()
+        if getattr(block, "status", "") == "draft" and not getattr(block, "protected", False)
+    ]
+    check_names = draft_names if draft_names else None
+    report = precheck_canvas(canvas, block_names=check_names)
     findings = list(report.get("findings") or [])
+
+    # 接入 writeback_linter.lint_bundle 进行 R1~R5 静态门禁
+    artifacts: list[BlockArtifact] = []
+    for name, block in canvas.blocks.items():
+        if getattr(block, "protected", False):
+            continue
+        if check_names is not None and name not in check_names:
+            continue
+        source = block.get_full_scl()
+        kind = getattr(block, "block_type", "") or "FB"
+        if kind == "DB":
+            kind = "INSTANCE_DB"
+        artifacts.append(BlockArtifact(name=block.name or name, kind=kind, source=source))
+
+    if artifacts:
+        linter_findings = lint_bundle(artifacts, bom_enabled=True)
+        for f in linter_findings:
+            findings.append({
+                "target_type": "block",
+                "target_id": f.block,
+                "rule": f.rule,
+                "severity": f.severity,
+                "line": f.line,
+                "message": f"[{f.rule}] {f.message}",
+            })
+
     errors = [f for f in findings if f.get("severity") == "error"]
     warnings = [f for f in findings if f.get("severity") == "warning"]
     return {
@@ -203,16 +238,49 @@ def execute_canvas_writeback(
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Execute 1:1 writeback from Canvas to TIA Portal and attribute compiler results.
 
+    前置执行 precheck_canvas_for_writeback 静态门禁：若存在 error 严格 fail-closed 拦截；
+    接入单文件批次回写通道（Mega-Source AF_Batch.scl）。
+
     Returns:
         (writeback_result, error_attributions)
     """
+    # 1. 静态门禁预检：fail-closed 严格拦截
+    precheck = precheck_canvas_for_writeback(canvas)
+    if not precheck.get("ok"):
+        writeback_result = {
+            "ok": False,
+            "success": False,
+            "blocked": True,
+            "error": "precheck_failed",
+            "message": precheck.get("summary") or "本地静态门禁未通过，已拦截回写。",
+            "findings": precheck.get("findings", []),
+            "errors": precheck.get("errors", []),
+        }
+        attributions: list[dict[str, Any]] = []
+        for err in precheck.get("errors", []):
+            blk = err.get("target_id")
+            msg = err.get("message", "静态门禁错误")
+            if blk and blk in canvas.blocks:
+                canvas.blocks[blk].status = "error"
+                if msg not in canvas.blocks[blk].errors:
+                    canvas.blocks[blk].errors.append(msg)
+            attributions.append({
+                "target_type": "block",
+                "target_id": blk,
+                "severity": "error",
+                "message": msg,
+                "detail": str(err),
+            })
+        canvas.last_compile_result = writeback_result
+        return writeback_result, attributions
+
     if temp_bundle_parent:
         bundle_dir = canvas_to_tia_bundle(canvas, Path(temp_bundle_parent) / "canvas_bundle")
     else:
         temp_dir = tempfile.mkdtemp(prefix="canvas_writeback_")
         bundle_dir = canvas_to_tia_bundle(canvas, Path(temp_dir) / "bundle")
 
-    # Run writeback via HostGateway or Worker
+    # Run single-file batch writeback via HostGateway or Worker
     writeback_result = execute_writeback(
         project_path=project_path,
         bundle_dir=bundle_dir,

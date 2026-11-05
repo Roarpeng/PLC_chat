@@ -1,0 +1,242 @@
+/* 工程进度看板（ProjectProgressPanel）：右侧抽屉，方角 + 设计系统变量 */
+.pp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(13, 16, 23, 0.42);
+}
+
+.pp-panel {
+  width: min(600px, 94vw);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--line-2);
+  box-shadow: -12px 0 32px rgba(0, 0, 0, 0.18);
+  font-family: var(--sans);
+  color: var(--ink);
+}
+
+.pp-panel .muted {
+  color: var(--ink-3);
+}
+
+.pp-head {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.pp-head strong {
+  font-size: 15px;
+}
+
+.pp-head .muted {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pp-head-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.pp-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.pp-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pp-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pp-body {
+  flex: 1;
+  overflow: auto;
+  padding: 14px 16px 32px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.pp-section {
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.pp-section > h4 {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pp-section-body {
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.pp-empty {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.pp-kv {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 6px 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.pp-kv .k {
+  color: var(--ink-3);
+}
+
+.pp-jobs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.pp-jobs button {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pp-jobs button.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.pp-job-id {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.pp-job-name {
+  font-weight: 600;
+}
+
+.pp-job-flags {
+  color: var(--ink-3);
+  font-size: 11px;
+  flex-basis: 100%;
+}
+
+.pp-badge {
+  padding: 1px 6px;
+  border: 1px solid var(--line-2);
+  font-size: 11px;
+}
+
+.pp-badge.is-ok {
+  color: var(--run);
+  border-color: var(--run);
+}
+
+.pp-badge.is-warn {
+  color: var(--standby);
+  border-color: var(--standby);
+}
+
+.pp-badge.is-fail {
+  color: var(--fault);
+  border-color: var(--fault);
+}
+
+.pp-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.pp-download {
+  display: inline-block;
+  padding: 5px 12px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.pp-download:hover {
+  background: var(--accent-soft);
+}
+
+.pp-chat form {
+  display: flex;
+  gap: 8px;
+}
+
+.pp-chat input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.pp-chat-answer {
+  display: grid;
+  gap: 8px;
+}
+
+.pp-chat-text {
+  white-space: pre-wrap;
+  font-size: 12.5px;
+  line-height: 1.65;
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+}

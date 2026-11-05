@@ -205,3 +205,27 @@ def test_build_compile_receipt_factory() -> None:
     assert rpkg.build_compile_receipt({})["compiled"] is False
     ok = rpkg.build_compile_receipt({"compiled": True, "errors": [], "warnings_count": 0})
     assert ok["ok"] is True
+
+
+def test_package_includes_zap_archive_unzipped(tmp_path: Path) -> None:
+    """重构后交付包：解压后包含 .zap19 归档，方便 PLC 直接导入打开。"""
+    pkg = _build(tmp_path)
+    zip_path = Path(pkg["zip_path"])
+    assert "zap_path" in pkg
+    assert "zap_name" in pkg
+    assert pkg["zap_name"] == "DemoLine_AF.zap19"
+
+    # 解压外层交付母包
+    unzip_dir = tmp_path / "extracted_delivery"
+    with zipfile.ZipFile(zip_path) as zf:
+        zf.extractall(unzip_dir)
+
+    # 验证解压后有 .zap19
+    unpacked_zap = unzip_dir / "DemoLine_AF.zap19"
+    assert unpacked_zap.is_file(), f"解压交付包后未找到 {pkg['zap_name']}"
+
+    # 验证 .zap19 内包含西门子源文件
+    with zipfile.ZipFile(unpacked_zap) as zap_zf:
+        names = zap_zf.namelist()
+        assert any(n.endswith(".ap19") for n in names)
+        assert "src/MotorCtrl.scl" in names

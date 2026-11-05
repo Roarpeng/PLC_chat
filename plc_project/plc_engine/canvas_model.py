@@ -753,7 +753,10 @@ def attribute_compiler_errors(canvas: CanvasState, compile_result: dict[str, Any
             shown = "；".join(f"行 {ln}：{txt}" for ln, txt in issues[:3])
             more = f"（共 {len(issues)} 条）" if len(issues) > 3 else ""
         else:
-            shown, more = detail[:300], ""
+            # 修②:真机案例(51c23082…)"详情戛然而止于 Plc"即此处旧 300 截断吃掉了
+            # InnerMessages/编译诊断(前缀+工程路径已占 ~290 字符)。放大到 2000,
+            # 让 know-how/行号级根因透出;attributions.detail 同步放大。
+            shown, more = detail[:2000], ""
         msg = f"博图生成失败：块 [{blk or '?'}] {shown}{more}".strip()
         if blk and blk in canvas.blocks:
             canvas.blocks[blk].status = "error"
@@ -765,7 +768,7 @@ def attribute_compiler_errors(canvas: CanvasState, compile_result: dict[str, Any
                 "target_id": blk,
                 "severity": "error",
                 "message": msg,
-                "detail": detail[:1000],
+                "detail": detail[:2000],
             }
         )
 
@@ -1325,7 +1328,7 @@ def _autofix_bool_sr_latch_rewrite(
     ops: list[dict[str, Any]] = []
     diagnostics: list[dict[str, Any]] = []
 
-    def _bool_roots(block: "CanvasBlock", text: str) -> set[str]:
+    def _bool_roots(block: CanvasBlock, text: str) -> set[str]:
         """Bool 声明根集合：块结构化 interface + 当前文本声明区(两者取并集)。
 
         R5 重建后声明区在 scl_body 文本里，结构化 interface 是旧扁平形态——
@@ -1336,7 +1339,7 @@ def _autofix_bool_sr_latch_rewrite(
             for v in block.interface
             if (v.data_type or "").strip().lower() == "bool"
         }
-        for m in re.finditer(r'^\s*(?:"([^"]+)"|([A-Za-z_]\w*))\s*:\s*Bool\s*;', text, re.M):
+        for m in re.finditer(r'^\s*(?:"([^"]+)"|([A-Za-z_]\w*))\s*:\s*Bool\s*;', text, re.MULTILINE):
             roots.add((m.group(1) or m.group(2)).lower())
         return roots
 
@@ -1358,11 +1361,11 @@ def _autofix_bool_sr_latch_rewrite(
         return args
 
     def _take(args: dict[str, str], raw: str) -> None:
-        m = re.match(r"^\s*(\w+)\s*:=\s*(.+?)\s*$", raw, re.S)
+        m = re.match(r"^\s*(\w+)\s*:=\s*(.+?)\s*$", raw, re.DOTALL)
         if m:
             args[m.group(1).upper()] = m.group(2)
 
-    def _fix_text(text: str, block_key: str, block_name: str, block: "CanvasBlock") -> tuple[str, int]:
+    def _fix_text(text: str, block_key: str, block_name: str, block: CanvasBlock) -> tuple[str, int]:
         bools = _bool_roots(block, text)
         count = 0
         # 1) #X.Q → #X（X 为 Bool 声明）
@@ -1635,7 +1638,7 @@ def _autofix_t_conv_wrap(
     ops: list[dict[str, Any]] = []
     diagnostics: list[dict[str, Any]] = []
     # LHS tag := RHS "DB".path;  (RHS 到行尾或注释前)
-    pat = re.compile(r'^(\s*)"([^"]+)"\s*:=\s*("(?:[^"]+)"(?:\.\w+)+)\s*;', re.M)
+    pat = re.compile(r'^(\s*)"([^"]+)"\s*:=\s*("(?:[^"]+)"(?:\.\w+)+)\s*;', re.MULTILINE)
 
     def _rhs_type(db: str, path: str) -> str | None:
         db_iface = interfaces.get(db)
@@ -1885,7 +1888,7 @@ _XML_SECTION_TO_SCL = {
 _SCL_SECTION_ORDER = ("VAR_INPUT", "VAR_OUTPUT", "VAR_IN_OUT", "VAR", "VAR_TEMP")
 
 
-def _interface_damage_signals(block: "CanvasBlock") -> list[str]:
+def _interface_damage_signals(block: CanvasBlock) -> list[str]:
     """画布接口的损坏信号（R5 触发条件）。
 
     真机 FB1080 案例（62 个 TIA 错误全来自声明区）：导入层把嵌套 Struct
@@ -2001,7 +2004,7 @@ def _render_decl_sections_from_evidence(top_members: dict[str, Any]) -> str:
     return "\n".join(out)
 
 
-def _rebuild_unit_from_evidence(block: "CanvasBlock", top_members: dict[str, Any], body_text: str) -> str:
+def _rebuild_unit_from_evidence(block: CanvasBlock, top_members: dict[str, Any], body_text: str) -> str:
     """证据接口 + 现行 body → 完整编译单元文本（走完整单元直通渲染）。
 
     body 中对带空格成员的引用同步加引号（``#A Station CoolingFan(`` →

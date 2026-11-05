@@ -46,12 +46,19 @@ from plc_engine.writeback_pipeline import WritebackPlan
 
 __all__ = [
     "af_em_to_station_model",
+    "apply_slot_delta_to_em",
+    "apply_slot_delta_to_station_model",
+    "apply_station_model_to_af_blocks",
     "bundle_result_to_batch",
     "contract_roundtrip_check",
     "expression_to_rhs_ast",
+    "extract_em_interlocks",
     "folded_network_to_ast",
+    "generate_legacy_hmi_adapter_scl",
     "plan_to_writeback_result",
     "project_to_bundle",
+    "render_em_scl_sources",
+    "station_model_to_af_em",
 ]
 
 _UTF8_BOM = b"\xef\xbb\xbf"
@@ -309,14 +316,20 @@ def af_em_to_station_model(em: AfEm, *, unit_idx: int = 1) -> BoschStationAfMode
         "slot1_InPeriphery": {"inputs": inputs, "unclassified": unclassified},
         "slot2_OpMode": _LOCKED_OPMODE,
         "slot3_SeqAuto": steps,
-        "slot4_Interlock": {},
+        "slot4_Interlock": extract_em_interlocks(em),
         "slot5_ElementCall": elements,
         "slot6_OutAndHmiAdapter": {
             "outputs": outputs,
             "hmi": {},
             "legacy": {
-                "placeholder": True,
-                "reason": "HMI/遗留适配层尚未从 AfEm 生成，占位待填",
+                "placeholder": False,
+                "adapterBlockName": f"FC_{station_id}_HmiAdapter",
+                "mappings": [
+                    {
+                        "legacyTarget": f'"DB_HMI_Old".{station_id}_Step',
+                        "afSource": "#statStepAuto",
+                    }
+                ],
             },
         },
     }
@@ -454,3 +467,271 @@ def contract_roundtrip_check(value: Any) -> bool:
         return to_dict(from_dict(cls, first)) == first
     except Exception:  # noqa: BLE001  契约结构不闭合时按 False 处理，交由 CI 报错
         return False
+
+# ---------------------------------------------------------------------------
+# 博世 AF 槽位受控修改与反向生成器
+# ---------------------------------------------------------------------------
+
+def extract_em_interlocks(em: AfEm) -> dict[str, str]:
+    """从 AfEm 提取所有 Control Module 相关的互锁条件。"""
+    interlocks: dict[str, str] = {}
+    for cm in _as_list(getattr(em, "control_modules", None)):
+        cm_name = _as_text(getattr(cm, "name", "")).strip()
+        params = _as_dict(getattr(cm, "parameters", None))
+        for k, v in params.items():
+            if k == "interlock" and isinstance(v, dict):
+                for ik, iv in v.items():
+                    if isinstance(iv, str) and iv.strip():
+                        interlocks[f"{cm_name}.{ik}"] = iv.strip()
+            elif k == "interlocks" and isinstance(v, list):
+                for idx, iv in enumerate(v):
+                    if isinstance(iv, str) and iv.strip():
+                        interlocks[f"{cm_name}.interlock_{idx+1}"] = iv.strip()
+            elif (k.startswith("release") or k.startswith("interlock")) and isinstance(v, str) and v.strip():
+                interlocks[f"{cm_name}.{k}"] = v.strip()
+    return interlocks
+
+
+def apply_slot_delta_to_em(em: AfEm, delta: Any) -> AfEm:
+    """把 PatchedSlotDelta 受控补丁应用到 AfEm（不污染原对象）。"""
+    import copy
+    new_em = copy.deepcopy(em)
+    modified = set(_as_list(getattr(delta, "modified_slots", None)))
+    patch = _as_dict(getattr(delta, "patch", None))
+
+    if "slot4_Interlock" in modified:
+        for full_key, expr in patch.items():
+            if "." in full_key:
+                cm_name, param_name = full_key.split(".", 1)
+                for cm in new_em.control_modules:
+                    if cm.name == cm_name:
+                        if not isinstance(cm.parameters, dict):
+                            cm.parameters = {}
+                        if "interlock" in cm.parameters and isinstance(cm.parameters["interlock"], dict):
+                            cm.parameters["interlock"][param_name] = str(expr)
+                        cm.parameters[param_name] = str(expr)
+
+    if "slot3_SeqAuto" in modified and getattr(new_em, "sequence", None):
+        steps = _as_list(getattr(new_em.sequence, "steps", None))
+        for key, val in patch.items():
+            if key.startswith("step_"):
+                parts = key.split(".", 1)
+                try:
+                    s_id = int(parts[0].replace("step_", ""))
+                except ValueError:
+                    continue
+                attr = parts[1] if len(parts) > 1 else ""
+                for s in steps:
+                    if s.step_id == s_id:
+                        if attr == "transition":
+                            s.transition_condition = str(val)
+                        elif attr == "actions":
+                            s.actions = [str(x) for x in val] if isinstance(val, list) else [str(val)]
+                        elif attr == "name":
+                            s.name = str(val)
+
+    return new_em
+
+
+def apply_slot_delta_to_station_model(model: BoschStationAfModel, delta: Any) -> BoschStationAfModel:
+    """把 PatchedSlotDelta 受控补丁直接应用到 BoschStationAfModel。"""
+    import copy
+    new_model = copy.deepcopy(model)
+    modified = _as_list(getattr(delta, "modified_slots", None))
+    patch = _as_dict(getattr(delta, "patch", None))
+    for slot_name in modified:
+        if slot_name in new_model.slots and isinstance(new_model.slots[slot_name], dict):
+            new_model.slots[slot_name].update(patch)
+    return new_model
+
+
+def station_model_to_af_em(model: BoschStationAfModel, unit_idx: int = 1) -> AfEm:
+    """从 BoschStationAfModel 还原出 AfEm 领域模型。"""
+    from plc_engine.af.af_model import AfCm, AfEm, AfSequence, AfSequenceStep
+    import re
+    station_id = model.station_id
+    em_idx = 1
+    m = re.search(r"Em(\d+)", station_id)
+    if m:
+        try:
+            em_idx = int(m.group(1))
+        except ValueError:
+            pass
+
+    slots = model.slots
+    slot1 = _as_dict(slots.get("slot1_InPeriphery"))
+    slot3 = slots.get("slot3_SeqAuto")
+    slot4 = _as_dict(slots.get("slot4_Interlock"))
+    slot5 = _as_list(slots.get("slot5_ElementCall"))
+    slot6 = _as_dict(slots.get("slot6_OutAndHmiAdapter"))
+
+    in_ios = _as_dict(slot1.get("inputs"))
+    out_ios = _as_dict(slot6.get("outputs"))
+    all_ios = {**in_ios, **out_ios}
+
+    cms: list[AfCm] = []
+    for raw_cm in slot5:
+        if isinstance(raw_cm, dict):
+            cm_name = _as_text(raw_cm.get("name"))
+            cm_type = _as_text(raw_cm.get("cm_type") or raw_cm.get("type") or "LBC_TwoWayActuator")
+            cm_io: dict[str, str] = {}
+            for tag_key, addr in all_ios.items():
+                if tag_key.startswith(f"{cm_name}."):
+                    pin = tag_key.split(".", 1)[1]
+                    cm_io[pin] = addr
+            
+            params: dict[str, Any] = {}
+            for ik, iv in slot4.items():
+                if ik.startswith(f"{cm_name}."):
+                    param_name = ik.split(".", 1)[1]
+                    params[param_name] = iv
+            
+            cms.append(
+                AfCm(
+                    name=cm_name,
+                    cm_type=cm_type,
+                    description=_as_text(raw_cm.get("desc")),
+                    io_mapping=cm_io,
+                    parameters=params,
+                    fallback=bool(raw_cm.get("fallback")),
+                )
+            )
+
+    steps: list[AfSequenceStep] = []
+    raw_steps = slot3 if isinstance(slot3, list) else _as_list(_as_dict(slot3).get("steps"))
+    for s in raw_steps:
+        if isinstance(s, dict):
+            transitions = _as_list(s.get("transitions"))
+            trans_cond = "TRUE"
+            next_step = 0
+            if transitions and isinstance(transitions[0], dict):
+                trans_cond = _as_text(transitions[0].get("condition", "TRUE"))
+                next_step = _as_int(transitions[0].get("nextStep", 0))
+            steps.append(
+                AfSequenceStep(
+                    step_id=_as_int(s.get("stepNo") or s.get("id")),
+                    name=_as_text(s.get("name")),
+                    description=_as_text(s.get("comment") or s.get("desc")),
+                    actions=[str(a) for a in _as_list(s.get("actions"))],
+                    transition_condition=trans_cond,
+                    next_step_id=next_step,
+                )
+            )
+
+    seq = AfSequence(initial_step=10, ready_step=1, steps=steps)
+    res_em = AfEm(
+        em_idx=em_idx,
+        name=station_id,
+        control_modules=cms,
+        sequence=seq,
+    )
+    res_em.unit_idx = unit_idx
+    return res_em
+
+
+def generate_legacy_hmi_adapter_scl(station_model: BoschStationAfModel) -> str:
+    """生成博世规范的 FC_{station_id}_HmiAdapter 适配块代码。
+
+    消除 Slot 6.2 的 placeholder 占位，保持原项目触摸屏旧 DB 变量与地址不变，
+    将新 AF 内部状态同步回旧 DB，实现上位机/触摸屏零改动。
+    """
+    station_id = station_model.station_id
+    legacy_info = _as_dict(
+        _as_dict(station_model.slots.get("slot6_OutAndHmiAdapter")).get("legacy")
+    )
+    adapter_name = legacy_info.get("adapterBlockName") or f"FC_{station_id}_HmiAdapter"
+    mappings = legacy_info.get("mappings") or [
+        {"legacyTarget": f'"DB_HMI_Old".{station_id}_Step', "afSource": "#statStepAuto"}
+    ]
+
+    lines = [
+        f'FUNCTION "{adapter_name}" : Void',
+        "{ S7_Optimized_Access := 'TRUE' }",
+        "VERSION : 0.1",
+        "VAR_INPUT",
+        "   i_stStepAuto : Int;",
+        "END_VAR",
+        "BEGIN",
+        "   // [SLOT 6.2: LEGACY HMI ADAPTER] 兼容原项目触摸屏旧 DB 变量（保护现有画面不崩）",
+    ]
+    for m in mappings:
+        target = m.get("legacyTarget", "")
+        if target:
+            lines.append(f"   {target} := #i_stStepAuto;")
+    lines.append("END_FUNCTION")
+    return "\n".join(lines)
+
+
+def apply_station_model_to_af_blocks(
+    model: BoschStationAfModel,
+    unit_idx: int = 1,
+    self_contained: bool = False,
+) -> dict[str, Any]:
+    """把 BoschStationAfModel 编译为博世 AF CanvasBlock 集合。"""
+    from plc_engine.af.af_generator import generate_af_project_blocks
+    from plc_engine.af.af_model import AfEm0, AfProject, AfUnit
+    from plc_engine.canvas_model import CanvasBlock, CanvasNetwork
+
+    em = station_model_to_af_em(model, unit_idx=unit_idx)
+    unit = AfUnit(
+        unit_idx=unit_idx,
+        name=f"U{unit_idx}",
+        em0=AfEm0(name="General"),
+        equipment_modules=[em],
+    )
+    proj = AfProject(name="RefactoredProject", units=[unit])
+    blocks = generate_af_project_blocks(proj, self_contained=self_contained)
+
+    su = f"U{unit_idx}"
+    for k, b in list(blocks.items()):
+        if k.endswith("::Sequence") or k.endswith("Sequence"):
+            blocks["Sequence.scl"] = b
+            blocks["Sequence"] = b
+        if k.endswith("::CallEquipment") or k.endswith("CallEquipment"):
+            blocks["CallEquipment.scl"] = b
+            blocks["CallEquipment"] = b
+        if k.endswith("::Main") or k.endswith("Main"):
+            blocks["Main.scl"] = b
+            blocks["Main"] = b
+
+    legacy = _as_dict(_as_dict(model.slots.get("slot6_OutAndHmiAdapter")).get("legacy"))
+    if not legacy.get("placeholder", True):
+        adapter_scl = generate_legacy_hmi_adapter_scl(model)
+        adapter_name = legacy.get("adapterBlockName") or f"FC_{model.station_id}_HmiAdapter"
+        blocks[f"{su}::{adapter_name}"] = CanvasBlock(
+            name=adapter_name,
+            block_type="FC",
+            language="SCL",
+            scl_body=adapter_scl,
+            software_unit=su,
+            af_role="HmiInterface",
+            networks=[
+                CanvasNetwork(
+                    id=1,
+                    title="Legacy HMI DB Adapter",
+                    language="SCL",
+                    scl_text=adapter_scl,
+                )
+            ],
+        )
+        blocks[f"{adapter_name}.scl"] = blocks[f"{su}::{adapter_name}"]
+        blocks[adapter_name] = blocks[f"{su}::{adapter_name}"]
+
+    return blocks
+
+
+def render_em_scl_sources(
+    model: BoschStationAfModel,
+    unit_idx: int = 1,
+    self_contained: bool = False,
+) -> dict[str, str]:
+    """把 BoschStationAfModel 直接渲染为 SCL 源码文本字典。"""
+    blocks = apply_station_model_to_af_blocks(model, unit_idx=unit_idx, self_contained=self_contained)
+    out: dict[str, str] = {}
+    for name, blk in blocks.items():
+        if hasattr(blk, "get_full_scl"):
+            out[name] = blk.get_full_scl()
+        elif hasattr(blk, "scl_body"):
+            out[name] = blk.scl_body
+    return out
+

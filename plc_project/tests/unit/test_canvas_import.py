@@ -296,3 +296,25 @@ def test_canvas_import_upload_endpoint_zap19_without_project_tree(client) -> Non
     detail = resp.json()["detail"]
     assert detail["code"] == "PLC_UPLOAD_INVALID"
     assert "孤立的 TIA 工程文件" in detail["message"]
+
+
+def test_import_canvas_from_plain_scl_directory(tmp_path: Path) -> None:
+    scl_dir = tmp_path / "plain_export"
+    scl_dir.mkdir()
+    scl_file = scl_dir / "FB_ST10_Logic.scl"
+    scl_file.write_text(
+        'FUNCTION_BLOCK "FB_ST10_Logic"\n'
+        'VAR_INPUT\n'
+        '   i_xStart : Bool;\n'
+        'END_VAR\n'
+        'BEGIN\n'
+        '   #i_xStart := TRUE;\n'
+        'END_FUNCTION_BLOCK\n',
+        encoding="utf-8"
+    )
+    data = import_canvas_from_path(scl_dir, project_name="plain_proj")
+    assert data["blocks_parsed"] == 1
+    assert "FB_ST10_Logic" in data["canvas"]["blocks"]
+    blk = data["canvas"]["blocks"]["FB_ST10_Logic"]
+    assert blk["block_type"] == "FB"
+    assert blk["language"] == "SCL"

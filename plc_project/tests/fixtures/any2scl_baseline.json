@@ -1,0 +1,161 @@
+{
+  "schema": "any2scl-golden-baseline/1",
+  "generated_by": "tests/fixtures/build_any2scl_baseline.py",
+  "generated_at_utc": "2026-11-05T02:09:01.726142+00:00",
+  "entrypoint": "agents.plc.tia.pipeline.analyze_tia_exports",
+  "source": {
+    "path": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\PLC_Openness_data\\hr001\\export",
+    "readonly": true,
+    "coverage_scope": "full",
+    "scope_note": "对 export 全目录跑一次 analyze_tia_exports：rglob('*.xml') 覆盖块 XML / PLC 标签表 / HMI / manifest（跳过 _source_artifacts）；全量耗时约 1~2 s，未做子集裁剪。",
+    "block_xml_count": 85,
+    "tag_table_count": 2
+  },
+  "timings_ms": {
+    "analyze_tia_exports_wall_ms": 1606.4,
+    "pipeline_internal": {
+      "extract_ms": 764,
+      "fold_attach_ms": 115,
+      "kg_ms": 623,
+      "scl_ms": 67,
+      "report_ms": 18,
+      "fold_serialize_ms": 9
+    }
+  },
+  "counts": {
+    "total_blocks": 89,
+    "project_blocks": 89,
+    "networks": 410,
+    "scl_files": 54,
+    "converted": 46,
+    "parsed": 8,
+    "protected": 0,
+    "interface_only": 18,
+    "unknown": 17,
+    "conversion_report_failed": 17,
+    "warning_count": 1,
+    "warning_codes": [
+      "coverage.unresolved_parts"
+    ]
+  },
+  "todos": {
+    "total": 23,
+    "instruction_count": 5562,
+    "todo_rate": 0.0041,
+    "translated_rate": 0.9959,
+    "histogram": {
+      "MOVE_BLK_VARIANT": 9,
+      "InRange": 6,
+      "Shr": 3,
+      "Or": 1,
+      "S_Move": 1,
+      "OutRange": 1,
+      "JmpList": 1,
+      "MB_SERVER": 1
+    },
+    "blocks_with_any_todo": [
+      "FB1064_DiamondAutostep",
+      "FB1142_TypeChangePrompt",
+      "FB5699_RandomDemoTest",
+      "FB720_KuKa_MainCtrl",
+      "FC2100 Modbus TCP",
+      "FC2300 Time Calculation",
+      "FC2500 Visual Chiseling",
+      "FC2600 FT Control"
+    ]
+  },
+  "defect_pattern_files": {
+    "S1_statement_loss": {
+      "file_count": 0,
+      "files": []
+    },
+    "S2_loop_guard": {
+      "file_count": 0,
+      "files": []
+    },
+    "S3_empty_literal": {
+      "file_count": 0,
+      "files": []
+    },
+    "S4_negation_loss": {
+      "file_count": 0,
+      "files": []
+    },
+    "S5_driver_loss": {
+      "file_count": 0,
+      "files": []
+    },
+    "any": {
+      "file_count": 0,
+      "files": []
+    }
+  },
+  "negation_conservation": {
+    "blocks_with_negated_parts": 24,
+    "blocks_missing_NOT": [],
+    "note": "S4 极性守恒：含 <Negated> 部件的块其 SCL 必须保留 NOT (；缺失即不等价"
+  },
+  "gate": {
+    "safe": false,
+    "issues": [
+      "untranslated_todo",
+      "unfoldable_parts"
+    ],
+    "affected_blocks": [
+      "FB1064_DiamondAutostep",
+      "FB1142_TypeChangePrompt",
+      "FB5699_RandomDemoTest",
+      "FB720_KuKa_MainCtrl",
+      "FC2100 Modbus TCP",
+      "FC2300 Time Calculation",
+      "FC2500 Visual Chiseling",
+      "FC2600 FT Control"
+    ]
+  },
+  "golden_tests": {
+    "file": "tests/unit/test_any2scl_golden.py",
+    "positive_cases": 6,
+    "negative_cases": 5,
+    "xfail_known_gaps": 1,
+    "defect_classes": [
+      "S1_statement_loss",
+      "S2_loop_guard",
+      "S3_empty_literal",
+      "S4_negation_loss",
+      "S5_driver_loss"
+    ],
+    "note": "声明自测试文件（每类 >=1 正例 + 1 反例）；不是本次运行推算值"
+  },
+  "still_not_equivalent": [
+    {
+      "item": "FC2300 网络 5 含空格成员名未加引号",
+      "detail": "生成 \"DB2500 Visual Chiseling\".PLC Time.MINUTE / \"DB2100 Modbus Value\".PLC Para.Time Word 2，含空格成员未渲染成引号标识符，TIA External Source 编译会失败；数学语义已恢复但 SCL 文本仍非合法等价。",
+      "evidence": "docs/16 §7.4 残留；test_any2scl_golden.py::test_known_gap_fc2300_spaced_identifiers_not_quoted 标 xfail(strict=False)"
+    },
+    {
+      "item": "S11 合理 TODO（真正未支持部件）",
+      "detail": "MOVE_BLK_VARIANT / InRange / Shr / Or(Word) / S_Move / OutRange / JmpList / MB_SERVER 仍以 TODO[...] 保留，fold 与 translate 均未支持；对应 8 个 parsed 块，回写前必须人工补齐，门禁按 fail-closed 拦下。",
+      "evidence": "docs/16 §4 S11 / §7.1；本基线 todos.histogram 与 gate"
+    },
+    {
+      "item": "Word 字逻辑 Or 门（SrcType=Word）",
+      "detail": "1 处，fold/translate 均未支持，建议归一到 *Word 算子族（docs/16 §7.4-2）。",
+      "evidence": "todos.histogram['Or'] == 1"
+    },
+    {
+      "item": "Move.eno → Move.en 链（ENO≈EN 近似）未折",
+      "detail": "维持无条件（docs/16 §7.4-4）。",
+      "evidence": "docs/16 §7.4"
+    },
+    {
+      "item": "S12 可读性噪声 (TRUE AND X) 未做布尔化简",
+      "detail": "语义正确，仅影响可读性（docs/16 §7.4-1）。",
+      "evidence": "docs/16 §7.4"
+    },
+    {
+      "item": "真实 TIA 回灌编译验证未执行",
+      "detail": "本基线为离线 analyze_tia_exports 静态输出；未启动 TIA Portal / Openness / devctl 做 External Source 导入 + GenerateBlocksFromSource + Compile。",
+      "evidence": "docs/16 §5-1 / §7.4-3"
+    }
+  ]
+}

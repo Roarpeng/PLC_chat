@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
+import appSource from "../App.tsx?raw";
 import {
   REFACTOR_STAGE_NAMES,
+  buildJobExportMessage,
+  buildWritebackSubStages,
+  extractCompileFromJobDetail,
+  formatSelfHealProgress,
+  getStageStatusText,
   parseRefactorIntent,
   pipelineActiveStage,
   pipelineProgressText,
@@ -8,9 +14,15 @@ import {
   pipelineSettled,
   pipelineStageViews,
   refactorPipelinePackageUrl,
+  type JobExportView,
   type RefactorPipelineResult,
   type RefactorPipelineStage,
 } from "./refactorPipeline";
+import {
+  formatPlcCitations,
+  gatewayBase,
+  parseContentDispositionFilename,
+} from "../lib/plcGateway";
 
 describe("pipelineStageViews / pipelineActiveStage / pipelineSettled(进度卡视图层)", () => {
   it("阶段名中文化,未知段名原样透出,detail 透传", () => {
@@ -318,3 +330,251 @@ describe("pipelineResultMessage 等价性核对小节", () => {
     expect(msg).not.toContain("等价性核对");
   });
 });
+
+describe("buildWritebackSubStages (5 个子阶段视图与状态映射)", () => {
+  it("构建面向工程师的标准 5 个子阶段视图", () => {
+    const stages = buildWritebackSubStages([]);
+    expect(stages.map((s) => s.key)).toEqual([
+      "static_gate",
+      "topo_sort",
+      "batch_write",
+      "incremental_compile",
+      "self_healing",
+    ]);
+    expect(stages[0].label).toContain("静态安全门禁");
+    expect(stages[1].label).toContain("依赖拓扑排序");
+    expect(stages[2].label).toContain("极速批次回写");
+    expect(stages[3].label).toContain("增量软件编译");
+    expect(stages[4].label).toContain("智能错误自愈");
+  });
+
+  it("映射底层 compile-jobs 原始阶段到 5 子阶段", () => {
+    const raw = [
+      { name: "prepare_work", status: "ok" },
+      { name: "open_project", status: "ok" },
+      { name: "write_plc", status: "ok" },
+      { name: "compile_plc", status: "running" },
+    ];
+    const stages = buildWritebackSubStages(raw);
+    expect(stages[0].status).toBe("ok");
+    expect(stages[1].status).toBe("ok");
+    expect(stages[2].status).toBe("ok");
+    expect(stages[3].status).toBe("running");
+    expect(stages[4].status).toBe("pending");
+  });
+
+  it("静态门禁被拦截时 status 为 intercepted 并提供 detail 细节", () => {
+    const raw = [
+      { name: "precheck", status: "error", detail: "规则 R2 违例：Slot 3 直写物理 Q" },
+    ];
+    const stages = buildWritebackSubStages(raw);
+    expect(stages[0].status).toBe("intercepted");
+    expect(stages[0].detail).toContain("规则 R2 违例");
+  });
+
+  it("自愈进行中展示轮次与进度信息", () => {
+    const stages = buildWritebackSubStages(
+      [
+        { name: "compile_plc", status: "error" },
+        { name: "fix_loop", status: "running" },
+      ],
+      { healingRound: 1, maxHealingRounds: 3 },
+    );
+    expect(stages[3].status).toBe("error");
+    expect(stages[4].status).toBe("healing");
+    expect(stages[4].detail).toContain("正在尝试第 1/3 轮自愈：修复 UDT 字段引用...");
+  });
+
+  it("自愈熔断时展示熔断告警与终态", () => {
+    const stages = buildWritebackSubStages([], {
+      circuitBroken: true,
+      circuitBreakerAlert: "块 FB_ST10 连续出现同类错误 2 次，熔断器跳闸",
+    });
+    expect(stages[4].status).toBe("error");
+    expect(stages[4].detail).toContain("连续出现同类错误");
+  });
+});
+
+describe("getStageStatusText & pipelineSettled 拓展测试", () => {
+  it("文案映射覆盖待开始、进行中、完成、已拦截、自愈中", () => {
+    expect(getStageStatusText("pending")).toBe("待开始");
+    expect(getStageStatusText("running")).toBe("进行中…");
+    expect(getStageStatusText("ok")).toBe("完成");
+    expect(getStageStatusText("blocked")).toBe("已拦截");
+    expect(getStageStatusText("intercepted")).toBe("已拦截");
+    expect(getStageStatusText("healing")).toBe("自愈中");
+  });
+
+  it("settled 判定包含 intercepted / blocked 终态，排除 healing 态", () => {
+    expect(pipelineSettled([{ status: "ok" }, { status: "intercepted" }])).toBe(true);
+    expect(pipelineSettled([{ status: "ok" }, { status: "blocked" }])).toBe(true);
+    expect(pipelineSettled([{ status: "ok" }, { status: "healing" }])).toBe(false);
+  });
+
+  it("formatSelfHealProgress 格式化轮次与熔断说明", () => {
+    expect(formatSelfHealProgress(2, 3, "修正槽位表达式")).toBe(
+      "正在尝试第 2/3 轮自愈：修正槽位表达式",
+    );
+    expect(formatSelfHealProgress(1, 3, undefined, true)).toBe(
+      "自愈已熔断：同类错误连续出现达到阈值，已停止自动重试",
+    );
+  });
+});
+
+/* ---- 防回归：打包分支不得产生写死结论、不得硬拼后端端口 ---- */
+
+describe("打包分支交付包消息（实事求是，数据全部来自真实响应）", () => {
+  const FORBIDDEN = [
+    "0 Errors, 0 Warnings",
+    "64 块 SCL",
+    "HR001_AF_V1_2",
+    "C:\\Users\\",
+    "无任何缺失组件报错",
+    "State=Success",
+    ".zap19",
+    ":8000",
+  ];
+
+  it("资源不存在：如实给出真实原因，无任何写死结论/块数/包名/本机路径", () => {
+    const msg = buildJobExportMessage({
+      jobId: "plc_abc123",
+      available: false,
+      reason: "Export package not ready（PLC_EXPORT_NOT_READY）",
+    });
+    expect(msg).toContain("当前作业暂无可下载交付包");
+    expect(msg).toContain("PLC_EXPORT_NOT_READY");
+    for (const f of FORBIDDEN) expect(msg).not.toContain(f);
+  });
+
+  it("资源存在：块数/文件数/包名/编译结果逐字来自真实响应而非写死", () => {
+    const view: JobExportView = {
+      jobId: "plc_xyz",
+      available: true,
+      filename: "ResearchOS_PLC_Result_LineA_plc_xyz.zip",
+      exportUrl: "/api/v1/plc/jobs/plc_xyz/export",
+      blockCount: 37,
+      fileCount: 12,
+      compile: { compiled: false, errors: 3, warnings: 5, note: "本机未安装博图" },
+      status: "ready",
+      projectName: "LineA",
+    };
+    const msg = buildJobExportMessage(view);
+    expect(msg).toContain("ResearchOS_PLC_Result_LineA_plc_xyz.zip");
+    expect(msg).toContain("**块数**：37");
+    expect(msg).toContain("**源码文件数**：12");
+    expect(msg).toContain("Errors 3 / Warnings 5");
+    expect(msg).toContain("本机未安装博图");
+    expect(msg).toContain("[下载真实导出包](/api/v1/plc/jobs/plc_xyz/export)");
+    expect(msg).not.toContain("0 Errors, 0 Warnings");
+    // 换一组真实数值，证明输出随响应变化、不是写死常量
+    const other = buildJobExportMessage({
+      ...view,
+      blockCount: 8,
+      fileCount: 2,
+      compile: { compiled: true, errors: 1, warnings: 2 },
+    });
+    expect(other).toContain("**块数**：8");
+    expect(other).not.toContain("**块数**：37");
+    expect(other).toContain("Errors 1 / Warnings 2");
+  });
+
+  it("字段缺失：如实标注未返回，绝不补 0 或编造结论", () => {
+    const msg = buildJobExportMessage({ jobId: "j", available: true });
+    expect(msg).toContain("网关未返回文件名");
+    expect(msg).toContain("网关未返回块数");
+    expect(msg).toContain("网关未返回文件数");
+    expect(msg).toContain("未返回编译结论");
+    expect(msg).not.toContain("0 Errors, 0 Warnings");
+    expect(msg).not.toContain("Errors 0");
+  });
+});
+
+describe("extractCompileFromJobDetail：只从真实载荷读取编译结论", () => {
+  it("report.compile 含真实数值时如实返回", () => {
+    expect(
+      extractCompileFromJobDetail({
+        report: {
+          compile: {
+            compiled: false,
+            errors: ["e1", "e2"],
+            warnings_count: 7,
+            skipped_reason: "未装博图",
+          },
+        },
+      }),
+    ).toEqual({ compiled: false, errors: 2, warnings: 7, note: "未装博图" });
+  });
+
+  it("无编译字段一律返回 null，不编造 0/0", () => {
+    expect(extractCompileFromJobDetail({ blocks: [], coverage: {} })).toBeNull();
+    expect(extractCompileFromJobDetail(null)).toBeNull();
+    expect(extractCompileFromJobDetail(undefined)).toBeNull();
+  });
+});
+
+describe("网关真实辅助函数（citations / 文件名 / 基址）", () => {
+  it("formatPlcCitations 把网关真实 citations 字段渲染进 Markdown", () => {
+    const text = formatPlcCitations([
+      {
+        block: "FB_Motor",
+        locator: "Network 3 / line 2",
+        snippet: "#q := #start OR #q;",
+        source_status: "exported",
+      },
+      { block: "OB1", evidence: "CALL FB_Motor" },
+    ]);
+    expect(text).toContain("FB_Motor");
+    expect(text).toContain("Network 3 / line 2");
+    expect(text).toContain("#q := #start OR #q;");
+    expect(text).toContain("exported");
+    expect(text).toContain("CALL FB_Motor");
+  });
+
+  it("空 citations 返回空串（不编造引用源）", () => {
+    expect(formatPlcCitations([])).toBe("");
+    expect(formatPlcCitations(null)).toBe("");
+    expect(formatPlcCitations(undefined)).toBe("");
+  });
+
+  it("parseContentDispositionFilename 抽取真实包名", () => {
+    expect(
+      parseContentDispositionFilename(
+        'attachment; filename="ResearchOS_PLC_Result_A_1a2b3c4d.zip"',
+      ),
+    ).toBe("ResearchOS_PLC_Result_A_1a2b3c4d.zip");
+    expect(parseContentDispositionFilename(null)).toBeNull();
+  });
+
+  it("gatewayBase() 是统一网关基址入口（字符串）", () => {
+    expect(typeof gatewayBase()).toBe("string");
+  });
+});
+
+describe("源码静态断言：App.tsx 打包分支不硬拼端口、不留写死结论", () => {
+  it("删除 window.location 硬拼后端端口与 download-package 旧端点", () => {
+    expect(appSource).not.toContain("window.location.protocol");
+    expect(appSource).not.toContain('window.location.hostname + ":8000"');
+    expect(appSource).not.toContain("download-package?package_type");
+    expect(appSource).not.toContain(":8000");
+    expect(appSource).toContain("gatewayBase()");
+  });
+
+  it("删除所有写死编译结论/块数/包名/本机绝对路径", () => {
+    for (const forbidden of [
+      "0 Errors, 0 Warnings",
+      "64 块 SCL 源码",
+      "HR001_AF_V1_2",
+      "PLC_Openness_data",
+      "无任何缺失组件报错",
+      "State=Success",
+      "TIA Portal V19 Openness 软件完全重建校验",
+      "C:\\Users\\",
+    ]) {
+      expect(appSource).not.toContain(forbidden);
+    }
+    expect(appSource).toContain("当前作业暂无可下载交付包");
+    expect(appSource).toContain("probePlcJobExport");
+    expect(appSource).toContain("buildJobExportMessage");
+  });
+});
+

@@ -23,6 +23,8 @@ export interface ProjectLaunchScreenProps {
   onNewProject: () => void;
   /** 点历史卡片 = 选中该会话(进画布) */
   onSelectSession: (id: string) => void;
+  /** 从零生成标准工程:进入独立的规格工作台(确认前不产生任何修改) */
+  onEnterGreenfield?: () => void;
 }
 
 const SESSION_CARD_STYLE: React.CSSProperties = {
@@ -73,6 +75,7 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
   onImport,
   onNewProject,
   onSelectSession,
+  onEnterGreenfield,
 }) => {
   // 防御性排序:即使上游未按 updatedAt 降序,这里也取最新的前 3 个
   const recent = [...sessions]
@@ -164,6 +167,23 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
             从工艺需求开始,自动生成标准结构工程 —— 先生成需求卡,确认工艺意图后创建
           </span>
         </button>
+
+        {/* 入口 4:从零生成标准工程(独立通道,确认图中架构与功能前不生成任何工程) */}
+        {onEnterGreenfield && (
+          <button
+            type="button"
+            className="launch-entry"
+            style={ENTRY_STYLE}
+            onClick={onEnterGreenfield}
+          >
+            <span style={{ fontSize: 15, color: "var(--ink)", fontWeight: 500 }}>
+              从零生成标准工程
+            </span>
+            <span style={{ fontSize: 13, color: "var(--ink-2)" }}>
+              用自然语言描述工艺,生成结构图后手动连线;确认图中架构与功能之前不产生任何修改
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

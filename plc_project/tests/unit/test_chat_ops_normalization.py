@@ -206,3 +206,106 @@ def test_uservar_placeholder_renamed_by_convention():
         ],
     )
     assert cleaned2[0]["variable"]["name"] == "MyEnable"
+
+
+# ---------------------------------------------------------------------------
+# 工站级受控槽位编辑 (P0-B 交付项)
+# ---------------------------------------------------------------------------
+
+def test_detect_station_slot_intent() -> None:
+    from gateway.app.services.plc.chat_ops import detect_station_slot_intent
+    from plc_engine.canvas_model import create_empty_canvas
+
+    c = create_empty_canvas("T")
+    # 互锁识别
+    st, kind = detect_station_slot_intent("在 ST10 升降气缸下降前增加夹爪原位互锁", c)
+    assert st == "ST10"
+    assert kind == "slot4_Interlock"
+
+    # 步序识别
+    st2, kind2 = detect_station_slot_intent("修改 EM1 的步序 20 转移条件", c)
+    assert st2 == "EM1"
+    assert kind2 == "slot3_SeqAuto"
+
+    # 纯提问不触发出 ops
+    st3, kind3 = detect_station_slot_intent("ST10 的互锁逻辑是什么？", c)
+    assert st3 is None
+    assert kind3 is None
+
+    # 非工站指令
+    st4, kind4 = detect_station_slot_intent("加一个急停按钮", c)
+    assert st4 is None
+    assert kind4 is None
+
+
+def test_build_chat_ops_station_slot_interlock_rule_flow() -> None:
+    from gateway.app.services.plc.chat_ops import build_chat_ops
+    from plc_engine.canvas_model import create_empty_canvas
+
+    canvas = create_empty_canvas("T")
+    prompt = "在 ST10 升降气缸下降前增加夹爪原位互锁"
+
+    res = build_chat_ops(prompt, canvas, use_llm=False)
+    assert res["ok"] is True
+    assert res["source"] == "rules_slot_editor"
+    assert res["station_id"] == "ST10"
+    assert res["estimated_tokens"] < 1500
+    assert res["delta"]["modified_slots"] == ["slot4_Interlock"]
+    assert "Cyl_Lift.releaseWork" in res["delta"]["patch"]
+    assert "#Cyl_Grip.q_xInHome" in res["delta"]["patch"]["Cyl_Lift.releaseWork"]
+
+    # 检查 Diff Summary（自然语言可解释，严禁直接倾倒底层巨量 SCL）
+    diff = res["diff_summary"]
+    assert diff["station_id"] == "ST10"
+    assert len(diff["entries"]) >= 1
+    assert diff["entries"][0]["slot"] == "Slot 4 (@INTERLOCK)"
+    assert diff["entries"][0]["target"] == "Cyl_Lift.releaseWork"
+    assert "变更前" in diff["text"]
+    assert "变更后" in diff["text"]
+    assert "#Cyl_Grip.q_xInHome" in diff["text"]
+
+
+def test_build_chat_ops_station_slot_step_flow() -> None:
+    from gateway.app.services.plc.chat_ops import build_chat_ops
+    from plc_engine.canvas_model import create_empty_canvas
+
+    canvas = create_empty_canvas("T")
+    prompt = "修改 ST10 步序 20 转移条件"
+
+    res = build_chat_ops(prompt, canvas, use_llm=False)
+    assert res["ok"] is True
+    assert res["delta"]["modified_slots"] == ["slot3_SeqAuto"]
+    assert "step_20.transition" in res["delta"]["patch"]
+    assert res["diff_summary"]["station_id"] == "ST10"
+
+
+def test_build_chat_ops_station_slot_llm_flow(monkeypatch) -> None:
+    import json
+    from gateway.app.services.plc.chat_ops import build_chat_ops
+    from plc_engine.canvas_model import create_empty_canvas
+    import gateway.app.services.plc.llm_explain as le
+
+    llm_payload = {
+        "stationId": "ST10",
+        "modifiedSlots": ["slot4_Interlock"],
+        "patch": {
+            "Cyl_Lift.releaseWork": '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos AND #Cyl_Grip.q_xInHome',
+        },
+        "explanation": "LLM 受控编辑：在升降下降前增加夹爪原位互锁",
+    }
+
+    def fake_raw(messages, settings, **kw):
+        return json.dumps(llm_payload), {"prompt_tokens": 300, "completion_tokens": 50}
+
+    monkeypatch.setattr(le, "llm_settings", lambda: {"base_url": "u", "api_key": "k", "model": "m"})
+    monkeypatch.setattr(le, "chat_completion_raw", fake_raw)
+
+    canvas = create_empty_canvas("T")
+    prompt = "在 ST10 升降气缸下降前增加夹爪原位互锁"
+
+    res = build_chat_ops(prompt, canvas, use_llm=True)
+    assert res["ok"] is True
+    assert res["source"] == "llm_slot_editor"
+    assert res["station_id"] == "ST10"
+    assert res["explanation"] == "LLM 受控编辑：在升降下降前增加夹爪原位互锁"
+    assert "#Cyl_Grip.q_xInHome" in res["delta"]["patch"]["Cyl_Lift.releaseWork"]

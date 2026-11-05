@@ -831,6 +831,97 @@ def generate_from_source_via_openness_cli(
     return result
 
 
+def fast_writeback_via_openness_cli(
+    project_path: str | Path,
+    scl_path: str | Path | None = None,
+    *,
+    body: dict[str, Any] | None = None,
+    plc_name: str = "",
+    software_unit: str = "",
+    overwrite: bool = True,
+    timeout_s: int = 600,
+    compile_after: bool = True,
+) -> dict[str, Any]:
+    """通过常驻 Session 服务执行 /fast-writeback；若服务不可用则通过 CLI 回退或启动。
+
+    返回归一化的回写与编译结果字典（兼容 FastWritebackResult 契约）。
+    """
+    if isinstance(project_path, dict) and body is None:
+        body = project_path
+        project_path = body.get("project") or body.get("project_path") or ""
+        scl_path = scl_path or body.get("scl") or body.get("scl_path") or ""
+
+    project = Path(project_path).expanduser().resolve()
+    scl = Path(scl_path or (body.get("scl") if body else "") or (body.get("scl_path") if body else "")).expanduser().resolve()
+
+    req_body: dict[str, Any] = dict(body or {})
+    req_body.setdefault("project", str(project))
+    req_body.setdefault("scl", str(scl))
+    req_body.setdefault("scl_path", str(scl))
+    if plc_name:
+        req_body.setdefault("plc", plc_name)
+    if software_unit:
+        req_body.setdefault("unit", software_unit)
+        req_body.setdefault("software_unit", software_unit)
+
+    # 1. 优先检查并调用 openness_session.fast_writeback（若未运行则由 ensure_session_running 启动）
+    try:
+        from gateway.app.services.plc.openness_session import (
+            ensure_session_running,
+            fast_writeback,
+            session_enabled,
+        )
+
+        if session_enabled() and ensure_session_running():
+            res = fast_writeback(req_body, timeout_s=float(timeout_s))
+            if not res.get("fallback") and not res.get("unreachable"):
+                if "ok" not in res and "success" in res:
+                    res["ok"] = bool(res.get("success"))
+                return res
+    except Exception:
+        # 服务异常或未运行且启动失败，降级到 CLI 回退
+        pass
+
+    # 2. CLI 回退：单次 generate-from-source (+ compile-plc)
+    gen_res = generate_from_source_via_openness_cli(
+        project,
+        scl,
+        plc_name=plc_name,
+        software_unit=software_unit,
+        overwrite=overwrite,
+        timeout_s=timeout_s,
+    )
+    compile_res: dict[str, Any] = {}
+    compile_ok = True
+    if compile_after and gen_res.get("ok"):
+        compile_res = compile_plc_via_openness_cli(
+            project,
+            plc_name=plc_name,
+            timeout_s=timeout_s,
+        )
+        compile_sub = compile_res.get("compile") if isinstance(compile_res.get("compile"), dict) else compile_res
+        compile_ok = bool(compile_res.get("ok") and (compile_sub or {}).get("ok", True))
+        if compile_sub and compile_sub.get("apiAvailable") is False:
+            compile_ok = False
+        if compile_sub and compile_sub.get("ok") is False:
+            compile_ok = False
+
+    ok = bool(gen_res.get("ok") and (compile_ok if compile_after else True))
+    errors = []
+    if isinstance(compile_res.get("compile"), dict):
+        errors = compile_res["compile"].get("errors") or compile_res["compile"].get("inconsistentBlocks") or []
+    return {
+        "ok": ok,
+        "success": ok,
+        "fallback": True,
+        "generate": gen_res,
+        "compile": compile_res if compile_after else {"skipped": True},
+        "errors": errors,
+        "writtenBlockCount": req_body.get("writtenBlockCount") or 1,
+        "skippedUnchangedBlocks": req_body.get("skippedUnchangedBlocks") or 0,
+    }
+
+
 def compile_plc_via_openness_cli(
     project_path: str | Path,
     *,

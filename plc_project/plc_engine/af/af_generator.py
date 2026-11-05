@@ -24,6 +24,114 @@ from plc_engine.canvas_model import CanvasBlock
 #: 自举模式产物中禁止出现的官方库前缀(测试据此断言零库引用)
 _SELF_CONTAINED_FORBIDDEN_PREFIXES = ("LUC_", "LAF_", "LBC_", "LPMLV2022_")
 
+#: 自举模式标准 PLC 数据类型 (UDTs)，消除单个 DB 匿名嵌套结构体数量超限 (S7-1200 限制)
+_SELF_CONTAINED_UDTS: dict[str, str] = {
+    "AF_typeSequence": """TYPE "AF_typeSequence"
+VERSION : 0.1
+   STRUCT
+      commands : STRUCT
+         start : Bool;
+         stop : Bool;
+         reset : Bool;
+      END_STRUCT;
+      status : STRUCT
+         stepCurrent : DInt;
+         busy : Bool;
+         error : Bool;
+         stateComplete : Bool;
+      END_STRUCT;
+   END_STRUCT;
+END_TYPE
+""",
+    "AF_typeJobs": """TYPE "AF_typeJobs"
+VERSION : 0.1
+   STRUCT
+      selectedJob : Int;
+   END_STRUCT;
+END_TYPE
+""",
+    "AF_typeTwoWayActuator": """TYPE "AF_typeTwoWayActuator"
+VERSION : 0.1
+   STRUCT
+      commands : STRUCT
+         workPosition : Bool;
+         homePosition : Bool;
+      END_STRUCT;
+      status : STRUCT
+         inWorkPosition : Bool;
+         inHomePosition : Bool;
+      END_STRUCT;
+   END_STRUCT;
+END_TYPE
+""",
+    "AF_typeSimpleActuator": """TYPE "AF_typeSimpleActuator"
+VERSION : 0.1
+   STRUCT
+      commands : STRUCT
+         on : Bool;
+      END_STRUCT;
+      status : STRUCT
+         on : Bool;
+      END_STRUCT;
+   END_STRUCT;
+END_TYPE
+""",
+    "AF_typeDigitalSignal": """TYPE "AF_typeDigitalSignal"
+VERSION : 0.1
+   STRUCT
+      status : STRUCT
+         signal : Bool;
+      END_STRUCT;
+   END_STRUCT;
+END_TYPE
+""",
+    "AF_typeAnalogInput": """TYPE "AF_typeAnalogInput"
+VERSION : 0.1
+   STRUCT
+      status : STRUCT
+         value : Int;
+         signal : Bool;
+      END_STRUCT;
+   END_STRUCT;
+END_TYPE
+""",
+    "AF_typeAnalogOutput": """TYPE "AF_typeAnalogOutput"
+VERSION : 0.1
+   STRUCT
+      commands : STRUCT
+         value : Int;
+      END_STRUCT;
+   END_STRUCT;
+END_TYPE
+""",
+    "AF_typeAxisControl": """TYPE "AF_typeAxisControl"
+VERSION : 0.1
+   STRUCT
+      commands : STRUCT
+         start : Bool;
+         stop : Bool;
+      END_STRUCT;
+      status : STRUCT
+         running : Bool;
+      END_STRUCT;
+   END_STRUCT;
+END_TYPE
+""",
+    "AF_typeGeneralControl": """TYPE "AF_typeGeneralControl"
+VERSION : 0.1
+   STRUCT
+      commands : STRUCT
+         cmd : Bool;
+      END_STRUCT;
+      status : STRUCT
+         feedback : Bool;
+      END_STRUCT;
+   END_STRUCT;
+END_TYPE
+""",
+}
+
+
 
 def generate_af_project_blocks(
     project: AfProject,
@@ -38,6 +146,15 @@ def generate_af_project_blocks(
     tag 时不能发 Bool 成员(TIA 不允许 Bool→Int 隐式,真机 U1Em1 案例)。
     """
     blocks: dict[str, CanvasBlock] = {}
+    if self_contained:
+        for udt_name, udt_scl in _SELF_CONTAINED_UDTS.items():
+            blocks[udt_name] = CanvasBlock(
+                name=udt_name,
+                block_type="UDT",
+                af_role="UDT",
+                scl_body=udt_scl,
+                status="draft",
+            )
     for unit in project.units:
         unit_blocks = generate_af_unit_blocks(
             unit, self_contained=self_contained, tag_types=tag_types, af_io_drive=af_io_drive
@@ -64,7 +181,7 @@ def generate_af_unit_blocks(
 
     # 1. Unit OBs
     blocks[f"{unit_su}::Startup"] = CanvasBlock(
-        name="Startup",
+        name=f"{unit_su}_Startup" if self_contained else "Startup",
         block_type="OB",
         number=obs.startup,
         software_unit=unit_su,
@@ -74,7 +191,7 @@ def generate_af_unit_blocks(
         status="draft",
     )
     blocks[f"{unit_su}::Main"] = CanvasBlock(
-        name="Main",
+        name=f"{unit_su}_Main" if self_contained else "Main",
         block_type="OB",
         number=obs.main,
         software_unit=unit_su,
@@ -84,7 +201,7 @@ def generate_af_unit_blocks(
         status="draft",
     )
     blocks[f"{unit_su}::ProDiag"] = CanvasBlock(
-        name="ProDiag",
+        name=f"{unit_su}_ProDiag" if self_contained else "ProDiag",
         block_type="OB",
         number=obs.prodiag,
         software_unit=unit_su,
@@ -132,7 +249,7 @@ BEGIN
 END_DATA_BLOCK
 """
     blocks[f"{unit_su}::EmNodes"] = CanvasBlock(
-        name="EmNodes",
+        name=f"{unit_su}_EmNodes" if self_contained else "EmNodes",
         block_type="DB",
         number=unit.unit_idx * 1000 + 10,
         software_unit=unit_su,
@@ -229,7 +346,7 @@ BEGIN
 END_FUNCTION_BLOCK
 """
     blocks[f"{unit_su}::CallUnit"] = CanvasBlock(
-        name="CallUnit",
+        name=f"{unit_su}_CallUnit" if self_contained else "CallUnit",
         block_type="FB",
         number=unit.unit_idx * 1000 + 1,
         software_unit=unit_su,
@@ -249,7 +366,7 @@ BEGIN
 END_DATA_BLOCK
 """
         blocks[f"{unit_su}::CallUnit_DB"] = CanvasBlock(
-            name="CallUnit_DB",
+            name=f"{unit_su}_CallUnit_DB" if self_contained else "CallUnit_DB",
             block_type="DB",
             number=unit.unit_idx * 1000 + 11,
             software_unit=unit_su,
@@ -285,7 +402,7 @@ def _generate_em0_blocks(unit: AfUnit, *, self_contained: bool = False) -> dict[
     em0_body = ";\n" if self_contained else '"CallEquipment_DB"();\n'
 
     blocks[f"{su}::Startup"] = CanvasBlock(
-        name="Startup",
+        name=f"{su}_Startup" if self_contained else "Startup",
         block_type="OB",
         number=obs.startup,
         software_unit=su,
@@ -294,7 +411,7 @@ def _generate_em0_blocks(unit: AfUnit, *, self_contained: bool = False) -> dict[
         status="draft",
     )
     blocks[f"{su}::Main"] = CanvasBlock(
-        name="Main",
+        name=f"{su}_Main" if self_contained else "Main",
         block_type="OB",
         number=obs.main,
         software_unit=su,
@@ -303,7 +420,7 @@ def _generate_em0_blocks(unit: AfUnit, *, self_contained: bool = False) -> dict[
         status="draft",
     )
     blocks[f"{su}::ProDiag"] = CanvasBlock(
-        name="ProDiag",
+        name=f"{su}_ProDiag" if self_contained else "ProDiag",
         block_type="OB",
         number=obs.prodiag,
         software_unit=su,
@@ -339,7 +456,7 @@ def generate_af_em_blocks(
 
     # 1. EM OBs
     blocks[f"{su}::Startup"] = CanvasBlock(
-        name="Startup",
+        name=f"{su}_Startup" if self_contained else "Startup",
         block_type="OB",
         number=obs.startup,
         software_unit=su,
@@ -349,7 +466,7 @@ def generate_af_em_blocks(
         status="draft",
     )
     blocks[f"{su}::Main"] = CanvasBlock(
-        name="Main",
+        name=f"{su}_Main" if self_contained else "Main",
         block_type="OB",
         number=obs.main,
         software_unit=su,
@@ -359,7 +476,7 @@ def generate_af_em_blocks(
         status="draft",
     )
     blocks[f"{su}::ProDiag"] = CanvasBlock(
-        name="ProDiag",
+        name=f"{su}_ProDiag" if self_contained else "ProDiag",
         block_type="OB",
         number=obs.prodiag,
         software_unit=su,
@@ -371,30 +488,17 @@ def generate_af_em_blocks(
 
     # 2. DB ControlNodes
     if self_contained:
-        # 自举模式:CM 与 sequence 全部内联 Struct,零官方库类型引用;标题带 su 前缀
-        cm_structs = "\n".join(_self_contained_cm_struct(cm) for cm in em.control_modules)
+        # 自举模式:CM 与 sequence 引用标准自举 UDT,避免单个 DB 内联嵌套 Struct 超 S7-1200 限制
+        cm_fields = [f'    {cm.name} : "{_self_contained_cm_type(cm)}";' for cm in em.control_modules]
+        cm_fields_str = "\n".join(cm_fields)
         db_ctrl_nodes_scl = f"""DATA_BLOCK "{ctrl_db}"
 {'{ S7_Optimized_Access := \'TRUE\' }'}
 VERSION : 0.1
 NON_RETAIN
 STRUCT
-    sequence : Struct
-        commands : Struct
-            start : Bool;
-            stop : Bool;
-            reset : Bool;
-        end_struct;
-        status : Struct
-            stepCurrent : DInt;
-            busy : Bool;
-            error : Bool;
-            stateComplete : Bool;
-        end_struct;
-    end_struct;
-    jobs : Struct
-        selectedJob : Int;
-    end_struct;
-{cm_structs}
+    sequence : "AF_typeSequence";
+    jobs : "AF_typeJobs";
+{cm_fields_str}
 END_STRUCT;
 BEGIN
 END_DATA_BLOCK
@@ -417,7 +521,7 @@ BEGIN
 END_DATA_BLOCK
 """
     blocks[f"{su}::ControlNodes"] = CanvasBlock(
-        name="ControlNodes",
+        name=ctrl_db if self_contained else "ControlNodes",
         block_type="DB",
         number=unit_idx * 1000 + em.em_idx * 10 + 3,
         software_unit=su,
@@ -452,7 +556,7 @@ BEGIN
 END_FUNCTION
 """
     blocks[f"{su}::StepToString"] = CanvasBlock(
-        name="StepToString",
+        name=step_fc if self_contained else "StepToString",
         block_type="FC",
         number=unit_idx * 1000 + em.em_idx * 10 + 2,
         software_unit=su,
@@ -580,7 +684,7 @@ BEGIN
 END_FUNCTION_BLOCK
 """
     blocks[f"{su}::Sequence"] = CanvasBlock(
-        name="Sequence",
+        name=seq_fb if self_contained else "Sequence",
         block_type="FB",
         number=unit_idx * 1000 + em.em_idx * 10 + 1,
         software_unit=su,
@@ -686,7 +790,7 @@ BEGIN
 END_FUNCTION_BLOCK
 """
     blocks[f"{su}::CallEquipment"] = CanvasBlock(
-        name="CallEquipment",
+        name=call_eq_fb if self_contained else "CallEquipment",
         block_type="FB",
         number=unit_idx * 1000 + em.em_idx * 10 + 0,
         software_unit=su,
@@ -707,7 +811,7 @@ BEGIN
 END_DATA_BLOCK
 """
         blocks[f"{su}::CallEquipment_DB"] = CanvasBlock(
-            name="CallEquipment_DB",
+            name=call_eq_db if self_contained else "CallEquipment_DB",
             block_type="DB",
             number=unit_idx * 1000 + em.em_idx * 10 + 5,
             software_unit=su,
@@ -732,6 +836,24 @@ def _strip_lbc_prefix(cm_type: str) -> str:
         if t.startswith(prefix):
             return t[len(prefix):]
     return t
+
+
+def _self_contained_cm_type(cm: AfCm) -> str:
+    """自举模式 CM 的标准 UDT 类型名。"""
+    t = str(cm.cm_type)
+    if t == "LBC_TwoWayActuator":
+        return "AF_typeTwoWayActuator"
+    elif t == "LBC_SimpleActuator":
+        return "AF_typeSimpleActuator"
+    elif t == "LBC_DigitalSignal":
+        return "AF_typeDigitalSignal"
+    elif t == "LBC_AnalogInput":
+        return "AF_typeAnalogInput"
+    elif t == "LBC_AnalogOutput":
+        return "AF_typeAnalogOutput"
+    elif t == "LBC_AxisControl":
+        return "AF_typeAxisControl"
+    return "AF_typeGeneralControl"
 
 
 def _self_contained_cm_struct(cm: AfCm) -> str:
@@ -849,18 +971,30 @@ def _self_contained_cm_drive_lines(
         return "\n".join(lines)
     t = str(cm.cm_type)
     if t == "LBC_TwoWayActuator":
+        params = getattr(cm, "parameters", {}) or {}
+        ic_dict = params.get("interlock") if isinstance(params.get("interlock"), dict) else {}
+        release_work = params.get("releaseWork") or ic_dict.get("releaseWork")
+        release_home = params.get("releaseHome") or ic_dict.get("releaseHome")
+        work_cond = f"#controlNodes.{cm.name}.commands.workPosition"
+        if release_work:
+            lines.append(f"    // Slot 4 Release Work Interlock: {release_work}")
+            work_cond = f"{work_cond} AND ({release_work})"
+        home_cond = f"#controlNodes.{cm.name}.commands.homePosition"
+        if release_home:
+            lines.append(f"    // Slot 4 Release Home Interlock: {release_home}")
+            home_cond = f"{home_cond} AND ({release_home})"
         if io.get("workCmd") or io.get("workCmdTag"):
             lines.append(
                 _bool_write(
                     io.get("workCmdTag", ""), io.get("workCmd", ""),
-                    f"#controlNodes.{cm.name}.commands.workPosition",
+                    work_cond,
                 )
             )
         if io.get("homeCmd") or io.get("homeCmdTag"):
             lines.append(
                 _bool_write(
                     io.get("homeCmdTag", ""), io.get("homeCmd", ""),
-                    f"#controlNodes.{cm.name}.commands.homePosition",
+                    home_cond,
                 )
             )
         if io.get("workSensor") or io.get("workSensorTag"):

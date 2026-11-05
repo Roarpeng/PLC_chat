@@ -986,6 +986,19 @@ async def download_canvas_package_endpoint(
         repo_root / "release_packages" / "HR001_AF_V1_2_Package",
         repo_root / "release_packages",
     ])
+    import tempfile
+    temp_dir = Path(tempfile.gettempdir())
+    for release_dir in sorted(temp_dir.glob("refactor_release_*"), key=lambda p: p.stat().st_mtime, reverse=True)[:10]:
+        candidates.append(release_dir)
+    try:
+        from gateway.app.services.plc import refactor_pipeline
+        with refactor_pipeline._lock:
+            for j in refactor_pipeline._jobs.values():
+                zp = str(j.get("zap_path") or "")
+                if zp and Path(zp).is_file():
+                    candidates.append(Path(zp).parent)
+    except Exception:
+        pass
 
     ptype = package_type.lower().strip()
     target_file: Path | None = None
@@ -2810,7 +2823,7 @@ async def create_refactor_pipeline_endpoint(
         do_compile=bool(body.get("do_compile", True)),
         auto_fix=bool(body.get("auto_fix", True)),
         evidence_dir=evidence_dir,
-        mode=str(body.get("mode") or "overlay"),
+        mode=str(body.get("mode") or "af_scl"),
     )
     logger.info(
         "plc refactor pipeline queued id=%s project=%s do_compile=%s auto_fix=%s evidence=%s request_id=%s",
@@ -2843,6 +2856,49 @@ async def get_refactor_pipeline_endpoint(
     if view is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"code": "JOB_NOT_FOUND"})
     return ApiResponse(ok=True, data=view, request_id=request_id)
+
+
+@router.get("/canvas/refactor-pipeline/{job_id}/zap")
+async def download_refactor_pipeline_zap_endpoint(
+    job_id: str,
+    principal: PrincipalDep,
+    request_id: RequestIdDep,
+) -> Response:
+    """下载流水线生成的西门子博途原生工程归档（.zap19 / .zap，方便博途一键导入打开）。"""
+    _ = principal
+    from fastapi.responses import FileResponse
+    from gateway.app.services.plc import refactor_pipeline
+
+    job = refactor_pipeline.get_refactor_pipeline_job(job_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"code": "JOB_NOT_FOUND"})
+
+    zap_path = str(job.get("zap_path") or "")
+    if not zap_path or not Path(zap_path).is_file():
+        pkg_path = str(job.get("package_path") or "")
+        if pkg_path:
+            pkg_dir = Path(pkg_path).with_suffix("")
+            if pkg_dir.is_dir():
+                found = list(pkg_dir.glob("*.zap*"))
+                if found:
+                    zap_path = str(found[0])
+
+    if not zap_path or not Path(zap_path).is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "ZAP_NOT_READY",
+                "message": "博途归档尚未生成（作业未完成或未产出工程归档）",
+            },
+        )
+    name = Path(zap_path).name
+    logger.info("plc refactor pipeline zap download id=%s file=%s request_id=%s", job_id, name, request_id)
+    return FileResponse(
+        path=zap_path,
+        filename=name,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
 
 
 @router.get("/canvas/refactor-pipeline/{job_id}/package")

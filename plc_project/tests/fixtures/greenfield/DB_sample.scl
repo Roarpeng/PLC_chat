@@ -1,0 +1,19 @@
+﻿DATA_BLOCK "DB1900_Communication_PC"
+{ S7_Optimized_Access := 'FALSE' }
+VERSION : 0.1
+   STRUCT
+      Send : Struct          // 发送区
+         Heart : Bool;   // 心跳
+         Spare : Array[0..21] of Byte;
+         Counter : Int := 0;  // 计数
+      END_STRUCT;
+      Recv : Struct          // 接收区
+         Status : Bool;
+         Values : Array[1..8] of Real;
+      END_STRUCT;
+   END_STRUCT;
+
+   BEGIN
+      Send.Heart := TRUE;
+      Send.Counter := 10;
+   END_DATA_BLOCK

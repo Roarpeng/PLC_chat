@@ -1,0 +1,6 @@
+Name,Data Type,Logical Address,Comment
+I0_0_PartPresent,Bool,%I0.0,工件到位
+I0_1_BadAddress,Bool,%X9.9,非法地址
+I0_0_PartPresent,Bool,%I0.2,重复名
+,Bool,%I0.3,空名
+I0_4_DupAddr,Bool,%I0.0,重复地址

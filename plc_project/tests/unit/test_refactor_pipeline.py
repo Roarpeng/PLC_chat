@@ -398,6 +398,11 @@ def test_endpoint_post_poll_download(monkeypatch: pytest.MonkeyPatch, client: Te
     assert pkg.content[:2] == b"PK"
     assert pkg.headers["content-type"].startswith("application/zip")
 
+    zap_resp = client.get(f"/api/v1/plc/canvas/refactor-pipeline/{job_id}/zap", headers=_AUTH)
+    assert zap_resp.status_code == 200, zap_resp.text
+    assert zap_resp.content[:2] == b"PK"
+    assert "attachment" in zap_resp.headers["content-disposition"]
+
 
 def test_endpoint_404_unknown_job(client: TestClient) -> None:
     """不存在的作业：GET 与 package 均 404。"""

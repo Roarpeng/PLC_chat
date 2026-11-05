@@ -31,12 +31,22 @@ type Props = {
   inspectCtx?: InspectContext;
   writebackHint?: (blockName: string) => WritebackChipHint;
   getSclPreview?: (blockName: string) => Array<{ block?: string }>;
+  attributions?: Array<{
+    target_type?: string;
+    target_id?: string;
+    severity?: string;
+    message?: string;
+    detail?: string;
+  }>;
+  healingProgress?: string | null;
+  circuitBreakerAlert?: string | null;
   onTabChange: (tab: NodeWorkbenchTab) => void;
   onClose: () => void;
   onAsk: (node: InspectableNode, question: string) => Promise<void> | void;
   onOptimizePropose?: () => Promise<void> | void;
   onConfirmWriteback?: (node: InspectableNode) => Promise<void> | void;
   onJumpCitation?: (ref: string) => void;
+  onSmartHeal?: (node: InspectableNode) => Promise<void> | void;
 };
 
 const TABS: Array<{ id: NodeWorkbenchTab; label: string }> = [
@@ -56,12 +66,16 @@ export function NodeWorkbench({
   inspectCtx,
   writebackHint,
   getSclPreview,
+  attributions,
+  healingProgress,
+  circuitBreakerAlert,
   onTabChange,
   onClose,
   onAsk,
   onOptimizePropose,
   onConfirmWriteback,
   onJumpCitation,
+  onSmartHeal,
 }: Props) {
   const view = inspectNode(node, inspectCtx);
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
@@ -76,6 +90,16 @@ export function NodeWorkbench({
     ? writebackHint(blockName)
     : writebackHintForBlock(job, blockName);
   const sclHits = getSclPreview?.(blockName) || [];
+
+  const nodeErrors = (attributions || []).filter((a) => {
+    const tid = String(a.target_id || "");
+    return (
+      tid === blockName ||
+      tid === node.id ||
+      (node.source?.block_name && tid === node.source.block_name) ||
+      (a.message && (a.message.includes(`[${blockName}]`) || a.message.includes(`'${blockName}'`)))
+    );
+  });
 
   useEffect(() => {
     setNote(readHumanNote(view.noteKey));
@@ -143,6 +167,65 @@ export function NodeWorkbench({
         ))}
       </div>
       <div className="kg-wb-body">
+        {/* 编译报错精准归因与一键自愈横幅 */}
+        {nodeErrors.length > 0 && (
+          <div
+            style={{
+              margin: "8px 12px",
+              padding: "10px",
+              background: "rgba(239, 68, 68, 0.12)",
+              border: "1px solid #ef4444",
+              borderRadius: 6,
+              fontSize: 12,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <strong style={{ color: "#f87171", display: "flex", alignItems: "center", gap: 4 }}>
+                <span>⚠️</span> 博途增量编译报错精准归因 ({nodeErrors.length})
+              </strong>
+              {onSmartHeal && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void onSmartHeal(node)}
+                  style={{
+                    background: "#ef4444",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 4,
+                    padding: "3px 8px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: busy ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 3,
+                  }}
+                >
+                  <span>⚡</span> 一键智能自愈
+                </button>
+              )}
+            </div>
+            {circuitBreakerAlert && (
+              <div style={{ color: "#fca5a5", fontSize: 11, marginBottom: 4, fontWeight: 500 }}>
+                ⚠️ 熔断保护告警：{circuitBreakerAlert}
+              </div>
+            )}
+            {healingProgress && (
+              <div style={{ color: "#93c5fd", fontSize: 11, marginBottom: 4 }}>
+                ⏳ {healingProgress}
+              </div>
+            )}
+            <ul style={{ margin: "4px 0 0 16px", padding: 0, color: "#fca5a5", fontSize: 11 }}>
+              {nodeErrors.map((err, idx) => (
+                <li key={idx} style={{ marginBottom: 2 }}>
+                  {err.detail || err.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {tab === "meaning" ? (
           <section className="kg-wb-section" aria-label="是什么">
             <h3>含义</h3>

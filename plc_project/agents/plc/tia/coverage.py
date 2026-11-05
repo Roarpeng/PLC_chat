@@ -542,3 +542,277 @@ def coverage_markdown(coverage: dict[str, Any]) -> str:
         "Writeback stays HITL; default optimize is comments / dead-block notes only."
     )
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# fail-closed writeback gate (any2scl golden regression, docs/16 §4 / §7)
+#
+# 追加段：不改动 build_category_coverage / build_coverage_report /
+# coverage_markdown / _degradation_warnings 等任何现有函数或其返回结构。
+# ---------------------------------------------------------------------------
+
+#: 五类系统性缺陷在最终 SCL 文本里留下的确定性坏痕迹
+#: (docs/16 §3.1 修复前实际输出 / §4 问题清单 / §7.1 修复波清零项)。
+#: 只收录"可从 SCL 文本可靠判定"的模式；S4 极性反转在文本上没有稳定
+#: token，由 assert_scl_safe_for_writeback 借 PlcProject 的 negated 部件做
+#: 取反守恒检查（见下）。修复波后 hr001 全量扫描五类均为 0 文件。
+SCL_DEFECT_PATTERNS: dict[str, tuple[str, ...]] = {
+    "S1_statement_loss": (
+        r"TODO\[translate-align\]",
+        r"folded-leftover",
+        (
+            r"TODO\[(?:CoilTON|CoilTOF|CoilTP|Add|Sub|Mul|Div|Mod|Pow|Abs|Calc|Swap|"
+            r"Sin|Cos|Sqrt|RD_SYS_T|RD_LOC_T|WR_SYS_T|WR_LOC_T|READ_CLK|TIME_TCK|"
+            r"T_CONV|SYS_TIME)\]"
+        ),
+    ),
+    "S2_loop_guard": (r"loop guard",),
+    "S3_empty_literal": (
+        r"PT\s*:=\s*\)",
+        r"PT\s*:=\s*;",
+        r":=\s*\)",
+        r":=\s*;",
+        r'"TRUE"',
+        r'"FALSE"',
+    ),
+    "S4_negation_loss": (r"TODO\[Negated\]",),
+    "S5_driver_loss": (
+        r"\b(?:Sr|Rs|CtU|CtD|CtUD|CTU|CTD|CTUD|TON|TOF|TP|SR|RS)\s*\(\s*\)\s*;",
+        r"(?m)^[ \t]*\(\s*\)\s*;",
+    ),
+}
+
+_COMPILED_DEFECT_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
+    code: tuple(re.compile(pattern) for pattern in patterns)
+    for code, patterns in SCL_DEFECT_PATTERNS.items()
+}
+_LINE_COMMENT_RE = re.compile(r"//[^\n]*")
+_HAS_NOT_RE = re.compile(r"\bNOT\s*\(")
+
+
+def scan_scl_defects(scl: str) -> dict[str, list[str]]:
+    """Scan one SCL source for the five defect families, return only hits.
+
+    Pure function (never mutates, never raises on malformed text). ``//`` line
+    comments are stripped before matching so an explanatory comment containing
+    ``"TRUE"`` cannot trigger S3; ``(* ... *)`` block comments are kept because
+    the S1/S2 leftovers live inside them.
+    """
+    text = _LINE_COMMENT_RE.sub("", scl or "")
+    hits: dict[str, list[str]] = {}
+    for code, patterns in _COMPILED_DEFECT_PATTERNS.items():
+        found: list[str] = []
+        for pattern in patterns:
+            for match in pattern.finditer(text):
+                snippet = match.group(0).strip()
+                if snippet and snippet not in found:
+                    found.append(snippet)
+        if found:
+            hits[code] = found[:8]
+    return hits
+
+
+class SclWritebackUnsafeError(RuntimeError):
+    """Raised when generated SCL must not be written back to TIA (fail-closed).
+
+    ``issues`` keeps each blocking category; ``blocks`` is the deduped, sorted
+    block-name list carried by the exception for the writeback chain's UI.
+    """
+
+    def __init__(self, issues: list[dict[str, Any]]) -> None:
+        self.issues = list(issues)
+        blocks = sorted(
+            {str(name) for issue in issues for name in (issue.get("blocks") or []) if name}
+        )
+        self.blocks = blocks
+        lines = ["SCL 回写门禁失败（fail-closed），禁止写入 TIA："]
+        for issue in issues:
+            affected = [str(b) for b in (issue.get("blocks") or []) if b]
+            shown = "、".join(f"`{name}`" for name in affected[:_MAX_AFFECTED_BLOCKS])
+            if len(affected) > _MAX_AFFECTED_BLOCKS:
+                shown += f" 等 {len(affected)} 个块"
+            lines.append(
+                f"- [{issue.get('code')}] {issue.get('detail')}"
+                + (f"（受影响块：{shown}）" if shown else "（块名不可定位）")
+            )
+        lines.append(
+            f"受影响块清单（去重，共 {len(blocks)} 个）："
+            + ("、".join(blocks) if blocks else "(无)")
+        )
+        super().__init__("\n".join(lines))
+
+
+def _extract_scl_sources(data: dict[str, Any]) -> dict[str, str]:
+    raw = data.get("scl_sources")
+    if isinstance(raw, dict):
+        return {str(k): str(v) for k, v in raw.items() if isinstance(v, str)}
+    report_keys = {"coverage", "conversion_report", "warnings", "todo_count", "project"}
+    bare_mapping = bool(data) and all(isinstance(v, str) for v in data.values())
+    if bare_mapping and not (report_keys & data.keys()):
+        return {str(k): str(v) for k, v in data.items()}
+    return {}
+
+
+def _extract_coverage(data: dict[str, Any]) -> dict[str, Any]:
+    raw = data.get("coverage")
+    if isinstance(raw, dict):
+        return raw
+    coverage_markers = (
+        "warning_count",
+        "warnings",
+        "todo_histogram",
+        "todo_rate",
+        "todo_count",
+        "translated_rate",
+        "top_untranslated_parts",
+        "language_histogram",
+    )
+    if any(key in data for key in coverage_markers):
+        return data
+    return {}
+
+
+def _negated_blocks(project: Any) -> list[str]:
+    """Block names carrying a pin-level negated part (<Negated Name="operand"/>)."""
+    if project is None or not hasattr(project, "blocks"):
+        return []
+    out: list[str] = []
+    for name, block in project.blocks.items():
+        found = False
+        for network in getattr(block, "networks", None) or []:
+            parts = getattr(network, "parts", None) or {}
+            for part in parts.values():
+                negated = bool(getattr(part, "negated", False))
+                pins = getattr(part, "negated_pins", None) or set()
+                if negated or "operand" in pins:
+                    found = True
+                    break
+            if found:
+                break
+        if found:
+            out.append(str(name))
+    return out
+
+
+def assert_scl_safe_for_writeback(report_or_coverage: Any) -> bool:
+    """Fail-closed gate: never write unsafe SCL back to TIA.
+
+    Accepted inputs:
+      * ``analyze_tia_exports`` result (has ``scl_sources`` / ``coverage`` / ``project``),
+      * ``build_coverage_report`` output (no SCL text — structural signals only),
+      * ``build_conversion_report`` output (structural signals only),
+      * a bare ``{block_name: scl_text}`` mapping.
+
+    Raises :class:`SclWritebackUnsafeError` (with a deduped block-name list) when
+    any is present: untranslated ``TODO[...]`` markers, unfoldable parts
+    (``coverage.unresolved_parts``), S7-GRAPH downgrade, or any of the five
+    defect families in :data:`SCL_DEFECT_PATTERNS`. Returns ``True`` only when
+    the evidence is conclusive and clean. S4 (polarity reversal) has no stable
+    text token, so it is additionally checked by negated-part / ``NOT (``
+    conservation when a ``PlcProject`` is available.
+
+    This function only reads its input; it does not change any
+    ``build_coverage*`` return shape (backward compatible).
+    """
+    if not isinstance(report_or_coverage, dict):
+        raise SclWritebackUnsafeError(
+            [{"code": "no_evidence", "blocks": [], "detail": "入参不是 dict，无法确认 SCL 安全"}]
+        )
+    data = report_or_coverage
+    scl_sources = _extract_scl_sources(data)
+    coverage = _extract_coverage(data)
+    conversion = data.get("conversion_report")
+    if not isinstance(conversion, dict):
+        conversion = {}
+    project = data.get("project")
+
+    issues: list[dict[str, Any]] = []
+
+    # (1) 未翻译 TODO：文本优先 + coverage/conversion 结构化信号兜底
+    todo_blocks: set[str] = set()
+    for name, text in scl_sources.items():
+        if _TODO_RE.search(text):
+            todo_blocks.add(name)
+    cov_blocks = coverage.get("blocks")
+    if isinstance(cov_blocks, list):
+        for row in cov_blocks:
+            if not isinstance(row, dict):
+                continue
+            name = str(row.get("block") or "")
+            has_todo = row.get("todo_count") or row.get("todo_parts")
+            if name and (has_todo or row.get("status") == "parsed"):
+                todo_blocks.add(name)
+    if not scl_sources and conversion:
+        for row in conversion.get("blocks") or []:
+            if isinstance(row, dict) and row.get("status") == "parsed":
+                name = str(row.get("block") or "")
+                if name:
+                    todo_blocks.add(name)
+    todo_total = int(coverage.get("todo_count") or 0)
+    if todo_blocks or todo_total > 0:
+        issues.append(
+            {
+                "code": "untranslated_todo",
+                "blocks": sorted(b for b in todo_blocks if b),
+                "detail": (
+                    f"仍有 {todo_total} 个未翻译 TODO[...] 占位"
+                    if todo_total
+                    else "SCL 文本仍含未翻译 TODO[...] 占位"
+                ),
+            }
+        )
+
+    # (2) 不可折叠部件 / GRAPH 降级（coverage warnings 是既有公开结构）
+    for warn in coverage.get("warnings") or []:
+        if not isinstance(warn, dict):
+            continue
+        code = str(warn.get("code") or "")
+        affected = [str(b) for b in (warn.get("affected_blocks") or []) if b]
+        if code == "coverage.unresolved_parts":
+            issues.append(
+                {
+                    "code": "unfoldable_parts",
+                    "blocks": affected,
+                    "detail": f"{int(warn.get('count') or 0)} 个块含无法折叠成语句的网络部件",
+                }
+            )
+        elif code == "coverage.graph_not_executable":
+            issues.append(
+                {
+                    "code": "graph_not_executable",
+                    "blocks": affected,
+                    "detail": "S7-GRAPH 降级为注释序列，语义不等价，不能直接回写",
+                }
+            )
+
+    # (3) 五类缺陷模式：文本扫描 + S4 取反守恒
+    by_code: dict[str, set[str]] = {}
+    for name, text in scl_sources.items():
+        for defect_code in scan_scl_defects(text):
+            by_code.setdefault(defect_code, set()).add(name)
+    if project is not None:
+        for name in _negated_blocks(project):
+            if name in scl_sources and not _HAS_NOT_RE.search(scl_sources[name]):
+                by_code.setdefault("S4_negation_loss", set()).add(name)
+    for defect_code in sorted(by_code):
+        issues.append(
+            {
+                "code": defect_code,
+                "blocks": sorted(by_code[defect_code]),
+                "detail": f"命中 docs/16 五类缺陷模式 {defect_code}",
+            }
+        )
+
+    # (4) fail-closed：既无 SCL 文本也无结构化证据，一律拦下
+    if not scl_sources and not coverage and not conversion:
+        issues.append(
+            {
+                "code": "no_evidence",
+                "blocks": [],
+                "detail": "无 scl_sources / coverage / conversion_report，无法确认 SCL 安全",
+            }
+        )
+
+    if issues:
+        raise SclWritebackUnsafeError(issues)
+    return True

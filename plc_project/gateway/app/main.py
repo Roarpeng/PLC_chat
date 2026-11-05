@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from gateway.app.config import get_settings
-from gateway.app.routers import plc
+from gateway.app.routers import greenfield, plc
 from researchos_shared import configure_logging
 
 
@@ -49,6 +49,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(plc.router)
+    app.include_router(greenfield.router)
 
     @app.get("/health")
     async def health() -> dict[str, str]:

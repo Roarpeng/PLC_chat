@@ -439,7 +439,7 @@ def _normalize_patch_result(result: Any) -> tuple[list[Any], list[str]]:
     else:
         patches = getattr(result, "patches", None) or getattr(result, "ops", None) or []
         diagnostics = getattr(result, "diagnostics", None) or []
-    diag_texts = [str(d)[:200] for d in list(diagnostics)[:_DIAGNOSTICS_LIMIT] if str(d).strip()]
+    diag_texts = [str(d)[:600] for d in list(diagnostics)[:_DIAGNOSTICS_LIMIT] if str(d).strip()]
     return list(patches), diag_texts
 
 
@@ -664,6 +664,55 @@ def _extract_compile_errors(
     return errors[:_ERRORS_LIMIT], warnings_count
 
 
+def _convert_canvas_legacy_blocks_to_scl(canvas: CanvasState) -> int:
+    """把画布上无 TODO 占位的旧块语言标记与状态正式转换为 SCL。"""
+    converted_count = 0
+    for name, block in canvas.blocks.items():
+        if getattr(block, "protected", False):
+            continue
+        nm = str(block.name or name)
+        m = re.match(r"^DB(\d+)_(.+?)(?:\[.*\])?$", nm)
+        if m and str(block.block_type).upper() == "DB":
+            fb_sibling = f"FB{m.group(1)}_{m.group(2)}"
+            has_fb = any(
+                str(b.name or k) == fb_sibling or k == fb_sibling
+                for k, b in canvas.blocks.items()
+            )
+            if has_fb:
+                continue
+        text = "\n".join(
+            [str(block.scl_body or "")]
+            + [str(getattr(n, "scl_text", "") or "") for n in (block.networks or [])]
+        ).upper()
+        if "TODO" in text or "(* EMPTY NETWORK *)" in text:
+            continue
+        if str(block.block_type).upper() in {"FB", "FC", "OB"}:
+            block.language = "SCL"
+            for net in (block.networks or []):
+                net.language = "SCL"
+            if getattr(block, "status", "") != "draft":
+                block.status = "draft"
+            converted_count += 1
+    return converted_count
+
+
+def _todo_placeholder_blocks(canvas: CanvasState) -> list[str]:
+    """含 TODO/EMPTY 占位的旧块名清单(修③:交付风险显式化,与写集裁剪同谓词)。"""
+    names: list[str] = []
+    for name, block in canvas.blocks.items():
+        if getattr(block, "protected", False):
+            continue
+        text = "\n".join(
+            [str(block.scl_body or "")]
+            + [str(getattr(n, "scl_text", "") or "") for n in (block.networks or [])]
+        ).upper()
+        if "TODO" in text or "(* EMPTY NETWORK *)" in text:
+            nm = str(block.name or name)
+            if nm not in names:
+                names.append(nm)
+    return names
+
+
 def _compile_write_scope(canvas: CanvasState, mode: str = "overlay") -> tuple[CanvasState, list[str]]:
     """编译写集裁剪：只写 AF 家族（重构新增块），旧块一律保留 TIA 原件。
 
@@ -677,7 +726,7 @@ def _compile_write_scope(canvas: CanvasState, mode: str = "overlay") -> tuple[Ca
     """
     af_roles = {
         "Sequence", "CallEquipment", "CallUnit", "ControlNodes", "EmNodes",
-        "OB", "StepToString", "CallEquipment_DB", "CallUnit_DB",
+        "OB", "StepToString", "CallEquipment_DB", "CallUnit_DB", "UDT",
     }
     scoped = deepcopy(canvas)
     excluded: list[str] = []
@@ -686,36 +735,30 @@ def _compile_write_scope(canvas: CanvasState, mode: str = "overlay") -> tuple[Ca
             block.status = "synced"
             excluded.append(name)
             continue
+        role = getattr(block, "af_role", "")
+        is_af = role in af_roles or ("::" in name and role not in {"legacy_superseded", "af_pending_manual"}) or name.startswith("AF_type")
+        if is_af:
+            block.status = "draft"
+            continue
+
         if mode == "af_scl":
-            # 全量 SCL 化(要求2):synced 的旧块(导入后未被规则触碰,翻译体在
-            # 画布里)也要强制进写集——否则 staging 跳过 synced,LAD 原件不动
-            # (真机 GUI 实测:大量 LAD FB 未转 SCL 的根因)。
-            # 例外:FB 的实例 DB(DB<n>_<名> ↔ FB<n>_<名>)绝不写——TIA 在 FB
-            # 编译时自动对账实例 DB;手写伪造的全局 DB 版本既生成非法(V35 六
-            # 连败根因)更会切断 FB↔DB 关联破坏功能一致(要求4)。
-            nm = str(block.name or name)
-            m = re.match(r"^DB(\d+)_(.+?)(?:\[.*\])?$", nm)
-            if m and str(block.block_type).upper() == "DB":
-                fb_sibling = f"FB{m.group(1)}_{m.group(2)}"
-                has_fb = any(
-                    str(b.name or k) == fb_sibling or k == fb_sibling
-                    for k, b in scoped.blocks.items()
-                )
-                if has_fb:
-                    block.status = "synced"
-                    excluded.append(name)
-                    continue
-            if getattr(block, "status", "") != "draft":
-                block.status = "draft"
-            # 全量 SCL 化(要求2),但含翻译期 TODO 占位的块除外——TODO 是翻译器
-            # 无法翻译的 LAD 构造,硬写会 fail-closed 或丢逻辑;诚实边界:保原件。
-            text = "\n".join(
+            # 全量 SCL 化: 旧块中属于系统的硬件 OB / DB 必须保留原件, 外部源不能重新定义硬件 OB
+            btype = str(block.block_type).upper()
+            if btype in {"OB", "DB"}:
+                block.status = "synced"
+                excluded.append(name)
+                continue
+            # 翻译体含 TODO 占位的旧块保留原件待人工确认
+            text_body = "\n".join(
                 [str(block.scl_body or "")]
                 + [str(getattr(n, "scl_text", "") or "") for n in (block.networks or [])]
             ).upper()
-            if "TODO" in text or "(* EMPTY NETWORK *)" in text:
+            if "TODO" in text_body or "(* EMPTY NETWORK *)" in text_body:
                 block.status = "synced"
                 excluded.append(name)
+                continue
+            if getattr(block, "status", "") != "draft":
+                block.status = "draft"
             continue
         role = getattr(block, "af_role", "")
         is_af = role in af_roles or ("::" in name and role not in {"legacy_superseded", "af_pending_manual"})
@@ -730,7 +773,8 @@ def _temp_compile(
     *,
     project_source: str,
     plc_name: str = "",
-    mode: str = "overlay",
+    mode: str = "af_scl",
+    keep_temp: bool = False,
 ) -> dict[str, Any]:
     """临时副本编译（非破坏铁律的唯一编译通道）。
 
@@ -828,6 +872,7 @@ def _temp_compile(
             for n in (_inner.get("inconsistentBlocks") or [])
             if isinstance(n, str) and n.strip() and "compiling finished" not in str(n).lower()
         ]
+        has_saved_project = bool(writeback.get("ok")) or (temp_apxx.exists() and any(temp_apxx.parent.glob("*.ap*")))
         return {
             "ran": True,
             "skipped_reason": "",
@@ -836,19 +881,23 @@ def _temp_compile(
             "warnings_count": warnings_count,
             "attributions": attributions,
             "inconsistent_blocks": _inconsistent,
+            "refactored_project_dir": str(temp_apxx.parent) if has_saved_project else None,
+            "tmp_root": str(tmp_root),
         }
     except Exception as exc:  # noqa: BLE001 - Openness 启动/运行失败 → 如实 skipped
         logger.warning("temp compile failed: %s", exc)
         empty["skipped_reason"] = f"临时副本编译执行失败：{exc}"
+        shutil.rmtree(tmp_root, ignore_errors=True)
         return empty
     finally:
-        shutil.rmtree(tmp_root, ignore_errors=True)
+        if not keep_temp:
+            shutil.rmtree(tmp_root, ignore_errors=True)
 
 
 def _make_temp_compile_runner(
     project_source: str,
     plc_name: str,
-    mode: str = "overlay",
+    mode: str = "af_scl",
 ) -> Callable[..., dict[str, Any]]:
     """给 ``run_fix_loop`` 注入的编译 runner：default_compile_runner 同形返回，
     但写回/编译只发生在临时副本上（project_path 形参仅作信息，不落盘真实工程）。
@@ -950,7 +999,7 @@ def create_refactor_pipeline_job(
     do_compile: bool = True,
     auto_fix: bool = True,
     evidence_dir: str = "",
-    mode: str = "overlay",
+    mode: str = "af_scl",
 ) -> dict[str, Any]:
     """创建并调度重构流水线作业；立即返回作业快照（后台线程执行）。
 
@@ -977,7 +1026,7 @@ def create_refactor_pipeline_job(
             "do_compile": bool(do_compile),
             "auto_fix": bool(auto_fix),
             "evidence_dir": str(evidence_dir or ""),
-            "mode": str(mode or "overlay"),
+            "mode": str(mode or "af_scl"),
         },
     }
     with _lock:
@@ -992,7 +1041,7 @@ def create_refactor_pipeline_job(
         do_compile=bool(do_compile),
         auto_fix=bool(auto_fix),
         evidence_dir=str(evidence_dir or ""),
-        mode=str(mode or "overlay"),
+        mode=str(mode or "af_scl"),
     )
     return get_refactor_pipeline_job(job_id) or job
 
@@ -1005,7 +1054,7 @@ def _run_job(
     do_compile: bool,
     auto_fix: bool,
     evidence_dir: str = "",
-    mode: str = "overlay",
+    mode: str = "af_scl",
 ) -> None:
     """流水线编排：五个阶段顺序推进，阶段边界检查取消，全程不泄漏线程。"""
     warnings: list[str] = []
@@ -1026,6 +1075,10 @@ def _run_job(
             canvas, target, evidence_dir=evidence_dir, af_io_drive=af_io_drive
         )
         warnings.extend(stage_warnings)
+        if mode == "af_scl":
+            converted_scl_count = _convert_canvas_legacy_blocks_to_scl(canvas)
+            if converted_scl_count:
+                stage_warnings.append(f"非 SCL 旧块转纯 SCL：已成功转换 {converted_scl_count} 个 FB/FC 为标准 SCL 代码。")
         # 引擎完全降级（零 AF 块）：中间三段照契约跳过，降级证据转 warnings，
         # 流水线整体仍 ok（由 warnings 表达降级），package 段收据如实呈现。
         degraded = _report_degraded(report)
@@ -1091,12 +1144,23 @@ def _run_job(
                 }
             else:
                 plc_name = str(getattr(canvas.source, "plc_name", "") or "") if canvas.source else ""
-                info = _temp_compile(canvas, project_source=source_path, plc_name=plc_name, mode=mode)
+                info = _temp_compile(canvas, project_source=source_path, plc_name=plc_name, mode=mode, keep_temp=True)
                 excluded_superseded = list(info.get("excluded_superseded") or [])
                 if excluded_superseded:
                     warnings.append(
                         "已取代旧块不参与编译写集（"
                         f"{len(excluded_superseded)} 个，如 {', '.join(excluded_superseded[:4])}）"
+                    )
+                # 修③:TODO 占位块显式警示——它们的 LAD 构造翻译器无法直译,
+                # 编译写集已保留 TIA 原件(不覆盖),交付物里逻辑仍是原样;
+                # 若后续人工重写为 SCL 再进写集。不标注会被误读为"已重构"。
+                todo_blocks = _todo_placeholder_blocks(canvas)
+                if todo_blocks:
+                    warnings.append(
+                        "含未翻译网络(TODO 占位)的旧块保留 TIA 原件、未参与覆盖生成"
+                        f"（{len(todo_blocks)} 个：{', '.join(todo_blocks[:6])}"
+                        + ("…" if len(todo_blocks) > 6 else "")
+                        + "），需人工补译后再交付"
                     )
                 compile_attributions = list(info["attributions"] or [])
                 if not info["ran"]:
@@ -1111,9 +1175,9 @@ def _run_job(
                         "compiled": True,
                         "errors": list(info["errors"] or []),
                         "warnings_count": int(info["warnings_count"] or 0),
-                        # TIA 指认的不一致块名单(编译 API 不给逐条错误文本,
-                        # IsConsistent 巡检是唯一宿主归属通道;如实入 result/收据)
                         "inconsistent_blocks": list(info.get("inconsistent_blocks") or []),
+                        "refactored_project_dir": info.get("refactored_project_dir"),
+                        "tmp_root": info.get("tmp_root"),
                     }
             detail = (
                 f"编译通过（0 错误 / {compile_info['warnings_count']} 警告）"
@@ -1186,22 +1250,32 @@ def _run_job(
         except Exception as exc:  # noqa: BLE001 - 报告失败不阻塞交付,warning 如实记
             warnings.append(f"等价性核对报告生成失败：{exc}")
 
+        refactored_dir = compile_info.get("refactored_project_dir") if compile_info else None
+        effective_source = refactored_dir if (refactored_dir and Path(refactored_dir).exists()) else source_path
+
         pkg = release_package.build_release_package(
             canvas,
             report,
             project_name=effective_name,
             compile_info=compile_info,
             equivalence_report=equivalence_report,
+            project_source_path=effective_source,
         )
+        # 打包完成，清扫已使用的临时工程目录
+        tmp_to_clean = compile_info.get("tmp_root") if compile_info else None
+        if tmp_to_clean and Path(tmp_to_clean).exists():
+            shutil.rmtree(tmp_to_clean, ignore_errors=True)
         with _lock:
             live = _jobs.get(job_id)
             if live is not None:
                 live["package_path"] = pkg["zip_path"]
+                live["zap_path"] = pkg.get("zap_path")
+                live["zap_name"] = pkg.get("zap_name")
         _set_stage(
             job_id,
             "package",
             "ok",
-            f"交付包已生成（{pkg['file_count']} 个文件 / {pkg['size_bytes']} 字节）",
+            f"交付包已生成（{pkg['file_count']} 个文件 / {pkg['size_bytes']} 字节，解压含 {pkg.get('zap_name', '.zap19')}）",
         )
 
         eq_verdict = (equivalence_report or {}).get("io_verdict", {})
@@ -1221,7 +1295,7 @@ def _run_job(
                 if equivalence_report is not None
                 else None
             ),
-            "package": {"size_bytes": int(pkg["size_bytes"]), "file_count": int(pkg["file_count"])},
+            "package": {"size_bytes": int(pkg["size_bytes"]), "file_count": int(pkg["file_count"]), "zap_name": pkg.get("zap_name")},
             "warnings": [w for w in warnings if w][:_WARNINGS_LIMIT],
         }
         with _lock:

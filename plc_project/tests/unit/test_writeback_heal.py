@@ -368,3 +368,152 @@ def test_heal_outcome_defaults() -> None:
     assert outcome.final_errors == []
     assert outcome.requests == []
     assert outcome.repaired_blocks == []
+
+
+# --------------------------------------------------------------------------
+# gateway.app.services.plc.fix_loop 集成测试
+# --------------------------------------------------------------------------
+
+
+def test_fix_loop_parse_attributions_to_compile_errors() -> None:
+    from gateway.app.services.plc.fix_loop import parse_attributions_to_compile_errors
+
+    raw_attrs = [
+        {
+            "target_type": "block",
+            "target_id": "FB_ST10_PickAndPlace",
+            "severity": "error",
+            "message": "博图编译报错：块 [FB_ST10_PickAndPlace] 组件 'xInTargetPos' 未在类型 'UDT_AxisStatus' 中定义。",
+            "detail": "行 000042：组件 'xInTargetPos' 未在类型 'UDT_AxisStatus' 中定义。",
+        },
+        {
+            "target_type": "network",
+            "target_id": "Net_3",
+            "severity": "error",
+            "message": "博图生成失败：块 [FB_ST20] Line 15 变量未定义",
+        },
+    ]
+
+    items = parse_attributions_to_compile_errors(raw_attrs)
+    assert len(items) == 2
+    assert items[0].block_name == "FB_ST10_PickAndPlace"
+    assert items[0].network_or_line == "Line 42"
+    assert "xInTargetPos" in items[0].tia_description
+    assert items[1].block_name == "FB_ST20"
+    assert items[1].network_or_line == "Line 15"
+
+
+def test_fix_loop_match_available_struct_definition() -> None:
+    from gateway.app.services.plc.fix_loop import (
+        match_available_struct_definition,
+        parse_attributions_to_compile_errors,
+    )
+    from plc_engine.canvas_model import CanvasBlock, CanvasState, CanvasVariable
+
+    canvas = CanvasState(
+        project_name="TestProj",
+        blocks={
+            "UDT_AxisStatus": CanvasBlock(
+                name="UDT_AxisStatus",
+                block_type="UDT",
+                interface=[
+                    CanvasVariable(name="xReady", data_type="Bool"),
+                    CanvasVariable(name="xHomed", data_type="Bool"),
+                    CanvasVariable(name="xInPos", data_type="Bool"),
+                    CanvasVariable(name="rActPos", data_type="Real"),
+                ],
+            ),
+            "FB_ST10": CanvasBlock(
+                name="FB_ST10",
+                block_type="FB",
+                scl_body="statAxis : UDT_AxisStatus;",
+            ),
+        },
+    )
+
+    err = parse_attributions_to_compile_errors(
+        [
+            {
+                "target_type": "block",
+                "target_id": "FB_ST10",
+                "message": "组件 'xInTargetPos' 未在类型 'UDT_AxisStatus' 中定义。",
+            }
+        ]
+    )
+
+    struct_def = match_available_struct_definition(canvas, err)
+    assert struct_def.type_name == "UDT_AxisStatus"
+    assert struct_def.fields == ["xReady", "xHomed", "xInPos", "rActPos"]
+
+
+def test_fix_loop_circuit_breaker_stops_on_repeated_errors() -> None:
+    from gateway.app.services.plc.fix_loop import run_fix_loop
+    from plc_engine.canvas_model import CanvasBlock, CanvasState
+
+    # 画布包含触发规则修复的块，确保第 1 轮产生 ops 并调用 runner
+    canvas = CanvasState(
+        project_name="TestLoop",
+        blocks={
+            "FB1080_C": CanvasBlock(
+                name="FB1080_C",
+                block_type="FB",
+                scl_body='#p := #E.Pulse;\n"DB1080_C".x := TRUE;\n',
+            )
+        },
+    )
+
+    call_count = 0
+
+    def mock_runner(job_id: str, canvas_dict: dict, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        # 行号变化但同类错误（同块、同描述），避免触发 no_progress，精准触发熔断
+        return {
+            "ok": False,
+            "attributions": [
+                {
+                    "target_type": "block",
+                    "target_id": "FB1080_C",
+                    "severity": "error",
+                    "message": "博图编译报错：块 [FB1080_C] 静态门禁 R2 错误",
+                    "detail": f"行 0000{10 + call_count}：静态门禁 R2 错误",
+                }
+            ],
+            "canvas": canvas_dict,
+        }
+
+    # 初始报错行 10
+    init_attrs = [
+        {
+            "target_type": "block",
+            "target_id": "FB1080_C",
+            "severity": "error",
+            "message": "博图编译报错：块 [FB1080_C] 静态门禁 R2 错误",
+            "detail": "行 000010：静态门禁 R2 错误",
+        }
+    ]
+
+    # 第 1 轮 runner 返回行 11；第 2 轮 breaker.update 检测到同一错误类别连续出现达到阈值 2，触发跳闸熔断
+    res = run_fix_loop(
+        canvas,
+        init_attrs,
+        project_path="dummy.ap19",
+        max_rounds=3,
+        use_llm=False,
+        compile_runner=mock_runner,
+    )
+
+    assert res["ok"] is False
+    assert res["circuit_breaker"] is True
+    assert res["stopped"] == "circuit_breaker"
+    assert "熔断" in res.get("circuit_breaker_alert", "") or "熔断" in res["rounds"][-1].get("message", "")
+
+
+
+def test_run_writeback_heal_facade() -> None:
+    from gateway.app.services.plc.fix_loop import run_writeback_heal
+
+    outcome = run_writeback_heal(_clean_blocks(), [], lambda _req: None)
+    assert outcome.success is True
+    assert outcome.stop_reason == "clean"
+

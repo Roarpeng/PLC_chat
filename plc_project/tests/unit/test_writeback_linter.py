@@ -436,3 +436,21 @@ def test_assert_clean_raises_on_error() -> None:
 
 def test_assert_clean_passes_on_clean_bundle() -> None:
     assert_clean([fb("FB_Ascii", ASCII_BLOCK), fb("FB_R4Ok", FB_R4_OK)])
+
+def test_r6_formal_deadlock_detection() -> None:
+    code = """FUNCTION_BLOCK "FB_Deadlock"
+VAR
+    #xRunning : Bool;
+END_VAR
+BEGIN
+    IF #xRunning AND NOT #xRunning THEN
+        #xRunning := TRUE;
+    END_IF;
+END_FUNCTION_BLOCK
+"""
+    findings = lint_block(fb("FB_Deadlock", code))
+    r6 = [f for f in findings if f.rule == "R6"]
+    assert len(r6) == 1
+    assert r6[0].severity == "error"
+    assert "形式化死锁" in r6[0].message
+

@@ -16,7 +16,10 @@ Safety rails (see ``writeback_safety``) layered on top of the import logic:
 from __future__ import annotations
 
 import json
+import logging
 import os
+import re
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -27,8 +30,13 @@ from agents.plc.tia.openness_cli import (
     generate_from_source_via_openness_cli,
     import_block_via_openness_cli,
     import_xml_via_openness_cli,
+    openness_cli,
 )
 from agents.plc.tia.surface import classify_xml_kind, xml_looks_like_safety
+from plc_engine.writeback_contract import BlockArtifact, scl_block_name
+
+logger = logging.getLogger(__name__)
+
 from agents.plc.tia.writeback_safety import (
     backup_target,
     content_sha256,
@@ -324,6 +332,31 @@ def _backup_blocked_result(
     }
 
 
+def _knowhow_block_names(project_path: str | Path, plc_name: str = "") -> set[str]:
+    """list-blocks 一次,返回工程里 know-how 保护块名(保原件过滤依据)。
+
+    best-effort:CLI 不可用/超时/返回异常 → 空集(不过滤,维持旧行为);
+    不抛错——本查询只为剔除毒块,不允许它自己变成写回故障点。
+    """
+    args = ["list-blocks", "--project", str(project_path)]
+    if plc_name:
+        args.extend(["--plc", plc_name])
+    try:
+        result = openness_cli(*args, timeout_s=240)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("list-blocks 查询 know-how 名单失败(跳过过滤): %s", exc)
+        return set()
+    names: set[str] = set()
+    listed = result.get("blocks")
+    if isinstance(listed, dict):
+        for item in listed.get("blocks") or []:
+            if isinstance(item, dict) and item.get("knowHowProtected"):
+                nm = str(item.get("name") or "").strip()
+                if nm:
+                    names.add(nm)
+    return names
+
+
 def _exception_result(exc: BaseException) -> dict[str, Any]:
     """异常 → 失败 result payload（错误收集专用）。
 
@@ -341,6 +374,22 @@ def _exception_result(exc: BaseException) -> dict[str, Any]:
     if chain:
         payload["error_chain"] = chain
     return payload
+
+
+def resolve_block_dependencies(blocks: Sequence[BlockArtifact]) -> list[BlockArtifact]:
+    """根据 SCL 源码中的符号引用自动分析正向依赖 (dependencies)，供 Kahn 拓扑排序生成。"""
+    out_blocks = list(blocks)
+    name_to_block = {b.name.strip('"'): b for b in out_blocks}
+    for b in out_blocks:
+        cur_clean = b.name.strip('"')
+        for other_name in name_to_block:
+            if other_name == cur_clean:
+                continue
+            pat = r'(?:"' + re.escape(other_name) + r'"|\b' + re.escape(other_name) + r'\b)'
+            if re.search(pat, b.source):
+                if other_name not in b.dependencies:
+                    b.dependencies.append(other_name)
+    return out_blocks
 
 
 def execute_writeback(
@@ -456,7 +505,12 @@ def execute_writeback(
         }
         return result
 
-    for entry in pending:
+    xml_pending = [e for e in pending if e["action"] != "generate_from_source"]
+    scl_pending = [e for e in pending if e["action"] == "generate_from_source"]
+    # 修①配套:legacy 批次被剔除的 know-how 加密块名单(结果字段,无 SCL 通道时为空)
+    knowhow_skipped: list[str] = []
+
+    for entry in xml_pending:
         action = str(entry["action"])
         target = Path(str(entry["target"]))
         if action == "refuse":
@@ -491,34 +545,145 @@ def execute_writeback(
                     overwrite=True,
                 )
                 results.append({"xml": str(target), "kind": entry["kind"], "result": payload})
-            else:  # generate_from_source
-                unit = str(entry.get("software_unit") or "")
-                payload = generate_from_source_via_openness_cli(
-                    project_path,
-                    target,
-                    plc_name=plc_name,
-                    software_unit=unit,
-                    overwrite=True,
-                )
-                scl_results.append({"scl": str(target), "result": payload})
         except Exception as exc:  # noqa: BLE001
-            # 错误收集：str(exc) 会丢异常链根因，这里带出 InnerException 等价物
             payload = _exception_result(exc)
-            if action == "generate_from_source":
-                scl_results.append({"scl": str(target), "result": payload})
-            else:
-                results.append(
-                    {"xml": str(target), "kind": entry["kind"], "result": payload}
-                )
+            results.append({"xml": str(target), "kind": entry["kind"], "result": payload})
+
         key = manifest_key(str(entry["kind"]), str(entry["block"]))
         payload_ok_by_key[key] = bool(payload.get("ok"))
         if not payload.get("ok"):
             import_ok = False
 
+    batch_payload: dict[str, Any] | None = None
+    if scl_pending and import_ok:
+        from agents.plc.tia.writeback_batch import (
+            BATCH_FILE_NAME,
+            infer_kind,
+            prepare_batch_writeback,
+        )
+        blocks: list[BlockArtifact] = []
+        for entry in scl_pending:
+            target = Path(str(entry["target"]))
+            try:
+                src = target.read_text(encoding="utf-8-sig")
+                kind = infer_kind(src) or "FB"
+                name = scl_block_name(src) or str(entry.get("block") or target.stem)
+                blocks.append(BlockArtifact(name=name, kind=kind, source=src))
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("读取 SCL 外部源失败 %s: %s", target, exc)
+
+        # 分批回写保障：AF 架构核心块与 UDT（批次 1，高可靠零错误通道） vs 旧块（批次 2，隔离通道）
+        af_blocks = [b for b in blocks if "::" in b.name or b.name.startswith("U1") or b.name.startswith("AF_type")]
+        legacy_blocks = [b for b in blocks if b not in af_blocks]
+
+        # 修①(真机 HR002 案例 51c23082…):legacy 批次可能混有 know-how 加密块——
+        # 导入侧 XML 未携带保护属性、画布 protected=False 时,用翻译体覆盖加密块
+        # 会被 TIA 在 GenerateBlocksFromSource 整批拒绝(报错戛然而止难定位)。
+        # 保原件语义:加密块不参与覆盖生成,留在工程里不动。list-blocks 一次取
+        # 真机保护名单(best-effort:CLI 不可用/超时则不过滤,维持旧行为)。
+        if legacy_blocks:
+            knowhow_names = _knowhow_block_names(project_path, plc_name)
+            if knowhow_names:
+                keep_blocks: list[BlockArtifact] = []
+                for b in legacy_blocks:
+                    if b.name in knowhow_names:
+                        knowhow_skipped.append(b.name)
+                    else:
+                        keep_blocks.append(b)
+                legacy_blocks = keep_blocks
+                if knowhow_skipped:
+                    logger.info(
+                        "legacy 批次剔除 know-how 加密块 %d 个(保原件不覆盖): %s",
+                        len(knowhow_skipped),
+                        ", ".join(knowhow_skipped[:8]),
+                    )
+
+        batches_to_run: list[tuple[str, list[BlockArtifact]]] = []
+        if af_blocks and not legacy_blocks:
+            batches_to_run.append((BATCH_FILE_NAME, af_blocks))
+        elif legacy_blocks and not af_blocks:
+            batches_to_run.append((BATCH_FILE_NAME, legacy_blocks))
+        elif af_blocks and legacy_blocks:
+            batches_to_run.append((BATCH_FILE_NAME, af_blocks))
+            batches_to_run.append(("01_Legacy_Batch.scl", legacy_blocks))
+        elif blocks:
+            batches_to_run.append((BATCH_FILE_NAME, blocks))
+
+        overall_batch_ok = True
+        for batch_filename, sub_blocks in batches_to_run:
+            sub_blocks = resolve_block_dependencies(sub_blocks)
+            sub_plan = prepare_batch_writeback(sub_blocks, output_dir=export_dir)
+            if not sub_plan.bundle_path:
+                continue
+
+            sub_batch_path = Path(sub_plan.bundle_path)
+            # 重命名为对应的批次文件名，避免覆盖
+            dest_batch_path = export_dir / batch_filename
+            if sub_batch_path.is_file() and sub_batch_path.resolve() != dest_batch_path.resolve():
+                if dest_batch_path.exists():
+                    dest_batch_path.unlink()
+                sub_batch_path.rename(dest_batch_path)
+                sub_batch_path = dest_batch_path
+
+            sub_payload = None
+            try:
+                payload = generate_from_source_via_openness_cli(
+                    project,
+                    sub_batch_path,
+                    plc_name=plc_name,
+                    software_unit="",
+                    overwrite=True,
+                )
+                sub_payload = {
+                    "ok": bool(payload.get("ok")),
+                    "success": bool(payload.get("ok")),
+                    "generate": payload,
+                }
+            except Exception as exc:  # noqa: BLE001
+                sub_payload = _exception_result(exc)
+
+            sub_ok = bool(sub_payload.get("ok") or sub_payload.get("success"))
+            if not sub_ok:
+                overall_batch_ok = False
+                logger.warning("批次生成告警 [%s]: %s", batch_filename, sub_payload.get("error"))
+
+            # 记录批次结果
+            batch_payload = sub_payload
+            scl_results.append({
+                "scl": str(sub_batch_path),
+                "result": sub_payload,
+                "blocks": [b.name for b in sub_blocks],
+            })
+
+            # 更新 manifest
+            for entry in scl_pending:
+                key = manifest_key(str(entry["kind"]), str(entry["block"]))
+                payload_ok_by_key[key] = sub_ok
+
+        import_ok = overall_batch_ok
+
     compile_payload: dict[str, Any] | None = None
     compiled_ok = False
     if compile_after and import_ok and (xmls or scls):
-        compile_payload = compile_plc_via_openness_cli(project_path, plc_name=plc_name)
+        if (
+            batch_payload
+            and batch_payload.get("compileScope")
+            and batch_payload.get("compileScope") != "not_run"
+            and not batch_payload.get("fallback")
+        ):
+            compiled_ok = bool(batch_payload.get("success"))
+            compile_payload = {
+                "ok": compiled_ok,
+                "compile": {
+                    "ok": compiled_ok,
+                    "scope": batch_payload.get("compileScope"),
+                    "note": batch_payload.get("compileScopeNote"),
+                    "errors": batch_payload.get("errors") or [],
+                    "errorCount": len(batch_payload.get("errors") or []),
+                },
+            }
+        else:
+            compile_payload = compile_plc_via_openness_cli(project_path, plc_name=plc_name)
         compile = (
             compile_payload.get("compile")
             if isinstance(compile_payload.get("compile"), dict)
@@ -560,6 +725,7 @@ def execute_writeback(
         "compile": compile_payload,
         "planned": planned,
         "skipped_items": unchanged,
+        "knowhow_skipped": knowhow_skipped,
         "backup_path": backup.get("path"),
         "rollback": {
             "backup_path": backup.get("path"),

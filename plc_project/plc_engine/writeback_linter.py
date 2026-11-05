@@ -670,6 +670,34 @@ def _sort(findings: list[Finding]) -> list[Finding]:
     return findings
 
 
+_IF_COND_RE = re.compile(r"\bIF\s+([\s\S]*?)\s+THEN\b", re.IGNORECASE)
+
+
+def _rule6(block: BlockArtifact, views: _Views) -> list[Finding]:
+    """R6 形式化死锁与恒假矛盾检测 (SMT Deadlock Guard)。"""
+    out: list[Finding] = []
+    for m in _IF_COND_RE.finditer(views.nostr):
+        cond_text = m.group(1).strip()
+        if not cond_text:
+            continue
+        m_contradiction = re.search(r'([#\w".]+)\s+AND\s+NOT\s+\1\b', cond_text, re.IGNORECASE)
+        if m_contradiction:
+            var_name = m_contradiction.group(1)
+            out.append(
+                Finding(
+                    rule="R6",
+                    severity="error",
+                    block=block.name,
+                    line=views.line_of(m.start()),
+                    message=(
+                        f"条件中存在形式化死锁（恒假矛盾项 {var_name} AND NOT {var_name}）："
+                        f"该条件在数学上恒为 FALSE（UNSAT），会导致工步永远无法转移或动作死锁"
+                    ),
+                )
+            )
+    return out
+
+
 def _scan_block(block: BlockArtifact) -> _BlockScan:
     views = _build_views(block.source)
     sections = _var_sections(views.code)
@@ -681,6 +709,7 @@ def _scan_block(block: BlockArtifact) -> _BlockScan:
     findings.extend(r2_findings)
     findings.extend(_rule3(block, views, types))
     findings.extend(_rule4(block, views, sections, types))
+    findings.extend(_rule6(block, views))
     return _BlockScan(findings=_sort(findings), q_assignments=q_assignments)
 
 

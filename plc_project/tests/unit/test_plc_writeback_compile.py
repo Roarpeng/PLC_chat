@@ -358,7 +358,15 @@ def test_confirm_focus_does_not_apply_unrelated_dead_block(tmp_path: Path, monke
     )
     assert result.get("scope") == "block:FB_A"
     assert "FC_A_Extract" in (result.get("helper_blocks") or [])
-    assert "FB_A" in staged
-    assert "FC_A_Extract" in staged
-    assert "FB_orphan" not in staged
+    batch_file = export / "AF_Batch.scl"
+    if batch_file.exists():
+        batch_text = batch_file.read_text(encoding="utf-8")
+        assert "FB_A" in batch_text
+        assert "FC_A_Extract" in batch_text
+        assert "FB_orphan" not in batch_text
+        assert "AF_Batch" in staged
+    else:
+        assert "FB_A" in staged
+        assert "FC_A_Extract" in staged
+        assert "FB_orphan" not in staged
 

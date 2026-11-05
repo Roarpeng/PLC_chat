@@ -1,0 +1,111 @@
+sequenceDiagram
+    autonumber
+    actor U as 工程师
+    participant UI as 通道界面
+    participant PANEL as 三视图画布
+    participant LINK as 校验面板
+    participant API as 网关路由
+    participant UP as 上传解析服务
+    participant IOP as 既有解析器
+    participant CF as 契约冻结器
+    participant SESS as 会话态
+    participant SVC as 业务编排
+    participant PLAN as 既有规划器
+    participant PROJ as 视图投影器
+    participant VAL as 连线校验器
+    participant SPEC as 规格冻结器
+    participant FS as 规格存储
+    participant P2 as 第二期交付通道
+
+    U->>UI: 进入「从零生成标准工程」通道
+    UI->>API: POST /session
+    API->>SESS: new session(stage=DRAFT, counters=0)
+    SESS-->>API: session_id
+    API-->>UI: ApiResponse{ok, data:{session_id, stage}}
+
+    U->>UI: 对话上传 PLCTags.xlsx / .csv + DB .scl / 文本
+    UI->>API: POST /upload (multipart, session_id)
+    API->>SESS: assert_gate("upload")
+    API->>UP: parse_upload_batch(files)
+    UP->>IOP: parse_plctags_xlsx/csv / parse_db_scl_all / read_db_text
+    IOP-->>UP: entries / units
+    UP->>UP: strict_validate_* (白名单/上限/编码/重复/地址)
+    alt 任一条目不合法 (fail-closed)
+        UP-->>API: ParseReceipt{status=rejected, errors[明细]}
+        API-->>UI: 400 GF_UPLOAD_* + 整批拒绝明细
+        UI->>LINK: 展示失败明细（行/列/原因）
+    else 全部合法
+        UP-->>API: ParseReceipt{status=parsed, contract_draft_hash}
+        API-->>UI: 解析回执（条目清单 + 冻结预览）
+        U->>UI: 确认解析回执
+        UI->>API: POST /receipt/confirm
+        API->>CF: freeze_contract(receipt)
+        CF->>CF: contract_sha256 + immutable=true
+        CF-->>SESS: CompatContract (只读冻结)
+        API-->>UI: 契约清单灰锁 + 六类物理不可变标记
+    end
+
+    U->>UI: 自然语言描述工艺
+    UI->>API: POST /draft {prompt}
+    API->>SESS: assert_gate("draft") + 校验契约已冻结
+    API->>SVC: nl_to_ir(prompt)
+    SVC->>PLAN: plan_af_project_from_spec(prompt)
+    PLAN-->>SVC: AfProject (瞬时)
+    SVC->>SVC: GreenfieldIR.from_af_project() + 注入 modes/interlocks/compat_refs
+    SVC->>PROJ: project_views(ir)
+    PROJ-->>SVC: GFViews (flow / seq / state, 共享 ID)
+    SVC->>PROJ: assert_roundtrip(ir, views)
+    SVC-->>SESS: 写入内存 ir / views, stage=LINKABLE
+    API-->>UI: {ir, views, open_questions}
+    UI->>PANEL: 渲染三视图首版（含建议边）
+    UI->>LINK: 渲染白名单 + ir_only 字段表单 + 只读契约
+
+    U->>PANEL: 手动新增 / 删除 / 改向连线
+    PANEL->>API: POST /link {patch: IRPatch}
+    API->>SESS: assert_gate("link")
+    API->>VAL: validate_edge(edge, ir)
+    VAL->>VAL: 层级唯一父 / 数据流单向 / 只经CN / PackML / 五信号 / 命名空间 / 契约
+    alt 非法边
+        VAL-->>API: EdgeViolation{code, view, node_id, message}
+        API-->>PANEL: 422 + 拦截原因 + 定位高亮 (IR 不变)
+    else 合法边
+        VAL->>SVC: apply_patch(ir, patch) 写 edges[]
+        SVC->>PROJ: project_views(ir) 三视图重投影
+        PROJ->>PROJ: assert_roundtrip(ir, views)
+        PROJ-->>SVC: 新三视图
+        SVC-->>SESS: stage=VALIDATING
+        API-->>UI: {views, validation_report}
+        UI->>PANEL: 三个 Tab 联动刷新 + 改动边高亮
+        UI->>LINK: 实时合法或拦截反馈
+    end
+
+    U->>UI: 请求校验汇总
+    UI->>API: POST /validate
+    API->>VAL: validate_ir(ir)
+    VAL-->>API: ValidationReport{ok, violations, open_questions}
+    API-->>UI: 校验结果（未通过则确认按钮禁用）
+
+    U->>UI: 点击「确认图中架构与功能」(explicit=true)
+    UI->>API: POST /confirm {session_id, by, explicit:true}
+    API->>SESS: assert_gate("confirm") 校验 report.ok && stage==VALIDATING
+    SESS->>SESS: assert_no_side_effects() 前置 (ops=0, disk_writes=0, writebacks=0)
+    API->>SPEC: freeze(ir, views, contract, by)
+    SPEC->>SPEC: canonical_json → ir_sha / view_*_sha / contract_sha → spec_hash
+    SPEC->>FS: 原子写 specs/vN.json (temp+rename, 旧版不变)
+    FS-->>SPEC: ok
+    SPEC-->>SESS: stage=FROZEN, spec_version=vN, spec_hash
+    API-->>UI: 徽章「已冻结 vN · sha256:xxxxxxxx」+ 导出留痕入口
+    UI->>U: 展示首版 Mermaid 与冻结 spec（供 Phase 2 输入）
+
+    rect rgb(240, 242, 246)
+    Note over U,P2: 【第二期 · 本轮不实现，虚线示意】确认后才允许生成与回写
+    U-->>P2: 用户再次显式触发「生成标准工程」
+    P2-->>P2: spec → to_af_project() → af_generator(self_contained=True)
+    P2-->>P2: SCL 源包 + SimaticML XML 补充包(OB/文件夹) + 标签表
+    P2-->>P2: af_linter + scl_precheck + writeback_linter(R1~R5) + mega_source 打包
+    P2-->>P2: PCEC new_change → baseline_matches fail-closed → fast-writeback 并线
+    P2-->>P2: TIA Portal V19 编译零错误 (唯一验收口径)
+    P2-->>U: 编译收据 / 结构化错误回传 / 自愈闭环
+    end
+
+    Note over SESS,FS: 本轮出口止于「stage=FROZEN + specs/vN.json」；<br/>确认前前后端双向零 ops / 零写盘 / 零写回 / 零生成

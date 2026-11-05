@@ -681,7 +681,15 @@ class LegacyToAfMapper:
                 step = self._parse_single_step(step_num, branch_code, "Step", cms)
                 steps.append(step)
 
-        # 3. Default fallback steps if none parsed
+        # 3. Try mining Boolean flag / M-bit sequencer chains (Pattern B)
+        if not steps:
+            from plc_engine.af.bit_chain_miner import BitChainMiner
+            miner = BitChainMiner()
+            chains = miner.mine_chains(code)
+            if chains and chains[0].normalized_steps:
+                steps = list(chains[0].normalized_steps)
+
+        # 4. Default fallback steps if none parsed
         if not steps:
             steps = [
                 ExtractedStep(step_id=10, name="STEP_10_WAIT", actions=["// Wait"], transition_condition="TRUE", next_step_id=20),

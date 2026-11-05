@@ -154,7 +154,7 @@ def test_backup_created_before_writes_and_reported(
     assert result["rollback"]["backup_path"] == result["backup_path"]
     assert "restore_from_backup" in result["rollback"]["restore_hint"]
     # 写操作确实发生（备份在前）
-    assert "scl:FB_Motor.scl" in calls and "compile" in calls
+    assert any(c in calls for c in ("scl:FB_Motor.scl", "scl:AF_Batch.scl")) and "compile" in calls
 
 
 def test_backup_handles_project_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -187,7 +187,7 @@ def test_second_run_with_same_content_is_skipped(
     _patch_clis(monkeypatch, calls)
     first = execute_writeback(project, bundle, plc_name="PLC_1")
     assert first["ok"] is True
-    assert calls and "scl:FB_Motor.scl" in calls
+    assert calls and any(c in calls for c in ("scl:FB_Motor.scl", "scl:AF_Batch.scl"))
 
     manifest = load_manifest(export)
     assert manifest, "首次执行后应写入幂等清单"
@@ -221,7 +221,7 @@ def test_changed_content_is_reimported(tmp_path: Path, monkeypatch: pytest.Monke
     prepare_writeback(export, _changeset(SCL_BODY + "    #Extra := 1;\n"), [])
     calls.clear()
     again = execute_writeback(project, bundle, plc_name="PLC_1")
-    assert "scl:FB_Motor.scl" in calls, "内容变了必须重新导入"
+    assert any(c in calls for c in ("scl:FB_Motor.scl", "scl:AF_Batch.scl")), "内容变了必须重新导入"
     assert again["ok"] is True
     assert again.get("skipped") is None
 
@@ -261,7 +261,7 @@ def test_failed_entry_is_retried_next_run(tmp_path: Path, monkeypatch: pytest.Mo
     calls.clear()
     _patch_clis(monkeypatch, calls)
     retried = execute_writeback(project, bundle, plc_name="PLC_1")
-    assert "scl:FB_Motor.scl" in calls, "上次失败必须重跑而不是跳过"
+    assert any(c in calls for c in ("scl:FB_Motor.scl", "scl:AF_Batch.scl")), "上次失败必须重跑而不是跳过"
     assert retried["ok"] is True
 
 

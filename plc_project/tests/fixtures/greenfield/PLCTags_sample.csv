@@ -1,0 +1,6 @@
+变量名,路径,数据类型,地址,注释
+I0_0_PartPresent,PLC Tags/Default,Bool,%I0.0,工件到位
+I0_1_StartButton,PLC Tags/Default,Bool,%I0.1,启动按钮
+Q0_0_Conveyor,PLC Tags/Default,Bool,%Q0.0,输送带运行
+Q0_1_PressValve,PLC Tags/Default,Bool,%Q0.1,压装阀
+IW64_Temperature,PLC Tags/Default,Int,%IW64,温度

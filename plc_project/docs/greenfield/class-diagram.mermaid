@@ -1,0 +1,387 @@
+classDiagram
+    direction TB
+
+    class GreenfieldIR {
+        +str ir_version
+        +GFProject project
+        +list~GFUnit~ units
+        +list~GFEm~ ems
+        +list~GFCm~ cms
+        +list~GFControlNode~ control_nodes
+        +list~GFJob~ jobs
+        +list~GFStep~ steps
+        +list~GFMode~ modes
+        +list~GFInterlock~ interlocks
+        +list~GFIoBinding~ io_bindings
+        +list~GFCompatRef~ compat_refs
+        +list~GFEdge~ edges
+        +GFViews views
+        +GFSpecMeta spec_meta
+        +__init__(project: GFProject)
+        +to_dict() dict
+        +from_dict(data: dict) GreenfieldIR
+        +canonical_json() str
+        +ir_sha256() str
+        +to_af_project() AfProject
+        +node_index() dict
+        +ir_only_fields() list~str~
+        +apply_patch(patch: IRPatch) None
+    }
+
+    class GFProject {
+        +str name
+        +str business_label
+        +str af_profile
+        +str namespace_prefix
+        +str tia_version
+    }
+    class GFUnit {
+        +str id
+        +int unit_idx
+        +str name
+        +str business_label
+        +str namespace_prefix
+        +str parent_id
+        +dict ob_numbers
+    }
+    class GFEm {
+        +str id
+        +int em_idx
+        +str unit_id
+        +str name
+        +str business_label
+        +str namespace_prefix
+        +str control_node_id
+        +list~str~ job_ids
+        +int initial_step_id
+        +dict ob_numbers
+        +str sc_policy
+    }
+    class GFCm {
+        +str id
+        +str em_id
+        +str cm_type
+        +str business_label
+        +dict plcopen
+        +list~str~ io_binding_ids
+        +dict parameters
+        +has_plcopen_five() bool
+    }
+    class GFControlNode {
+        +str id
+        +str em_id
+        +str namespace_prefix
+        +str sequence_ref
+        +list~str~ commands
+        +list~str~ status
+    }
+    class GFJob {
+        +str id
+        +str em_id
+        +int job_id
+        +str name
+        +int initial_step_id
+        +str start_condition
+        +str interlock_id
+        +bool single_cycle_job
+    }
+    class GFStep {
+        +str id
+        +str em_id
+        +str job_id
+        +int step_id
+        +str name
+        +list~str~ actions
+        +str transition_condition
+        +int next_step_id
+        +int error_step_id
+        +int timeout_ms
+        +dict branch
+    }
+    class GFMode {
+        +str id
+        +str name
+        +str business_label
+        +str packml_mode
+        +list~str~ enabled_states
+        +list~str~ enabled_transitions
+        +bool enable_hold
+        +bool enable_complete
+    }
+    class GFInterlock {
+        +str id
+        +str target_id
+        +str expression
+        +str source
+        +list~str~ applies_to
+    }
+    class GFIoBinding {
+        +str id
+        +str cm_id
+        +str direction
+        +str channel
+        +str compat_ref_id
+        +str field_path
+    }
+    class GFCompatRef {
+        +str id
+        +str kind
+        +str contract_id
+        +str raw_ref
+        +bool immutable
+        +str contract_sha
+    }
+    class GFEdge {
+        +str id
+        +EdgeKind kind
+        +str src_id
+        +str dst_id
+        +list~str~ view_mask
+        +str origin
+        +str label
+        +bool immutable
+        +str created_at
+    }
+    class GFViews {
+        +GFViewSnapshot flow
+        +GFViewSnapshot seq
+        +GFViewSnapshot state
+        +bool shared_id_namespace
+        +str projection_version
+        +dict layout
+    }
+    class GFViewSnapshot {
+        +str mermaid
+        +list~str~ node_ids
+        +list~str~ edge_ids
+    }
+    class GFSpecMeta {
+        +str spec_version
+        +str spec_hash
+        +str prev_spec_hash
+        +GreenfieldStage stage
+        +str frozen_at
+        +str frozen_by
+        +list~str~ contract_hashes
+        +str receipt_id
+        +list~str~ open_questions
+    }
+    class IRPatch {
+        +str op
+        +GFEdge edge
+        +str field_path
+        +str value
+    }
+
+    class ParseReceipt {
+        +str receipt_id
+        +str status
+        +int items_total
+        +list~ReceiptError~ errors
+        +str contract_draft_hash
+        +bool user_confirmed
+    }
+    class ReceiptError {
+        +str file
+        +int row
+        +str column
+        +str code
+        +str message
+    }
+    class CompatContract {
+        +str contract_id
+        +str contract_sha
+        +list~IoEntry~ io_entries
+        +list~DbStruct~ db_structs
+        +list~ObEntry~ ob_entries
+        +list~SafetyEntry~ safety_entries
+        +list~SymbolEntry~ symbols
+        +str frozen_at
+        +__init__(receipt: ParseReceipt)
+        +assert_immutable() None
+        +ref(kind: str, raw: str) GFCompatRef
+    }
+    class IoEntry {
+        +str name
+        +str path
+        +str data_type
+        +str logical_address
+        +str comment
+    }
+    class DbStruct {
+        +str name
+        +str optimized_access
+        +list~DbMember~ members
+        +dict initial_assignments
+        +str scl_body
+    }
+    class DbMember {
+        +str name
+        +str data_type
+        +str initial_value
+        +str comment
+        +int offset
+    }
+    class ObEntry {
+        +int number
+        +str ob_type
+        +int call_order
+    }
+    class SafetyEntry {
+        +str name
+        +str reason
+    }
+    class SymbolEntry {
+        +str name
+        +str raw
+    }
+    class FrozenSpec {
+        +str spec_version
+        +str spec_hash
+        +str prev_spec_hash
+        +GreenfieldIR ir
+        +GFViews views
+        +list~str~ contract_refs
+        +str frozen_at
+        +str frozen_by
+        +__init__(ir: GreenfieldIR, views: GFViews, contract: CompatContract)
+        +spec_hash() str
+        +export_md() str
+    }
+    class EdgeViolation {
+        +str code
+        +str view
+        +str node_id
+        +str edge_id
+        +str message
+    }
+    class ValidationReport {
+        +bool ok
+        +list~EdgeViolation~ violations
+        +list~str~ open_questions
+        +str checked_at
+    }
+
+    class ViewProjector {
+        +project_views(ir: GreenfieldIR) GFViews
+        +render_flow(ir: GreenfieldIR) str
+        +render_sequence(ir: GreenfieldIR) str
+        +render_state(ir: GreenfieldIR) str
+        +assert_roundtrip(ir: GreenfieldIR, views: GFViews) None
+        +render_export_md(ir: GreenfieldIR) str
+    }
+    class EdgeValidator {
+        +validate_edge(edge: GFEdge, ir: GreenfieldIR) list~EdgeViolation~
+        +validate_ir(ir: GreenfieldIR) ValidationReport
+        +apply_patch(ir: GreenfieldIR, patch: IRPatch) ValidationReport
+    }
+    class ContractFreezer {
+        +parse_upload_batch(files: list) ParseReceipt
+        +freeze_contract(receipt: ParseReceipt) CompatContract
+    }
+    class SpecFreezer {
+        +freeze(ir: GreenfieldIR, views: GFViews, contract: CompatContract, by: str) FrozenSpec
+        +next_version(prev: str) str
+        +load_spec(version: str) FrozenSpec
+    }
+    class GreenfieldSession {
+        +str session_id
+        +GreenfieldIR ir
+        +CompatContract contract
+        +GreenfieldStage stage
+        +ValidationReport report
+        +int ops_count
+        +int disk_writes
+        +int writebacks
+        +assert_gate(action: str) None
+        +assert_no_side_effects() None
+        +transition_stage(to: GreenfieldStage) None
+    }
+    class GreenfieldService {
+        +nl_to_ir(prompt: str) GreenfieldIR
+        +apply_link_patch(patch: IRPatch) ValidationReport
+        +get_views() GFViews
+        +confirm_and_freeze(by: str) FrozenSpec
+        +export_first_mermaid() str
+    }
+    class GreenfieldUploadService {
+        +parse_upload_batch(files: list) ParseReceipt
+        +confirm_receipt(receipt_id: str) CompatContract
+    }
+    class GreenfieldRouter {
+        +upload(session_id: str, files: list) ApiResponse
+        +confirm_receipt(session_id: str) ApiResponse
+        +draft(session_id: str, prompt: str) ApiResponse
+        +link(session_id: str, patch: IRPatch) ApiResponse
+        +validate(session_id: str) ApiResponse
+        +views(session_id: str) ApiResponse
+        +confirm(session_id: str) ApiResponse
+        +export(session_id: str) ApiResponse
+    }
+    class DeliveryPort {
+        <<interface>>
+        +deliver(spec: FrozenSpec) DeliveryResult
+        +assert_pcec_gate(spec: FrozenSpec) None
+    }
+    class GateLockedError {
+        +str code
+        +str message
+    }
+
+    GreenfieldIR "1" *-- "1" GFProject
+    GreenfieldIR "1" *-- "0..*" GFUnit
+    GreenfieldIR "1" *-- "0..*" GFEm
+    GreenfieldIR "1" *-- "0..*" GFCm
+    GreenfieldIR "1" *-- "0..*" GFControlNode
+    GreenfieldIR "1" *-- "0..*" GFJob
+    GreenfieldIR "1" *-- "0..*" GFStep
+    GreenfieldIR "1" *-- "0..*" GFMode
+    GreenfieldIR "1" *-- "0..*" GFInterlock
+    GreenfieldIR "1" *-- "0..*" GFIoBinding
+    GreenfieldIR "1" *-- "0..*" GFCompatRef
+    GreenfieldIR "1" *-- "0..*" GFEdge
+    GreenfieldIR "1" *-- "1" GFViews
+    GreenfieldIR "1" *-- "1" GFSpecMeta
+    GFViews "1" *-- "3" GFViewSnapshot
+    GFUnit "1" o-- "0..*" GFEm : unit_id 唯一父
+    GFEm "1" o-- "0..*" GFCm : em_id 唯一父
+    GFEm "1" o-- "1" GFControlNode : control_node_id
+    GFCm "1" o-- "0..*" GFIoBinding
+    GFIoBinding "*" --> "1" GFCompatRef : 只读引用
+    GFCompatRef "*" --> "1" CompatContract : contract_id
+    CompatContract "1" *-- "0..*" IoEntry
+    CompatContract "1" *-- "0..*" DbStruct
+    CompatContract "1" *-- "0..*" ObEntry
+    CompatContract "1" *-- "0..*" SafetyEntry
+    CompatContract "1" *-- "0..*" SymbolEntry
+    DbStruct "1" *-- "0..*" DbMember
+    ParseReceipt "1" *-- "0..*" ReceiptError
+    CompatContract ..> ParseReceipt : 由已确认回执冻结
+    FrozenSpec "1" *-- "1" GreenfieldIR : 内嵌快照
+    FrozenSpec "1" *-- "1" GFViews : 三视图快照
+    FrozenSpec ..> CompatContract : contract_refs 引用
+
+    ViewProjector ..> GreenfieldIR : 只读投影
+    EdgeValidator ..> GreenfieldIR : 校验并写 edges
+    EdgeValidator ..> GFEdge
+    EdgeValidator ..> EdgeViolation : 产出
+    ValidationReport "1" *-- "0..*" EdgeViolation
+    EdgeValidator ..> IRPatch
+    GreenfieldSession "1" *-- "1" GreenfieldIR
+    GreenfieldSession "1" *-- "1" CompatContract
+    GreenfieldSession "1" *-- "1" ValidationReport
+    GreenfieldService ..> GreenfieldSession
+    GreenfieldService ..> ViewProjector
+    GreenfieldService ..> EdgeValidator
+    GreenfieldService ..> SpecFreezer
+    GreenfieldService ..> ContractFreezer
+    GreenfieldRouter ..> GreenfieldService
+    GreenfieldRouter ..> GreenfieldUploadService
+    SpecFreezer ..> FrozenSpec
+    ContractFreezer ..> CompatContract
+    GreenfieldSession ..> GateLockedError : 越阶段抛出
+    DeliveryPort ..> FrozenSpec : Phase 2 只读消费
+    GreenfieldIR ..> AfProject : to_af_project() 瞬时派生
+    class AfProject {
+        <<existing dataclass>>
+    }

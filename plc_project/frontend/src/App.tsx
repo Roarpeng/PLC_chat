@@ -88,14 +88,27 @@ import {
 import {
   GATEWAY_BASE,
   GatewayError,
+  chatPlcJob,
+  fetchPlcJob,
+  formatPlcCitations,
+  gatewayBase,
   pollUntil,
+  probePlcJobExport,
   requestPlc,
   type PlcJobDetail,
   type PlcJobSummary,
 } from "./lib/plcGateway";
+import { resolveActivePlcJobId } from "./state/sourceCompare";
+import { ProjectProgressPanel } from "./shell/ProjectProgressPanel";
+import { GreenfieldChannel } from "./shell/GreenfieldChannel";
 /* 重构流水线(纯函数层:意图解析/阶段进度/结果消息 + DTO 契约类型;
    网络请求仍按 /canvas/* 惯例留在本文件) */
 import {
+  buildJobExportMessage,
+  buildWritebackSubStages,
+  extractCompileFromJobDetail,
+  formatSelfHealProgress,
+  getStageStatusText,
   parseRefactorIntent,
   pipelineProgressText,
   pipelineResultMessage,
@@ -277,6 +290,8 @@ const ChangeLogIcon: React.FC = () => (
 );
 
 const App: React.FC = () => {
+  /* Greenfield 独立通道（与既有工作台互不触发） */
+  const [channel, setChannel] = useState<"workbench" | "greenfield">("workbench");
   /* 画布与会话 */
   const [canvas, setCanvas] = useState<CanvasStateData>(() => blankCanvas(""));
   const [backendConnected, setBackendConnected] = useState<boolean | null>(null);
@@ -423,6 +438,9 @@ const App: React.FC = () => {
   }, []);
   useEffect(() => abortRefactorPoll, [abortRefactorPoll]);
   const [writebackNotice, setWritebackNotice] = useState<string | null>(null);
+  const [healingRound, setHealingRound] = useState<number>(0);
+  const [isSmartHealing, setIsSmartHealing] = useState<boolean>(false);
+  const [circuitBreakerAlert, setCircuitBreakerAlert] = useState<string | null>(null);
 
   /* 变更记录(PCEC 账本,契约 19 §5):抽屉打开才拉取;编译作业结束(成功/失败)
      递增 tick,让打开中的抽屉自动重拉账本 */
@@ -476,6 +494,8 @@ const App: React.FC = () => {
   /* 解析降级告警：只有真的存在降级时才铺开 */
   const [degradation, setDegradation] = useState<DegradationState | null>(null);
   const [degradationOpen, setDegradationOpen] = useState(false);
+  /** 工程进度看板（右侧抽屉）：打开才挂载才拉真实 /jobs 数据 */
+  const [progressOpen, setProgressOpen] = useState(false);
 
   /* 变量交叉引用分析 */
   const report = useMemo(() => analyzeCanvas(canvas), [canvas]);
@@ -991,7 +1011,7 @@ const App: React.FC = () => {
 
   /* 旧版同步重构(POST /canvas/refactor):流水线端点不可用(404/网关未升级/网络)
      时的兜底。报告文案统一走 pipelineResultMessage(自适应读取 lint_findings),
-     不再硬编码"静态合规审查: 0 Errors, 0 Warnings"。 */
+     不再硬编码任何静态合规结论数字。 */
   const runLegacySyncRefactor = async (phId: string): Promise<boolean> => {
     try {
       const targetUnit = `U1_${canvas.project_name || "HR001"}`;
@@ -1035,6 +1055,7 @@ const App: React.FC = () => {
       project_name: canvas.project_name,
       do_compile: intent.wantCompile,
       auto_fix: true,
+      mode: "af_scl",
     };
     try {
       const data = await requestPlc<{ job_id?: string; id?: string }>(
@@ -1200,8 +1221,25 @@ const App: React.FC = () => {
       let answerTried = false;
       if (!localOps.length && question) {
         if (Object.keys(canvas.blocks).length === 0) {
-          // 空白画布上问项目问题——LLM 只会收到空上下文答非所问，
-          // 直接引导用户进入导入的会话（打开即空白是新默认，历史需主动选）。
+          // 空白画布：若网关已有真实解析作业，改走块级只读问答 POST /jobs/{id}/chat，
+          // 直接基于已解析作业回答，不强依赖画布；返回的真实 citations 一并渲染进消息。
+          // 非空白画布的提问仍走下方 SSE 流式问答，此分支不改动那条路径。
+          const jobId = await resolveActivePlcJobId(canvas.project_name);
+          if (jobId) {
+            try {
+              const turn = await chatPlcJob(jobId, prompt, selectedBlockName ?? undefined);
+              settle(
+                turn.text +
+                  formatPlcCitations(turn.citations) +
+                  `\n\n> 基于解析作业 \`${jobId}\` 的块级只读问答（网关真实响应，非画布流式问答）。`,
+              );
+              return;
+            } catch {
+              /* 块级问答不可用 → 回落下方原有导入引导，不破坏 SSE 路径 */
+            }
+          }
+          // 无真实作业 / 块级问答失败：直接引导用户进入导入的会话
+          // （打开即空白是新默认，历史需主动选）。
           updateMessageText(
             phId,
             "当前是空白画布，还没有项目上下文。请先在左侧「历史对话」中点选你导入的工程会话" +
@@ -1252,26 +1290,56 @@ const App: React.FC = () => {
         prompt.includes("导出工程") ||
         prompt.toLowerCase().includes("zap19");
       if (isPackageIntent) {
-        const downloadBase = (window.location.protocol + "//" + window.location.hostname + ":8000");
-        const zipUrl = `${downloadBase}/api/v1/plc/canvas/download-package?package_type=zip`;
-        const zapUrl = `${downloadBase}/api/v1/plc/canvas/download-package?package_type=zap19`;
-        const rptUrl = `${downloadBase}/api/v1/plc/canvas/download-package?package_type=receipt`;
-        const pkgMsg = `### 西门子标准重构项目打包就绪\n\n` +
-          `**官方编译验证**：已通过西门子 TIA Portal V19 Openness 软件完全重建校验，**0 Errors, 0 Warnings (State=Success)**。\n\n` +
-          `#### 1. Web 直接下载连接 (点击立即下载)\n` +
-          `- [**点击直接下载：博图 V19 原生工程归档包 (.zap19)**](${zapUrl})\n` +
-          `- [**点击直接下载：完整交付母包 (.zip，含 64 块 SCL 源码 + I/O 保全表 + 编译收据)**](${zipUrl})\n` +
-          `- [查看 Openness 官方编译收据 (.json)](${rptUrl})\n\n` +
-          `#### 2. 本地项目同目录存储位置（与导入工程同目录）\n` +
-          `- 交付母包与 .zap19 已直接放置在导入项目的同一个目录下：\n` +
-          `  \`C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\PLC_Openness_data\\hr001\\\`\n` +
-          `  - \`HR001_AF_V1_2.zap19\`\n` +
-          `  - \`HR001_AF_V1_2_Package.zip\`\n` +
-          `  - \`compile_receipt.json\`\n` +
-          `  - \`io_retention_matrix.csv\`\n\n` +
-          `#### 3. 编译验证说明\n` +
-          `下载后在博图 V19 菜单点击「项目 -> 恢复 (Retrieve)」选择 \`HR001_AF_V1_2.zap19\` 即可直接打开编译，无任何缺失组件报错。`;
-        commitSession(canvas, [{ id: phId, role: "system", text: pkgMsg, ts: Date.now() }]);
+        // 实事求是：取真实 job_id → 真实请求导出端点确认资源是否存在 →
+        // 块数/文件数/编译结果/包名一律来自真实响应，一个字都不写死。
+        // 下载链接统一走 gatewayBase()（经 Vite 代理），不再硬拼后端端口。
+        void (async () => {
+          const jobId = await resolveActivePlcJobId(canvas.project_name);
+          if (!jobId) {
+            settle(
+              "### 当前作业暂无可下载交付包\n\n" +
+                "原因：网关 /jobs 未返回与当前画布关联的已就绪解析作业（status=ready 且带 coverage）。\n\n" +
+                "> 请先导入并解析工程，再请求交付包；此处不提供任何写死的包名、块数或编译结论。",
+            );
+            return;
+          }
+          const exportUrl = `${gatewayBase()}/api/v1/plc/jobs/${encodeURIComponent(jobId)}/export`;
+          const probe = await probePlcJobExport(jobId, AbortSignal.timeout?.(30000));
+          if (!probe.exists) {
+            settle(
+              buildJobExportMessage({ jobId, available: false, reason: probe.reason }) +
+                `\n\n> 导出端点：\`${exportUrl}\`（真实请求返回 HTTP ${probe.status}）。`,
+            );
+            return;
+          }
+          let detail: PlcJobDetail | null = null;
+          try {
+            detail = await fetchPlcJob(jobId);
+          } catch {
+            /* 详情拉取失败：块数/文件数/编译结果如实标注"网关未返回" */
+          }
+          const blockCount =
+            detail && Array.isArray(detail.blocks)
+              ? detail.blocks.length
+              : detail?.structure?.counts?.total ?? null;
+          const fileCount =
+            detail && detail.scl_files && typeof detail.scl_files === "object"
+              ? Object.keys(detail.scl_files).length
+              : null;
+          settle(
+            buildJobExportMessage({
+              jobId,
+              available: true,
+              filename: probe.filename,
+              exportUrl,
+              blockCount,
+              fileCount,
+              compile: extractCompileFromJobDetail(detail),
+              status: detail?.status ?? null,
+              projectName: detail?.project_name ?? null,
+            }),
+          );
+        })();
         return;
       }
       let llmSaidNoEdit = false;
@@ -2375,8 +2443,21 @@ const App: React.FC = () => {
         });
         try {
           job = await pollCompileJob(job.id, (j) => {
+            const subStages = buildWritebackSubStages(j.stages, {
+              healingRound,
+              maxHealingRounds: 3,
+              circuitBroken: Boolean(circuitBreakerAlert),
+              circuitBreakerAlert: circuitBreakerAlert || undefined,
+            });
+            const active =
+              subStages.find((s) => s.status === "running" || s.status === "healing") ||
+              [...subStages].reverse().find((s) => s.status !== "pending");
+            const activeText = active
+              ? `[${active.label} ${getStageStatusText(active.status)}] ${active.detail || ""}`
+              : "进行中…";
+            setWritebackNotice(`回写阶段推进：${activeText}`);
             patchLongTask(compileTaskId, {
-              detail: `编译作业 ${j.id.slice(0, 10)} · ${j.status === "running" ? "进行中" : j.status}`,
+              detail: `编译作业 ${j.id.slice(0, 10)} · ${active ? `${active.label} ${getStageStatusText(active.status)}` : (j.status === "running" ? "进行中" : j.status)}`,
             });
           });
           bumpChangesRefresh(); // 作业收敛(ok/error/cancelled)→ 刷新 PCEC 变更账本
@@ -2449,11 +2530,17 @@ const App: React.FC = () => {
         if (detail && (job.status === "ok" || headline)) notice += `（${detail}）`;
         if (job.status === "error" && (job.attributions || []).length) {
           try {
+            setHealingRound(1);
+            setWritebackNotice("正在尝试第 1/3 轮自愈：结构化抽取可用字段白名单并生成受控槽位补丁…");
             const fdata = await requestPlc<{
               ok?: boolean;
               canvas?: CanvasStateData;
               attributions?: CompilerAttribution[];
               rounds?: unknown[];
+              circuit_breaker?: boolean;
+              circuit_breaker_alert?: string;
+              stopped?: string;
+              message?: string;
             }>(`/api/v1/plc/canvas/fix-loop`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -2464,6 +2551,7 @@ const App: React.FC = () => {
                 plc_name: plcName,
                 auto: true,
                 max_rounds: 3,
+                use_llm: true,
               }),
               signal: AbortSignal.timeout?.(600000),
             });
@@ -2474,13 +2562,21 @@ const App: React.FC = () => {
                 setCanvas(fdata.canvas);
               }
               setAttributions((fdata.attributions || []) as CompilerAttribution[]);
-              notice = fdata.ok
-                ? `自动修正后编译通过（${(fdata.rounds || []).length} 轮）`
-                : `自动修正未完全成功（${(fdata.rounds || []).length} 轮）`;
+              const rCount = (fdata.rounds || []).length;
+              if (fdata.stopped === "circuit_breaker" || fdata.circuit_breaker) {
+                const cbMsg = fdata.circuit_breaker_alert || fdata.message || "同类错误连续出现达到阈值，熔断保护跳闸，防止LLM空转编造字段";
+                setCircuitBreakerAlert(cbMsg);
+                notice = `自愈熔断保护跳闸：${cbMsg}`;
+              } else if (fdata.ok) {
+                notice = `智能自愈成功！经 ${rCount} 轮受控槽位修复，增量编译已通过并回写保存`;
+              } else {
+                notice = `智能自愈未完全成功（已尝试 ${rCount} 轮，剩余 ${fdata.attributions?.length ?? 0} 个错误）`;
+              }
             }
           } catch {
             /* optional */
           } finally {
+            setHealingRound(0);
             bumpChangesRefresh(); // 修正轮也走编译作业 → 账本同样要刷新
           }
         }
@@ -2505,6 +2601,74 @@ const App: React.FC = () => {
     }
   };
 
+  /** 一键智能自愈：受控槽位修复 + 白名单注入 + CircuitBreaker 熔断保护 */
+  const handleTriggerSmartHeal = async () => {
+    if (writebackInFlightRef.current || isSmartHealing) return;
+    writebackInFlightRef.current = true;
+    setIsSmartHealing(true);
+    setCircuitBreakerAlert(null);
+    setHealingRound(1);
+    setWritebackNotice("正在尝试第 1/3 轮自愈：结构化抽取可用字段白名单并生成受控槽位补丁…");
+    const projectPath = canvas.source?.project_path || `${canvas.project_name}.ap19`;
+    const plcName = canvas.source?.plc_name || "PLC_1";
+
+    try {
+      const fdata = await requestPlc<{
+        ok?: boolean;
+        canvas?: CanvasStateData;
+        attributions?: CompilerAttribution[];
+        rounds?: unknown[];
+        circuit_breaker?: boolean;
+        circuit_breaker_alert?: string;
+        stopped?: string;
+        message?: string;
+      }>(`/api/v1/plc/canvas/fix-loop`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          canvas,
+          attributions,
+          project_path: projectPath,
+          plc_name: plcName,
+          auto: true,
+          max_rounds: 3,
+          use_llm: true,
+        }),
+        signal: AbortSignal.timeout?.(600000),
+      });
+
+      if (fdata) {
+        if (fdata.canvas) {
+          setCanvas(fdata.canvas);
+        }
+        if (fdata.attributions) {
+          setAttributions((fdata.attributions || []) as CompilerAttribution[]);
+        }
+        const rCount = (fdata.rounds || []).length;
+        if (fdata.stopped === "circuit_breaker" || fdata.circuit_breaker) {
+          const cbMsg =
+            fdata.circuit_breaker_alert ||
+            fdata.message ||
+            "同类错误连续出现达到阈值，熔断保护跳闸，防止LLM空转编造字段";
+          setCircuitBreakerAlert(cbMsg);
+          setWritebackNotice(`自愈熔断保护跳闸：${cbMsg}`);
+        } else if (fdata.ok) {
+          setWritebackNotice(`智能自愈成功！经 ${rCount} 轮受控槽位修复，增量编译已通过并回写保存`);
+        } else {
+          setWritebackNotice(`智能自愈未完全成功（已尝试 ${rCount} 轮，剩余 ${fdata.attributions?.length ?? 0} 个错误待人工复核）`);
+        }
+      }
+    } catch (err) {
+      const msg = explainGatewayError(err, "自愈执行异常");
+      setWritebackNotice(`自愈执行失败：${msg}`);
+    } finally {
+      setIsSmartHealing(false);
+      setHealingRound(0);
+      writebackInFlightRef.current = false;
+      bumpChangesRefresh();
+    }
+  };
+
   /* —— 新建工程流 · 最小创建确认的表单校验(与 CreateBlockDialog 的标识规则同口径) —— */
   const npfCreating = newProjectFlow.phase === "creating";
   const npfName = newProjectName.trim();
@@ -2515,6 +2679,10 @@ const App: React.FC = () => {
     npfNameError = "仅限字母、数字与下划线，且以字母或下划线开头";
   }
   const npfValid = npfName.length > 0 && npfNameError === "";
+
+  if (channel === "greenfield") {
+    return <GreenfieldChannel onBack={() => setChannel("workbench")} />;
+  }
 
   return (
     <div className="app">
@@ -2535,6 +2703,16 @@ const App: React.FC = () => {
           currentSessionId={activeSessionId}
           onJump={handleJumpToLongTask}
         />
+
+        {/* 工程进度看板:单一数据源作业/进度视图(/jobs + /brief + /export) */}
+        <button
+          className="topbar__toggle"
+          onClick={() => setProgressOpen(true)}
+          aria-label="工程进度看板"
+          title="工程进度看板 · 作业列表/状态/耗时/覆盖率/TODO/风险/交付物"
+        >
+          进度
+        </button>
 
         {/* 变更记录:低显著度次级入口(学 SclPane 的 </> 模式),打开才拉取账本 */}
         <button
@@ -2848,6 +3026,7 @@ const App: React.FC = () => {
                     onImport={() => setImportOpen(true)}
                     onNewProject={handleNewProjectEntry}
                     onSelectSession={handleSelectSession}
+                    onEnterGreenfield={() => setChannel("greenfield")}
                   />
                 </div>
               )}
@@ -2904,6 +3083,12 @@ const App: React.FC = () => {
       <CompileDrawer
         job={compileJob}
         attributions={attributions}
+        healingRound={healingRound}
+        maxHealingRounds={3}
+        circuitBroken={Boolean(circuitBreakerAlert)}
+        circuitBreakerAlert={circuitBreakerAlert || undefined}
+        healing={isSmartHealing}
+        onSmartHeal={() => void handleTriggerSmartHeal()}
         onJump={(a) => {
           if (a.target_type === "block" || a.target_type === "network") {
             setSelectedBlockName(a.target_id);
@@ -2931,6 +3116,22 @@ const App: React.FC = () => {
         <ChangeLogDrawer
           onClose={() => setChangeLogOpen(false)}
           refreshTick={changesRefreshTick}
+        />
+      )}
+
+      {/* 工程进度看板(右侧抽屉):打开才挂载才拉真实网关数据,关闭即卸载 */}
+      {progressOpen && (
+        <ProjectProgressPanel
+          projectName={canvas.project_name}
+          onClose={() => setProgressOpen(false)}
+          onJumpCanvas={(intent) => {
+            const name = intent.blockName || intent.symbol;
+            if (name) {
+              setSelectedBlockName(name);
+              setFocus({ kind: "block", blockName: name });
+              setProgressOpen(false);
+            }
+          }}
         />
       )}
 

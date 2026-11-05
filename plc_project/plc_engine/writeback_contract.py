@@ -95,6 +95,11 @@ def scl_block_name(source: str) -> str | None:
         ):
             if upper.startswith(kw):
                 rest = line[len(kw):].strip()
+                # 引号包裹的块名（可含空格，如 "Pull or plug of modules"）
+                if rest.startswith('"'):
+                    end_idx = rest.find('"', 1)
+                    if end_idx != -1:
+                        return rest[1:end_idx] or None
                 # DATA_BLOCK "IDB" "FB" 这种形式只取第一个名字
                 token = rest.split()[0] if rest.split() else ""
                 return token.strip('"') or None

@@ -7,6 +7,22 @@ import re
 from typing import Any
 
 from plc_engine.canvas_model import CanvasState
+from plc_engine.contracts import (
+    BoschStationAfModel,
+    PatchedSlotDelta,
+    from_dict,
+    to_dict,
+)
+from plc_engine.slot_context_slicer import (
+    assert_context_safe,
+    slice_station_context,
+    validate_slot_patch,
+)
+from plc_engine.contract_adapters import (
+    apply_slot_delta_to_station_model,
+    apply_station_model_to_af_blocks,
+    render_em_scl_sources,
+)
 
 ALLOWED_OPS = {
     "add_block",
@@ -632,6 +648,383 @@ def stream_project_answer(
     )
 
 
+
+# ---------------------------------------------------------------------------
+# 工站级六槽位受控对话编辑与反向渲染 (docs/plc_chat_v3_0.html Tab 4 / Step 5)
+# ---------------------------------------------------------------------------
+
+_STATION_REGEX = re.compile(r"\b(ST\d+|EM\d+|U\d+Em\d+)\b", re.IGNORECASE)
+_STATION_ZH_REGEX = re.compile(r"(?:工站|工位|站)\s*([A-Za-z0-9_]+)", re.IGNORECASE)
+
+_SLOT4_KEYWORDS = ("互锁", "联锁", "防呆", "保护", "释放", "interlock", "release")
+_SLOT3_KEYWORDS = ("步序", "工步", "步骤", "转移", "动作", "下降前", "升起前", "伸出前", "缩回前", "sequence", "step")
+
+
+def detect_station_slot_intent(
+    prompt: str,
+    canvas: CanvasState | None = None,
+    context: dict[str, Any] | None = None,
+) -> tuple[str | None, str | None]:
+    """识别工站级槽位自然语言交互意图。
+
+    返回 (station_id, intent_kind)，例如 ("ST10", "slot4_Interlock")；
+    若未命中则返回 (None, None)。
+    """
+    text = (prompt or "").strip()
+    if _question_without_edit_intent(text):
+        return None, None
+
+    ctx = context or {}
+    station_id = ctx.get("target_station") or ctx.get("station_id")
+
+    if not station_id:
+        m = _STATION_REGEX.search(text)
+        if m:
+            station_id = m.group(1).upper()
+        else:
+            m_zh = _STATION_ZH_REGEX.search(text)
+            if m_zh:
+                station_id = m_zh.group(1).upper()
+
+    if not station_id and canvas:
+        for b_name in canvas.blocks:
+            m_b = _STATION_REGEX.search(b_name)
+            if m_b and m_b.group(1).lower() in text.lower():
+                station_id = m_b.group(1).upper()
+                break
+
+    if not station_id:
+        return None, None
+
+    low = text.lower()
+    has_slot4 = any(k in text or k in low for k in _SLOT4_KEYWORDS)
+    has_slot3 = any(k in text or k in low for k in _SLOT3_KEYWORDS)
+
+    if has_slot4:
+        return station_id, "slot4_Interlock"
+    if has_slot3:
+        return station_id, "slot3_SeqAuto"
+
+    return None, None
+
+
+def _create_default_station_model(station_id: str) -> BoschStationAfModel:
+    """为指定工站构造标准 BoschStationAfModel 骨架（对齐 docs/plc_chat_v3_0.html Tab 4）。"""
+    slots = {
+        "slot1_InPeriphery": {
+            "inputs": {
+                "Cyl_Lift.i_xSenHome": f'"I_{station_id}_Lift_Home"',
+                "Cyl_Lift.i_xSenWork": f'"I_{station_id}_Lift_Work"',
+                "Cyl_Grip.i_xSenHome": f'"I_{station_id}_Grip_Home"',
+                "Cyl_Grip.i_xSenWork": f'"I_{station_id}_Grip_Work"',
+            },
+            "unclassified": {},
+        },
+        "slot2_OpMode": "LOCKED_BOSCH_TEMPLATE",
+        "slot3_SeqAuto": [
+            {
+                "stepNo": 10,
+                "name": "WAIT_FOR_PALLET",
+                "comment": "等待托盘到位且升降气缸在原位",
+                "actions": [],
+                "transitions": [
+                    {
+                        "condition": f'"I_{station_id}_PalletInPos" AND #Cyl_Lift.q_xInHome',
+                        "nextStep": 20,
+                    }
+                ],
+            },
+            {
+                "stepNo": 20,
+                "name": "LIFT_DESCEND",
+                "comment": "升降气缸下降取料",
+                "actions": ["Cyl_Lift.Work"],
+                "transitions": [
+                    {
+                        "condition": "#Cyl_Lift.q_xInWork",
+                        "nextStep": 30,
+                    }
+                ],
+            },
+        ],
+        "slot4_Interlock": {
+            "Cyl_Lift.releaseWork": '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos',
+        },
+        "slot5_ElementCall": [
+            {
+                "instanceName": "Cyl_Lift",
+                "name": "Cyl_Lift",
+                "fbType": "FB_Bosch_Cyl2Way",
+                "cm_type": "LBC_TwoWayActuator",
+                "ioMap": {
+                    "senHome": f'"I_{station_id}_Lift_Home"',
+                    "senWork": f'"I_{station_id}_Lift_Work"',
+                },
+                "timeout": "T#2000MS",
+                "interlock": {
+                    "releaseHome": "#i_stOpMode.xSafetyOk",
+                    "releaseWork": '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos',
+                },
+            },
+            {
+                "instanceName": "Cyl_Grip",
+                "name": "Cyl_Grip",
+                "fbType": "FB_Bosch_Cyl2Way",
+                "cm_type": "LBC_TwoWayActuator",
+                "ioMap": {
+                    "senHome": f'"I_{station_id}_Grip_Home"',
+                    "senWork": f'"I_{station_id}_Grip_Work"',
+                },
+                "timeout": "T#1500MS",
+                "interlock": {
+                    "releaseHome": "#i_stOpMode.xSafetyOk",
+                    "releaseWork": "#i_stOpMode.xSafetyOk",
+                },
+            },
+        ],
+        "slot6_OutAndHmiAdapter": {
+            "outputs": {
+                "Cyl_Lift.q_xOutHome": f'"Q_{station_id}_Lift_Home"',
+                "Cyl_Lift.q_xOutWork": f'"Q_{station_id}_Lift_Work"',
+                "Cyl_Grip.q_xOutHome": f'"Q_{station_id}_Grip_Home"',
+                "Cyl_Grip.q_xOutWork": f'"Q_{station_id}_Grip_Work"',
+            },
+            "hmi": {},
+            "legacy": {"placeholder": True},
+        },
+    }
+    return BoschStationAfModel(
+        station_id=station_id,
+        fb_block_name=f"FB_{station_id}_Main",
+        idb_block_name=f"IDB_{station_id}_Main",
+        cmd_udt_name=f"UDT_{station_id}_AutoCmd",
+        slots=slots,
+    )
+
+
+def resolve_station_model(
+    station_id: str,
+    canvas: CanvasState,
+    context: dict[str, Any] | None = None,
+) -> BoschStationAfModel:
+    """解析或合成目标工站的 BoschStationAfModel。"""
+    ctx = context or {}
+    if "station_model" in ctx:
+        sm = ctx["station_model"]
+        if isinstance(sm, BoschStationAfModel):
+            return sm
+        if isinstance(sm, dict):
+            return from_dict(BoschStationAfModel, sm)
+    if "station_models" in ctx and isinstance(ctx["station_models"], dict):
+        cand = ctx["station_models"].get(station_id)
+        if isinstance(cand, BoschStationAfModel):
+            return cand
+        if isinstance(cand, dict):
+            return from_dict(BoschStationAfModel, cand)
+
+    return _create_default_station_model(station_id)
+
+
+def generate_diff_summary(
+    model: BoschStationAfModel,
+    delta: PatchedSlotDelta,
+) -> dict[str, Any]:
+    """生成结构化与自然语言可解释的变更对比，严禁直接倾倒底层巨量 SCL。"""
+    entries: list[dict[str, Any]] = []
+    lines: list[str] = [f"=== 工站 {delta.station_id} 受控槽位变更对比 ==="]
+
+    for slot_name in delta.modified_slots:
+        if slot_name == "slot4_Interlock":
+            lines.append("【Slot 4: @INTERLOCK 释放与安全联锁】")
+            old_slot4 = model.slots.get("slot4_Interlock") or {}
+            for target_elem, new_cond in delta.patch.items():
+                if target_elem.startswith("step_") or target_elem == "slot3_SeqAuto":
+                    continue
+                old_cond = old_slot4.get(target_elem, "(无前置互锁)")
+                entries.append({
+                    "slot": "Slot 4 (@INTERLOCK)",
+                    "target": target_elem,
+                    "before": old_cond,
+                    "after": new_cond,
+                    "change_type": "UPDATE_INTERLOCK" if target_elem in old_slot4 else "ADD_INTERLOCK",
+                })
+                lines.append(f"  • 目标元件: {target_elem}")
+                lines.append(f"    - 变更前: {old_cond}")
+                lines.append(f"    + 变更后: {new_cond}")
+        elif slot_name == "slot3_SeqAuto":
+            lines.append("【Slot 3: @SEQ_AUTO 自动步序逻辑】")
+            for target_key, new_val in delta.patch.items():
+                entries.append({
+                    "slot": "Slot 3 (@SEQ_AUTO)",
+                    "target": target_key,
+                    "before": "见原步序定义",
+                    "after": str(new_val),
+                    "change_type": "UPDATE_SEQUENCE",
+                })
+                lines.append(f"  • 步序条目: {target_key} -> {new_val}")
+
+    lines.append(f"★ 变更说明: {delta.explanation}")
+    return {
+        "station_id": delta.station_id,
+        "entries": entries,
+        "text": "\n".join(lines),
+    }
+
+
+def handle_station_slot_chat(
+    prompt: str,
+    canvas: CanvasState,
+    station_id: str,
+    intent_kind: str,
+    *,
+    context: dict[str, Any] | None = None,
+    use_llm: bool = True,
+) -> dict[str, Any]:
+    """处理工站级六槽位对话受控编辑。"""
+    ctx = context or {}
+    model = resolve_station_model(station_id, canvas, ctx)
+
+    # 1. 微型上下文切片 (< 1500 Tokens) 并执行安全断言
+    slice_res = slice_station_context(model, prompt, token_budget=1500)
+    assert_context_safe(slice_res)
+
+    delta: PatchedSlotDelta | None = None
+    source = "rules"
+
+    # 2. 若启用 LLM，发起受控提示
+    if use_llm:
+        from gateway.app.services.plc.llm_explain import chat_completion_raw, llm_settings
+        settings = llm_settings()
+        if settings is not None:
+            system_msg = (
+                "You are an industrial automation slot editor following Siemens & Bosch OpCon AF standards. "
+                "You output ONLY a raw JSON object conforming to PatchedSlotDelta: "
+                '{"stationId": "' + station_id + '", "modifiedSlots": ["slot4_Interlock"], '
+                '"patch": {"<element.condition>": "<new SCL logic>"}, "explanation": "..."}. '
+                "CRITICAL CONSTRAINTS: "
+                "1. Modify ONLY Slot 3 (@SEQ_AUTO) or Slot 4 (@INTERLOCK). Never touch Slot 2. "
+                "2. Do NOT output full SCL files. "
+                "3. Do NOT leak or reference physical %Q addresses; use only symbolic names and slot variables. "
+                "4. Reply with raw JSON object, no markdown."
+            )
+            user_msg = json.dumps(slice_res.to_payload(), ensure_ascii=False)
+            try:
+                raw_text, _ = chat_completion_raw(
+                    [
+                        {"role": "system", "content": system_msg},
+                        {"role": "user", "content": user_msg},
+                    ],
+                    settings,
+                    timeout_s=60.0,
+                    max_tokens=1024,
+                    json_mode=True,
+                )
+                raw_text = (raw_text or "").strip()
+                if raw_text.startswith("```"):
+                    raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)
+                    raw_text = re.sub(r"\s*```$", "", raw_text)
+                parsed = json.loads(raw_text)
+                if isinstance(parsed, dict) and "patch" in parsed:
+                    if "stationId" in parsed and "station_id" not in parsed:
+                        parsed["station_id"] = parsed.pop("stationId")
+                    if "modifiedSlots" in parsed and "modified_slots" not in parsed:
+                        parsed["modified_slots"] = parsed.pop("modifiedSlots")
+                    delta = from_dict(PatchedSlotDelta, parsed)
+                    source = "llm"
+            except Exception:
+                delta = None
+
+    # 3. 规则确定性兜底
+    if delta is None:
+        source = "rules"
+        if intent_kind == "slot4_Interlock":
+            if any(k in prompt for k in ("夹爪", "Grip", "grip", "张开")):
+                interlock_cond = "#Cyl_Grip.q_xInHome"
+                target_elem = "Cyl_Lift.releaseWork"
+                explanation = f"在 {station_id} 升降气缸下降 (Cyl_Lift.releaseWork) 前增加夹爪气缸原位互锁 (#Cyl_Grip.q_xInHome)。"
+            else:
+                interlock_cond = "#i_stOpMode.xSafetyOk"
+                target_elem = "Cyl_Lift.releaseWork"
+                explanation = f"在 {station_id} 升降气缸动作前补充安全联锁条件。"
+
+            existing_expr = (model.slots.get("slot4_Interlock") or {}).get(target_elem, "")
+            if existing_expr:
+                if interlock_cond not in existing_expr:
+                    new_expr = f"{existing_expr} AND {interlock_cond}"
+                else:
+                    new_expr = existing_expr
+            else:
+                new_expr = f"#i_stOpMode.xSafetyOk AND {interlock_cond}"
+
+            delta = PatchedSlotDelta(
+                station_id=station_id,
+                modified_slots=["slot4_Interlock"],
+                patch={target_elem: new_expr},
+                explanation=explanation,
+            )
+        else:
+            # Slot 3 步序修改
+            m_step = re.search(r"(?:步序|工步|步骤|step)\s*(\d+)", prompt, re.IGNORECASE)
+            step_no = int(m_step.group(1)) if m_step else 20
+            target_key = f"step_{step_no}.transition"
+            new_cond = "#Cyl_Lift.q_xInWork AND #Cyl_Grip.q_xInHome"
+            explanation = f"更新 {station_id} 步序 {step_no} 的转移条件为 {new_cond}。"
+            delta = PatchedSlotDelta(
+                station_id=station_id,
+                modified_slots=["slot3_SeqAuto"],
+                patch={target_key: new_cond},
+                explanation=explanation,
+            )
+
+    # 4. 严格校验补丁
+    validate_slot_patch(delta, check_physical_q=True)
+
+    # 5. 生成 Diff Summary
+    diff_summary = generate_diff_summary(model, delta)
+
+    # 6. 反向应用并渲染更新
+    updated_model = apply_slot_delta_to_station_model(model, delta)
+    rendered_blocks = apply_station_model_to_af_blocks(updated_model)
+
+    ops: list[dict[str, Any]] = []
+    for b_name, b_obj in rendered_blocks.items():
+        if b_name.endswith(".scl") or "::" not in b_name:
+            continue
+        short_name = getattr(b_obj, "name", "")
+        matched = next(
+            (cn for cn in canvas.blocks if cn == b_name or cn == short_name or cn.endswith(f"::{short_name}")),
+            None,
+        )
+        if matched:
+            ops.append({
+                "op": "update_block_scl",
+                "name": matched,
+                "scl_body": getattr(b_obj, "scl_body", ""),
+            })
+
+    cleaned_ops, op_errors = validate_ops(canvas, ops)
+
+    return {
+        "ok": True,
+        "ops": cleaned_ops,
+        "errors": op_errors,
+        "source": f"{source}_slot_editor",
+        "station_id": station_id,
+        "delta": to_dict(delta),
+        "diff_summary": diff_summary,
+        "explanation": delta.explanation,
+        "estimated_tokens": slice_res.estimated_tokens,
+        "modified_slots": delta.modified_slots,
+        "message": f"工站 {station_id} 受控槽位编辑完成：{delta.explanation}",
+        "preview": [
+            {
+                "kind": "slot~",
+                "summary": f"{station_id} 槽位修改: {', '.join(delta.modified_slots)} ({delta.explanation[:50]})",
+            }
+        ],
+    }
+
+
 def build_chat_ops(
     prompt: str,
     canvas: CanvasState,
@@ -670,6 +1063,15 @@ def build_chat_ops(
     # 动词的问句仍放行给结构化意图/LLM）。
     if _question_without_edit_intent(prompt):
         return {"ops": [], "errors": [], "source": "question", "preview": []}
+
+    # 工站级六槽位受控编辑（Tab 4 / Step 5：<1500 Tokens 切片与 PatchedSlotDelta）
+    station_id, intent_kind = detect_station_slot_intent(prompt, canvas, ctx)
+    if station_id and intent_kind:
+        slot_res = handle_station_slot_chat(
+            prompt, canvas, station_id, intent_kind, context=ctx, use_llm=use_llm
+        )
+        if slot_res:
+            return slot_res
     ops: list[dict[str, Any]] = []
     source = "rules"
     if use_llm:

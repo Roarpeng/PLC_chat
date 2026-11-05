@@ -29,6 +29,14 @@ export const GATEWAY_BASE =
       : "http://localhost:8000"
     : String(rawGateway).replace(/\/$/, "");
 
+/**
+ * 统一网关基址入口：交付/打包等分支一律用它拼真实端点，
+ * 禁止再在 UI 里 `window.location... + ":8000"` 硬拼端口绕过 Vite 代理。
+ */
+export function gatewayBase(): string {
+  return GATEWAY_BASE;
+}
+
 /** Any non-2xx / `ok:false` gateway answer, with the gateway code preserved. */
 export class GatewayError extends Error {
   readonly status: number;
@@ -537,4 +545,116 @@ export async function annotatePlcDeviceCard(
       body: JSON.stringify({ text, author }),
     },
   );
+}
+
+/* ---- 交付包 / 简报 / 块级问答（真实端点，见 routers/plc.py） ---- */
+
+/** 解析作业导出端点 URL（统一走 gatewayBase，不硬拼端口）。 */
+export function plcJobExportUrl(jobId: string): string {
+  return `${gatewayBase()}/api/v1/plc/jobs/${encodeURIComponent(jobId)}/export`;
+}
+
+/** 博途原生归档端点 URL（是否真有产物须以请求结果为准，绝不写死"已就绪"）。 */
+export function plcJobZapUrl(jobId: string): string {
+  return `${gatewayBase()}/api/v1/plc/jobs/${encodeURIComponent(jobId)}/zap`;
+}
+
+/** GET /jobs/{id}/brief → 分层工程简报（requestPlc 拆 { ok, data } 信封）。 */
+export async function fetchPlcJobBrief(jobId: string): Promise<PlcProjectBrief> {
+  return requestPlc<PlcProjectBrief>(
+    `/api/v1/plc/jobs/${encodeURIComponent(jobId)}/brief`,
+  );
+}
+
+/** 从 Content-Disposition 抽真实文件名：`attachment; filename="x.zip"`。 */
+export function parseContentDispositionFilename(value: string | null): string | null {
+  if (!value) return null;
+  const match = /filename\*?="?([^";]+)"?/i.exec(value);
+  const name = match?.[1]?.trim();
+  return name || null;
+}
+
+/** 一次真实 GET /jobs/{id}/export 探测结果。 */
+export type PlcExportProbe = {
+  exists: boolean;
+  status: number;
+  filename: string | null;
+  contentType: string | null;
+  /** 不存在时的真实原因（HTTP 状态 / 网关 code+message / 网络错误）；存在时为 null。 */
+  reason: string | null;
+};
+
+/**
+ * 真实请求导出端点，只确认资源是否存在并读响应头，不把整包读进内存。
+ * - 2xx：存在，文件名来自 Content-Disposition；
+ * - 404/409 等：不存在，原因来自网关 JSON 错误体；
+ * - 网络错误：不存在，原因来自异常信息。
+ * 下载本身交给 `plcJobExportUrl` 链接，不在此消费 body。
+ */
+export async function probePlcJobExport(
+  jobId: string,
+  signal?: AbortSignal,
+): Promise<PlcExportProbe> {
+  let res: Response;
+  try {
+    res = await fetch(plcJobExportUrl(jobId), {
+      method: "GET",
+      headers: { Accept: "application/zip" },
+      signal,
+    });
+  } catch (err) {
+    return {
+      exists: false,
+      status: 0,
+      filename: null,
+      contentType: null,
+      reason: `网关不可达或请求失败（${err instanceof Error ? err.message : String(err)}）`,
+    };
+  }
+  const contentType = res.headers.get("content-type");
+  const filename = parseContentDispositionFilename(res.headers.get("content-disposition"));
+  if (!res.ok) {
+    let reason = `导出端点返回 HTTP ${res.status}`;
+    try {
+      const body = JSON.parse(await res.text()) as {
+        detail?: string | { code?: string; message?: string };
+        error?: string | { code?: string; message?: string };
+      };
+      const detail = body?.detail ?? body?.error ?? null;
+      const message = typeof detail === "string" ? detail : detail?.message;
+      const code = typeof detail === "object" ? detail?.code : undefined;
+      if (message) reason = `${message}${code ? `（${code}）` : ""}`;
+    } catch {
+      /* 非 JSON 错误体：保留 HTTP 状态即可 */
+    }
+    return { exists: false, status: res.status, filename, contentType, reason };
+  }
+  // 资源真实存在：取消响应体（只做存在性探测，避免把整个 zip 读进内存）
+  try {
+    await res.body?.cancel();
+  } catch {
+    /* 忽略取消失败 */
+  }
+  return { exists: true, status: res.status, filename, contentType, reason: null };
+}
+
+/**
+ * 把块级只读问答返回的真实 citations 渲染成 Markdown 引用清单，
+ * 追加进对话消息文本（ChatDock 的 MarkdownBody 会渲染，无需改 ChatDock）。
+ */
+export function formatPlcCitations(citations: PlcCitation[] | null | undefined): string {
+  const list = Array.isArray(citations) ? citations : [];
+  if (!list.length) return "";
+  const lines = list.map((c, i) => {
+    const block = c.block || c.target || c.nodeId || "—";
+    const loc =
+      c.locator ||
+      (c.network ? `Network ${c.network}` : "") ||
+      (typeof c.line === "number" ? `line ${c.line}` : "");
+    const snip = c.snippet || c.evidence || "";
+    const status = c.source_status ? ` · ${c.source_status}` : "";
+    const head = `- [${i + 1}] \`${block}\`${loc ? ` · ${loc}` : ""}${status}`;
+    return snip ? `${head}\n  - ${snip}` : head;
+  });
+  return `\n\n#### 引用源（网关真实 citations）\n${lines.join("\n")}`;
 }

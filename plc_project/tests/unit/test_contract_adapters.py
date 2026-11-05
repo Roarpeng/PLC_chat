@@ -18,6 +18,15 @@ from plc_engine.af.af_model import (
     AfUnit,
 )
 from plc_engine.contract_adapters import (
+    apply_slot_delta_to_em,
+    apply_slot_delta_to_station_model,
+    apply_station_model_to_af_blocks,
+    extract_em_interlocks,
+    render_em_scl_sources,
+    station_model_to_af_em,
+)
+from plc_engine.contracts import PatchedSlotDelta
+from plc_engine.contract_adapters import (
     af_em_to_station_model,
     bundle_result_to_batch,
     contract_roundtrip_check,
@@ -497,3 +506,151 @@ def test_contract_roundtrip_check_populated_instances() -> None:
 
 def test_contract_roundtrip_check_non_dataclass_is_false() -> None:
     assert contract_roundtrip_check({"a": 1}) is False
+
+
+# ---------------------------------------------------------------------------
+# Slot 4 互锁提取与双向反向渲染测试 (P0-B 交付项)
+# ---------------------------------------------------------------------------
+
+def test_extract_em_interlocks_from_various_cm_params() -> None:
+    cms = [
+        AfCm(
+            name="cylLift",
+            cm_type="LBC_TwoWayActuator",
+            parameters={
+                "releaseHome": "#i_stOpMode.xSafetyOk",
+                "releaseWork": '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos',
+            },
+        ),
+        AfCm(
+            name="cylGrip",
+            cm_type="LBC_TwoWayActuator",
+            parameters={
+                "interlock": {
+                    "releaseWork": "#cylLift.senWork",
+                },
+            },
+        ),
+        AfCm(
+            name="motorConveyor",
+            cm_type="LBC_AxisControl",
+            parameters={
+                "interlocks": ["I_Guard_Closed", "NOT I_Estop"],
+            },
+        ),
+    ]
+    em = AfEm(
+        em_idx=1,
+        name="Station1",
+        control_modules=cms,
+    )
+
+    interlocks = extract_em_interlocks(em)
+    assert interlocks["cylLift.releaseHome"] == "#i_stOpMode.xSafetyOk"
+    assert interlocks["cylLift.releaseWork"] == '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos'
+    assert interlocks["cylGrip.releaseWork"] == "#cylLift.senWork"
+    assert interlocks["motorConveyor.interlock_1"] == "I_Guard_Closed"
+    assert interlocks["motorConveyor.interlock_2"] == "NOT I_Estop"
+
+
+def test_af_em_to_station_model_populates_slot4_interlock() -> None:
+    em = _em()
+    # 为 cylLoader 添加真实释放条件
+    em.control_modules[0].parameters = {
+        "interlock": {
+            "releaseWork": '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos',
+            "releaseHome": "#i_stOpMode.xSafetyOk",
+        }
+    }
+    model = af_em_to_station_model(em)
+    slot4 = model.slots["slot4_Interlock"]
+    assert slot4["cylLoader.releaseWork"] == '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos'
+    assert slot4["cylLoader.releaseHome"] == "#i_stOpMode.xSafetyOk"
+
+
+def test_apply_slot_delta_to_em_slot4() -> None:
+    em = _em()
+    delta = PatchedSlotDelta(
+        station_id="Em1_LoadingStation",
+        modified_slots=["slot4_Interlock"],
+        patch={
+            "cylLoader.releaseWork": '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos AND #cylGrip.q_xInHome',
+        },
+        explanation="在气缸伸出前增加夹爪原位互锁",
+    )
+    new_em = apply_slot_delta_to_em(em, delta)
+    # 原 em 不受污染
+    assert em.control_modules[0].parameters == {}
+    # new_em 已更新
+    assert (
+        new_em.control_modules[0].parameters["releaseWork"]
+        == '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos AND #cylGrip.q_xInHome'
+    )
+
+    # 再次转为 StationModel 校验一致性
+    updated_model = af_em_to_station_model(new_em)
+    assert (
+        updated_model.slots["slot4_Interlock"]["cylLoader.releaseWork"]
+        == '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos AND #cylGrip.q_xInHome'
+    )
+
+
+def test_apply_slot_delta_to_em_slot3() -> None:
+    em = _em()
+    delta = PatchedSlotDelta(
+        station_id="Em1_LoadingStation",
+        modified_slots=["slot3_SeqAuto"],
+        patch={
+            "step_20.transition": "cylLoader.senWork AND sensorPart.sig",
+            "step_20.actions": ["#cmd.extend := TRUE;", "#cmd.log := 1;"],
+        },
+        explanation="修改步序 20 转移条件与动作",
+    )
+    new_em = apply_slot_delta_to_em(em, delta)
+    assert em.sequence.steps[1].transition_condition == "cylLoader.senWork"
+    assert new_em.sequence.steps[1].transition_condition == "cylLoader.senWork AND sensorPart.sig"
+    assert new_em.sequence.steps[1].actions == ["#cmd.extend := TRUE;", "#cmd.log := 1;"]
+
+
+def test_apply_station_model_to_af_blocks_renders_scl() -> None:
+    em = _em()
+    em.control_modules[0].parameters = {
+        "releaseWork": '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos',
+    }
+    model = af_em_to_station_model(em, unit_idx=1)
+
+    blocks = apply_station_model_to_af_blocks(model, unit_idx=1, self_contained=True)
+    assert "Sequence.scl" in blocks
+    assert "CallEquipment.scl" in blocks
+    assert "Main.scl" in blocks
+
+    seq_block = blocks["Sequence.scl"]
+    assert "WAIT_FOR_PART" in seq_block.scl_body
+    assert "CYL_EXTEND" in seq_block.scl_body
+    assert "sensorPart.sig" in seq_block.scl_body
+
+    call_eq = blocks["CallEquipment.scl"]
+    assert "Slot 4 Release Work Interlock" in call_eq.scl_body
+    assert '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos' in call_eq.scl_body
+
+    # 测试文本化导出
+    sources = render_em_scl_sources(model, unit_idx=1)
+    assert "FUNCTION_BLOCK" in sources["Sequence.scl"]
+    assert "FUNCTION_BLOCK" in sources["CallEquipment.scl"]
+
+
+def test_station_model_to_af_em_roundtrip() -> None:
+    original_em = _em()
+    original_em.unit_idx = 1
+    original_em.control_modules[0].parameters = {
+        "releaseWork": '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos',
+    }
+    model = af_em_to_station_model(original_em, unit_idx=1)
+    restored_em = station_model_to_af_em(model, unit_idx=1)
+
+    assert restored_em.em_idx == original_em.em_idx
+    assert len(restored_em.sequence.steps) == len(original_em.sequence.steps)
+    assert restored_em.sequence.steps[0].step_id == 10
+    assert restored_em.sequence.steps[0].name == "WAIT_FOR_PART"
+    assert restored_em.control_modules[0].name == "cylLoader"
+    assert restored_em.control_modules[0].parameters["releaseWork"] == '#i_stOpMode.xSafetyOk AND "DB_AxisX".xInPos'
