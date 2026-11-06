@@ -18,6 +18,7 @@ import "@fontsource/albert-sans/600.css";
 import type { Connection } from "@xyflow/react";
 import {
   GFRequestError,
+  actionAvailability,
   applyCanvasPatch,
   applyLinkPatch,
   beginEdit,
@@ -27,6 +28,8 @@ import {
   confirmSpec,
   createDraft,
   deliverTia,
+  diffChecklistComplete,
+  diffExplicitlyConfirmed,
   diffWriteBlockers,
   ensureProjectId,
   exportDraft,
@@ -43,10 +46,17 @@ import {
   loadReferenceFixture,
   loadSessionId,
   revalidate,
+  runActionA,
+  runActionB,
+  runActionC,
   saveSessionId,
   sendChat,
   updateHardware,
   uploadFiles,
+  type GFActionCompileDiagnostics,
+  type GFActionKind,
+  type GFActionMachine,
+  type GFActionResult,
   type GFBlocker,
   type GFCanvasOp,
   type GFDraftPayload,
@@ -97,6 +107,21 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
   const [confirmErrorCode, setConfirmErrorCode] = useState("");
   const [confirmErrorMessage, setConfirmErrorMessage] = useState("");
 
+  /* —— F20 三动作状态（A 导出 / B 首次写入 / C 增量回写）—— */
+  const [actionResults, setActionResults] = useState<
+    Partial<Record<GFActionKind, GFActionResult | null>>
+  >({});
+  const [actionLoading, setActionLoading] = useState<GFActionKind | null>(null);
+  const [actionError, setActionError] = useState("");
+  const [actionErrorCode, setActionErrorCode] = useState("");
+  /** 差异清单逐项勾选（D11：显式确认前必须逐项勾齐）。 */
+  const [diffChecked, setDiffChecked] = useState<Record<string, boolean>>({});
+  const [actionARun, setActionARun] = useState(false);
+  const [actionAFidelityOk, setActionAFidelityOk] = useState<boolean | null>(null);
+  const [actionBDone, setActionBDone] = useState(false);
+  /** Action A 的真实 fidelity 报告，透传给 B/C（不虚构）。 */
+  const [actionFidelityReport, setActionFidelityReport] = useState<Record<string, unknown> | null>(null);
+
   /** run 内部始终读最新 state，避免闭包捕获旧快照。 */
   const stateRef = useRef<GFState | null>(null);
   stateRef.current = state;
@@ -124,6 +149,49 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
         onCaught?.(caught);
       } finally {
         setBusy(false);
+      }
+    },
+    [busy, refresh, sessionId],
+  );
+
+  /** 三动作统一异步边界：loading / error（可读中文）/ 结果 / 反馈四态齐全。 */
+  const runAction = useCallback(
+    async (kind: GFActionKind, call: (sid: string) => Promise<GFActionResult>) => {
+      if (!sessionId || busy) return;
+      setActionLoading(kind);
+      setActionError("");
+      setActionErrorCode("");
+      setError("");
+      try {
+        const result = await call(sessionId);
+        setActionResults((prev) => ({ ...prev, [kind]: result }));
+        if (kind === "A") {
+          setActionARun(true);
+          setActionAFidelityOk(result.fidelity_ok === true);
+          setActionFidelityReport(
+            result.fidelity_report
+              ? (result.fidelity_report as unknown as Record<string, unknown>)
+              : null,
+          );
+        }
+        if (kind === "B" && result.ok && !result.blocked) setActionBDone(true);
+        setActionFeedback(
+          kind === "A"
+            ? `Action A 已导出工程包：还原度校验 fidelity_ok=${String(result.fidelity_ok)}（不写 TIA，不等于编译通过）`
+            : kind === "B"
+              ? `Action B 首次写入编排返回：compile_ok=${String(result.compile_ok)}（真机 L2 仍为 pending_real_machine）`
+              : `Action C 增量回写返回：mode=${result.mode}；真机结论 pending_real_machine`,
+        );
+        await refresh(sessionId);
+      } catch (caught) {
+        const gfErr = caught instanceof GFRequestError ? caught : null;
+        setActionError(formatGfError(caught));
+        setActionErrorCode(gfErr?.code ?? "");
+        setActionFeedback(
+          `Action ${kind} 被拒绝：${formatGfError(caught)}（服务端 fail-closed，未产生越权写入）`,
+        );
+      } finally {
+        setActionLoading(null);
       }
     },
     [busy, refresh, sessionId],
@@ -208,10 +276,38 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
   const effectiveState = state
     ? { ...state, spec_diff: state.spec_diff ?? diff }
     : null;
+  const effectiveDiff: GFSpecDiff | null = state?.spec_diff ?? diff ?? null;
   const effectiveDiffConfirmed = diffConfirmed || state?.diff_confirmed === true;
+  /** D11：逐项勾选齐全 ∧ 显式确认标志，才算显式确认（确认前零副作用）。 */
+  const checklistComplete = diffChecklistComplete(effectiveDiff, diffChecked);
+  const explicitConfirmed = diffExplicitlyConfirmed(
+    effectiveDiff,
+    diffChecked,
+    effectiveDiffConfirmed,
+  );
   const writeBlockers: GFBlocker[] = effectiveState
-    ? diffWriteBlockers(effectiveState, effectiveDiffConfirmed, state?.reverse_protection ?? null)
+    ? diffWriteBlockers(effectiveState, explicitConfirmed, state?.reverse_protection ?? null)
     : [];
+
+  /* —— 三动作状态机（对齐服务端 §3.2 / D11 / D10 / UC-17）—— */
+  const latestActionReverse =
+    actionResults.C?.reverse_protection ?? actionResults.B?.reverse_protection ?? null;
+  const effectiveReverse = state?.reverse_protection ?? latestActionReverse ?? null;
+  const reverseBlocked =
+    !!effectiveReverse &&
+    (effectiveReverse.allowed === false || (effectiveReverse.tia_side_drift ?? 0) > 0);
+  const machine: GFActionMachine = {
+    stage: state?.stage ?? "DRAFT",
+    actionARun,
+    actionAFidelityOk,
+    actionBDone,
+    diffConfirmed: explicitConfirmed,
+    diffChecklistComplete: checklistComplete,
+    reverseBlocked,
+  };
+  const availability = actionAvailability(machine);
+  const actionCompileDiagnostics: GFActionCompileDiagnostics | null =
+    actionResults.B?.compile_diagnostics ?? actionResults.C?.compile_diagnostics ?? null;
 
   const onFiles = async (files: File[]) => {
     if (files.length === 0) return;
@@ -259,16 +355,29 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
     if (!projectId) return;
     void run(async () => {
       const result = await loadDiff(projectId, stateRef.current);
+      // 差异清单变了，逐项勾选与显式确认一律重置（D11 fail-closed，需重新核对）。
+      setDiffChecked({});
+      setDiffConfirmed(false);
       setActionFeedback(
         result
-          ? "差异清单已刷新（带 source_id），请逐条核对后显式勾选确认"
+          ? "差异清单已刷新（带 source_id），请逐条勾选后显式确认（D11）"
           : "差异清单刷新失败，已安全降级，未产生任何写入",
       );
     });
   };
 
+  /** D11：任一勾选变化都撤销显式确认，要求重新核对并再次显式确认。 */
+  const onToggleDiffItem = (key: string, checked: boolean) => {
+    setDiffChecked((prev) => ({ ...prev, [key]: checked }));
+    setDiffConfirmed(false);
+  };
+
   const onConfirmDiff = (confirmed: boolean) => {
     if (!projectId) return;
+    if (confirmed && !checklistComplete) {
+      setActionFeedback("请先逐项勾选全部变更 / 新增 / 移除项后再显式确认（D11：确认前零副作用）");
+      return;
+    }
     void run(
       async () => {
         const versions = (stateRef.current?.specs ?? []).map((s) => s.spec_version);
@@ -276,11 +385,11 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
         const fromVersion =
           versions.length > 1 ? versions[versions.length - 2] : Math.max(0, toVersion - 1);
         const diffId = diff?.diff_id ?? `diff-${fromVersion}-${toVersion}`;
-        await confirmDiff(projectId, diffId, confirmed);
-        setDiffConfirmed(confirmed);
+        await confirmDiff(projectId, diffId, confirmed && checklistComplete);
+        setDiffConfirmed(confirmed && checklistComplete);
         setActionFeedback(
           confirmed
-            ? "差异清单已显式确认（D11）：后续写入解锁；确认前零副作用计数器恒 0"
+            ? "差异清单已逐项核对并显式确认（D11）：后续写入解锁；确认前零副作用计数器恒 0"
             : "已撤销差异清单确认：后续写入重新锁定",
         );
       },
@@ -320,7 +429,8 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
         confirmErrorMessage={confirmErrorMessage}
         writeBlockers={writeBlockers}
         pendingRealMachine={pendingRealMachine}
-        diffConfirmed={effectiveDiffConfirmed}
+        diffConfirmed={explicitConfirmed}
+        actionResults={actionResults}
         onLoadReference={() => {
           void run(async (sid) => {
             await loadReferenceFixture(sid, prompt);
@@ -444,6 +554,38 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
             actionFeedback={actionFeedback}
             pendingRealMachine={pendingRealMachine}
             sclSources={sclSources}
+            actionAvailability={availability}
+            actionResults={actionResults}
+            actionLoading={actionLoading}
+            actionError={actionError}
+            actionErrorCode={actionErrorCode}
+            actionCompileDiagnostics={actionCompileDiagnostics}
+            diffChecked={diffChecked}
+            onToggleDiffItem={onToggleDiffItem}
+            checklistComplete={checklistComplete}
+            explicitConfirmed={explicitConfirmed}
+            onRunActionA={() =>
+              void runAction("A", (sid) => runActionA({ session_id: sid }))
+            }
+            onRunActionB={() =>
+              void runAction("B", (sid) =>
+                runActionB({
+                  session_id: sid,
+                  confirmed: explicitConfirmed,
+                  fidelity_report: actionFidelityReport,
+                }),
+              )
+            }
+            onRunActionC={() =>
+              void runAction("C", (sid) =>
+                runActionC({
+                  session_id: sid,
+                  confirmed: explicitConfirmed,
+                  diff: effectiveDiff,
+                  fidelity_report: actionFidelityReport,
+                }),
+              )
+            }
             onSelectHwNode={setSelectedHwNodeId}
             onSelectTarget={setSelectedTargetId}
             onPromptChange={setPrompt}

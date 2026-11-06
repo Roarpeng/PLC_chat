@@ -1211,3 +1211,31 @@
 .gf-scl-preview .tok-com { color: var(--ink-3); font-style: italic; }
 .gf-scl-preview .tok-str { color: var(--danger); }
 .gf-scl-preview .tok-num { color: var(--danger-deep); }
+
+/* ============================== 三动作操作入口（Agent L 收口补齐） ==============================
+ * J 新增类名 gf-action-triad / gf-action-card 的样式补齐（F20 / Action A·B·C）。
+ * 只沿用 .gf-root 既有设计令牌，不硬编码颜色：深 / 浅主题由令牌层统一切换，
+ * 文字色用 --ink / --ink-2、背景用 --paper-2，与 .gf-review-section 视觉语义一致
+ * （方角、纸色分层、无渐变、无阴影），不新增任何依赖。
+ * ============================================================================================ */
+.gf-action-triad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap);
+}
+@media (max-width: 860px) {
+  .gf-action-triad { grid-template-columns: minmax(0, 1fr); }
+}
+.gf-action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: var(--pad);
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.gf-action-card .gf-btn { align-self: stretch; justify-content: center; }
+.gf-action-card .gf-muted,
+.gf-action-card .gf-bad-text { word-break: break-word; }

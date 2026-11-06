@@ -16,7 +16,10 @@ import {
   formatGfError,
   gateReason,
   mapConfirmError,
+  pendingRealMachineLabel,
   shortHash,
+  type GFActionKind,
+  type GFActionResult,
   type GFBlocker,
   type GFStage,
   type GFState,
@@ -45,6 +48,8 @@ export interface GreenfieldGateBarProps {
   pendingRealMachine?: boolean;
   diffConfirmed?: boolean;
   projectId?: string;
+  /** F20 三动作结果（顶栏状态徽标；真机结论一律 pending_real_machine）。 */
+  actionResults?: Partial<Record<GFActionKind, GFActionResult | null>>;
 }
 
 /** 阶段 → 梯级点亮数（0..8）：蓝图纸上一格一格亮上去。 */
@@ -74,6 +79,7 @@ export const GreenfieldGateBar: React.FC<GreenfieldGateBarProps> = ({
   pendingRealMachine = true,
   diffConfirmed,
   projectId,
+  actionResults,
 }) => {
   const [summary, setSummary] = useState<Record<string, unknown> | null>(null);
   const [summaryError, setSummaryError] = useState("");
@@ -142,11 +148,24 @@ export const GreenfieldGateBar: React.FC<GreenfieldGateBarProps> = ({
         {state.framework_baseline_version && (
           <span className="gf-muted" title="框架基线版本锁定状态">基线 {state.framework_baseline_version}</span>
         )}
-        {pendingRealMachine && (
-          <span className="gf-pending-chip" title="本批次无真机：不宣称 L2 / L4 通过，不宣称编译零错误">
-            pending_real_machine
-          </span>
-        )}
+        {/* pending_real_machine 常驻可见：真机未跑时显示「待真机」，绝不显示「成功」 */}
+        <span className="gf-pending-chip" title={pendingRealMachineLabel(pendingRealMachine)}>
+          {pendingRealMachine ? "pending_real_machine" : "真机证据待收口核验"}
+        </span>
+        <span
+          className="gf-chip"
+          title="三动作状态（A 导出 / B 首次写入 / C 增量回写）；fidelity_ok 只表达还原度校验，不等于编译通过；真机结论一律 pending_real_machine"
+        >
+          A {actionResults?.A
+            ? (actionResults.A.fidelity_ok === true ? "还原度校验达标" : "还原度校验未达标")
+            : "未执行"}
+          {" · "}B {actionResults?.B
+            ? (actionResults.B.tia_written ? "已写入（待真机）" : "待真机")
+            : "未执行"}
+          {" · "}C {actionResults?.C
+            ? (actionResults.C.tia_written ? "已回写（待真机）" : "待真机")
+            : "未执行"}
+        </span>
 
         {onLoadReference && (
           <button

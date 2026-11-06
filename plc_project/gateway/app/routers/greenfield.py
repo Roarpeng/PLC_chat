@@ -38,6 +38,9 @@ def _error_status(code: str) -> int:
     """
     if code in ("GF_TIA_UNAVAILABLE", "GF_TIA_EXEC_ERROR"):
         return 503
+    # WP-06：三动作硬门禁（D11 / D10 / UC-17 / UC-13 / D9）一律 409 fail-closed。
+    if code.startswith("GF_ACTION"):
+        return 409
     if code.startswith(("GF_GATE", "GF_SPEC_IMMUTABLE", "GF_PCEC_")):
         return 409
     if code.startswith(("GF_EDGE", "GF_VIEW", "GF_TIA_OB")) or code == "GF_TIA_STATIC_GATE_FAILED":
@@ -135,6 +138,35 @@ class ConfirmDiffIn(SessionIn):
     project_id: str = ""
     diff_id: str = ""
     confirmed: bool = False
+
+
+class ActionAIn(SessionIn):
+    """POST /action-a：导出工程包（离线可校验，不写 TIA）。"""
+
+    tia_side_snapshot: dict[str, str] | None = None
+    include_zip_base64: bool = False
+
+
+class ActionBIn(SessionIn):
+    """POST /action-b：首次写入博途编译（以 Action A 的 fidelity_ok==true 为前提，D11 确认）。"""
+
+    confirmed: bool = False
+    fidelity_report: dict[str, Any] | None = None
+    ap_path: str = ""
+    static_gate_passed: bool | None = None
+
+
+class ActionCIn(SessionIn):
+    """POST /action-c：调试期增量回写（§13.5 八步；D11 / D10 / D9 fail-closed）。"""
+
+    confirmed: bool = False
+    diff: dict[str, Any] | None = None
+    tia_side_snapshot: dict[str, str] | None = None
+    last_generated: dict[str, str] | None = None
+    tia_owned_by_ui: bool = False
+    fidelity_report: dict[str, Any] | None = None
+    ap_path: str = ""
+    static_gate_passed: bool | None = None
 
 
 def _session(session_id: str | None, project_id: str = ""):
@@ -380,3 +412,100 @@ def confirm_diff(body: ConfirmDiffIn = Body(...)) -> ApiResponse[dict[str, Any]]
     session = _session(body.session_id, body.project_id)
     payload = body.model_dump(exclude={"session_id", "project_id"})
     return _ok(svc.confirm_diff_action(session, payload))
+
+
+# ---------------------------------------------------------------------------
+# WP-06 / §3.2 三动作端点：Action A 导出工程包 / B 首次写入编译 / C 增量回写
+# 旧端点 /generate /deliver-tia /download-package 一律保留、默认行为不变，
+# D11 硬门禁只挂在新增的 /action-b /action-c（契约 §2 / 任务 5）。
+# 收口接线（Agent L）：会话模式开启时由 _action_session_port() 注入 G 的
+# SessionModeTiaPort；默认关闭时 port=None，仍走现有离线 / mock 路径
+# （pending_real_machine），不改 TiaSessionPort 协议形状、不触真机。
+# ---------------------------------------------------------------------------
+
+def _action_session_port():
+    """G ⇄ H 收口接线：按会话模式开关注入 G 的会话端口（默认关闭）。
+
+    ``PLC_GREENFIELD_SESSION_MODE`` 未设置时 ``session_mode_enabled()`` 为 False，
+    返回 None → H 的 run_action_b/c 走既有离线编排（pending_real_machine），
+    与接线前逐字节一致，绝不 break 存量单测。开启后返回
+    ``tia_delivery.SessionModeTiaPort``，由 H 消费（契约 §3.1 Protocol 解耦）。
+    """
+    if not tia_delivery.session_mode_enabled():
+        return None
+    return tia_delivery.SessionModeTiaPort()
+
+
+def _action_result(result: dict[str, Any]) -> Any:
+    """三动作统一出口：blocked → 非 200 错误信封（服务端 fail-closed）；否则 200。"""
+    if result.get("blocked"):
+        exc = GreenfieldError(
+            result["reason"],
+            code=result["code"],
+            details={
+                "action": result.get("action"),
+                "blocked_reason": result.get("reason"),
+                "side_effect_counters": result.get("side_effect_counters"),
+                "zero_side_effects": result.get("zero_side_effects"),
+                "step_order": result.get("step_order"),
+            },
+        )
+        return _fail(exc)
+    return _ok(result)
+
+
+@router.post("/action-a")
+def action_a(body: ActionAIn = Body(...)) -> ApiResponse[dict[str, Any]]:
+    """Action A：产出 fidelity_report.json + EvidenceBundle（spec/ir_snapshot/四视图/
+    连线清单/静态门禁/产物哈希/.zip 摘要）可离线校验；不写 TIA；返回 fidelity_ok。
+    """
+    try:
+        return _ok(
+            svc.run_action_a(
+                _session(body.session_id),
+                tia_side_snapshot=body.tia_side_snapshot,
+                include_zip_base64=body.include_zip_base64,
+            )
+        )
+    except GreenfieldError as exc:
+        return _fail(exc)
+
+
+@router.post("/action-b")
+def action_b(body: ActionBIn = Body(...)) -> ApiResponse[dict[str, Any]]:
+    """Action B：以 Action A 的 fidelity_ok==true 为前提（UC-17）+ D11 确认（UC-19）。"""
+    try:
+        return _action_result(
+            svc.run_action_b(
+                _session(body.session_id),
+                confirmed=body.confirmed,
+                fidelity_report=body.fidelity_report,
+                ap_path=body.ap_path,
+                static_gate_passed=body.static_gate_passed,
+                port=_action_session_port(),
+            )
+        )
+    except GreenfieldError as exc:
+        return _fail(exc)
+
+
+@router.post("/action-c")
+def action_c(body: ActionCIn = Body(...)) -> ApiResponse[dict[str, Any]]:
+    """Action C：§13.5 八步增量回写；D11 / D10 / D9 服务端 fail-closed。"""
+    try:
+        return _action_result(
+            svc.run_action_c(
+                _session(body.session_id),
+                confirmed=body.confirmed,
+                diff=body.diff,
+                tia_side_snapshot=body.tia_side_snapshot,
+                last_generated=body.last_generated,
+                tia_owned_by_ui=body.tia_owned_by_ui,
+                fidelity_report=body.fidelity_report,
+                ap_path=body.ap_path,
+                static_gate_passed=body.static_gate_passed,
+                port=_action_session_port(),
+            )
+        )
+    except GreenfieldError as exc:
+        return _fail(exc)

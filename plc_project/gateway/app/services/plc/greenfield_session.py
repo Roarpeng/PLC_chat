@@ -68,6 +68,19 @@ class GreenfieldSession:
     #: 对话流消息（chat 化主入口）。纯内存（Q1 口径），随草稿导出/导入。
     #: 结构：{id, role: user|assistant|event, kind, text, payload, ts}
     messages: list[dict[str, Any]] = field(default_factory=list)
+    # —— WP-06 / Action A·B·C 编排态（纯内存，Q1；不参与冻结规格哈希）——
+    #: Action A 最近一次 FidelityReport（to_dict）与 fidelity_ok（UC-17 前置）。
+    last_fidelity_report: dict[str, Any] | None = None
+    last_fidelity_ok: bool | None = None
+    #: Action B 是否已完成首次写入编译；供 Action C 前置留痕。
+    action_b_done: bool = False
+    action_b_compile_ok: bool | None = None
+    #: D9 会话复用：同一项目只 /open 一次，句柄在同进程内复用。
+    action_session_handle: str = ""
+    action_c_open_count: int = 0
+    #: §13.5 步骤 8 增量账本（Greenfield 自有留痕，非存量链事务，契约 §0.5）。
+    incremental_ledger: list[dict[str, Any]] = field(default_factory=list)
+    last_action_c: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not self.session_id:
@@ -196,6 +209,18 @@ class GreenfieldSession:
     def count(self, key: str, delta: int = 1) -> None:
         self.counters[key] = self.counters.get(key, 0) + delta
 
+    def action_state(self) -> dict[str, Any]:
+        """WP-06 三动作编排态只读快照（供 /state 与草稿导出留痕）。"""
+        return {
+            "last_fidelity_ok": self.last_fidelity_ok,
+            "action_b_done": self.action_b_done,
+            "action_b_compile_ok": self.action_b_compile_ok,
+            "action_session_handle": self.action_session_handle,
+            "action_c_open_count": self.action_c_open_count,
+            "pcec_ledger_entries": len(self.incremental_ledger),
+            "last_action_c_mode": (self.last_action_c or {}).get("mode"),
+        }
+
     # ------------------------------------------------------------ 草稿导出/导入
     def export_draft(self) -> dict[str, Any]:
         """用户主动导出（纯内存 → JSON），不计入任何副作用。"""
@@ -214,6 +239,7 @@ class GreenfieldSession:
             "diff_confirmed": self.diff_confirmed,
             "change_events": [dict(e) for e in self.change_events],
             "messages": [dict(m) for m in self.messages],
+            "action_state": self.action_state(),
         }
 
     def import_draft(self, payload: dict[str, Any]) -> None:
@@ -254,6 +280,15 @@ class GreenfieldSession:
         self.views = None
         self.report = None
         self.counters = {"ops": 0, "disk_writes": 0, "writebacks": 0, "generations": 0}
+        # 导入草稿不继承任何三动作编排态（确认前零副作用、会话句柄重新建立）。
+        self.last_fidelity_report = None
+        self.last_fidelity_ok = None
+        self.action_b_done = False
+        self.action_b_compile_ok = None
+        self.action_session_handle = ""
+        self.action_c_open_count = 0
+        self.incremental_ledger = []
+        self.last_action_c = None
         self.transition_stage(GreenfieldStage.LINKABLE if self.ir else GreenfieldStage.DRAFT)
 
     # -------------------------------------------------------------- 状态快照
@@ -290,6 +325,8 @@ class GreenfieldSession:
                 "fidelity_ok": None,
                 "note": "本批次无真机；fidelity_ok 不由离线单测判定（N9 / §0.8）",
             },
+            # 三动作真实编排态（A 的离线 fidelity 结论在此单独留痕，不覆盖上方 pending 口径）。
+            "action_state": self.action_state(),
         }
 
 

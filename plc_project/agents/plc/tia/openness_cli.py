@@ -1253,3 +1253,40 @@ def get_tags_via_openness_cli(
         )
     return result
 
+
+# ---------------------------------------------------------------------------
+# WP-02 / P0-G：SessionServer 会话入口（批次 2 增量回写真机地基）
+#
+# 纯新增：Greenfield 迭代路径从「每次 create-project」改为「SessionServer
+# /open 一次并保持会话」。这两个函数只走现有 HTTP 路由 /open 与 /close，
+# 不调用 create-project / archive-project / close-project CLI 命令、不新建项目。
+# 供 tia_delivery.SessionModeTiaPort 复用；不改 C# 源码、不改 FastWriteback.cs。
+# ---------------------------------------------------------------------------
+
+
+def open_session_project_via_openness_cli(
+    project_path: str | Path, *, plc_name: str = ""
+) -> dict[str, Any]:
+    """会话模式：POST /open 打开既有项目一次并保持常驻会话。
+
+    与 ``generate_from_source_via_openness_cli`` / ``create-project`` 路径不同，
+    本函数不新建、不归档、不重载项目；同一 HTTP 会话内后续增量复用该句柄。
+    返回结构化 dict（含 route / session_mode / project_path），失败信号由上层
+    ``openness_session.classify_session_failure`` 统一 fail-closed 归类。
+    """
+    from gateway.app.services.plc import openness_session
+
+    resp = openness_session.ensure_project_open(str(project_path), plc_name=plc_name)
+    out = dict(resp) if isinstance(resp, dict) else {"ok": False}
+    out.setdefault("route", "/open")
+    out["session_mode"] = True
+    out["project_path"] = str(project_path)
+    return out
+
+
+def close_session_project_via_openness_cli() -> dict[str, Any]:
+    """会话生命周期结束时显式 POST /close（三次增量过程中不调用）。"""
+    from gateway.app.services.plc import openness_session
+
+    return openness_session.close_project()
+

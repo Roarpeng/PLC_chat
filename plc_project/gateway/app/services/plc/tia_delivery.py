@@ -36,10 +36,11 @@ import time
 import zipfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 from xml.sax.saxutils import escape
 
 from gateway.app.services.plc import greenfield_service as gf_service
+from gateway.app.services.plc import openness_session
 from gateway.app.services.plc.greenfield_session import GreenfieldSession
 from plc_engine import pcec, scl_precheck
 from plc_engine.af.greenfield_ir import GreenfieldIR, sha256_prefixed
@@ -341,10 +342,26 @@ def _ob_secondary_type(ob_name: str) -> str | None:
     return None
 
 
+#: 自产 OB XML 的 MultilingualText culture：只输出目标项目实际支持的语言。
+#: F 的 Gate-0 V19 真机实测（research/Gate0_环境与档位实测_2026-11-06.md §6.1）
+#: 证实：硬编码 zh-CN/en-US/de-DE 三 culture 导入 CanvasE2E 副本时报
+#: ``openness_error``「Cannot import multilingual text with culture 'en-US'
+#: ... does not exist within the current project.」；仅保留 zh-CN 的诊断变体
+#: 与真实先例最小改号样本（OB123_from_real.xml）均通过 culture 校验并导入成功。
+#: 真实 V19 导出先例 hr001/OB1Main.xml 的三 culture 属于该项目自身语言配置，
+#: 并非通用可导入格式：多余 culture 会失败、缺失 culture 不报错，故默认收敛
+#: 到中文项目通用的 zh-CN（资料缺失时明确降级，不静默近似其它语言）。
+_OB_MULTILINGUAL_CULTURES = ("zh-CN",)
+
+
 def _render_multilingual(id_base: int, composition: str, text: str) -> str:
-    """三种文化的 MultilingualText 块（结构与真机 V19 导出一致）。"""
+    """目标项目语言的 MultilingualText 块（culture 与 V19 可导入先例一致）。
+
+    仅输出 ``_OB_MULTILINGUAL_CULTURES`` 内项目实际支持的 culture：多余 culture
+    触发 ``openness_error``，缺失 culture 不报错（依据见常量处注释）。
+    """
     items = []
-    for offset, culture in enumerate(("zh-CN", "en-US", "de-DE")):
+    for offset, culture in enumerate(_OB_MULTILINGUAL_CULTURES):
         items.append(
             f'          <MultilingualTextItem ID="{id_base + 1 + offset}" CompositionName="Items">\n'
             "            <AttributeList>\n"
@@ -388,12 +405,16 @@ def _render_call_network(call_db: str) -> str:
 
 
 def _render_empty_network() -> str:
-    """空体 OB 的最小 StructuredText 网络（复刻 FB StructuredText v4 先例形态）。"""
-    return (
-        '<NetworkSource><StructuredText xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/StructuredText/v4">\n'
-        '  <Token Text=";" UId="21" />\n'
-        "</StructuredText></NetworkSource>"
-    )
+    """空体 OB 的空 LAD 网络：与真实 V19 导出先例的空 CompileUnit 一致。
+
+    真实先例 ``hr001/.../OB1Main.xml`` 的空 CompileUnit 使用 ``<NetworkSource />``
+    自闭合（无 FlgNet、无 StructuredText）。自产模板旧版误用
+    ``StructuredText/v4`` + ``<Token Text=";"/>``（SCL/ST 形态），在
+    ``ProgrammingLanguage=LAD`` 下导入报「namespace .../StructuredText/v4 is
+    incorrect」（F 诊断变体 §6.2）。此处改回先例的空 ``<NetworkSource />``：
+    不引用任何块、不虚构网络、不引入错误 namespace。
+    """
+    return "<NetworkSource />"
 
 
 def _render_ob_xml(
@@ -958,7 +979,7 @@ def _event(session: GreenfieldSession, text: str, payload: dict[str, Any] | None
     session.add_message("event", "delivery", text, payload)
 
 
-def deliver_tia(session: GreenfieldSession, *, mode: str = "auto") -> dict[str, Any]:
+def deliver_tia(session: GreenfieldSession, *, mode: str = "auto", session_mode: bool | None = None) -> dict[str, Any]:
     """Greenfield 冻结规格 → AF 工程包 + XML 补充包 → 静态门禁 → PCEC 账本 →（可选）Openness 自动导入编译。
 
     流程对应 §9 P2-4..P2-8；副作用计数沿用 ``session.count("generations")``；
@@ -1150,14 +1171,28 @@ def deliver_tia(session: GreenfieldSession, *, mode: str = "auto") -> dict[str, 
                 },
             )
         else:
-            run = _run_openness_import_compile(
-                project_name=str(delivery["project_name"]),
-                package_dir=package_dir,
-                workspace=package_dir.parent,
-                planned_text=str(gates.get("planned_text") or ""),
-                supplement=supplement,
-                tia_version=tia_version,
-            )
+            # WP-02 / P0-G 会话模式分支：默认关闭，保持现有 create-project
+            # 交付链不变（存量 greenfield 单测不受影响）。开启后改走
+            # SessionServer /open 一次 + fast-writeback(overwrite) + compile-plc
+            # + save，不新建 / 不归档 / 不重载项目（契约 §3.1 / UC-05）。
+            if session_mode_enabled(session_mode):
+                run = _run_session_mode_import_compile(
+                    project_name=str(delivery["project_name"]),
+                    package_dir=package_dir,
+                    workspace=package_dir.parent,
+                    planned_text=str(gates.get("planned_text") or ""),
+                    supplement=supplement,
+                    tia_version=tia_version,
+                )
+            else:
+                run = _run_openness_import_compile(
+                    project_name=str(delivery["project_name"]),
+                    package_dir=package_dir,
+                    workspace=package_dir.parent,
+                    planned_text=str(gates.get("planned_text") or ""),
+                    supplement=supplement,
+                    tia_version=tia_version,
+                )
             diagnostics = _diagnostics_from_run(
                 run, gates=gates, delivery=delivery, tia_version=tia_version
             )
@@ -1326,3 +1361,473 @@ def deliver_tia(session: GreenfieldSession, *, mode: str = "auto") -> dict[str, 
     delivery["scl_sources"] = gf_service.collect_scl_sources(delivery)
     result["scl_sources"] = delivery["scl_sources"]
     return result
+
+
+# ===========================================================================
+# WP-02 / P0-G：Greenfield 会话模式（F16 地基 / TiaSessionPort，批次 2）
+#
+# 契约 §3.1：G 提供会话端口，消费方（H / Action C）按 Protocol 解耦；
+# Greenfield 迭代路径从「每次 create-project」改为「SessionServer /open 一次
+# 并保持会话」，接通 overwrite:true + fast-writeback / compile-plc / save，
+# 不归档 / 不重载 / 不新建项目。
+#
+# 诚实口径：本段为离线可推进的**接口与编排地基**。真机 UC-05（三次增量
+# error_count==0 / 项目未重载 / PCEC 三条）由主 agent 收口实测；本段及其
+# mock 单测一律 pending_real_machine，**禁止**宣称 L2/L4 通过或「编译零错误」。
+# N9：fidelity_ok 与 compile_ok 严格分离；warning 单列、绝不并入成功。
+# ===========================================================================
+
+from typing import runtime_checkable  # noqa: E402 - 追加段局部依赖，无副作用
+
+#: 会话模式开关：默认关闭，保持现有 create-project 交付链向后兼容（存量测试
+#: 不传 session_mode 时不受影响）。开启：显式 session_mode=True 或环境变量
+#: PLC_GREENFIELD_SESSION_MODE=1（契约任务 1「可用环境变量或显式参数控制」）。
+SESSION_MODE_ENV = "PLC_GREENFIELD_SESSION_MODE"
+
+#: 契约 §3.1 fail-closed 明确错误码（复用 openness_session 底层常量，避免漂移）。
+GF_EXCLUSIVE_ACCESS_DENIED = openness_session.GF_EXCLUSIVE_ACCESS_DENIED
+GF_TIA_UNAVAILABLE = openness_session.GF_TIA_UNAVAILABLE
+GF_TIA_TOKEN_DENIED = openness_session.GF_TIA_TOKEN_DENIED
+GF_TIA_LICENSE_DENIED = openness_session.GF_TIA_LICENSE_DENIED
+GF_SESSION_NOT_OPEN = openness_session.GF_SESSION_NOT_OPEN
+GF_TIA_EXEC_ERROR = openness_session.GF_TIA_EXEC_ERROR
+
+
+def session_mode_enabled(session_mode: bool | None = None) -> bool:
+    """会话模式开关：显式参数优先，否则读环境变量，**默认关闭**（向后兼容）。"""
+    if session_mode is not None:
+        return bool(session_mode)
+    import os
+
+    return os.environ.get(SESSION_MODE_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+@runtime_checkable
+class TiaSessionPort(Protocol):
+    """契约 §3.1 会话端口（消费方按 Protocol 解耦，不 import 具体实现）。
+
+    实现方保证：``/open`` 一次并保持会话；连续增量不 create-project / 不归档 /
+    不重载 / 不新建；每个方法返回结构化 dict，至少含 ``ok`` / ``error_count`` /
+    ``warnings`` / ``tia_version`` / ``project_path`` / ``elapsed_ms``；
+    ``tia_unavailable`` 显式失败，绝不包装成 ``ok=true`` 或 HTTP 200。
+    """
+
+    def open_project(self, ap_path: str) -> dict[str, Any]: ...
+    def fast_writeback(
+        self, blocks: list[dict[str, Any]], *, overwrite: bool = True
+    ) -> dict[str, Any]: ...
+    def compile_plc(self) -> dict[str, Any]: ...
+    def save_project(self) -> dict[str, Any]: ...
+    def close(self) -> dict[str, Any]: ...
+
+
+class SessionModeTiaPort:
+    """契约 §3.1 的 :class:`TiaSessionPort` 具体实现（SessionServer 常驻会话）。
+
+    组合 ``openness_session`` 的 HTTP 路由与 ``openness_cli`` 的 /open 接入：
+      open_project   -> /open 一次（句柄复用，不重复 POST）
+      fast_writeback -> /fast-writeback（overwrite:true 块级覆盖）
+      compile_plc    -> /compile-plc（喂 CompileDiagnostics，warning 单列）
+      save_project   -> /save（不归档 / 不重载 / 不新建）
+      close          -> /close（显式结束，三次增量过程中不调用）
+
+    fail-closed：任一响应命中 ExclusiveAccess / 文件锁 / 许可 / token /
+    tia_unavailable 信号，返回 ``ok=false`` + 明确 ``code`` + ``http_status!=200``；
+    调用方 :func:`run_incremental_writebacks` 据此阻止后续写入（契约 §1.5 / §3.1）。
+    """
+
+    def __init__(
+        self,
+        *,
+        tia_version: str = "V19",
+        plc_name: str = "",
+        static_gate_passed: bool = True,
+    ) -> None:
+        self.tia_version = str(tia_version or "V19")
+        self.plc_name = str(plc_name or "")
+        # 能进入会话增量说明四层静态门禁已 fail-closed 通过；单测可显式关闭验证负例。
+        self.static_gate_passed = bool(static_gate_passed)
+        self.session_handle: str | None = None
+        self.project_path: str = ""
+        self._open_count = 0
+
+    # -- 统一结构化返回：契约 §3.1 要求所有方法至少含 6 个字段 --------------
+    def _result(self, *, ok: bool, stage: str, **extra: Any) -> dict[str, Any]:
+        base: dict[str, Any] = {
+            "ok": ok,
+            "stage": stage,
+            "error_count": 0,
+            "warnings": [],
+            "tia_version": self.tia_version,
+            "project_path": self.project_path,
+            "elapsed_ms": 0.0,
+            "session_handle": self.session_handle,
+            "http_status": 200 if ok else 503,
+        }
+        base.update(extra)
+        return base
+
+    def _failed(
+        self, stage: str, failure: dict[str, Any], *, elapsed_ms: float = 0.0
+    ) -> dict[str, Any]:
+        return self._result(
+            ok=False,
+            stage=stage,
+            code=str(failure.get("code") or GF_TIA_EXEC_ERROR),
+            reason=str(failure.get("reason") or ""),
+            http_status=int(failure.get("http_status") or 503),
+            elapsed_ms=elapsed_ms,
+        )
+
+    def _classify(self, resp: dict[str, Any] | None, stage: str) -> dict[str, Any] | None:
+        return openness_session.classify_session_failure(resp, stage=stage)
+
+    def _exec_failure(self, resp: dict[str, Any], stage: str) -> dict[str, Any]:
+        return {
+            "code": GF_TIA_EXEC_ERROR,
+            "reason": str(resp.get("error") or f"{stage} 未成功"),
+            "http_status": 503,
+        }
+
+    def open_project(self, ap_path: str) -> dict[str, Any]:
+        ap = str(ap_path or "")
+        # 同一会话句柄复用：已 open 且路径不变 → 直接复用，不再 POST /open。
+        if self.session_handle and self.project_path == ap:
+            return self._result(ok=True, stage="open_project", reused=True, route="/open")
+        t0 = time.perf_counter()
+        # tia_unavailable 显式失败：探测不可用 → ok=false + 非 200，绝不 ok=true。
+        status = openness_session.session_status()
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        if not status.get("available"):
+            return self._failed(
+                "open_project",
+                {
+                    "code": GF_TIA_UNAVAILABLE,
+                    "reason": str(status.get("reason") or "TIA / Openness 不可用"),
+                    "http_status": 503,
+                },
+                elapsed_ms=elapsed_ms,
+            )
+        from agents.plc.tia.openness_cli import open_session_project_via_openness_cli
+
+        resp = open_session_project_via_openness_cli(ap, plc_name=self.plc_name)
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        failure = self._classify(resp, "open_project")
+        if failure:
+            return self._failed("open_project", failure, elapsed_ms=elapsed_ms)
+        if not (resp.get("ok") or resp.get("success")):
+            return self._failed("open_project", self._exec_failure(resp, "/open"), elapsed_ms=elapsed_ms)
+        self.project_path = ap
+        self.tia_version = str(status.get("tia_version") or self.tia_version)
+        # 句柄优先取服务端返回，否则由项目路径派生稳定标识（同一进程内不变）。
+        self.session_handle = str(
+            resp.get("sessionHandle") or resp.get("session_handle") or f"gf-session:{ap}"
+        )
+        self._open_count += 1
+        return self._result(
+            ok=True, stage="open_project", reused=False, route="/open",
+            open_count=self._open_count, elapsed_ms=elapsed_ms,
+        )
+
+    def fast_writeback(
+        self, blocks: list[dict[str, Any]], *, overwrite: bool = True
+    ) -> dict[str, Any]:
+        if not self.session_handle:
+            return self._failed("fast_writeback", {
+                "code": GF_SESSION_NOT_OPEN, "reason": "会话未 open_project，拒绝写入", "http_status": 409,
+            })
+        t0 = time.perf_counter()
+        names = [
+            str(b.get("name")) for b in (blocks or [])
+            if isinstance(b, dict) and b.get("name")
+        ]
+        body: dict[str, Any] = {
+            "project": self.project_path,
+            "project_path": self.project_path,
+            "plc": self.plc_name,
+            "overwrite": bool(overwrite),  # 契约：接通 overwrite:true（块级覆盖）
+            "blockNames": names,
+            "blocks": list(blocks or []),
+        }
+        for b in (blocks or []):
+            if isinstance(b, dict) and b.get("scl_path"):
+                body["scl"] = str(b["scl_path"])
+                body["scl_path"] = str(b["scl_path"])
+                break
+        resp = openness_session.fast_writeback(body)
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        failure = self._classify(resp, "fast_writeback")
+        if failure:
+            return self._failed("fast_writeback", failure, elapsed_ms=elapsed_ms)
+        if not (resp.get("ok") or resp.get("success")):
+            return self._failed("fast_writeback", self._exec_failure(resp, "/fast-writeback"), elapsed_ms=elapsed_ms)
+        return self._result(
+            ok=True, stage="fast_writeback", overwrite=bool(overwrite),
+            written_block_count=int(resp.get("writtenBlockCount") or 0),
+            exclusive_access_used=bool(resp.get("exclusiveAccessUsed")),
+            elapsed_ms=elapsed_ms,
+        )
+
+    def compile_plc(self) -> dict[str, Any]:
+        if not self.session_handle:
+            return self._failed("compile_plc", {
+                "code": GF_SESSION_NOT_OPEN, "reason": "会话未 open_project，拒绝编译", "http_status": 409,
+            })
+        t0 = time.perf_counter()
+        resp = openness_session.compile_plc(self.project_path, plc_name=self.plc_name)
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        failure = self._classify(resp, "compile_plc")
+        if failure:
+            return self._failed("compile_plc", failure, elapsed_ms=elapsed_ms)
+        # P0-A 唯一判定口径：复用 CompileDiagnostics
+        # （compile_ok = error_count==0 ∧ static_gate_passed；warning 单列、不并入成功），
+        # 会话模式与 create-project 路径同口径（契约任务 4）。
+        diag = build_compile_diagnostics(
+            resp,
+            static_gate_passed=self.static_gate_passed,
+            tia_version=self.tia_version,
+            project_path=self.project_path,
+            elapsed_ms=elapsed_ms,
+        )
+        return self._result(
+            ok=True, stage="compile_plc",
+            error_count=diag.error_count,
+            warnings=list(diag.warnings),
+            blocks=list(diag.blocks),
+            compile_ok=diag.compile_ok,
+            compile_diagnostics=diag.to_dict(),
+            elapsed_ms=elapsed_ms,
+        )
+
+    def save_project(self) -> dict[str, Any]:
+        if not self.session_handle:
+            return self._failed("save_project", {
+                "code": GF_SESSION_NOT_OPEN, "reason": "会话未 open_project，拒绝保存", "http_status": 409,
+            })
+        t0 = time.perf_counter()
+        resp = openness_session.save_project(self.project_path)
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        failure = self._classify(resp, "save_project")
+        if failure:
+            return self._failed("save_project", failure, elapsed_ms=elapsed_ms)
+        if not resp.get("ok"):
+            return self._failed("save_project", self._exec_failure(resp, "/save"), elapsed_ms=elapsed_ms)
+        return self._result(
+            ok=True, stage="save_project",
+            archived=False, reloaded=False, created=False,  # 不归档 / 不重载 / 不新建
+            elapsed_ms=elapsed_ms,
+        )
+
+    def close(self) -> dict[str, Any]:
+        from agents.plc.tia.openness_cli import close_session_project_via_openness_cli
+
+        t0 = time.perf_counter()
+        resp = close_session_project_via_openness_cli()
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        failure = self._classify(resp, "close")
+        if failure:
+            return self._failed("close", failure, elapsed_ms=elapsed_ms)
+        self.session_handle = None
+        return self._result(ok=True, stage="close", session_handle=None, elapsed_ms=elapsed_ms)
+
+
+def _record_incremental_change(
+    *,
+    project_path: str,
+    tia_version: str,
+    index: int,
+    blocks: list[dict[str, Any]],
+    diagnostics: dict[str, Any],
+) -> str:
+    """沿用 sanctioned PCEC 记账路径：每次成功增量写 1 条（三次 = 3 条）。
+
+    只调用模块既有 import 的 ``pcec.new_change`` / ``pcec.put_change``，
+    **不新增** forbidden_modules import（白名单不变）；kind 用
+    ``greenfield_incremental`` 与首次交付事务 ``greenfield_generate`` 区分。
+    """
+    try:
+        baseline = pcec.project_baseline(project_path)
+    except Exception:  # noqa: BLE001 - baseline 取不到不阻断记账（写入前门禁已完成）
+        baseline = {"project_hash": "", "tia_version": tia_version}
+    touched = [
+        str(b.get("name")) for b in (blocks or [])
+        if isinstance(b, dict) and b.get("name")
+    ]
+    change = pcec.new_change(
+        "greenfield_incremental",
+        f"Greenfield 会话模式增量 #{index}（{len(touched)} 块，overwrite=true，不重载项目）",
+        ops=[{
+            "op": "incremental_fast_writeback",
+            "index": index,
+            "overwrite": True,
+            "mode": "incremental",
+            "changed_source_ids": touched,
+            "compile_diagnostics": diagnostics or {},
+        }],
+        touched_blocks=touched,
+        baseline=baseline,
+    )
+    pcec.put_change(change)
+    return str(change.get("change_id") or "")
+
+
+def run_incremental_writebacks(
+    port: TiaSessionPort,
+    increments: list[dict[str, Any]],
+    *,
+    ap_path: str = "",
+    record_pcec: bool = True,
+) -> dict[str, Any]:
+    """UC-05 编排：``/open`` 一次 → 三次增量（fast-writeback + compile-plc + save）→ PCEC 3 条。
+
+    - 会话句柄在同一 ``port`` 内复用，全程**不调用** create-project /
+      archive-project / close-project / ``port.close()``（项目未关闭、未重载、未新建）。
+    - 任一步 fail-closed（``ok=false`` / ``compile_ok=false``）立即终止并阻止后续
+      写入，零副作用：该次及后续均不记 PCEC、不调用 save。
+    - 每次成功增量写 1 条 PCEC；三次成功 = 3 条（契约任务 5）。
+    - 真机项标 ``pending_real_machine``；mock 单测不构成 L2/L4 证据。
+    """
+    sequence: list[tuple[str, int]] = []
+    diagnostics: list[dict[str, Any]] = []
+    change_ids: list[str] = []
+    first_ap = str(ap_path or (increments[0].get("ap_path") if increments else "") or "")
+
+    opened = port.open_project(first_ap)
+    sequence.append(("open_project", 0))
+    handle = opened.get("session_handle")
+
+    def _abort(
+        code: str, http_status: int, reason: str, completed: int
+    ) -> dict[str, Any]:
+        return {
+            "ok": False, "status": "fail_closed", "code": code,
+            "http_status": http_status, "reason": reason,
+            "increment_count": completed, "pcec_records": len(change_ids),
+            "pcec_change_ids": list(change_ids), "sequence": sequence,
+            "diagnostics": diagnostics, "session_handle": handle,
+            "mode": "incremental", "pending_real_machine": True,
+        }
+
+    if not opened.get("ok"):
+        return _abort(
+            str(opened.get("code") or GF_TIA_EXEC_ERROR),
+            int(opened.get("http_status") or 503),
+            str(opened.get("reason") or ""), 0,
+        )
+
+    for index, inc in enumerate(increments, 1):
+        blocks = list(inc.get("blocks") or [])
+        overwrite = bool(inc.get("overwrite", True))
+        fwb = port.fast_writeback(blocks, overwrite=overwrite)
+        sequence.append(("fast_writeback", index))
+        if not fwb.get("ok"):
+            return _abort(
+                str(fwb.get("code") or GF_TIA_EXEC_ERROR),
+                int(fwb.get("http_status") or 503),
+                str(fwb.get("reason") or ""), index - 1,
+            )
+        comp = port.compile_plc()
+        sequence.append(("compile_plc", index))
+        if not comp.get("ok"):
+            return _abort(
+                str(comp.get("code") or GF_TIA_EXEC_ERROR),
+                int(comp.get("http_status") or 503),
+                str(comp.get("reason") or ""), index - 1,
+            )
+        diag = comp.get("compile_diagnostics") or {}
+        diagnostics.append(diag)
+        if not comp.get("compile_ok"):
+            return _abort(
+                GF_TIA_EXEC_ERROR, 503,
+                "编译判定未通过（error_count>0 或静态门禁拦截）", index - 1,
+            )
+        saved = port.save_project()
+        sequence.append(("save_project", index))
+        if not saved.get("ok"):
+            return _abort(
+                str(saved.get("code") or GF_TIA_EXEC_ERROR),
+                int(saved.get("http_status") or 503),
+                str(saved.get("reason") or ""), index - 1,
+            )
+        if record_pcec:
+            cid = _record_incremental_change(
+                project_path=first_ap,
+                tia_version=str(comp.get("tia_version") or ""),
+                index=index, blocks=blocks, diagnostics=diag,
+            )
+            change_ids.append(cid)
+            sequence.append(("pcec", index))
+
+    return {
+        "ok": True, "status": "ok", "mode": "incremental",
+        "increment_count": len(increments), "pcec_records": len(change_ids),
+        "pcec_change_ids": list(change_ids), "sequence": sequence,
+        "diagnostics": diagnostics, "session_handle": handle,
+        "http_status": 200, "pending_real_machine": True,
+        "l2_status": L2_STATUS_PENDING,
+    }
+
+
+def _run_session_mode_import_compile(
+    *,
+    project_name: str,
+    package_dir: Path,
+    workspace: Path,
+    planned_text: str,
+    supplement: dict[str, Any],
+    tia_version: str,
+) -> dict[str, Any]:
+    """会话模式单次执行（供 :func:`deliver_tia` 的 session_mode 分支）。
+
+    ``/open`` 一次 + ``fast-writeback(overwrite)`` + ``compile-plc`` + ``save``，
+    不 create-project / 不归档 / 不重载 / 不新建。返回与
+    :func:`_run_openness_import_compile` 同构，供 :func:`_diagnostics_from_run` 归一。
+    """
+    port = SessionModeTiaPort(tia_version=tia_version)
+    scl_path = workspace / f"{project_name}_AF_bundle.scl"
+    scl_path.write_bytes(b"\xef\xbb\xbf" + str(planned_text or "").encode("utf-8"))
+    ap_path = str(workspace / "tia_project" / f"{project_name}.ap19")
+    blocks = [
+        {"name": str(Path(rel).stem), "scl_path": str(scl_path)}
+        for rel in sorted(supplement.get("ob_files") or [])
+    ]
+    steps: list[dict[str, Any]] = []
+
+    opened = port.open_project(ap_path)
+    steps.append({"step": "/open", "ok": bool(opened.get("ok")), "detail": str(opened.get("code") or "")})
+    if not opened.get("ok"):
+        diag = unavailable_diagnostics(
+            reason=str(opened.get("reason") or opened.get("code") or "会话模式 /open 失败"),
+            static_gate_passed=True, tia_version=tia_version, project_path=ap_path,
+        )
+        return {
+            "status": "tia_error", "steps": steps, "compile": None,
+            "diagnostics": diag.to_dict(), "project_path": ap_path,
+            "error": opened.get("code"),
+        }
+    fwb = port.fast_writeback(blocks, overwrite=True)
+    steps.append({"step": "/fast-writeback", "ok": bool(fwb.get("ok")), "detail": "overwrite=true"})
+    if not fwb.get("ok"):
+        diag = unavailable_diagnostics(
+            reason=str(fwb.get("reason") or "fast-writeback 失败"),
+            static_gate_passed=True, tia_version=tia_version, project_path=ap_path,
+        )
+        return {
+            "status": "tia_error", "steps": steps, "compile": None,
+            "diagnostics": diag.to_dict(), "project_path": ap_path, "error": fwb.get("code"),
+        }
+    comp = port.compile_plc()
+    steps.append({"step": "/compile-plc", "ok": bool(comp.get("ok")), "detail": str(comp.get("error_count"))})
+    saved = port.save_project() if comp.get("ok") else {"ok": False}
+    steps.append({"step": "/save", "ok": bool(saved.get("ok")), "detail": "不归档/不重载/不新建"})
+    diag = comp.get("compile_diagnostics") or unavailable_diagnostics(
+        reason="未产出编译结论", static_gate_passed=True,
+        tia_version=tia_version, project_path=ap_path,
+    ).to_dict()
+    compile_ok = bool(comp.get("compile_ok")) and bool(saved.get("ok"))
+    return {
+        "status": "compile_ok" if compile_ok else "compile_failed",
+        "steps": steps, "compile": {"ok": comp.get("ok")}, "diagnostics": diag,
+        "project_path": ap_path, "tia_version": tia_version,
+        "elapsed_ms": float(comp.get("elapsed_ms") or 0.0),
+    }

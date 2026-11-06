@@ -1,0 +1,1459 @@
+{
+  "schema_version": "1.0",
+  "title": "UC-05 / UC-12 / UC-13 / UC-02 / UC-03 V19 真机全量验收（Agent M）",
+  "agent": "Agent M · V19 真机全量验收（批次 2）",
+  "generated_at": "2026-11-06T15:24:02.386520+00:00",
+  "tia_version": "V19",
+  "environment": {
+    "exe": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe",
+    "python": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/.venv/Scripts/python.exe",
+    "serve_url": "http://127.0.0.1:8791",
+    "temp_root": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106",
+    "read_only_source": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/PLC_Openness_data/openness_e2e/CanvasE2E",
+    "status_probe_reference": "research/Gate0_环境与档位实测_2026-11-06.md §4（opennessAvailable=true, tiaVersion=V19）"
+  },
+  "safety": {
+    "only_temp_copies": true,
+    "original_ap19_opened_or_written_back": false,
+    "serve_processes_stopped": true,
+    "git_operations": 0,
+    "product_code_modified": false,
+    "csharp_source_modified": false,
+    "d12_hard_refuse_honored": true
+  },
+  "cases": {
+    "UC-05": {
+      "case_id": "uc05",
+      "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+      "case_dir": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05",
+      "source_copied_from": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/PLC_Openness_data/openness_e2e/CanvasE2E",
+      "source_opened_or_written_back": false,
+      "serve_start": {
+        "healthy": true,
+        "health": {
+          "method": "GET",
+          "path": "/health",
+          "timeout_s": 5.0,
+          "http_status": 200,
+          "json": {
+            "ok": true,
+            "status": "ok"
+          }
+        }
+      },
+      "scl_variants": [
+        {
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc1.scl",
+          "sha256": "d3a2bdbc1a7ac074a5dd6c917fc18497f71e906faa3606526db003b0ddd97e26",
+          "bytes": 149
+        },
+        {
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc2.scl",
+          "sha256": "d42a3e12c60f79c401454ee30989657dd016d8047e9311ac9f6e6b8e667a9adc",
+          "bytes": 149
+        },
+        {
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc3.scl",
+          "sha256": "c54582712611f63f89d8fdbb4faaecdf9bb72de2d3e5ee8358ce2e4cb667a390",
+          "bytes": 149
+        }
+      ],
+      "equivalence_note": "三次增量覆盖的内容以最小可编译 SCL 外部源变体代替（①改 1 个 EM 步序 ②新增 1 个 CM ③改 1 条交互连线）。真实 /fast-writeback 走 GenerateBlocksFromSource(overwrite=true)，每次导入一个独立 FC 变体并编译，等价体现『打开一次、连续三次增量覆盖』。",
+      "g_orchestrator_result": {
+        "ok": true,
+        "status": "ok",
+        "mode": "incremental",
+        "increment_count": 3,
+        "pcec_records": 3,
+        "pcec_change_ids": [
+          "chg-9755507b46b1",
+          "chg-fc2cc2c59d12",
+          "chg-01d81eb59d27"
+        ],
+        "sequence": [
+          [
+            "open_project",
+            0
+          ],
+          [
+            "fast_writeback",
+            1
+          ],
+          [
+            "compile_plc",
+            1
+          ],
+          [
+            "save_project",
+            1
+          ],
+          [
+            "pcec",
+            1
+          ],
+          [
+            "fast_writeback",
+            2
+          ],
+          [
+            "compile_plc",
+            2
+          ],
+          [
+            "save_project",
+            2
+          ],
+          [
+            "pcec",
+            2
+          ],
+          [
+            "fast_writeback",
+            3
+          ],
+          [
+            "compile_plc",
+            3
+          ],
+          [
+            "save_project",
+            3
+          ],
+          [
+            "pcec",
+            3
+          ]
+        ],
+        "diagnostics": [
+          {
+            "error_count": 0,
+            "warnings": [],
+            "blocks": [],
+            "elapsed_ms": 1043.5529999995197,
+            "tia_version": "V19",
+            "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+            "static_gate_passed": true,
+            "compile_ok": true,
+            "status": "compiled",
+            "tia_unavailable": false,
+            "pending_real_machine": false,
+            "xml_package_unverified": true,
+            "reason": ""
+          },
+          {
+            "error_count": 0,
+            "warnings": [],
+            "blocks": [],
+            "elapsed_ms": 144.0468000000692,
+            "tia_version": "V19",
+            "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+            "static_gate_passed": true,
+            "compile_ok": true,
+            "status": "compiled",
+            "tia_unavailable": false,
+            "pending_real_machine": false,
+            "xml_package_unverified": true,
+            "reason": ""
+          },
+          {
+            "error_count": 0,
+            "warnings": [],
+            "blocks": [],
+            "elapsed_ms": 120.36820000139414,
+            "tia_version": "V19",
+            "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+            "static_gate_passed": true,
+            "compile_ok": true,
+            "status": "compiled",
+            "tia_unavailable": false,
+            "pending_real_machine": false,
+            "xml_package_unverified": true,
+            "reason": ""
+          }
+        ],
+        "session_handle": "gf-session:C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+        "http_status": 200,
+        "pending_real_machine": true,
+        "l2_status": "pending_real_machine"
+      },
+      "raw_http_returns": [
+        {
+          "call": "health",
+          "raw": {
+            "ok": true,
+            "status": "ok"
+          }
+        },
+        {
+          "call": "session_status",
+          "raw": {
+            "ok": true,
+            "available": true,
+            "tia_version": "V19",
+            "tia_running": false,
+            "openness_available": true,
+            "reason": ""
+          }
+        },
+        {
+          "call": "health",
+          "raw": {
+            "ok": true,
+            "status": "ok"
+          }
+        },
+        {
+          "call": "ensure_project_open",
+          "raw": {
+            "ok": true,
+            "project": {
+              "ok": true,
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19",
+              "projectName": "CanvasE2E",
+              "plcName": "PLC_1",
+              "deviceName": "PLC_1",
+              "message": "Project opened via TIA Openness."
+            },
+            "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19"
+          }
+        },
+        {
+          "call": "health",
+          "raw": {
+            "ok": true,
+            "status": "ok",
+            "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19"
+          }
+        },
+        {
+          "call": "fast_writeback",
+          "raw": {
+            "success": true,
+            "elapsedMilliseconds": 11943,
+            "writtenBlockCount": 0,
+            "skippedUnchangedBlocks": 0,
+            "errors": [],
+            "exclusiveAccessUsed": true,
+            "compileScope": "incremental_blocks",
+            "compileScopeNote": "No UDT/GlobalDB change: compiled 1 affected PlcBlock(s) via GetService<ICompilable>(). ",
+            "snapshotHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19 在 2026-11-06T15:24:23.7921571Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc1.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-06T15:24:23.7921571Z；项目最后写入(UTC)：2026-10-21T06:26:17.6124396Z。",
+            "snapshot": {
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19",
+              "capturedAtUtc": "2026-11-06T15:24:23.7921571Z",
+              "projectLastWriteUtc": "2026-10-21T06:26:17.6124396Z",
+              "sclPath": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc1.scl",
+              "restoreHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19 在 2026-11-06T15:24:23.7921571Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc1.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-06T15:24:23.7921571Z；项目最后写入(UTC)：2026-10-21T06:26:17.6124396Z。"
+            },
+            "generateApi": "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
+            "generatedNames": [],
+            "message": "Mega-Source 单次生成 0 块，编译范围=incremental_blocks，零错误。",
+            "ok": true
+          }
+        },
+        {
+          "call": "health",
+          "raw": {
+            "ok": true,
+            "status": "ok",
+            "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19"
+          }
+        },
+        {
+          "call": "compile_plc",
+          "raw": {
+            "ok": true,
+            "scope": "full_software",
+            "compile": {
+              "ok": true,
+              "apiAvailable": true,
+              "state": "Success",
+              "errorCount": 0,
+              "warningCount": 0,
+              "inconsistentBlocks": [
+                "Compiling finished (errors: 0; warnings: 0)"
+              ],
+              "message": "Compile State=Success errors=0 warnings=0"
+            }
+          }
+        },
+        {
+          "call": "health",
+          "raw": {
+            "ok": true,
+            "status": "ok",
+            "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19"
+          }
+        },
+        {
+          "call": "save_project",
+          "raw": {
+            "ok": true
+          }
+        },
+        {
+          "call": "health",
+          "raw": {
+            "ok": true,
+            "status": "ok",
+            "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19"
+          }
+        },
+        {
+          "call": "fast_writeback",
+          "raw": {
+            "success": true,
+            "elapsedMilliseconds": 240,
+            "writtenBlockCount": 0,
+            "skippedUnchangedBlocks": 0,
+            "errors": [],
+            "exclusiveAccessUsed": true,
+            "compileScope": "incremental_blocks",
+            "compileScopeNote": "No UDT/GlobalDB change: compiled 1 affected PlcBlock(s) via GetService<ICompilable>(). ",
+            "snapshotHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19 在 2026-11-06T15:24:37.1584051Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc2.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-06T15:24:37.1584051Z；项目最后写入(UTC)：2026-11-06T15:24:37.0797356Z。",
+            "snapshot": {
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19",
+              "capturedAtUtc": "2026-11-06T15:24:37.1584051Z",
+              "projectLastWriteUtc": "2026-11-06T15:24:37.0797356Z",
+              "sclPath": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc2.scl",
+              "restoreHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19 在 2026-11-06T15:24:37.1584051Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc2.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-06T15:24:37.1584051Z；项目最后写入(UTC)：2026-11-06T15:24:37.0797356Z。"
+            },
+            "generateApi": "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
+            "generatedNames": [],
+            "message": "Mega-Source 单次生成 0 块，编译范围=incremental_blocks，零错误。",
+            "ok": true
+          }
+        },
+        {
+          "call": "health",
+          "raw": {
+            "ok": true,
+            "status": "ok",
+            "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19"
+          }
+        },
+        {
+          "call": "compile_plc",
+          "raw": {
+            "ok": true,
+            "scope": "full_software",
+            "compile": {
+              "ok": true,
+              "apiAvailable": true,
+              "state": "Success",
+              "errorCount": 0,
+              "warningCount": 0,
+              "inconsistentBlocks": [
+                "Compiling finished (errors: 0; warnings: 0)"
+              ],
+              "message": "Compile State=Success errors=0 warnings=0"
+            }
+          }
+        },
+        {
+          "call": "health",
+          "raw": {
+            "ok": true,
+            "status": "ok",
+            "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19"
+          }
+        },
+        {
+          "call": "save_project",
+          "raw": {
+            "ok": true
+          }
+        },
+        {
+          "call": "health",
+          "raw": {
+            "ok": true,
+            "status": "ok",
+            "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19"
+          }
+        },
+        {
+          "call": "fast_writeback",
+          "raw": {
+            "success": true,
+            "elapsedMilliseconds": 438,
+            "writtenBlockCount": 0,
+            "skippedUnchangedBlocks": 0,
+            "errors": [],
+            "exclusiveAccessUsed": true,
+            "compileScope": "incremental_blocks",
+            "compileScopeNote": "No UDT/GlobalDB change: compiled 1 affected PlcBlock(s) via GetService<ICompilable>(). ",
+            "snapshotHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19 在 2026-11-06T15:24:37.6620756Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc3.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-06T15:24:37.6620756Z；项目最后写入(UTC)：2026-11-06T15:24:37.6111326Z。",
+            "snapshot": {
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19",
+              "capturedAtUtc": "2026-11-06T15:24:37.6620756Z",
+              "projectLastWriteUtc": "2026-11-06T15:24:37.6111326Z",
+              "sclPath": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc3.scl",
+              "restoreHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19 在 2026-11-06T15:24:37.6620756Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc3.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-06T15:24:37.6620756Z；项目最后写入(UTC)：2026-11-06T15:24:37.6111326Z。"
+            },
+            "generateApi": "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
+            "generatedNames": [],
+            "message": "Mega-Source 单次生成 0 块，编译范围=incremental_blocks，零错误。",
+            "ok": true
+          }
+        },
+        {
+          "call": "health",
+          "raw": {
+            "ok": true,
+            "status": "ok",
+            "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19"
+          }
+        },
+        {
+          "call": "compile_plc",
+          "raw": {
+            "ok": true,
+            "scope": "full_software",
+            "compile": {
+              "ok": true,
+              "apiAvailable": true,
+              "state": "Success",
+              "errorCount": 0,
+              "warningCount": 0,
+              "inconsistentBlocks": [
+                "Compiling finished (errors: 0; warnings: 0)"
+              ],
+              "message": "Compile State=Success errors=0 warnings=0"
+            }
+          }
+        },
+        {
+          "call": "health",
+          "raw": {
+            "ok": true,
+            "status": "ok",
+            "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19"
+          }
+        },
+        {
+          "call": "save_project",
+          "raw": {
+            "ok": true
+          }
+        }
+      ],
+      "open_call_count": 1,
+      "compile_rounds": [
+        {
+          "round": 1,
+          "http_status": 200,
+          "raw": {
+            "ok": true,
+            "scope": "full_software",
+            "compile": {
+              "ok": true,
+              "apiAvailable": true,
+              "state": "Success",
+              "errorCount": 0,
+              "warningCount": 0,
+              "inconsistentBlocks": [
+                "Compiling finished (errors: 0; warnings: 0)"
+              ],
+              "message": "Compile State=Success errors=0 warnings=0"
+            }
+          },
+          "errorCount": 0,
+          "warningCount": 0,
+          "state": "Success"
+        },
+        {
+          "round": 2,
+          "http_status": 200,
+          "raw": {
+            "ok": true,
+            "scope": "full_software",
+            "compile": {
+              "ok": true,
+              "apiAvailable": true,
+              "state": "Success",
+              "errorCount": 0,
+              "warningCount": 0,
+              "inconsistentBlocks": [
+                "Compiling finished (errors: 0; warnings: 0)"
+              ],
+              "message": "Compile State=Success errors=0 warnings=0"
+            }
+          },
+          "errorCount": 0,
+          "warningCount": 0,
+          "state": "Success"
+        },
+        {
+          "round": 3,
+          "http_status": 200,
+          "raw": {
+            "ok": true,
+            "scope": "full_software",
+            "compile": {
+              "ok": true,
+              "apiAvailable": true,
+              "state": "Success",
+              "errorCount": 0,
+              "warningCount": 0,
+              "inconsistentBlocks": [
+                "Compiling finished (errors: 0; warnings: 0)"
+              ],
+              "message": "Compile State=Success errors=0 warnings=0"
+            }
+          },
+          "errorCount": 0,
+          "warningCount": 0,
+          "state": "Success"
+        }
+      ],
+      "fast_writeback_rounds": [
+        {
+          "round": 1,
+          "raw": {
+            "success": true,
+            "elapsedMilliseconds": 11943,
+            "writtenBlockCount": 0,
+            "skippedUnchangedBlocks": 0,
+            "errors": [],
+            "exclusiveAccessUsed": true,
+            "compileScope": "incremental_blocks",
+            "compileScopeNote": "No UDT/GlobalDB change: compiled 1 affected PlcBlock(s) via GetService<ICompilable>(). ",
+            "snapshotHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19 在 2026-11-06T15:24:23.7921571Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc1.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-06T15:24:23.7921571Z；项目最后写入(UTC)：2026-10-21T06:26:17.6124396Z。",
+            "snapshot": {
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19",
+              "capturedAtUtc": "2026-11-06T15:24:23.7921571Z",
+              "projectLastWriteUtc": "2026-10-21T06:26:17.6124396Z",
+              "sclPath": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc1.scl",
+              "restoreHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19 在 2026-11-06T15:24:23.7921571Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc1.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-06T15:24:23.7921571Z；项目最后写入(UTC)：2026-10-21T06:26:17.6124396Z。"
+            },
+            "generateApi": "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
+            "generatedNames": [],
+            "message": "Mega-Source 单次生成 0 块，编译范围=incremental_blocks，零错误。",
+            "ok": true
+          }
+        },
+        {
+          "round": 2,
+          "raw": {
+            "success": true,
+            "elapsedMilliseconds": 240,
+            "writtenBlockCount": 0,
+            "skippedUnchangedBlocks": 0,
+            "errors": [],
+            "exclusiveAccessUsed": true,
+            "compileScope": "incremental_blocks",
+            "compileScopeNote": "No UDT/GlobalDB change: compiled 1 affected PlcBlock(s) via GetService<ICompilable>(). ",
+            "snapshotHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19 在 2026-11-06T15:24:37.1584051Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc2.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-06T15:24:37.1584051Z；项目最后写入(UTC)：2026-11-06T15:24:37.0797356Z。",
+            "snapshot": {
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19",
+              "capturedAtUtc": "2026-11-06T15:24:37.1584051Z",
+              "projectLastWriteUtc": "2026-11-06T15:24:37.0797356Z",
+              "sclPath": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc2.scl",
+              "restoreHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19 在 2026-11-06T15:24:37.1584051Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc2.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-06T15:24:37.1584051Z；项目最后写入(UTC)：2026-11-06T15:24:37.0797356Z。"
+            },
+            "generateApi": "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
+            "generatedNames": [],
+            "message": "Mega-Source 单次生成 0 块，编译范围=incremental_blocks，零错误。",
+            "ok": true
+          }
+        },
+        {
+          "round": 3,
+          "raw": {
+            "success": true,
+            "elapsedMilliseconds": 438,
+            "writtenBlockCount": 0,
+            "skippedUnchangedBlocks": 0,
+            "errors": [],
+            "exclusiveAccessUsed": true,
+            "compileScope": "incremental_blocks",
+            "compileScopeNote": "No UDT/GlobalDB change: compiled 1 affected PlcBlock(s) via GetService<ICompilable>(). ",
+            "snapshotHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19 在 2026-11-06T15:24:37.6620756Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc3.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-06T15:24:37.6620756Z；项目最后写入(UTC)：2026-11-06T15:24:37.6111326Z。",
+            "snapshot": {
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19",
+              "capturedAtUtc": "2026-11-06T15:24:37.6620756Z",
+              "projectLastWriteUtc": "2026-11-06T15:24:37.6111326Z",
+              "sclPath": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc3.scl",
+              "restoreHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05\\proj\\CanvasE2E.ap19 在 2026-11-06T15:24:37.6620756Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/M_FC_Uc05Inc3.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-06T15:24:37.6620756Z；项目最后写入(UTC)：2026-11-06T15:24:37.6111326Z。"
+            },
+            "generateApi": "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
+            "generatedNames": [],
+            "message": "Mega-Source 单次生成 0 块，编译范围=incremental_blocks，零错误。",
+            "ok": true
+          }
+        }
+      ],
+      "save_rounds": [
+        {
+          "round": 1,
+          "raw": {
+            "ok": true
+          }
+        },
+        {
+          "round": 2,
+          "raw": {
+            "ok": true
+          }
+        },
+        {
+          "round": 3,
+          "raw": {
+            "ok": true
+          }
+        }
+      ],
+      "pcec_count": 3,
+      "pcec_change_ids": [
+        "chg-9755507b46b1",
+        "chg-fc2cc2c59d12",
+        "chg-01d81eb59d27"
+      ],
+      "session_handle": "gf-session:C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+      "sequence": [
+        [
+          "open_project",
+          0
+        ],
+        [
+          "fast_writeback",
+          1
+        ],
+        [
+          "compile_plc",
+          1
+        ],
+        [
+          "save_project",
+          1
+        ],
+        [
+          "pcec",
+          1
+        ],
+        [
+          "fast_writeback",
+          2
+        ],
+        [
+          "compile_plc",
+          2
+        ],
+        [
+          "save_project",
+          2
+        ],
+        [
+          "pcec",
+          2
+        ],
+        [
+          "fast_writeback",
+          3
+        ],
+        [
+          "compile_plc",
+          3
+        ],
+        [
+          "save_project",
+          3
+        ],
+        [
+          "pcec",
+          3
+        ]
+      ],
+      "diagnostics": [
+        {
+          "error_count": 0,
+          "warnings": [],
+          "blocks": [],
+          "elapsed_ms": 1043.5529999995197,
+          "tia_version": "V19",
+          "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+          "static_gate_passed": true,
+          "compile_ok": true,
+          "status": "compiled",
+          "tia_unavailable": false,
+          "pending_real_machine": false,
+          "xml_package_unverified": true,
+          "reason": ""
+        },
+        {
+          "error_count": 0,
+          "warnings": [],
+          "blocks": [],
+          "elapsed_ms": 144.0468000000692,
+          "tia_version": "V19",
+          "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+          "static_gate_passed": true,
+          "compile_ok": true,
+          "status": "compiled",
+          "tia_unavailable": false,
+          "pending_real_machine": false,
+          "xml_package_unverified": true,
+          "reason": ""
+        },
+        {
+          "error_count": 0,
+          "warnings": [],
+          "blocks": [],
+          "elapsed_ms": 120.36820000139414,
+          "tia_version": "V19",
+          "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+          "static_gate_passed": true,
+          "compile_ok": true,
+          "status": "compiled",
+          "tia_unavailable": false,
+          "pending_real_machine": false,
+          "xml_package_unverified": true,
+          "reason": ""
+        }
+      ],
+      "l2_status_from_g_orchestrator": "pending_real_machine",
+      "pending_real_machine_from_g_orchestrator": true,
+      "health_openProject_values": [
+        null,
+        null,
+        "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+        "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+        "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+        "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+        "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+        "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+        "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+        "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+        "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19"
+      ],
+      "handle_reused": true,
+      "project_not_closed_reloaded_created": {
+        "close_calls_in_sequence": 0,
+        "create_project_calls_in_sequence": 0,
+        "archive_project_calls_in_sequence": 0,
+        "open_call_count": 1,
+        "health_openProject_unique_paths": [
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19"
+        ],
+        "g_orchestrator_guarantee": "run_incremental_writebacks 全程不调用 create-project / archive-project / close-project / port.close()；save_project 返回 archived=false / reloaded=false / created=false（源码 tia_delivery.py:1615-1619）"
+      },
+      "pcec_ledger": {
+        "dir": "C:/Users/vboxuser/AppData/Local/Temp/researchos_plc/changes",
+        "change_ids_expected": [
+          "chg-9755507b46b1",
+          "chg-fc2cc2c59d12",
+          "chg-01d81eb59d27"
+        ],
+        "change_ids_present_on_disk": [
+          "chg-9755507b46b1",
+          "chg-fc2cc2c59d12",
+          "chg-01d81eb59d27"
+        ],
+        "count_on_disk": 3
+      },
+      "equivalent_spec_sha256": "4221454bcd33b0dade907e91e6cf92a26feb1ba60b4866ef9f654ab07ba6c54d",
+      "vN_label": "vN=uc05-p0g-3increments（等价口径，非 Greenfield 真实 spec_hash）",
+      "spec_hash_honest_note": "本次为 P0-G 真机地基实测，未跑 Greenfield 冻结规格链；此处仅对三次增量输入（3 个 SCL 变体）做确定性内容哈希，用于证明输入可复现，不冒充 specs/vN.json 的 spec_hash。",
+      "status": "pass",
+      "close": {
+        "method": "POST",
+        "path": "/close",
+        "timeout_s": 60.0,
+        "http_status": 200,
+        "json": {
+          "ok": true
+        }
+      },
+      "serve_stop": {
+        "returncode": 1,
+        "port_reachable_after_stop": false,
+        "leftover_process": false
+      }
+    },
+    "UC-05-equivalent-xml": {
+      "case_id": "uc05_xml",
+      "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05_xml/proj/CanvasE2E.ap19",
+      "case_dir": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05_xml",
+      "source_copied_from": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/PLC_Openness_data/openness_e2e/CanvasE2E",
+      "source_opened_or_written_back": false,
+      "serve_start": {
+        "healthy": true,
+        "health": {
+          "method": "GET",
+          "path": "/health",
+          "timeout_s": 5.0,
+          "http_status": 200,
+          "json": {
+            "ok": true,
+            "status": "ok"
+          }
+        }
+      },
+      "xml_variants": [
+        {
+          "name": "OB401_MInc1",
+          "number": 401,
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/OB401_MInc1.xml",
+          "sha256": "5d32e24525f7c59a3adb3574fb029c3c9cc4b96b488e5df347fa7a5add5081a3",
+          "bytes": 2336
+        },
+        {
+          "name": "OB402_MInc2",
+          "number": 402,
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/OB402_MInc2.xml",
+          "sha256": "ebd240ba8ef6bc7b7c959f06add89f3c598d8d4047c891297cd912f59b4268b5",
+          "bytes": 2336
+        },
+        {
+          "name": "OB403_MInc3",
+          "number": 403,
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/OB403_MInc3.xml",
+          "sha256": "50b5c4a9bf4ea1c52412d6115d662ea94f20c4002b889672f24a81a954ef2d64",
+          "bytes": 2336
+        }
+      ],
+      "equivalence_note": "按任务允许的等价替代：三次增量覆盖内容改用 K 修复后的自产最小可编译 OB XML 变体（08-k1-probe-fix.md §4：culture 仅 zh-CN、空网络 <NetworkSource />），走 C# SessionServer 真实 /import-xml 路由（ImportOptions.Override）写入，每次 /compile-plc 记录真实 errorCount/warningCount/state。这是 /import-xml 等价路径，不是 G 的 /fast-writeback P0-G 地基路径；两者同为真实真机操作，数字均来自真实 HTTP 返回。",
+      "repro_command": "cd <R> && ./.venv/Scripts/python.exe -c \"from gateway.app.services.plc.tia_delivery import _render_ob_xml; ... （见 10-real-machine-acceptance.md §复现命令）\"",
+      "open": {
+        "method": "POST",
+        "path": "/open",
+        "timeout_s": 300.0,
+        "http_status": 200,
+        "json": {
+          "ok": true,
+          "project": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc05_xml\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "plcName": "PLC_1",
+            "deviceName": "PLC_1",
+            "message": "Project opened via TIA Openness."
+          },
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05_xml/proj/CanvasE2E.ap19"
+        }
+      },
+      "open_call_count": 1,
+      "rounds": [
+        {
+          "round": 1,
+          "variant": "OB401_MInc1",
+          "import": {
+            "method": "POST",
+            "path": "/import-xml",
+            "timeout_s": 300.0,
+            "http_status": 200,
+            "json": {
+              "ok": true,
+              "import": {
+                "ok": true,
+                "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\OB401_MInc1.xml",
+                "overwrite": true,
+                "kind": "block",
+                "importedNames": [
+                  "OB401_MInc1"
+                ],
+                "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                "message": "Imported 1 item(s): OB401_MInc1."
+              }
+            }
+          },
+          "compile": {
+            "method": "POST",
+            "path": "/compile-plc",
+            "timeout_s": 300.0,
+            "http_status": 200,
+            "json": {
+              "ok": true,
+              "scope": "full_software",
+              "compile": {
+                "ok": true,
+                "apiAvailable": true,
+                "state": "Success",
+                "errorCount": 0,
+                "warningCount": 0,
+                "inconsistentBlocks": [
+                  "Compiling finished (errors: 0; warnings: 0)"
+                ],
+                "message": "Compile State=Success errors=0 warnings=0"
+              }
+            }
+          },
+          "save": {
+            "method": "POST",
+            "path": "/save",
+            "timeout_s": 120.0,
+            "http_status": 200,
+            "json": {
+              "ok": true
+            }
+          },
+          "health": {
+            "method": "GET",
+            "path": "/health",
+            "timeout_s": 10.0,
+            "http_status": 200,
+            "json": {
+              "ok": true,
+              "status": "ok",
+              "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05_xml/proj/CanvasE2E.ap19"
+            }
+          },
+          "errorCount": 0,
+          "warningCount": 0,
+          "state": "Success"
+        },
+        {
+          "round": 2,
+          "variant": "OB402_MInc2",
+          "import": {
+            "method": "POST",
+            "path": "/import-xml",
+            "timeout_s": 300.0,
+            "http_status": 200,
+            "json": {
+              "ok": true,
+              "import": {
+                "ok": true,
+                "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\OB402_MInc2.xml",
+                "overwrite": true,
+                "kind": "block",
+                "importedNames": [
+                  "OB402_MInc2"
+                ],
+                "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                "message": "Imported 1 item(s): OB402_MInc2."
+              }
+            }
+          },
+          "compile": {
+            "method": "POST",
+            "path": "/compile-plc",
+            "timeout_s": 300.0,
+            "http_status": 200,
+            "json": {
+              "ok": true,
+              "scope": "full_software",
+              "compile": {
+                "ok": true,
+                "apiAvailable": true,
+                "state": "Success",
+                "errorCount": 0,
+                "warningCount": 0,
+                "inconsistentBlocks": [
+                  "Compiling finished (errors: 0; warnings: 0)"
+                ],
+                "message": "Compile State=Success errors=0 warnings=0"
+              }
+            }
+          },
+          "save": {
+            "method": "POST",
+            "path": "/save",
+            "timeout_s": 120.0,
+            "http_status": 200,
+            "json": {
+              "ok": true
+            }
+          },
+          "health": {
+            "method": "GET",
+            "path": "/health",
+            "timeout_s": 10.0,
+            "http_status": 200,
+            "json": {
+              "ok": true,
+              "status": "ok",
+              "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05_xml/proj/CanvasE2E.ap19"
+            }
+          },
+          "errorCount": 0,
+          "warningCount": 0,
+          "state": "Success"
+        },
+        {
+          "round": 3,
+          "variant": "OB403_MInc3",
+          "import": {
+            "method": "POST",
+            "path": "/import-xml",
+            "timeout_s": 300.0,
+            "http_status": 200,
+            "json": {
+              "ok": true,
+              "import": {
+                "ok": true,
+                "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\OB403_MInc3.xml",
+                "overwrite": true,
+                "kind": "block",
+                "importedNames": [
+                  "OB403_MInc3"
+                ],
+                "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                "message": "Imported 1 item(s): OB403_MInc3."
+              }
+            }
+          },
+          "compile": {
+            "method": "POST",
+            "path": "/compile-plc",
+            "timeout_s": 300.0,
+            "http_status": 200,
+            "json": {
+              "ok": true,
+              "scope": "full_software",
+              "compile": {
+                "ok": true,
+                "apiAvailable": true,
+                "state": "Success",
+                "errorCount": 0,
+                "warningCount": 0,
+                "inconsistentBlocks": [
+                  "Compiling finished (errors: 0; warnings: 0)"
+                ],
+                "message": "Compile State=Success errors=0 warnings=0"
+              }
+            }
+          },
+          "save": {
+            "method": "POST",
+            "path": "/save",
+            "timeout_s": 120.0,
+            "http_status": 200,
+            "json": {
+              "ok": true
+            }
+          },
+          "health": {
+            "method": "GET",
+            "path": "/health",
+            "timeout_s": 10.0,
+            "http_status": 200,
+            "json": {
+              "ok": true,
+              "status": "ok",
+              "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05_xml/proj/CanvasE2E.ap19"
+            }
+          },
+          "errorCount": 0,
+          "warningCount": 0,
+          "state": "Success"
+        }
+      ],
+      "pcec_note": "等价路径未重复记 PCEC；PCEC 3 条来自 UC-05 主路径（G 编排）。",
+      "status": "pass",
+      "close": {
+        "method": "POST",
+        "path": "/close",
+        "timeout_s": 60.0,
+        "http_status": 200,
+        "json": {
+          "ok": true
+        }
+      },
+      "serve_stop": {
+        "returncode": 1,
+        "port_reachable_after_stop": false,
+        "leftover_process": false
+      }
+    },
+    "UC-12": {
+      "case_id": "uc12",
+      "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc12/proj/CanvasE2E.ap19",
+      "case_dir": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc12",
+      "source_copied_from": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/PLC_Openness_data/openness_e2e/CanvasE2E",
+      "source_opened_or_written_back": false,
+      "serve_start": {
+        "healthy": true,
+        "health": {
+          "method": "GET",
+          "path": "/health",
+          "timeout_s": 5.0,
+          "http_status": 200,
+          "json": {
+            "ok": true,
+            "status": "ok"
+          }
+        }
+      },
+      "baseline_block": {
+        "name": "OB501_Base",
+        "number": 501,
+        "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/OB501_Base.xml",
+        "sha256": "2c3f7ab79b684710edfe6d9c9b42d7ebbec672a9bebea3f78982a8b560f819ff"
+      },
+      "unrelated_block": {
+        "name": "OB502_Unrelated",
+        "number": 502,
+        "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/OB502_Unrelated.xml",
+        "sha256": "bcb67ce4ed4a96df414e5e1124ec1854288c505960b929a8ce99b076af4b8829"
+      },
+      "open": {
+        "method": "POST",
+        "path": "/open",
+        "timeout_s": 300.0,
+        "http_status": 200,
+        "json": {
+          "ok": true,
+          "project": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc12\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "plcName": "PLC_1",
+            "deviceName": "PLC_1",
+            "message": "Project opened via TIA Openness."
+          },
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc12/proj/CanvasE2E.ap19"
+        }
+      },
+      "import_baseline": {
+        "method": "POST",
+        "path": "/import-xml",
+        "timeout_s": 300.0,
+        "http_status": 200,
+        "json": {
+          "ok": true,
+          "import": {
+            "ok": true,
+            "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\OB501_Base.xml",
+            "overwrite": true,
+            "kind": "block",
+            "importedNames": [
+              "OB501_Base"
+            ],
+            "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+            "message": "Imported 1 item(s): OB501_Base."
+          }
+        }
+      },
+      "tia_side_manual_change": {
+        "description": "在 TIA 侧额外导入一个无关 OB502_Unrelated（模拟手工改动无关块）",
+        "import": {
+          "method": "POST",
+          "path": "/import-xml",
+          "timeout_s": 300.0,
+          "http_status": 200,
+          "json": {
+            "ok": true,
+            "import": {
+              "ok": true,
+              "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\OB502_Unrelated.xml",
+              "overwrite": true,
+              "kind": "block",
+              "importedNames": [
+                "OB502_Unrelated"
+              ],
+              "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+              "message": "Imported 1 item(s): OB502_Unrelated."
+            }
+          }
+        }
+      },
+      "reverse_guard_input": {
+        "last_generated": {
+          "OB501_Base": "2c3f7ab79b684710edfe6d9c9b42d7ebbec672a9bebea3f78982a8b560f819ff"
+        },
+        "tia_side_snapshot": {
+          "OB501_Base": "2c3f7ab79b684710edfe6d9c9b42d7ebbec672a9bebea3f78982a8b560f819ff",
+          "OB502_Unrelated": "bcb67ce4ed4a96df414e5e1124ec1854288c505960b929a8ce99b076af4b8829"
+        }
+      },
+      "reverse_guard_verdict": {
+        "allowed": false,
+        "drift_count": 0,
+        "tia_side_drift": 1,
+        "blocked_source_ids": [
+          "OB502_Unrelated"
+        ],
+        "reason": "阻止并提示:TIA 侧存在与上次生成物不一致的块,tia_side_drift=1,禁止覆盖(D10 / fail-closed,不是先覆盖再提示).被阻止的 source_id=OB502_Unrelated.请先在 TIA 侧核对该差异并显式确认后再写入.",
+        "function": "plc_engine.af.reverse_guard.check_reverse_guard（产品纯函数，非 mock）"
+      },
+      "fourth_increment": {
+        "attempted": false,
+        "blocked": true,
+        "routes_called": [],
+        "reason": "阻止并提示:TIA 侧存在与上次生成物不一致的块,tia_side_drift=1,禁止覆盖(D10 / fail-closed,不是先覆盖再提示).被阻止的 source_id=OB502_Unrelated.请先在 TIA 侧核对该差异并显式确认后再写入.",
+        "policy": "D10：reverse_guard.allowed==false / tia_side_drift>0 时 fail-closed 阻止写入，禁止先覆盖再提示"
+      },
+      "compile_after_block": {
+        "method": "POST",
+        "path": "/compile-plc",
+        "timeout_s": 300.0,
+        "http_status": 200,
+        "json": {
+          "ok": true,
+          "scope": "full_software",
+          "compile": {
+            "ok": true,
+            "apiAvailable": true,
+            "state": "Success",
+            "errorCount": 0,
+            "warningCount": 0,
+            "inconsistentBlocks": [
+              "Compiling finished (errors: 0; warnings: 0)"
+            ],
+            "message": "Compile State=Success errors=0 warnings=0"
+          }
+        }
+      },
+      "health_after_block": {
+        "method": "GET",
+        "path": "/health",
+        "timeout_s": 10.0,
+        "http_status": 200,
+        "json": {
+          "ok": true,
+          "status": "ok",
+          "openProject": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc12/proj/CanvasE2E.ap19"
+        }
+      },
+      "honest_note": "真机部分：两次真实 /import-xml 导入（基线块与无关块）+ 阻止后真实 /compile-plc 仍 0/0；判定 allowed=false 由产品纯函数 check_reverse_guard 对真实块内容哈希快照计算得出（非 mock）。H 的 Action C 端点 /action-c 接线状态未核验（契约 05 §8.3 列为主 agent 收口项），故本项不等于 Action C 端到端通过。",
+      "status": "pass",
+      "close": {
+        "method": "POST",
+        "path": "/close",
+        "timeout_s": 60.0,
+        "http_status": 200,
+        "json": {
+          "ok": true
+        }
+      },
+      "serve_stop": {
+        "returncode": 1,
+        "port_reachable_after_stop": false,
+        "leftover_process": false
+      }
+    },
+    "UC-13": {
+      "case_id": "uc13",
+      "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc13/proj/CanvasE2E.ap19",
+      "case_dir": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc13",
+      "source_copied_from": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/PLC_Openness_data/openness_e2e/CanvasE2E",
+      "source_opened_or_written_back": false,
+      "serve_start": {
+        "healthy": true,
+        "health": {
+          "method": "GET",
+          "path": "/health",
+          "timeout_s": 5.0,
+          "http_status": 200,
+          "json": {
+            "ok": true,
+            "status": "ok"
+          }
+        }
+      },
+      "pre_write_backup": {
+        "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc13/proj/CanvasE2E.ap19.pre.bak",
+        "sha256": "a1a57c591d808247a727afd536ac8cb7ae4bff32a349513f851c6bcc6b1201d9"
+      },
+      "open": {
+        "method": "POST",
+        "path": "/open",
+        "timeout_s": 300.0,
+        "http_status": 200,
+        "json": {
+          "ok": true,
+          "project": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_m_20261106\\uc13\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "plcName": "PLC_1",
+            "deviceName": "PLC_1",
+            "message": "Project opened via TIA Openness."
+          },
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc13/proj/CanvasE2E.ap19"
+        }
+      },
+      "failed_import_sample": {
+        "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/OB601_Bad.xml",
+        "sha256": "06898c791592ce478bddfddad80340b8e79b8856b99aeaf882e4b6b7f0349043",
+        "description": "把自产 OB XML 的 MultilingualText culture 由 zh-CN 改为 en-US（目标项目仅含 zh-CN）"
+      },
+      "failed_import": {
+        "method": "POST",
+        "path": "/import-xml",
+        "timeout_s": 300.0,
+        "http_status": 200,
+        "json": {
+          "ok": false,
+          "import": {
+            "ok": false,
+            "overwrite": false,
+            "error": {
+              "code": "openness_error",
+              "message": "Error when calling method 'Import' of type 'Siemens.Engineering.SW.Blocks.PlcBlockComposition'.\r\n\r\nCannot import multilingual text with culture 'en-US' at line number 31 at line position 12: the specified culture does not exist within the current project.",
+              "retryable": false
+            }
+          }
+        }
+      },
+      "ap19_sha256_after_failed_import": "a1a57c591d808247a727afd536ac8cb7ae4bff32a349513f851c6bcc6b1201d9",
+      "ap19_unchanged_after_failed_import": true,
+      "compile_after_failed_import": {
+        "method": "POST",
+        "path": "/compile-plc",
+        "timeout_s": 300.0,
+        "http_status": 200,
+        "json": {
+          "ok": true,
+          "scope": "full_software",
+          "compile": {
+            "ok": true,
+            "apiAvailable": true,
+            "state": "Success",
+            "errorCount": 0,
+            "warningCount": 0,
+            "inconsistentBlocks": [
+              "Compiling finished (errors: 0; warnings: 0)"
+            ],
+            "message": "Compile State=Success errors=0 warnings=0"
+          }
+        }
+      },
+      "honest_note": "C# /import-xml 失败时返回 ok=false 且未改动项目（真实返回 + 项目 .ap19 sha256 前后对比）；备份为文件系统级写前快照 + sha256，恢复后哈希一致。未做在线下载 / 项目归档恢复（D12 边界外）；FastWriteback.cs 的 snapshotHint 仅给恢复指引，真实 .zap 归档由上层编排负责。",
+      "status": "pass",
+      "close": {
+        "method": "POST",
+        "path": "/close",
+        "timeout_s": 60.0,
+        "http_status": 200,
+        "json": {
+          "ok": true
+        }
+      },
+      "serve_stop": {
+        "returncode": 1,
+        "port_reachable_after_stop": false,
+        "leftover_process": false
+      },
+      "backup_restore": {
+        "restored_from": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc13/proj/CanvasE2E.ap19.pre.bak",
+        "restored_sha256": "a1a57c591d808247a727afd536ac8cb7ae4bff32a349513f851c6bcc6b1201d9",
+        "matches_pre_write_sha256": true,
+        "executed_after_serve_stop": true
+      }
+    },
+    "UC-02": {
+      "case_id": "UC-02",
+      "requires_serve": false,
+      "real_machine_compiles": [
+        {
+          "round": 1,
+          "errorCount": 0,
+          "warningCount": 0,
+          "state": "Success"
+        },
+        {
+          "round": 2,
+          "errorCount": 0,
+          "warningCount": 0,
+          "state": "Success"
+        },
+        {
+          "round": 3,
+          "errorCount": 0,
+          "warningCount": 0,
+          "state": "Success"
+        }
+      ],
+      "product_diagnostics_from_real_return": {
+        "error_count": 0,
+        "warnings": [],
+        "blocks": [],
+        "elapsed_ms": 1.0,
+        "tia_version": "V19",
+        "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_m_20261106/uc05/proj/CanvasE2E.ap19",
+        "static_gate_passed": true,
+        "compile_ok": true,
+        "status": "compiled",
+        "tia_unavailable": false,
+        "pending_real_machine": false,
+        "xml_package_unverified": true,
+        "reason": ""
+      },
+      "warning_separation_check": {
+        "kind": "纯函数口径验证（非真机）",
+        "error_count": 0,
+        "warnings": [
+          "示例 warning: 变量未使用（仅用于验证 warning 单列不并入 compile_ok）"
+        ],
+        "compile_ok": true,
+        "verdict": "error_count==0 且含 warning 时 compile_ok 仍为 true；warning 单列不并入成功"
+      },
+      "error_counterexample": {
+        "kind": "纯函数口径对照（非真机）",
+        "error_count": 1,
+        "compile_ok": false
+      },
+      "honest_note": "真机部分：三次真实 /compile-plc 返回 errorCount=0 / warningCount=0 / state=Success，结构化诊断里 warnings 为独立空清单，与 error_count 分离；含 warning 的判定逻辑用产品纯函数 evaluate_compile 验证（明确标注非真机）。",
+      "status": "pass"
+    },
+    "UC-03": {
+      "case_id": "UC-03",
+      "requires_serve": false,
+      "serve_running": false,
+      "session_status_when_serve_down": {
+        "ok": false,
+        "available": false,
+        "tia_version": "",
+        "tia_running": false,
+        "openness_available": false,
+        "reason": "HTTP Error 502: Bad Gateway"
+      },
+      "session_port_open_project_when_unavailable": {
+        "ok": false,
+        "stage": "open_project",
+        "error_count": 0,
+        "warnings": [],
+        "tia_version": "V19",
+        "project_path": "",
+        "elapsed_ms": 2024.214999997639,
+        "session_handle": null,
+        "http_status": 503,
+        "code": "GF_TIA_UNAVAILABLE",
+        "reason": "HTTP Error 502: Bad Gateway"
+      },
+      "direct_http_when_serve_down": {
+        "method": "POST",
+        "path": "/open",
+        "timeout_s": 5.0,
+        "http_status": 502,
+        "raw": "upstream connect failed: 由于目标计算机积极拒绝，无法连接。 (os error 10061)\n"
+      },
+      "honest_note": "C# SessionServer 的路由对业务失败返回 HTTP 200 + ok=false（见 SessionServer.cs:170），Python 交付层 SessionModeTiaPort 把 tia_unavailable 显式映射为 http_status=503 / ok=false / code=GF_TIA_UNAVAILABLE（openness_session.classify_session_failure / _failed），不包装成 ok=true 或 200。契约 05 §8.3 仍列 _error_status 显式 503 为收口接线待核验项。",
+      "status": "pass"
+    }
+  },
+  "l1_l4_recheck": {
+    "L1": {
+      "verdict": "pending",
+      "reason": "coverage/orphan/drift 离线校验与端到端 UC-15 未跑（本 Agent 不涉离线链核验）"
+    },
+    "L2": {
+      "verdict": "pending",
+      "reason": "本次拿到 3 次真实 /compile-plc errorCount=0 / state=Success 与 UC-02/03 判定口径真机证据；但 L2 正式通过还需四层静态门禁全绿、UC-04/UC-18/UC-15 闭环；且 G 编排返回 l2_status=pending_real_machine，不据地基实测宣称 L2 通过"
+    },
+    "L3": {
+      "verdict": "pending",
+      "reason": "同 spec_hash 两次产物哈希一致 + 重启恢复 FROZEN vN 未跑（not_run）"
+    },
+    "L4": {
+      "verdict": "pending",
+      "reason": "UC-05 三次增量不重载已有真机证据（/open=1 + 3× errorCount=0 + PCEC 3 条 + 句柄复用），UC-12/UC-13 负例与回滚亦有真机结果；但 L4 完整通过还需 §13.9 六条用例的 fidelity_ok 与 tia_side_drift==0、UC-16 增量 EvidenceBundle；G1 的 P0-G 地基不等于 L4 通过"
+    }
+  },
+  "m4": {
+    "signable": false,
+    "verdict": "M4 未通过 / 不可签署",
+    "reason": "pending_real_machine 台账未清零；L1∧L2∧L3∧L4 未全绿；EvidenceBundle 未完整归档；P0-D 档位结论待用户拍板"
+  },
+  "known_limitations": [
+    "P0-D AF 档位结论仍待用户拍板（Agent 不代拍；拍板前映射层维持档位无关）",
+    "/fast-writeback 的 C# 原始返回 writtenBlockCount=0 / generatedNames=[] 为真实返回，已如实留痕；compileScopeNote 显示 compiled 1 affected PlcBlock(s)，未掩盖该字段",
+    "UC-05 的 spec_hash 为等价输入内容哈希，非 Greenfield 真实 specs/vN.json spec_hash",
+    "UC-12 的 allowed=false 由产品纯函数 check_reverse_guard 判定；H 的 /action-c 端点接线未核验",
+    "UC-13 备份为文件系统级 .ap19 快照 + sha256，未做 .zap19 归档恢复（D12 边界外）",
+    "xml_package_unverified 是否可消除见 10-real-machine-acceptance.md §6（本 Agent 不改产品代码标志位）",
+    "L1/L3 离线链、UC-15 九步端到端、UC-16 六条增量用例、UC-18 编译回喂、UC-04 包级验证均未闭环"
+  ]
+}

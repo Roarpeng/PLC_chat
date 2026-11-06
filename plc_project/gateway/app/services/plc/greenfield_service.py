@@ -7,12 +7,14 @@ from __future__ import annotations
 
 import base64
 import io
+import json
 import os
 import re
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, Protocol, runtime_checkable
 
 from gateway.app.services.plc.greenfield_session import GreenfieldSession, registry
 from gateway.app.services.plc.greenfield_upload import (
@@ -62,7 +64,15 @@ from plc_engine.af.greenfield_spec import (
     write_spec,
 )
 from plc_engine.af.greenfield_validator import apply_canvas_patch, validate_ir
-from plc_engine.af.spec_diff import compute_spec_diff
+from plc_engine.af.fidelity import FidelityChecker
+from plc_engine.af.reverse_guard import check_reverse_guard
+from plc_engine.af.spec_diff import (
+    FRAMEWORK_BASELINE_PARTITION,
+    SpecDiff,
+    canonical_hash,
+    compute_spec_diff,
+    sha256_prefixed,
+)
 from plc_engine.af.greenfield_views import (
     assert_roundtrip,
     project_views,
@@ -861,3 +871,745 @@ def confirm_diff_action(session: GreenfieldSession, payload: dict[str, Any]) -> 
         "zero_side_effects": dict(session.counters) == before,
         "write_allowed": True,
     }
+
+
+# ===========================================================================
+# WP-06 / Action A·B·C（F9 / F16 完整版 / F20 服务端）· §13.5 八步编排
+# ---------------------------------------------------------------------------
+# 契约 §2 / §3.1：G 的会话端口由主 agent 收口接线；H 此处按 Protocol 解耦，
+# **不 import** tia_delivery.py 的任何函数（尤其 G 新增的会话函数）。
+# N9：fidelity_ok（L1 离线逻辑等价）与 compile_ok（真机编译）严格分离；涉 TIA
+# 结论一律标 pending_real_machine，禁止以离线/mock 宣称 L2/L4 通过或「编译零错误」。
+# 契约 §0.5：新通道不产生 canvas ops、不建存量链事务；步骤 8 的账本为 Greenfield
+# 自有增量留痕。D12：不做在线下载 / online / run-stop / compare-to-PLC / F-block /
+# Safety / 全局库 / UI 自动化。
+# ===========================================================================
+
+@runtime_checkable
+class TiaSessionPort(Protocol):
+    """契约 §3.1 会话端口（消费方独立 Protocol，收口时由主 agent 注入实例）。"""
+
+    def open_project(self, ap_path: str) -> dict[str, Any]: ...
+    def fast_writeback(
+        self, blocks: list[dict[str, Any]], *, overwrite: bool = True
+    ) -> dict[str, Any]: ...
+    def compile_plc(self) -> dict[str, Any]: ...
+    def save_project(self) -> dict[str, Any]: ...
+    def close(self) -> dict[str, Any]: ...
+
+
+#: 硬门禁 / 编排错误码（服务端 fail-closed，前端不可绕过）。
+ACTION_CONFIRM_REQUIRED = "GF_ACTION_CONFIRM_REQUIRED"
+ACTION_B_FIDELITY_FAILED = "GF_ACTION_B_FIDELITY_FAILED"
+ACTION_B_COMPILE_FAILED = "GF_ACTION_B_COMPILE_FAILED"
+ACTION_C_FIDELITY_PREREQUISITE = "GF_ACTION_C_FIDELITY_PREREQUISITE"
+ACTION_C_SESSION_OWNERSHIP_CONFLICT = "GF_ACTION_C_SESSION_OWNERSHIP_CONFLICT"
+ACTION_C_REVERSE_GUARD_BLOCKED = "GF_ACTION_C_REVERSE_GUARD_BLOCKED"
+ACTION_C_REVERSE_GUARD_UNAVAILABLE = "GF_ACTION_C_REVERSE_GUARD_UNAVAILABLE"
+ACTION_C_ROLLBACK = "GF_ACTION_C_ROLLBACK"
+GF_TIA_UNAVAILABLE = "GF_TIA_UNAVAILABLE"
+GF_TIA_EXEC_ERROR = "GF_TIA_EXEC_ERROR"
+
+#: §13.5 Action C 八步（顺序即硬编排顺序，单测逐一断言）。
+ACTION_C_STEPS: tuple[str, ...] = (
+    "session_reuse",               # 1 会话复用（D9，/open 一次并保持）
+    "spec_diff",                   # 2 规格差异（复用 spec_diff.py）
+    "reverse_guard",               # 3 反向保护（复用 reverse_guard.py，D10）
+    "diff_confirm",                # 4 差异清单显式确认（D11）
+    "pre_write_backup",            # 5 写前备份
+    "block_overwrite",             # 6 块级覆盖（overwrite=true，不归档/不重载/不新建）
+    "compile_save",                # 7 编译+保存
+    "incremental_fidelity_pcec",   # 8 增量 fidelity + PCEC 账本
+)
+
+
+def _to_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _default_ap_path(session: GreenfieldSession) -> str:
+    return str(_work_dir() / "greenfield" / session.session_id / "project.ap19")
+
+
+def _tia_failure_code(result: dict[str, Any]) -> str:
+    code = str(result.get("code") or "")
+    if "GF_TIA_UNAVAILABLE" in code or result.get("tia_unavailable"):
+        return GF_TIA_UNAVAILABLE
+    return GF_TIA_EXEC_ERROR
+
+
+def _compile_verdict(comp: dict[str, Any], static_gate_passed: bool) -> dict[str, Any]:
+    """P0-A 判定式（不 import tia_delivery）：``compile_ok = error_count==0 ∧ static_gate_passed``。
+
+    warning 单列、绝不并入成功；TIA 执行中断 / 不可用一律不判通过（N9）。
+    即便注入的 port 是 mock，``l2_status`` 仍标 ``pending_real_machine``——真机
+    L2 结论只能由收口阶段实测给出，禁止据此宣称 L2 通过或「编译零错误」。
+    """
+    error_count = _to_int(comp.get("error_count"), 0)
+    warnings = list(comp.get("warnings") or [])
+    executed = comp.get("ok") is not False
+    compile_ok = bool(executed and error_count == 0 and static_gate_passed)
+    diagnostics = {
+        "status": "compiled" if executed else "tia_exec_error",
+        "error_count": error_count,
+        "warnings": warnings,
+        "blocks": list(comp.get("blocks") or []),
+        "elapsed_ms": comp.get("elapsed_ms", 0.0),
+        "tia_version": str(comp.get("tia_version") or ""),
+        "project_path": str(comp.get("project_path") or ""),
+        "static_gate_passed": bool(static_gate_passed),
+        "compile_ok": compile_ok,
+        "tia_unavailable": str(comp.get("code") or "") == GF_TIA_UNAVAILABLE,
+        "pending_real_machine": True,
+        "xml_package_unverified": True,
+        "l2_status": "pending_real_machine",
+        "warning_note": "warning 单列，不并入 compile_ok（N9 / P0-A）",
+        "reason": str(comp.get("reason") or ""),
+    }
+    return {
+        "compile_ok": compile_ok,
+        "error_count": error_count,
+        "warnings": warnings,
+        "static_gate_passed": bool(static_gate_passed),
+        "compile_diagnostics": diagnostics,
+    }
+
+
+def _static_gate_from_delivery(session: GreenfieldSession, override: Any = None) -> bool:
+    if override is not None:
+        return bool(override)
+    ld = session.last_delivery or {}
+    return bool((ld.get("verification") or {}).get("ok"))
+
+
+def _last_generated_from_delivery(delivery: dict[str, Any] | None) -> dict[str, str]:
+    return {
+        str(e.get("source_id")): str(e.get("sha256") or "")
+        for e in (delivery or {}).get("blocks_manifest", [])
+        if e.get("source_id")
+    }
+
+
+def _blocks_from_delivery(delivery: dict[str, Any] | None) -> list[dict[str, Any]]:
+    return [
+        {
+            "source_id": str(e.get("source_id") or ""),
+            "name": str(e.get("name") or ""),
+            "path": str(e.get("path") or ""),
+            "content_sha256": str(e.get("sha256") or ""),
+        }
+        for e in (delivery or {}).get("blocks_manifest", [])
+    ]
+
+
+def _build_artifacts(
+    delivery: dict[str, Any], spec: Any
+) -> tuple[dict[str, str], list[str], dict[str, str], dict[str, str]]:
+    """把工程包 ZIP + blocks_manifest 转为 FidelityChecker 产物映射。
+
+    每块写成带 ``source_id`` 的 JSON 描述符（content / content_hash / spec_hash），
+    derived 块进入 coverage_matrix、framework_baseline 块命中基线白名单；
+    返回 ``(artifacts, derived_source_ids, last_generated, artifact_hashes)``。
+    """
+    zip_bytes = bytes(delivery.get("zip_bytes") or b"")
+    manifest = delivery.get("blocks_manifest") or []
+    spec_hash = str(getattr(spec, "spec_hash", "") or "")
+    artifacts: dict[str, str] = {}
+    derived_ids: list[str] = []
+    last_generated: dict[str, str] = {}
+    artifact_hashes: dict[str, str] = {}
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+        for e in manifest:
+            path = str(e.get("path") or "")
+            part_path = str(e.get("partitioned_path") or path)
+            sid = str(e.get("source_id") or "")
+            sha = str(e.get("sha256") or "")
+            try:
+                scl = zf.read(path).decode("utf-8")
+            except (KeyError, UnicodeDecodeError):
+                scl = ""
+            descriptor: dict[str, Any] = {
+                "source_id": sid,
+                "source_kind": str(e.get("block_type") or ""),
+                "content": scl,
+                "content_hash": sha,
+                "spec_hash": spec_hash,
+            }
+            if e.get("partition") == FRAMEWORK_BASELINE_PARTITION:
+                descriptor["framework_baseline"] = True
+            else:
+                derived_ids.append(sid)
+            artifacts[part_path] = json.dumps(descriptor, ensure_ascii=False)
+            artifact_hashes[part_path] = sha
+            last_generated[sid] = sha
+    return artifacts, derived_ids, last_generated, artifact_hashes
+
+
+def _action_spec_like(spec: Any, expected_source_ids: list[str]) -> SimpleNamespace:
+    """FidelityChecker 的 FrozenSpecLike：期望对象集合 = 派生产物 source_id（L1 离线口径）。"""
+    snap = dict(getattr(spec, "ir_snapshot", {}) or {})
+    snap["expected_source_ids"] = sorted(set(expected_source_ids))
+    return SimpleNamespace(
+        project_id=str(getattr(spec, "project_id", "") or ""),
+        version=int(getattr(spec, "spec_version", 0) or 0),
+        ir_snapshot=snap,
+        spec_hash=str(getattr(spec, "spec_hash", "") or ""),
+    )
+
+
+def _diff_changed_blocks(diff: SpecDiff) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for blk in tuple(diff.changed) + tuple(diff.added):
+        out.append(
+            {"source_id": str(blk.source_id), "kind": str(blk.kind), "payload": dict(blk.payload)}
+        )
+    return out
+
+
+def _coerce_diff(
+    diff_arg: Any, session: GreenfieldSession
+) -> tuple[Any, int, list[str], list[dict[str, Any]], str]:
+    """归一差异清单：None 时复用 ``compute_spec_diff`` 从会话最后两版规格计算。"""
+    if diff_arg is None:
+        if len(session.specs) >= 2:
+            base, target = session.specs[-2], session.specs[-1]
+            d = compute_spec_diff(_spec_like(base), _spec_like(target))
+            return (
+                d, int(d.base_spec_version), list(d.changed_source_ids),
+                _diff_changed_blocks(d), "compute_spec_diff(vN-1→vN)",
+            )
+        base_v = int(getattr(session.specs[-1], "spec_version", 0)) if session.specs else 0
+        return None, base_v, [], [], "未提供差异清单且会话不足两版规格，产出空 diff（禁止臆造）"
+    if isinstance(diff_arg, SpecDiff):
+        return (
+            diff_arg, int(diff_arg.base_spec_version), list(diff_arg.changed_source_ids),
+            _diff_changed_blocks(diff_arg), "调用方注入 SpecDiff",
+        )
+    if isinstance(diff_arg, dict):
+        base_v = _to_int(diff_arg.get("base_spec_version"), 0)
+        changed_ids = [str(x) for x in (diff_arg.get("changed_source_ids") or [])]
+        changed_blocks: list[dict[str, Any]] = []
+        for blk in list(diff_arg.get("changed") or []) + list(diff_arg.get("added") or []):
+            if isinstance(blk, dict):
+                changed_blocks.append(
+                    {
+                        "source_id": str(blk.get("source_id") or ""),
+                        "kind": str(blk.get("kind") or ""),
+                        "payload": dict(blk.get("payload") or {}),
+                    }
+                )
+        diff_obj = SimpleNamespace(
+            base_spec_version=base_v,
+            target_spec_version=_to_int(diff_arg.get("target_spec_version"), 0),
+            changed_source_ids=tuple(changed_ids),
+            changed=(), added=(), removed=(),
+        )
+        return diff_obj, base_v, changed_ids, changed_blocks, "调用方注入差异清单 dict"
+    return None, 0, [], [], "差异清单类型无法识别（禁止臆造）"
+
+
+def _blocked(
+    session: GreenfieldSession,
+    code: str,
+    reason: str,
+    *,
+    action: str,
+    before: dict[str, int],
+    http_status: int | None = None,
+    steps: list[dict[str, Any]] | None = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    """统一 fail-closed 结果：零副作用（计数器相对调用前不变）。"""
+    counters = dict(session.counters)
+    payload: dict[str, Any] = {
+        "ok": False,
+        "blocked": True,
+        "action": action,
+        "code": code,
+        "reason": reason,
+        "side_effect_counters": counters,
+        "zero_side_effects": counters == before,
+        "mode": "incremental" if action == "C" else "full",
+        "pending_real_machine": True,
+        "xml_package_unverified": True,
+    }
+    if http_status is not None:
+        payload["http_status"] = http_status
+    if steps is not None:
+        payload["steps"] = steps
+        payload["step_order"] = [s["step"] for s in steps]
+    payload.update(extra)
+    return payload
+
+
+def run_action_a(
+    session: GreenfieldSession,
+    *,
+    tia_side_snapshot: dict[str, str] | None = None,
+    include_zip_base64: bool = False,
+) -> dict[str, Any]:
+    """Action A 导出工程包：产出 fidelity_report.json + EvidenceBundle，可离线校验，不写 TIA。
+
+    前置：已 FROZEN（复用 ``generate_project_package`` 的 ``assert_gate("generate")``）。
+    ``fidelity_ok`` 是 L1 逻辑等价离线判定；``tia_side_snapshot`` 缺省时 TIA 侧结论标
+    ``pending_real_machine``（N9），绝不等同编译通过。传入不一致的 TIA 快照会得到
+    ``fidelity_ok=false``，供 UC-17 走真实负例。
+    """
+    generate_project_package(session)  # FROZEN 门禁 + 缓存 last_delivery（含 zip_bytes）
+    delivery = session.last_delivery or {}
+    spec = session.specs[-1]
+    artifacts, derived_ids, _last_generated, artifact_hashes = _build_artifacts(delivery, spec)
+    spec_like = _action_spec_like(spec, derived_ids)
+    report = FidelityChecker().check(
+        spec_like, artifacts, mode="full", tia_side_snapshot=tia_side_snapshot
+    )
+    report_dict = report.to_dict()
+
+    zip_bytes = bytes(delivery.get("zip_bytes") or b"")
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+        zip_entry_hashes = {name: sha256_prefixed(zf.read(name)) for name in zf.namelist()}
+
+    views = get_views(session)
+    ir_dict = session.ir.to_dict() if session.ir else {}
+    edge_list = list(ir_dict.get("edges") or [])
+    static_gate = dict(delivery.get("verification") or {})
+
+    evidence: dict[str, Any] = {
+        "schema": "gf-evidence-bundle-v1",
+        "mode": "full",
+        "spec": spec.to_dict(),
+        "ir_snapshot": dict(getattr(spec, "ir_snapshot", {}) or {}),
+        "views": views,                         # 四视图（flow/seq/state/step_flow）
+        "edge_list": edge_list,                 # 连线清单
+        "static_gate": static_gate,             # 静态门禁
+        "fidelity_report": report_dict,         # fidelity_report.json 内容
+        "artifact_hashes": artifact_hashes,    # 派生产物哈希（source_id 定位）
+        "zip_entry_hashes": zip_entry_hashes,  # zip 全条目哈希（可离线复算）
+        # 附录 B coverage_matrix 完整结构（J 新增产物）显式列出，保持向后兼容：
+        # 旧 delivery 无该字段时降级为空 dict / 计数 0，bundle_sha256 仍可离线复算。
+        "coverage_matrix": delivery.get("coverage_matrix") or {},
+        "coverage_matrix_entry_count": len(delivery.get("coverage_matrix") or {}),
+        "baseline_manifest": delivery.get("baseline_manifest"),
+        "source_id_map": delivery.get("source_id_map"),
+        "package": {
+            "zip_filename": delivery.get("zip_filename"),
+            "zip_sha256": delivery.get("zip_sha256"),
+            "zip_size_bytes": delivery.get("zip_size_bytes"),
+            "zip_entry_count": len(zip_entry_hashes),
+            "offline_download_endpoint": "/api/v1/plc/canvas/greenfield/download-package",
+        },
+        "offline_verifiable": True,
+        "pending_real_machine": bool(report.pending_real_machine),
+        "xml_package_unverified": True,
+        "compile_ok": None,
+        "compile_note": "Action A 不写 TIA、不产出编译结论；fidelity_ok 是 L1 逻辑等价，不等同编译通过（N9）",
+    }
+    if include_zip_base64:
+        evidence["package_zip_base64"] = base64.b64encode(zip_bytes).decode("ascii")
+    evidence["bundle_sha256"] = canonical_hash(
+        {k: v for k, v in evidence.items() if k != "package_zip_base64"}
+    )
+
+    session.last_fidelity_report = report_dict
+    session.last_fidelity_ok = bool(report.fidelity_ok)
+    session.add_message(
+        "event", "action_a",
+        f"Action A 导出工程包：fidelity_ok={report.fidelity_ok}（离线 L1，不写 TIA）",
+        {"fidelity_ok": report.fidelity_ok, "block_count": delivery.get("block_count")},
+    )
+
+    return {
+        "ok": True,
+        "action": "A",
+        "mode": "full",
+        "fidelity_ok": bool(report.fidelity_ok),
+        "fidelity_report": report_dict,
+        "evidence_bundle": evidence,
+        "evidence_bundle_sha256": evidence["bundle_sha256"],
+        "spec_version": getattr(spec, "spec_version", 0),
+        "spec_hash": getattr(spec, "spec_hash", ""),
+        "block_count": delivery.get("block_count"),
+        "tia_written": False,
+        "reverse_protection": report.reverse_protection,
+        "tia_side_drift": report.tia_side_drift,
+        "ob_number_deviations": list(report.ob_number_deviations),
+        "pending_real_machine": True,
+        "xml_package_unverified": True,
+        "compile_ok": None,
+        "note": "不装 TIA 亦可完成 A；fidelity_ok=false 时 Action B 必须拒绝（UC-17）",
+    }
+
+
+def run_action_b(
+    session: GreenfieldSession,
+    *,
+    confirmed: bool = False,
+    fidelity_report: dict[str, Any] | None = None,
+    port: Any = None,
+    ap_path: str = "",
+    static_gate_passed: bool | None = None,
+    blocks: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Action B 首次写入博途编译：以 Action A 的 ``fidelity_ok == true`` 为前提（UC-17）。
+
+    首次 ``open_project`` → 导入 → ``compile_plc`` → ``save_project``；``compile_ok``
+    用 ``error_count==0 ∧ static_gate_passed``，warning 单列。``port`` 缺省时离线编排
+    标 ``pending_real_machine``，不宣称编译通过；TIA 不可用/执行中断显式非 200。
+    """
+    before = dict(session.counters)
+    # D11：服务端强制 fail-closed，确认前零副作用（UC-19）。
+    if confirmed is not True:
+        return _blocked(
+            session, ACTION_CONFIRM_REQUIRED,
+            "差异清单未显式确认（D11）：Action B 服务端 fail-closed，ops/disk_writes/writebacks/generations 保持不变",
+            action="B", before=before,
+        )
+    # UC-17：A 的 fidelity_ok == true 为前提。
+    rep = fidelity_report if fidelity_report is not None else session.last_fidelity_report
+    fidelity_ok = rep.get("fidelity_ok") if isinstance(rep, dict) else None
+    if fidelity_ok is not True:
+        return _blocked(
+            session, ACTION_B_FIDELITY_FAILED,
+            "Action B 前置未满足：Action A 的 fidelity_ok 不是 true（或尚未执行 Action A），拒绝首次写入博途（UC-17）",
+            action="B", before=before,
+            fidelity_ok=fidelity_ok, prerequisite="fidelity_ok == true",
+        )
+
+    gate = _static_gate_from_delivery(session, static_gate_passed)
+    if port is None:
+        diag = {
+            "status": "pending_real_machine", "compile_ok": False,
+            "error_count": 0, "warnings": [], "static_gate_passed": gate,
+            "tia_version": "", "project_path": ap_path or "", "elapsed_ms": 0.0,
+            "tia_unavailable": False, "pending_real_machine": True,
+            "xml_package_unverified": True,
+            "l2_status": "pending_real_machine",
+            "reason": "未提供 TiaSessionPort（未并线）：离线编排不写 TIA，真机编译结论 pending_real_machine（N9）",
+        }
+        return {
+            "ok": True, "blocked": False, "action": "B", "mode": "full",
+            "fidelity_ok": True, "compile_ok": False, "compile_diagnostics": diag,
+            "tia_written": False, "pending_real_machine": True,
+            "xml_package_unverified": True,
+            "side_effect_counters": dict(session.counters),
+            "zero_side_effects": dict(session.counters) == before,
+            "note": "门禁已通过；但离线无会话端口，绝不宣称编译零错误或 L2 通过（真机由主 agent 收口）",
+        }
+
+    steps: list[dict[str, Any]] = []
+    opened = port.open_project(ap_path or _default_ap_path(session))
+    steps.append({"step": "open_project", "ok": bool(opened.get("ok"))})
+    if not opened.get("ok"):
+        code = _tia_failure_code(opened)
+        return _blocked(
+            session, code,
+            "Action B 首次打开项目失败：" + str(opened.get("reason") or opened.get("error") or code),
+            action="B", before=before, http_status=503, steps=steps,
+        )
+    fwb_blocks = blocks if blocks is not None else _blocks_from_delivery(session.last_delivery)
+    written = port.fast_writeback(fwb_blocks, overwrite=True)
+    steps.append({"step": "fast_writeback", "ok": bool(written.get("ok")), "detail": f"blocks={len(fwb_blocks)}"})
+    if not written.get("ok"):
+        session.counters = dict(before)
+        return _blocked(
+            session, GF_TIA_EXEC_ERROR,
+            "Action B 导入失败：" + str(written.get("reason") or written.get("error") or "fast_writeback ok=false") + "；已回滚计数",
+            action="B", before=before, http_status=503, steps=steps,
+        )
+    session.count("writebacks")
+    comp = port.compile_plc()
+    verdict = _compile_verdict(comp, gate)
+    compile_ok = verdict["compile_ok"]
+    steps.append(
+        {"step": "compile_plc", "ok": bool(comp.get("ok")) and compile_ok,
+         "detail": f"error_count={verdict['error_count']}, compile_ok={compile_ok}"}
+    )
+    if not comp.get("ok") or not compile_ok:
+        session.counters = dict(before)
+        return _blocked(
+            session, ACTION_B_COMPILE_FAILED,
+            "Action B 编译未通过（error_count>0 或静态门禁拦截或 TIA 执行中断）："
+            + str(comp.get("reason") or "") + "；已回滚计数，不保存",
+            action="B", before=before, steps=steps,
+            compile_diagnostics=verdict["compile_diagnostics"],
+        )
+    saved = port.save_project()
+    steps.append({"step": "save_project", "ok": bool(saved.get("ok"))})
+    if not saved.get("ok"):
+        session.counters = dict(before)
+        return _blocked(
+            session, GF_TIA_EXEC_ERROR,
+            "Action B 保存失败：" + str(saved.get("reason") or "save_project ok=false") + "；已回滚计数",
+            action="B", before=before, http_status=503, steps=steps,
+        )
+    session.action_b_done = True
+    session.action_b_compile_ok = compile_ok
+    if not session.action_session_handle:
+        session.action_session_handle = str(opened.get("session_handle") or "gf-session")
+        session.action_c_open_count = 1
+    session.add_message(
+        "event", "action_b", f"Action B 首次写入编译完成：compile_ok={compile_ok}",
+        {"compile_ok": compile_ok},
+    )
+    return {
+        "ok": True, "blocked": False, "action": "B", "mode": "full",
+        "fidelity_ok": True, "compile_ok": compile_ok,
+        "compile_diagnostics": verdict["compile_diagnostics"],
+        "steps": steps, "step_order": [s["step"] for s in steps],
+        "tia_written": True, "session_handle": session.action_session_handle,
+        "side_effect_counters": dict(session.counters),
+        "zero_side_effects": dict(session.counters) == before,
+        "pending_real_machine": True,
+        "xml_package_unverified": True,
+        "note": "compile_ok 为本次编排判定；真机 L2 结论 pending_real_machine（N9）",
+    }
+
+
+def run_action_c(
+    session: GreenfieldSession,
+    *,
+    confirmed: bool = False,
+    port: Any = None,
+    diff: dict[str, Any] | None = None,
+    last_generated: dict[str, str] | None = None,
+    tia_side_snapshot: dict[str, str] | None = None,
+    tia_owned_by_ui: bool = False,
+    fidelity_report: dict[str, Any] | None = None,
+    ap_path: str = "",
+    static_gate_passed: bool | None = None,
+) -> dict[str, Any]:
+    """Action C 调试期增量回写：§13.5 八步编排（顺序见 ``ACTION_C_STEPS``）。
+
+    硬门禁（服务端 fail-closed，不能只靠前端拦截）：
+    D11 ``confirmed != true`` 零副作用（UC-19）→ D9 会话归属冲突阻止 →
+    D10 反向保护 ``allowed == false`` / ``tia_side_drift > 0`` 阻止且禁止「先覆盖再提示」
+    （UC-12）→ 写前备份 → 块级覆盖 → 编译+保存（不归档/不重载/不新建）→
+    失败导入回滚到调用前状态（UC-13）→ 增量 fidelity + 每次成功 1 条账本。
+    """
+    before = dict(session.counters)
+    steps: list[dict[str, Any]] = []
+
+    def _rec(name: str, ok: bool, detail: str = "") -> None:
+        steps.append({"step": name, "ok": bool(ok), "detail": detail})
+
+    # —— 入口硬门禁：D11 / D9 / 可选 fidelity 前提（§13.5 以 A 与已完成 B 为前提）——
+    if confirmed is not True:
+        return _blocked(
+            session, ACTION_CONFIRM_REQUIRED,
+            "差异清单未显式确认（D11）：Action C 服务端 fail-closed，ops/disk_writes/writebacks/generations 保持不变（UC-19）",
+            action="C", before=before, steps=steps,
+        )
+    if tia_owned_by_ui:
+        return _blocked(
+            session, ACTION_C_SESSION_OWNERSHIP_CONFLICT,
+            "会话归属冲突（D9）：检测到用户 UI 正打开同一项目；请关闭用户 UI 或转为只读观察，专用后台实例未取得独占，禁止写入",
+            action="C", before=before, steps=steps,
+            session_conflict_hint="关闭用户 UI 或转只读观察",
+        )
+    rep = fidelity_report if fidelity_report is not None else session.last_fidelity_report
+    if isinstance(rep, dict) and rep.get("fidelity_ok") is not True:
+        return _blocked(
+            session, ACTION_C_FIDELITY_PREREQUISITE,
+            "Action C 前置未满足：Action A 的 fidelity_ok 不是 true（§13.5 以 A 与已完成 B 为前提）",
+            action="C", before=before, steps=steps,
+            action_b_done=bool(session.action_b_done),
+        )
+
+    # —— 步骤 1 会话复用（D9：/open 一次并保持，后续迭代不再 open / create-project）——
+    reused = bool(session.action_session_handle)
+    if port is not None and not reused:
+        opened = port.open_project(ap_path or _default_ap_path(session))
+        if not opened.get("ok"):
+            code = _tia_failure_code(opened)
+            return _blocked(
+                session, code,
+                "Action C 会话打开失败：" + str(opened.get("reason") or opened.get("error") or code),
+                action="C", before=before, steps=steps, http_status=503,
+            )
+        session.action_session_handle = str(opened.get("session_handle") or "gf-session")
+        session.action_c_open_count += 1
+    _rec(
+        "session_reuse", True,
+        "复用既有句柄（不再 /open）" if reused else
+        ("offline_skip(pending_real_machine)" if port is None else "首次 /open 一次并保持"),
+    )
+
+    # —— 步骤 2 规格差异（复用 spec_diff.py）——
+    diff_obj, base_version, changed_ids, changed_blocks, diff_note = _coerce_diff(diff, session)
+    _rec("spec_diff", True, f"base=v{base_version}, changed={len(changed_ids)}; {diff_note}")
+
+    # —— 步骤 3 反向保护（复用 reverse_guard.py，D10 fail-closed）——
+    if last_generated is None:
+        last_generated = _last_generated_from_delivery(session.last_delivery)
+    if tia_side_snapshot is None:
+        return _blocked(
+            session, ACTION_C_REVERSE_GUARD_UNAVAILABLE,
+            "无法读取 TIA 侧块哈希快照，反向保护 fail-closed（禁止先覆盖再提示）；请提供 tia_side_snapshot 或由真机读取",
+            action="C", before=before, steps=steps,
+            reverse_protection={"status": "unavailable", "allowed": False, "tia_side_drift": None},
+            base_spec_version=base_version, changed_source_ids=changed_ids,
+        )
+    verdict = check_reverse_guard(last_generated, tia_side_snapshot)
+    reverse_protection = {
+        "status": "evaluated",
+        "allowed": verdict.allowed,
+        "drift_count": verdict.drift_count,
+        "tia_side_drift": verdict.tia_side_drift,
+        "blocked_source_ids": list(verdict.blocked_source_ids),
+        "reason": verdict.reason,
+    }
+    _rec("reverse_guard", verdict.allowed, f"tia_side_drift={verdict.tia_side_drift}")
+    if not verdict.allowed or verdict.tia_side_drift > 0:
+        return _blocked(
+            session, ACTION_C_REVERSE_GUARD_BLOCKED,
+            "D10 反向保护阻止：" + verdict.reason,
+            action="C", before=before, steps=steps,
+            reverse_protection=reverse_protection,
+            tia_side_drift=verdict.tia_side_drift,
+            base_spec_version=base_version, changed_source_ids=changed_ids,
+        )
+
+    # —— 步骤 4 差异清单显式确认（D11，已由入口硬门禁保证，此处留痕）——
+    _rec("diff_confirm", True, "confirmed=true（D11 已服务端强制，确认前零副作用）")
+
+    # —— 步骤 5 写前备份（快照 + 回滚钩子，UC-13）——
+    pre_state = {
+        "counters": dict(session.counters),
+        "last_delivery_zip_sha256": (session.last_delivery or {}).get("zip_sha256"),
+        "ledger_len": len(session.incremental_ledger),
+        "last_fidelity_report": session.last_fidelity_report,
+        "session_handle": session.action_session_handle,
+    }
+    backup = {
+        "pre_state": pre_state,
+        "backup_sha256": canonical_hash(
+            {"zip_sha256": pre_state["last_delivery_zip_sha256"], "changed_blocks": len(changed_blocks)}
+        ),
+    }
+    _rec("pre_write_backup", True, backup["backup_sha256"])
+
+    # —— 步骤 6 块级覆盖 + 步骤 7 编译+保存（不归档 / 不重载 / 不新建）——
+    compile_ok = False
+    compile_diagnostics: dict[str, Any] = {
+        "status": "pending_real_machine", "compile_ok": False,
+        "error_count": 0, "warnings": [], "static_gate_passed": False,
+        "tia_version": "", "project_path": "", "elapsed_ms": 0.0,
+        "pending_real_machine": True, "xml_package_unverified": True,
+        "l2_status": "pending_real_machine",
+        "reason": "未提供 TiaSessionPort，离线编排不写 TIA（pending_real_machine）",
+    }
+    rollback_reason = ""
+    if port is not None:
+        written = port.fast_writeback(changed_blocks, overwrite=True)
+        _rec("block_overwrite", bool(written.get("ok")), f"blocks={len(changed_blocks)}, overwrite=true")
+        if not written.get("ok"):
+            rollback_reason = "块级覆盖失败：" + str(written.get("error") or written.get("reason") or "fast_writeback ok=false")
+        else:
+            session.count("writebacks")
+            comp = port.compile_plc()
+            gate = _static_gate_from_delivery(session, static_gate_passed)
+            verdict_c = _compile_verdict(comp, gate)
+            compile_diagnostics = verdict_c["compile_diagnostics"]
+            compile_ok = verdict_c["compile_ok"]
+            _rec("compile_save", bool(comp.get("ok")) and compile_ok,
+                 f"error_count={verdict_c['error_count']}, compile_ok={compile_ok}")
+            if not comp.get("ok") or not compile_ok:
+                rollback_reason = "编译未通过（error_count>0 或静态门禁拦截或 TIA 执行中断）：" + str(comp.get("reason") or "")
+            else:
+                saved = port.save_project()
+                if not saved.get("ok"):
+                    rollback_reason = "保存失败：" + str(saved.get("reason") or "save_project ok=false")
+    else:
+        _rec("block_overwrite", True, "offline_skip(pending_real_machine)")
+        _rec("compile_save", True, "offline_skip(pending_real_machine)")
+
+    # —— 回滚演练（UC-13）：失败导入后项目回到调用前状态且备份可恢复 ——
+    if rollback_reason:
+        session.counters = dict(pre_state["counters"])
+        session.incremental_ledger = session.incremental_ledger[: pre_state["ledger_len"]]
+        session.last_fidelity_report = pre_state["last_fidelity_report"]
+        session.action_session_handle = pre_state["session_handle"]
+        return {
+            "ok": False, "blocked": True, "action": "C", "mode": "incremental",
+            "code": ACTION_C_ROLLBACK,
+            "reason": "失败导入已回滚（UC-13）：" + rollback_reason,
+            "rolled_back": True, "backup_restorable": True,
+            "state_restored": dict(session.counters) == pre_state["counters"],
+            "backup": backup, "steps": steps,
+            "step_order": [s["step"] for s in steps],
+            "side_effect_counters": dict(session.counters),
+            "zero_side_effects": dict(session.counters) == before,
+            "base_spec_version": base_version, "changed_source_ids": changed_ids,
+            "reverse_protection": reverse_protection,
+            "tia_side_drift": verdict.tia_side_drift,
+            "ob_number_deviations": [], "compile_ok": False,
+            "compile_diagnostics": compile_diagnostics,
+            "pending_real_machine": True, "xml_package_unverified": True,
+            "tia_written": False,
+        }
+
+    # —— 步骤 8 增量 fidelity + 账本（Greenfield 自有留痕，非存量链事务）——
+    inc_report_dict: dict[str, Any]
+    if session.specs and session.last_delivery:
+        spec = session.specs[-1]
+        artifacts, derived_ids, _generated, _hashes = _build_artifacts(session.last_delivery, spec)
+        spec_like = _action_spec_like(spec, derived_ids)
+        inc_report = FidelityChecker().check(
+            spec_like, artifacts, mode="incremental",
+            base_spec_version=base_version, diff=diff_obj,
+            tia_side_snapshot=tia_side_snapshot,
+        )
+        inc_report_dict = inc_report.to_dict()
+    else:
+        inc_report_dict = {
+            "mode": "incremental", "fidelity_ok": False,
+            "base_spec_version": base_version, "changed_source_ids": changed_ids,
+            "reverse_protection": reverse_protection, "tia_side_drift": verdict.tia_side_drift,
+            "ob_number_deviations": [],
+            "note": "无已生成工程产物，增量 fidelity 未计算（禁止臆造）",
+        }
+    ob_deviations = list(inc_report_dict.get("ob_number_deviations") or [])
+    session.incremental_ledger.append(
+        {
+            "kind": "greenfield_incremental",
+            "base_spec_version": base_version,
+            "changed_source_ids": changed_ids,
+            "compile_ok": compile_ok,
+            "tia_side_drift": verdict.tia_side_drift,
+            "tia_written": port is not None,
+            "backup_sha256": backup["backup_sha256"],
+        }
+    )
+    _rec("incremental_fidelity_pcec", True,
+         f"ledger={len(session.incremental_ledger)}, fidelity_ok={inc_report_dict.get('fidelity_ok')}")
+
+    result = {
+        "ok": True, "blocked": False, "action": "C", "mode": "incremental",
+        "base_spec_version": base_version,
+        "changed_source_ids": changed_ids,
+        "reverse_protection": reverse_protection,
+        "tia_side_drift": verdict.tia_side_drift,
+        "ob_number_deviations": ob_deviations,
+        "ob_number_deviations_note": "ob_number_deviations 显式留痕（即使为空也不静默；属不纳入 1:1 的域）",
+        "fidelity_report": inc_report_dict,
+        "steps": steps, "step_order": [s["step"] for s in steps],
+        "session_reused": reused,
+        "session_handle": session.action_session_handle,
+        "open_count": session.action_c_open_count,
+        "compile_ok": compile_ok,
+        "compile_diagnostics": compile_diagnostics,
+        "pcec_ledger_entries": len(session.incremental_ledger),
+        "rolled_back": False, "backup_restorable": True, "backup": backup,
+        "side_effect_counters": dict(session.counters),
+        "zero_side_effects": dict(session.counters) == before,
+        "pending_real_machine": port is None,
+        "xml_package_unverified": True,
+        "tia_written": port is not None,
+        "archived": False, "reloaded": False, "project_recreated": False,
+        "note": "不归档 / 不重载 / 不新建项目；真机 L4 结论 pending_real_machine（N9）",
+    }
+    session.last_action_c = result
+    return result

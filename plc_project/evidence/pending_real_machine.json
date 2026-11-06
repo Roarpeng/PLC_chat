@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "title": "pending_real_machine 台账（M4 清零检查依据）",
+  "owner": "Agent I / WP-10",
+  "policy": "M4 发布门禁在 pending 清零前必须保持未通过（Plan §6.3 / 契约 05 §1.4 / §6）",
+  "generated_at": "2026-11-06T00:00:00+08:00",
+  "cleared": false,
+  "cleared_at": null,
+  "clear_condition": "所有 items 必须经真机（或对应收口核验）产出真实结构化证据并由主 agent 逐条核验后，方可置 cleared=true 且 items 清空；禁止以离线单测通过 / mock / 人工观感清零；禁止把 pending 视为通过",
+  "accumulate_rule": "--offline 运行会由 RTM 状态聚合出 pending 集合并与本台账比对累计计数（默认只报告不改写）；--sync-ledger 可把差异写回；清零只能由主 agent 收口实测后执行",
+  "agent_m_update": {
+    "date": "2026-11-06",
+    "agent": "Agent M · V19 真机全量验收（批次 2 终态验收）",
+    "evidence_report": "evidence/uc05_real_machine_report.json",
+    "acceptance_report": "docs/greenfield/10-real-machine-acceptance.md",
+    "scope": "UC-02 / UC-03 / UC-05 / UC-12 / UC-13 已逐条产出 TIA V19 真机 / 探针结构化证据",
+    "rtm_status_change": "上述 5 个 UC 在 evidence/rtm.json 的主状态由 pending_real_machine → pass（逐条证据与边界见各 case 的 real_machine_facts / notes）",
+    "cleared": false,
+    "cleared_reason": "本台账按 clear_condition 保持未清零：仍有 UC-01（P0-D 档位待用户拍板）/ UC-04（包级 xml_package_unverified 未消除）/ UC-15 / UC-16 / UC-18 未闭环；L1/L3 离线链未跑、EvidenceBundle 未完整归档、L1∧L2∧L3∧L4 未全绿；且 items 清空须由主 agent 逐条核验，本 Agent 不代清零。UC 主状态 pass 不等于台账清零。",
+    "m4": "未通过 / 不可签署",
+    "items_kept": true,
+    "items_removed": []
+  },
+  "agent_n_offline_review": {
+    "date": "2026-11-06",
+    "agent": "Agent N · 离线用例证据复核与 RTM 收口（非真机）",
+    "evidence_index": "evidence/rtm.json 中 9 个原 not_run 的 UC（UC-06/07/08/09/10/11/14/17/19）已登记 offline_unit_test pass；逐条证据见各 case 的 offline_evidence / offline_verified_by / evidence_kind / caveat，汇总见 rtm.json summary.agent_n_offline_review 与 docs/greenfield/07-acceptance-matrix.md 末尾「离线证据复核」一节",
+    "pytest_passed": "test_greenfield_ir.py 17 / test_greenfield_patch_api.py 9 / test_greenfield_spec_diff.py 10 / test_greenfield_fidelity.py 12 / test_greenfield_e2e_delivery.py 2 / test_greenfield_gate.py 10 / test_greenfield_action_abc.py 20（逐文件 -q 实跑，全部 0 failed）",
+    "cleared": false,
+    "cleared_reason": "离线 pass 不使台账清零：本台账按 clear_condition 保持 cleared=false、items 一条未删；9 个 UC 的 pass 为 offline_unit_test 证据（不等同真机 L2/L4 通过），UC-01/UC-04/UC-15/UC-16/UC-18 五个 pending_real_machine 仍需真机全链，L1∧L2∧L3∧L4 未全绿、EvidenceBundle 未完整归档、P0-D 待用户拍板；items 清空须由主 agent 逐条核验后执行",
+    "m4": "未通过 / 不可签署",
+    "note": "离线单测通过不得用于清零；UC 主状态 pass（含离线 pass）不等于台账清零，也不等于 M4 可签署"
+  },
+  "items": [
+    {"id": "UC-01", "reason": "P0-D 档位结论待用户拍板 + 端到端全链未跑 + Gate-0=conditional-go；真机分组编译子结论已留痕但不闭环", "owner": "用户拍板 + 主 agent 收口", "requires": "user_decision + real_machine"},
+    {"id": "UC-02", "reason": "L2 编译判定口径涉真机编译报告，离线单测不得标 L2 pass", "owner": "主 agent 收口全量 pytest + 真机编译报告", "requires": "real_machine", "agent_m_real_machine": {"verdict": "pass", "evidence": "evidence/uc05_real_machine_report.json#cases/UC-02", "note": "Agent M 真机实测 3× /compile-plc errorCount=0 / warningCount=0 / state=Success；结构化诊断 error_count=0 与 warnings=[] 单列分离；含 warning 判定由产品纯函数 evaluate_compile 验证（明确标注非真机）"}},
+    {"id": "UC-03", "reason": "tia_unavailable 显式失败口径需在真机/接口层核验，不得 HTTP 200 静默成功", "owner": "主 agent 收口接线核验", "requires": "real_machine + wiring", "agent_m_real_machine": {"verdict": "pass", "evidence": "evidence/uc05_real_machine_report.json#cases/UC-03", "note": "serve 未启动探针：session_status.available=false；SessionModeTiaPort.open_project 返回 ok=false / code=GF_TIA_UNAVAILABLE / http_status=503（显式非 200）；C# serve 层业务失败为 200+ok=false 亦如实记录"}},
+    {"id": "UC-04", "reason": "K1 探针实测失败（openness_error: culture en-US / StructuredText-v4）；xml_package_unverified 未消除，待 Agent G 修复模板后 V19 真机复测", "owner": "Agent G 修复 + 收口真机复测", "requires": "real_machine"},
+    {"id": "UC-05", "reason": "P0-G 三次增量不重载真机未实测（会话句柄复用 / PCEC 三条 / 3x error_count==0）", "owner": "Agent G 真机地基 + 收口实测", "requires": "real_machine", "agent_m_real_machine": {"verdict": "pass", "evidence": "evidence/uc05_real_machine_report.json#cases/UC-05", "note": "Agent M 真机实测：/open=1 + 3× /fast-writeback 增量 + 3× /compile-plc errorCount=0 / warningCount=0 / state=Success + PCEC 3 条（账本磁盘核对 3 条）+ session_handle 复用 + 项目未关闭/未重载/未新建；另有 /import-xml 等价路径 3× 0/0 Success。P0-G 地基通过，不等于 L4 完整通过"}},
+    {"id": "UC-12", "reason": "D10 反向保护真机约束未验证（TIA 侧手工改无关块 → 第 4 次增量被阻止）", "owner": "Agent H + 收口实测", "requires": "real_machine", "agent_m_real_machine": {"verdict": "pass", "evidence": "evidence/uc05_real_machine_report.json#cases/UC-12", "note": "真机导入基线块 + 人为导入无关块；check_reverse_guard 返回 allowed=false / tia_side_drift=1 / blocked=[OB502_Unrelated]；第 4 次增量被阻止（未写入）、阻止后 /compile-plc 仍 0/0。H 的 /action-c 端点接线未核验"}},
+    {"id": "UC-13", "reason": "失败导入后回滚演练真机未实测", "owner": "Agent H + 收口实测", "requires": "real_machine", "agent_m_real_machine": {"verdict": "pass", "evidence": "evidence/uc05_real_machine_report.json#cases/UC-13", "note": "失败导入（culture en-US → openness_error）+ .ap19 sha256 前后一致 + /compile-plc 仍 0/0 + serve 停止后备份恢复 sha256 一致。备份为文件系统级快照，未做 .zap19 归档恢复（D12 边界外）"}},
+    {"id": "UC-15", "reason": "§9.2 九步端到端（含步骤 7 Action B 真机编译零错误）未跑；F 归档明确未跑 Greenfield 生成链全链", "owner": "主 agent 收口实测", "requires": "real_machine"},
+    {"id": "UC-16", "reason": "§13.9 六条增量用例（真机三次增量 + fidelity_ok + tia_side_drift==0）未实测", "owner": "主 agent 收口实测", "requires": "real_machine"},
+    {"id": "UC-18", "reason": "编译错误回喂自愈 + 复编译 error=0 涉真机编译，未实测", "owner": "WP-08 + 收口实测", "requires": "real_machine"}
+  ],
+  "known_unmet": [
+    "P0-D AF 档位结论待用户拍板（Agent 不代拍；拍板前映射层维持档位无关）",
+    "UC-04 K1：K 已修复自产 OB XML（culture zh-CN + 空网络 <NetworkSource />）并由 V19 真机验证可导入编译 0/0，Agent M 本次亦用 3 个空网络 OB 变体真机复测导入 + 编译 0/0；但包级 xml_package_unverified 仍保持 True（folders.json / SW.PlcBlockGroup XML 未测、Call 网络 OB 与完整 AF 工程包联合导入编译未验证、UC-15 全链未跑）",
+    "UC-05 三次增量已由 Agent M 真机实测通过（P0-G 地基）；UC-16 六条增量用例 / L4 完整通过（fidelity_ok + tia_side_drift==0）仍待收口",
+    "UC-12 / UC-13 反向保护与回滚已由 Agent M 真机演练通过；D11 差异清单级显式确认（UC-19）与 H 的 Action C 端点 /action-c 接线仍待主 agent 收口核验",
+    "UC-02 / UC-03 编译判定与 tia_unavailable 口径已由 Agent M 真机 / 探针核验；L2 层正式通过仍需 UC-04/UC-18/UC-15 闭环与四层静态门禁全绿",
+    "三动作端点 /action-a / /action-b / /action-c（契约 05 §3.2，Agent H 所有）需主 agent 收口时核验是否已接线",
+    "Gate-0=conditional-go，未到完整 go",
+    "L1 / L3 离线链、UC-15 九步端到端、UC-18 编译错误回喂、EvidenceBundle 完整归档仍未闭环"
+  ],
+  "honest_note": "本台账为『未清零』态，cleared=false / items 未删。Agent M 本次对 UC-02/03/05/12/13 逐条产出真实 V19 真机证据并更新 RTM 主状态为 pass，但不代主 agent 清零本台账（clear_condition 要求主 agent 逐条核验 + 全部 items 闭环）。任何离线单测通过（含 test_greenfield_acceptance.py）都不得用于清零；UC 主状态 pass 不等于 L1∧L2∧L3∧L4 通过，也不等于 M4 可签署。注意：tests/unit/test_greenfield_acceptance.py 中锁定『收口实测前 pass=0 / pending=10』的护栏断言会因本次 RTM 状态更新而失败，须由主 agent 在台账清零阶段同步；本 Agent 未改该单测（不在独占可写清单）。"
+}

@@ -38,6 +38,18 @@ const rawToken = import.meta.env.VITE_PLC_API_TOKEN as string | undefined;
 /** 5xx 最多重试 3 次（即初次 + 3 次重试 = 最多 4 次请求）。 */
 export const GF_MAX_RETRIES = 3;
 
+/**
+ * 确定性 TIA 失败码：即便落在 5xx（503）也**不重试**。
+ * 契约 §1.8 / UC-03：``GF_TIA_UNAVAILABLE`` / ``GF_TIA_EXEC_ERROR`` 是确定性
+ * 结果（探测不可用 / 执行中断），重试无意义且会掩盖事实；其余 5xx 仍最多重试 3 次，
+ * 4xx 一律不重试，fetch 网络失败仍显示离线提示。
+ */
+export const GF_NO_RETRY_CODES = ["GF_TIA_UNAVAILABLE", "GF_TIA_EXEC_ERROR"] as const;
+
+export function isDeterministicTiaFailure(code: string): boolean {
+  return (GF_NO_RETRY_CODES as readonly string[]).includes(code);
+}
+
 export type GFStage = "DRAFT" | "LINKABLE" | "VALIDATING" | "FROZEN" | "LOCKED";
 
 export interface GFEdge {
@@ -228,6 +240,114 @@ export interface GFSpecDiff {
   removed: GFSourceBlock[];
   changed_source_ids: string[];
   diff_id?: string;
+}
+
+/* ==========================================================================
+ * WP-06 / §3.2 三动作（Action A·B·C）真实字段
+ * 按 Agent H 的 router/service 实际请求/响应接线，不凭契约猜：
+ *  - ActionAIn  : session_id / tia_side_snapshot / include_zip_base64
+ *  - ActionBIn  : session_id / confirmed / fidelity_report / ap_path / static_gate_passed
+ *  - ActionCIn  : session_id / confirmed / diff / tia_side_snapshot / last_generated /
+ *                 tia_owned_by_ui / fidelity_report / ap_path / static_gate_passed
+ *  blocked 结果由 router 的 _action_result 转成 409/503 的 ok:false 信封，
+ *  gfRequest 会抛 GFRequestError（code/message），前端按 GF_ERROR_TEXT 映射中文。
+ * ========================================================================== */
+
+export type GFActionKind = "A" | "B" | "C";
+
+/** 三动作统一步骤（Action C §13.5 八步 / Action B 四步通用）。 */
+export interface GFActionStep {
+  step: string;
+  ok: boolean;
+  detail?: string;
+}
+
+/** H 的真实结构化编译诊断（compile_diagnostics，N9：warning 单列、不并入成功）。 */
+export interface GFActionCompileDiagnostics {
+  status?: string;
+  error_count: number;
+  warnings: string[];
+  blocks?: unknown[];
+  elapsed_ms?: number;
+  tia_version?: string;
+  project_path?: string;
+  static_gate_passed?: boolean;
+  compile_ok?: boolean;
+  tia_unavailable?: boolean;
+  pending_real_machine?: boolean;
+  xml_package_unverified?: boolean;
+  l2_status?: string;
+  warning_note?: string;
+  reason?: string;
+  [key: string]: unknown;
+}
+
+/** 三动作统一响应（服务端 /action-a · /action-b · /action-c 的实际结构）。 */
+export interface GFActionResult {
+  ok: boolean;
+  blocked?: boolean;
+  action: GFActionKind;
+  mode: "full" | "incremental";
+  code?: string;
+  reason?: string;
+  fidelity_ok?: boolean | null;
+  compile_ok?: boolean | null;
+  compile_diagnostics?: GFActionCompileDiagnostics | null;
+  steps?: GFActionStep[];
+  step_order?: string[];
+  tia_written?: boolean;
+  pending_real_machine?: boolean;
+  xml_package_unverified?: boolean;
+  side_effect_counters?: Record<string, number>;
+  zero_side_effects?: boolean;
+  note?: string;
+  /* Action A 特有 */
+  fidelity_report?: GFFidelityStatus | null;
+  evidence_bundle?: Record<string, unknown> | null;
+  evidence_bundle_sha256?: string;
+  spec_version?: number;
+  spec_hash?: string;
+  block_count?: number;
+  reverse_protection?: GFReverseProtection | null;
+  tia_side_drift?: number;
+  ob_number_deviations?: Array<Record<string, unknown>>;
+  /* Action C 增量特有 */
+  base_spec_version?: number;
+  changed_source_ids?: string[];
+  ob_number_deviations_note?: string;
+  session_reused?: boolean;
+  session_handle?: string;
+  open_count?: number;
+  pcec_ledger_entries?: number;
+  rolled_back?: boolean;
+  backup_restorable?: boolean;
+  [key: string]: unknown;
+}
+
+export interface GFActionARequest {
+  session_id: string;
+  tia_side_snapshot?: Record<string, string> | null;
+  include_zip_base64?: boolean;
+}
+
+export interface GFActionBRequest {
+  session_id: string;
+  confirmed: boolean;
+  fidelity_report?: Record<string, unknown> | null;
+  ap_path?: string;
+  static_gate_passed?: boolean | null;
+}
+
+export interface GFActionCRequest {
+  session_id: string;
+  confirmed: boolean;
+  diff?: GFSpecDiff | null;
+  tia_side_snapshot?: Record<string, string> | null;
+  last_generated?: Record<string, string> | null;
+  tia_owned_by_ui?: boolean;
+  fidelity_report?: Record<string, unknown> | null;
+  ap_path?: string;
+  static_gate_passed?: boolean | null;
 }
 
 /** 契约 §2.4 `ReverseGuardVerdict`（D10 展示层）。 */
@@ -580,9 +700,19 @@ export const GF_ERROR_TEXT: Record<string, string> = {
   GF_SPEC_IMMUTABLE: "规格已冻结且不可变，请走「继续调整（v+1）」开启新版本草稿。",
   GF_PATCH_ATOMIC_REJECTED: "节点变更中存在非法操作，整批已回滚，画布保持不变。",
   GF_EDGE_ILLEGAL: "连线类型不在允许白名单内，变更已回滚。",
-  GF_TIA_UNAVAILABLE: "TIA 真机环境不可用，本次交付未执行（非编译通过）。",
+  GF_TIA_UNAVAILABLE: "TIA 真机环境不可用，本次交付未执行（非编译通过）；属确定性失败，不进行无意义重试。",
+  GF_TIA_EXEC_ERROR: "TIA 真机执行中断，本次交付未执行（非编译通过）；属确定性失败，不进行无意义重试。",
   GF_SPEC_NOT_FOUND: "未找到该版本的冻结规格快照。",
   LLM_CALL_FAILED: "工艺解析服务暂时不可用，请稍后重试。",
+  /* WP-06 三动作硬门禁错误码（H 的 router/service fail-closed；禁止笼统「操作失败」） */
+  GF_ACTION_CONFIRM_REQUIRED: "差异清单尚未显式确认（D11）：服务端已强制阻止写入，确认前零副作用（ops / disk_writes / writebacks / generations 恒为 0）。",
+  GF_ACTION_B_FIDELITY_FAILED: "Action B 被拒绝：Action A 的还原度校验（fidelity_ok）不是 true（或尚未执行 A），禁止首次写入博途；这不代表编译通过（UC-17）。",
+  GF_ACTION_B_COMPILE_FAILED: "Action B 首次写入编译未通过（error_count>0 或静态门禁拦截或 TIA 执行中断）：已回滚计数、未保存，禁止宣称编译零错误。",
+  GF_ACTION_C_FIDELITY_PREREQUISITE: "Action C 前置未满足：Action A 的还原度校验（fidelity_ok）不是 true（增量回写以 A 与已完成 B 为前提）。",
+  GF_ACTION_C_SESSION_OWNERSHIP_CONFLICT: "会话归属冲突（D9）：检测到用户 UI 正打开同一项目，专用后台实例未取得独占；请关闭用户 UI 或转为只读观察，已阻止写入。",
+  GF_ACTION_C_REVERSE_GUARD_BLOCKED: "TIA 侧存在手工改动，已阻止覆盖（D10）：反向保护 fail-closed，未执行任何块级覆盖，禁止「先覆盖再提示」。",
+  GF_ACTION_C_REVERSE_GUARD_UNAVAILABLE: "无法读取 TIA 侧块哈希快照，反向保护 fail-closed：已阻止写入，请提供 TIA 侧快照或由真机读取。",
+  GF_ACTION_C_ROLLBACK: "失败导入已回滚（UC-13）：项目已恢复到调用前状态，备份可恢复；本次增量未写入账本，不宣称成功。",
 };
 
 function readErrorBody(body: unknown, status: number): { code: string; message: string; details: unknown } {
@@ -714,12 +844,17 @@ export async function gfRequest<T>(path: string, init?: RequestInit): Promise<T>
         details,
         body,
       });
-      if (res.status >= 500 && attempt < GF_MAX_RETRIES) {
+      if (
+        res.status >= 500 &&
+        !isDeterministicTiaFailure(code) &&
+        attempt < GF_MAX_RETRIES
+      ) {
         attempt += 1;
         lastFailure = failure;
         continue;
       }
-      throw failure; // 4xx 不重试；5xx 重试耗尽也抛出
+      // 4xx 不重试；确定性 TIA 失败（503）不重试；其余 5xx 重试耗尽也抛出
+      throw failure;
     }
 
     return unwrapEnvelope<T>(body);
@@ -957,6 +1092,23 @@ export async function fetchSpec(
   return gfRequest<Record<string, unknown>>(
     `${GF_API}/specs/${encodeURIComponent(String(version))}?project_id=${encodeURIComponent(projectId)}`,
   );
+}
+
+/* ---- WP-06 / §3.2 三动作端点（H 已实现；统一走 gfRequest 的中文错误 / 重试语义） ---- */
+
+/** Action A 导出工程包：前置 FROZEN，产出 fidelity_report + EvidenceBundle，不写 TIA。 */
+export async function runActionA(req: GFActionARequest): Promise<GFActionResult> {
+  return gfRequest<GFActionResult>(`${GF_API}/action-a`, jsonBody(req));
+}
+
+/** Action B 首次写入博途编译：服务端以 A 的 fidelity_ok==true + D11 confirmed 为前提。 */
+export async function runActionB(req: GFActionBRequest): Promise<GFActionResult> {
+  return gfRequest<GFActionResult>(`${GF_API}/action-b`, jsonBody(req));
+}
+
+/** Action C 调试期增量回写：§13.5 八步；D11 / D10 / D9 服务端 fail-closed。 */
+export async function runActionC(req: GFActionCRequest): Promise<GFActionResult> {
+  return gfRequest<GFActionResult>(`${GF_API}/action-c`, jsonBody(req));
 }
 
 // -------------------------------------------------------------- 纯函数守卫
@@ -1206,12 +1358,14 @@ export function formatFidelityLabel(fidelity: GFFidelityStatus | null | undefine
   ok: boolean;
 } {
   if (!fidelity) {
-    return { label: "还原一致性：暂无数据", detail: "后端尚未返回 fidelity 报告（不视为通过）", ok: false };
+    return { label: "还原度校验（还原一致性）：暂无数据", detail: "后端尚未返回 fidelity 报告（不视为通过）", ok: false };
   }
   const coverage = typeof fidelity.coverage === "number" ? Math.round(fidelity.coverage * 100) : null;
   const detail = `覆盖度 ${coverage === null ? "—" : `${coverage}%`} · 孤立块 ${fidelity.orphan ?? 0} · 漂移 ${fidelity.drift ?? 0} · TIA 侧漂移 ${fidelity.tia_side_drift ?? 0} · 模式 ${fidelity.mode ?? "full"}`;
   return {
-    label: fidelity.fidelity_ok ? "还原一致性：达标（fidelity_ok=true）" : "还原一致性：未达标（fidelity_ok=false）",
+    label: fidelity.fidelity_ok
+      ? "还原度校验（还原一致性）：达标（fidelity_ok=true）"
+      : "还原度校验（还原一致性）：未达标（fidelity_ok=false）",
     detail,
     ok: fidelity.fidelity_ok === true,
   };
@@ -1272,4 +1426,212 @@ export async function fileToUploadItem(file: File): Promise<{
 export function isSafeGreenfieldPath(path: string): boolean {
   if (!path.startsWith(GF_API)) return false;
   return !FORBIDDEN_ENDPOINTS.some((forbidden) => path.includes(forbidden));
+}
+
+/* ==========================================================================
+ * WP-06 三动作状态机 + D11 逐项勾选 + N9 诚实口径（纯函数，供单测直测）
+ * ========================================================================== */
+
+/** §13.5 Action C 八步（顺序与服务端 ACTION_C_STEPS 完全一致）。 */
+export const GF_ACTION_C_STEPS: Array<{ key: string; label: string }> = [
+  { key: "session_reuse", label: "1 会话复用" },
+  { key: "spec_diff", label: "2 规格差异" },
+  { key: "reverse_guard", label: "3 反向保护" },
+  { key: "diff_confirm", label: "4 差异清单确认" },
+  { key: "pre_write_backup", label: "5 写前备份" },
+  { key: "block_overwrite", label: "6 块级覆盖" },
+  { key: "compile_save", label: "7 编译与保存" },
+  { key: "incremental_fidelity_pcec", label: "8 增量校验与账本" },
+];
+
+/** Action B 首次写入四步（服务端 run_action_b 的 step_order）。 */
+export const GF_ACTION_B_STEPS: Array<{ key: string; label: string }> = [
+  { key: "open_project", label: "1 打开项目" },
+  { key: "fast_writeback", label: "2 首次导入" },
+  { key: "compile_plc", label: "3 编译" },
+  { key: "save_project", label: "4 保存" },
+];
+
+/** 每步结果状态：done / failed / todo（服务端一次性返回全部步骤）。 */
+export function actionStepStatus(
+  steps: GFActionStep[] | undefined,
+  key: string,
+): "done" | "failed" | "todo" {
+  const hit = (steps ?? []).find((s) => s.step === key);
+  if (!hit) return "todo";
+  return hit.ok ? "done" : "failed";
+}
+
+/** 差异清单逐项勾选：key = `${分组}:${source_id}`，带 source_id 可逐项核对。 */
+export type GFDiffGroup = "changed" | "added" | "removed";
+
+export function diffItemKey(group: GFDiffGroup, block: GFSourceBlock, index: number): string {
+  return `${group}:${block.source_id || index}`;
+}
+
+export function diffChecklistKeys(diff: GFSpecDiff | null | undefined): string[] {
+  if (!diff) return [];
+  const groups: GFDiffGroup[] = ["changed", "added", "removed"];
+  const keys: string[] = [];
+  for (const group of groups) {
+    (diff[group] ?? []).forEach((block, index) => keys.push(diffItemKey(group, block, index)));
+  }
+  return keys;
+}
+
+/** 逐项勾选齐全：无差异项时视为已完成（无可勾选项），有项则必须全部勾选。 */
+export function diffChecklistComplete(
+  diff: GFSpecDiff | null | undefined,
+  checked: Record<string, boolean>,
+): boolean {
+  const keys = diffChecklistKeys(diff);
+  if (keys.length === 0) return true;
+  return keys.every((key) => checked[key] === true);
+}
+
+/** D11：只有「逐项勾选齐全」∧「显式确认标志」才算显式确认（确认前零副作用）。 */
+export function diffExplicitlyConfirmed(
+  diff: GFSpecDiff | null | undefined,
+  checked: Record<string, boolean>,
+  confirmedFlag: boolean,
+): boolean {
+  return confirmedFlag === true && diffChecklistComplete(diff, checked);
+}
+
+export interface GFActionMachine {
+  stage: GFStage;
+  actionARun: boolean;
+  actionAFidelityOk: boolean | null;
+  actionBDone: boolean;
+  /** 差异清单显式确认（D11，已含逐项勾选齐全）。 */
+  diffConfirmed: boolean;
+  /** 逐项勾选是否齐全（用于 disabled 原因，区分「未勾选」与「未确认」）。 */
+  diffChecklistComplete: boolean;
+  /** D10 反向保护是否阻止覆盖。 */
+  reverseBlocked: boolean;
+}
+
+export interface GFActionAvailability {
+  enabled: boolean;
+  reason: string;
+}
+
+/**
+ * 三动作可用性状态机（对齐服务端 §3.2 / D11 / D10 / UC-17）：
+ * - A 导出工程包：需已 FROZEN（不写 TIA，不需要差异确认）；
+ * - B 首次写入：必须在 A 的 fidelity_ok===true 之后，且差异清单显式确认（服务端 B 亦强制 confirmed）；
+ * - C 增量回写：以 A 与已完成 B 为前提，且差异清单显式确认（D11）。
+ * 任一不满足都给出**具体中文原因**，禁止笼统「操作失败」。
+ */
+export function actionAvailability(m: GFActionMachine): Record<GFActionKind, GFActionAvailability> {
+  const frozen = m.stage === "FROZEN" || m.stage === "LOCKED";
+  const a: GFActionAvailability = frozen
+    ? { enabled: true, reason: "规格已冻结，可导出工程包（离线可校验，不写 TIA）" }
+    : { enabled: false, reason: "需先确认设备逻辑并锁定还原契约（FROZEN）后才能执行 Action A 导出工程包" };
+
+  const bReasons: string[] = [];
+  if (!m.actionARun || m.actionAFidelityOk !== true) {
+    bReasons.push("须先执行 Action A 且还原度校验（fidelity_ok）达标（UC-17）");
+  }
+  if (!m.diffChecklistComplete) {
+    bReasons.push("差异清单尚未逐项勾选齐全（D11）");
+  }
+  if (!m.diffConfirmed) {
+    bReasons.push("差异清单尚未显式确认（D11：确认前零副作用）");
+  }
+  if (m.reverseBlocked) {
+    bReasons.push("TIA 侧存在手工改动，反向保护已阻止覆盖（D10）");
+  }
+  const b: GFActionAvailability = bReasons.length === 0
+    ? { enabled: true, reason: "前置已满足，可发起首次写入博途编译（真机结论仍为 pending_real_machine）" }
+    : { enabled: false, reason: `Action B 已锁定：${bReasons.join("；")}` };
+
+  const cReasons: string[] = [];
+  if (!m.actionARun || m.actionAFidelityOk !== true) {
+    cReasons.push("须先执行 Action A 且还原度校验（fidelity_ok）达标");
+  }
+  if (!m.actionBDone) {
+    cReasons.push("须先完成 Action B 首次写入（§13.5 以 A 与已完成 B 为前提）");
+  }
+  if (!m.diffChecklistComplete) {
+    cReasons.push("差异清单尚未逐项勾选齐全（D11）");
+  }
+  if (!m.diffConfirmed) {
+    cReasons.push("差异清单尚未显式确认（D11：确认前零副作用，C 必须在显式确认后才可用）");
+  }
+  if (m.reverseBlocked) {
+    cReasons.push("TIA 侧存在手工改动，反向保护已阻止覆盖（D10）");
+  }
+  const c: GFActionAvailability = cReasons.length === 0
+    ? { enabled: true, reason: "前置已满足，可发起调试期增量回写（八步编排，真机结论仍为 pending_real_machine）" }
+    : { enabled: false, reason: `Action C 已锁定：${cReasons.join("；")}` };
+
+  return { A: a, B: b, C: c };
+}
+
+export interface GFCompileVerdict {
+  label: string;
+  detail: string;
+  ok: boolean;
+  pending: boolean;
+}
+
+/**
+ * N9 诚实口径：compile_ok 用 error_count / warnings 单列展示；真机未跑一律显示
+ * 「待真机」而非「成功」；禁止把 fidelity_ok 当编译通过，禁止宣称「编译零错误」。
+ */
+export function formatCompileVerdict(
+  diag: GFActionCompileDiagnostics | GFCompileDiagnostics | null | undefined,
+  pendingRealMachine?: boolean,
+): GFCompileVerdict {
+  if (!diag) {
+    return {
+      label: "待真机（暂无结构化编译诊断）",
+      detail: "后端尚未返回编译诊断：不虚构 error_count，不宣称编译零错误",
+      ok: false,
+      pending: true,
+    };
+  }
+  const raw = diag as GFActionCompileDiagnostics & GFCompileDiagnostics;
+  const errorCount = typeof raw.error_count === "number" ? raw.error_count : 0;
+  const warnings = Array.isArray(raw.warnings) ? raw.warnings.map((w) => String(w)) : [];
+  const compileOk = raw.compile_ok === true;
+  const statusPending =
+    pendingRealMachine === true ||
+    raw.pending_real_machine === true ||
+    raw.l2_status === "pending_real_machine" ||
+    raw.status === "pending_real_machine" ||
+    raw.tia_unavailable === true;
+  const detail =
+    `error_count ${errorCount} · warnings ${warnings.length} 条（单列，绝不并入成功）` +
+    (warnings.length ? `：${warnings.slice(0, 3).join(" / ")}` : "");
+  if (statusPending) {
+    return {
+      label: "待真机（pending_real_machine，不宣称编译通过 / 编译零错误）",
+      detail,
+      ok: false,
+      pending: true,
+    };
+  }
+  if (compileOk && errorCount === 0) {
+    return {
+      label: "编译判定：通过（本次编排；warning 单列不计入，真机 L2 仍 pending）",
+      detail,
+      ok: true,
+      pending: false,
+    };
+  }
+  return {
+    label: "编译判定：未通过（error_count>0 或静态门禁拦截或 TIA 执行中断）",
+    detail,
+    ok: false,
+    pending: false,
+  };
+}
+
+/** pending_real_machine 常驻文案（N9：真机未跑时显示「待真机」而非「成功」）。 */
+export function pendingRealMachineLabel(pending: boolean | undefined): string {
+  return pending === false
+    ? "真机证据已由收口阶段核验（以真实结构化报告为准）"
+    : "待真机：pending_real_machine（本批次不宣称 L2 / L4 通过，不宣称编译零错误）";
 }

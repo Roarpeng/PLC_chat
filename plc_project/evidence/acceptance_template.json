@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "title": "EvidenceBundle 归档结构模板（Plan §7.2 + 基线报告 v2.1 §9.3 / §13.6）",
+  "owner": "Agent I / WP-10",
+  "source_docs": [
+    "research/PLC_chat_产品开发Plan_v1.0_2026-11-06.md §7.2 / §9.3",
+    "research/PLC_chat_产品定义与1比1还原实施方案_2026-11-06.md v2.1 §9.3 / §13.6 / 附录 B",
+    "docs/greenfield/04-parallel-wp-contract.md §2.5 / §2.6"
+  ],
+  "directory_layout": {
+    "bundle_root": "evidence/bundles/<project_id>/<spec_version>/",
+    "layout": [
+      "MANIFEST.json（本模板实例化 + 归档清单 + 生成时间）",
+      "specs/vN.json",
+      "ir_snapshot.json",
+      "views/（四视图导出）",
+      "edges.json（连线清单）",
+      "open_questions_clearance.json（open_questions 清零记录）",
+      "static_gate_results.json（四层静态门禁结果）",
+      "fidelity_report.json",
+      "compile_report.json（结构化编译报告：error 数 / warning 清单 / 块清单 / 耗时 / TIA 版本 / 项目路径 / static_gates / compile_ok）",
+      "pcec_ledger.jsonl（PCEC 账本）",
+      "baseline_manifest.json",
+      "artifact_hashes.json（产物哈希）",
+      "project.zap19（.zap19 归档）",
+      "incremental/（增量模式追加字段容器）",
+      "integrity.sha256（全量产物哈希，用于 L3 可复现比对）"
+    ]
+  },
+  "full_artifacts": [
+    {"id": "specs_vN_json", "path": "specs/vN.json", "description": "完整 FrozenSpec 快照，可仅凭此重建画布（含拓扑）", "required": true, "source": "Plan §7.2 / 04 契约 §2.1"},
+    {"id": "ir_snapshot", "path": "ir_snapshot.json", "description": "GreenfieldIR.canonical_json() 快照（hw_nodes / hw_links / 节点 / 边 / 步序）", "required": true, "source": "Plan §7.2"},
+    {"id": "four_views_export", "path": "views/", "description": "四视图导出", "required": true, "source": "Plan §7.2"},
+    {"id": "edge_list", "path": "edges.json", "description": "连线清单", "required": true, "source": "Plan §7.2"},
+    {"id": "open_questions_clearance", "path": "open_questions_clearance.json", "description": "open_questions 清零记录（确认门禁前置）", "required": true, "source": "Plan §7.2 / §3 G0"},
+    {"id": "static_gate_results", "path": "static_gate_results.json", "description": "四层静态门禁结果（warning 单列不并入成功）", "required": true, "source": "Plan §7.2 / §2.2 L2"},
+    {"id": "fidelity_report_json", "path": "fidelity_report.json", "description": "fidelity_ok / coverage_matrix / orphan_blocks / drift_items / ob_number_deviations", "required": true, "source": "Plan §7.2 / 基线报告 附录 B"},
+    {"id": "structured_compile_report", "path": "compile_report.json", "description": "结构化编译报告（真实 CLI/HTTP 返回，含 error_count / warnings / blocks / elapsed_ms / tia_version / project_path）", "required": true, "source": "Plan §7.2 / 04 契约 §7"},
+    {"id": "pcec_ledger", "path": "pcec_ledger.jsonl", "description": "PCEC 账本（三次增量=3 条）", "required": true, "source": "Plan §7.2 / 05 契约 §3.1"},
+    {"id": "baseline_manifest_json", "path": "baseline_manifest.json", "description": "基线条目 + framework_baseline_version + 内容 sha256", "required": true, "source": "Plan §7.2 / 04 契约 §2.6"},
+    {"id": "artifact_hashes", "path": "artifact_hashes.json", "description": "产物哈希（同 spec_hash 两次生成比对，L3）", "required": true, "source": "Plan §7.2 / §2.2 L3"},
+    {"id": "zap19_archive", "path": "project.zap19", "description": ".zap19 归档", "required": true, "source": "Plan §7.2"}
+  ],
+  "incremental_fields": [
+    {"name": "mode", "type": "string", "description": "full | incremental", "required": true, "note": "增量模式必须显式标注", "source": "基线报告 §13.6"},
+    {"name": "base_spec_version", "type": "int", "description": "本次增量所基于的规格版本", "required": true, "note": "Action C 响应必须含", "source": "基线报告 §13.6 / 05 契约 §3.2"},
+    {"name": "changed_source_ids", "type": "array<string>", "description": "变更块 source_id 清单", "required": true, "note": "来自 /diff 的 SpecDiff.changed_source_ids", "source": "基线报告 §13.6 / 04 契约 §2.3"},
+    {"name": "reverse_protection", "type": "object", "description": "反向保护裁决（allowed / drift_count / tia_side_drift / blocked_source_ids / reason）", "required": true, "note": "allowed=false 必须 fail-closed 阻止写入（D10）", "source": "基线报告 §13.6 / 04 契约 §2.4"},
+    {"name": "tia_side_drift", "type": "int", "description": "第 4 指标：TIA 侧块与上次生成物哈希不一致的块数，要求 0", "required": true, "note": "tia_side_drift>0 时 Action C 在 §13.5 步骤 3 被阻止", "source": "基线报告 §13.6"},
+    {"name": "ob_number_deviations", "type": "array<object>", "description": "OB 编号偏差留痕（source_id / expected / assigned_by_tia / mitigation）", "required": true, "note": "属不纳入 1:1 的域，但必须留痕，禁止静默；不参与 fidelity_ok 判定", "source": "基线报告 §2.2 / 附录 B / Plan §7.2"}
+  ],
+  "ob_number_deviations_policy": "ob_number_deviations 属于不纳入 1:1 的域，但必须留痕、禁止静默；即使为空数组也要在报告中显式写出，不得省略该字段，也不得据其把 L1/L2 标为通过。",
+  "n9_independence": "fidelity_ok 与 compile_ok 严格独立（N9）：fidelity_report.json 的结构化编译报告分别归档，禁止互相替代。",
+  "honest_rules": [
+    "结构化编译报告只能来自真实 CLI 或 SessionServer HTTP 返回，禁止 mock / 离线推断冒充",
+    "增量 EvidenceBundle 缺少 6 个增量字段中任一，视为证据包不完整，M4 不得签署",
+    "tia_unavailable 必须显式非 200，不得包装成 ok=true",
+    "所有 pending_real_machine 项在台账清零前，M4 保持未通过"
+  ]
+}

@@ -45,6 +45,23 @@ import {
   updateHardware,
   uploadFiles,
   GFRequestError,
+  /* F20 三动作 / D11 / N9 新增导出 */
+  GF_ACTION_C_STEPS,
+  GF_ERROR_TEXT,
+  GF_NO_RETRY_CODES,
+  actionAvailability,
+  actionStepStatus,
+  diffChecklistComplete,
+  diffChecklistKeys,
+  diffExplicitlyConfirmed,
+  formatCompileVerdict,
+  isDeterministicTiaFailure,
+  pendingRealMachineLabel,
+  runActionA,
+  runActionB,
+  runActionC,
+  type GFActionMachine,
+  type GFSpecDiff,
   type GFState,
 } from "./greenfield";
 
@@ -561,5 +578,361 @@ describe("编译诊断状态机（P1-I 展示层）", () => {
     expect(compileStepStatus("diagnosed", "diagnosed")).toBe("active");
     expect(compileStepStatus("diagnosed", "healing")).toBe("todo");
     expect(compileStepStatus("settled", "recompiling")).toBe("done");
+  });
+});
+
+/* ==========================================================================
+ * F20 三动作 UI 接线 + 批次 1 遗留补齐（新增）
+ * ========================================================================== */
+
+describe("F20 三动作 API 封装（按 H 的真实请求字段接线）", () => {
+  it("runActionA/B/C 落在独立前缀且请求体使用真实字段", async () => {
+    const urls: string[] = [];
+    const bodies: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        urls.push(String(url));
+        if (init?.body) bodies.push(String(init.body));
+        return okResponse({ ok: true, action: "A", mode: "full", fidelity_ok: true });
+      }),
+    );
+    await runActionA({ session_id: "s1", include_zip_base64: false });
+    await runActionB({
+      session_id: "s1",
+      confirmed: true,
+      fidelity_report: { fidelity_ok: true },
+    });
+    await runActionC({ session_id: "s1", confirmed: true, diff: null });
+
+    expect(urls[0]).toContain("/action-a");
+    expect(urls[1]).toContain("/action-b");
+    expect(urls[2]).toContain("/action-c");
+    for (const url of urls) {
+      expect(url.startsWith(GF_API)).toBe(true);
+      expect(isSafeGreenfieldPath(url)).toBe(true);
+      for (const forbidden of FORBIDDEN_ENDPOINTS) {
+        expect(url).not.toContain(forbidden);
+      }
+    }
+    expect(JSON.parse(bodies[0])).toMatchObject({
+      session_id: "s1",
+      include_zip_base64: false,
+    });
+    expect(JSON.parse(bodies[1])).toMatchObject({
+      session_id: "s1",
+      confirmed: true,
+      fidelity_report: { fidelity_ok: true },
+    });
+    expect(JSON.parse(bodies[2])).toMatchObject({
+      session_id: "s1",
+      confirmed: true,
+    });
+  });
+});
+
+describe("F20 三动作状态机（§3.2 / D11 / D10 / UC-17）", () => {
+  const base: GFActionMachine = {
+    stage: "FROZEN",
+    actionARun: true,
+    actionAFidelityOk: true,
+    actionBDone: true,
+    diffConfirmed: true,
+    diffChecklistComplete: true,
+    reverseBlocked: false,
+  };
+
+  it("全部前置满足时 A / B / C 均可用，且不笼统提示", () => {
+    const a = actionAvailability(base);
+    expect(a.A.enabled).toBe(true);
+    expect(a.B.enabled).toBe(true);
+    expect(a.C.enabled).toBe(true);
+    expect(a.B.reason).not.toContain("操作失败");
+    expect(a.C.reason).not.toContain("操作失败");
+  });
+
+  it("A 导出工程包需已 FROZEN（不写 TIA，不需差异确认）", () => {
+    const a = actionAvailability({ ...base, stage: "LINKABLE" });
+    expect(a.A.enabled).toBe(false);
+    expect(a.A.reason).toContain("FROZEN");
+  });
+
+  it("B 必须在 A 的 fidelity_ok=true 后才可用（UC-17）", () => {
+    const noA = actionAvailability({ ...base, actionARun: false, actionAFidelityOk: null });
+    expect(noA.B.enabled).toBe(false);
+    expect(noA.B.reason).toContain("fidelity_ok");
+    const badFidelity = actionAvailability({ ...base, actionAFidelityOk: false });
+    expect(badFidelity.B.enabled).toBe(false);
+    expect(badFidelity.B.reason).toContain("还原度校验");
+  });
+
+  it("C 必须在差异清单显式确认后才可用（D11），且以已完成 B 为前提", () => {
+    const notConfirmed = actionAvailability({
+      ...base,
+      diffConfirmed: false,
+      diffChecklistComplete: false,
+    });
+    expect(notConfirmed.C.enabled).toBe(false);
+    expect(notConfirmed.C.reason).toContain("D11");
+    expect(notConfirmed.C.reason).toContain("逐项勾选");
+    const noB = actionAvailability({ ...base, actionBDone: false });
+    expect(noB.C.enabled).toBe(false);
+    expect(noB.C.reason).toContain("Action B");
+  });
+
+  it("未确认前 B / C 均 disabled 且说明 D11 原因；D10 反向保护也锁定写入", () => {
+    const notConfirmed = actionAvailability({
+      ...base,
+      diffConfirmed: false,
+      diffChecklistComplete: true,
+    });
+    expect(notConfirmed.B.enabled).toBe(false);
+    expect(notConfirmed.C.enabled).toBe(false);
+    expect(notConfirmed.B.reason).toContain("D11");
+    const drift = actionAvailability({ ...base, reverseBlocked: true });
+    expect(drift.B.enabled).toBe(false);
+    expect(drift.C.enabled).toBe(false);
+    expect(drift.C.reason).toContain("D10");
+  });
+});
+
+describe("D11 差异清单逐项勾选（changed / added / removed 带 source_id）", () => {
+  const diff: GFSpecDiff = {
+    base_spec_version: 1,
+    target_spec_version: 2,
+    changed: [{ source_id: "SRC-C", kind: "em", payload: {} }],
+    added: [{ source_id: "SRC-A", kind: "cm", payload: {} }],
+    removed: [{ source_id: "SRC-R", kind: "db", payload: {} }],
+    changed_source_ids: ["SRC-C"],
+  };
+
+  it("三清单逐项生成可勾选 key，且带 source_id", () => {
+    const keys = diffChecklistKeys(diff);
+    expect(keys).toHaveLength(3);
+    expect(keys).toContain("changed:SRC-C");
+    expect(keys).toContain("added:SRC-A");
+    expect(keys).toContain("removed:SRC-R");
+  });
+
+  it("未勾齐时不允许显式确认；勾齐 + 显式确认标志才放行", () => {
+    expect(diffChecklistComplete(diff, {})).toBe(false);
+    expect(diffExplicitlyConfirmed(diff, {}, true)).toBe(false);
+    const partial = { "changed:SRC-C": true, "added:SRC-A": true };
+    expect(diffChecklistComplete(diff, partial)).toBe(false);
+    const all = {
+      "changed:SRC-C": true,
+      "added:SRC-A": true,
+      "removed:SRC-R": true,
+    };
+    expect(diffChecklistComplete(diff, all)).toBe(true);
+    expect(diffExplicitlyConfirmed(diff, all, false)).toBe(false);
+    expect(diffExplicitlyConfirmed(diff, all, true)).toBe(true);
+  });
+
+  it("无差异项时视为已勾齐（无可勾选项），但仍需显式确认标志", () => {
+    expect(diffChecklistComplete(null, {})).toBe(true);
+    expect(diffExplicitlyConfirmed(null, {}, false)).toBe(false);
+    expect(diffExplicitlyConfirmed(null, {}, true)).toBe(true);
+  });
+});
+
+describe("F20 三动作错误码中文映射（禁止笼统「操作失败」）", () => {
+  const cases: Array<[string, string]> = [
+    ["GF_ACTION_CONFIRM_REQUIRED", "D11"],
+    ["GF_ACTION_B_FIDELITY_FAILED", "还原度校验"],
+    ["GF_ACTION_B_COMPILE_FAILED", "编译"],
+    ["GF_ACTION_C_FIDELITY_PREREQUISITE", "前置"],
+    ["GF_ACTION_C_SESSION_OWNERSHIP_CONFLICT", "会话归属冲突"],
+    ["GF_ACTION_C_REVERSE_GUARD_BLOCKED", "阻止覆盖"],
+    ["GF_ACTION_C_REVERSE_GUARD_UNAVAILABLE", "fail-closed"],
+    ["GF_ACTION_C_ROLLBACK", "回滚"],
+    ["GF_TIA_EXEC_ERROR", "TIA"],
+    ["GF_TIA_UNAVAILABLE", "TIA"],
+  ];
+  for (const [code, keyword] of cases) {
+    it(`${code} 映射为具体中文（含「${keyword}」）`, () => {
+      const text = mapApiError(code, "", 409);
+      expect(text).toContain(keyword);
+      expect(text).not.toContain("操作失败");
+      expect(GF_ERROR_TEXT[code]).toBeTruthy();
+      expect(mapConfirmError(code)).toContain(keyword);
+    });
+  }
+
+  it("D10 反向保护文案明确「已阻止覆盖」且说明未执行块级覆盖", () => {
+    const text = GF_ERROR_TEXT.GF_ACTION_C_REVERSE_GUARD_BLOCKED;
+    expect(text).toContain("D10");
+    expect(text).toContain("已阻止覆盖");
+    expect(text).toContain("未执行任何块级覆盖");
+  });
+
+  it("GF_ACTION_B_FIDELITY_FAILED 明确「这不代表编译通过」（N9）", () => {
+    expect(GF_ERROR_TEXT.GF_ACTION_B_FIDELITY_FAILED).toContain("不代表编译通过");
+  });
+});
+
+describe("gfRequest 503 确定性 TIA 错误重试豁免", () => {
+  it("GF_TIA_UNAVAILABLE / GF_TIA_EXEC_ERROR（503）只请求 1 次，不重试", async () => {
+    expect(GF_NO_RETRY_CODES).toContain("GF_TIA_UNAVAILABLE");
+    expect(GF_NO_RETRY_CODES).toContain("GF_TIA_EXEC_ERROR");
+    for (const code of GF_NO_RETRY_CODES) {
+      const fetchMock = vi.fn(async () => ({
+        ok: false,
+        status: 503,
+        text: async () =>
+          JSON.stringify({ ok: false, error: { code, message: "tia down" } }),
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+      try {
+        await gfRequest(`${GF_API}/action-b`);
+      } catch (err) {
+        expect((err as GFRequestError).message).toContain("TIA");
+        expect((err as GFRequestError).message).not.toContain("已重试 3 次");
+      }
+      expect(isDeterministicTiaFailure(code)).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("其他 5xx 仍最多重试 3 次；4xx 不重试；fetch 失败仍显示离线提示", async () => {
+    const fetch5xx = vi.fn(async () => ({
+      ok: false,
+      status: 503,
+      text: async () => JSON.stringify({ ok: false, error: { message: "上游维护中" } }),
+    }));
+    vi.stubGlobal("fetch", fetch5xx);
+    await expect(gfRequest(`${GF_API}/state`)).rejects.toMatchObject({
+      name: "GFRequestError",
+    });
+    expect(fetch5xx).toHaveBeenCalledTimes(GF_MAX_RETRIES + 1);
+
+    const fetch4xx = vi.fn(async () => ({
+      ok: false,
+      status: 409,
+      text: async () =>
+        JSON.stringify({
+          ok: false,
+          error: { code: "GF_ACTION_CONFIRM_REQUIRED", message: "x" },
+        }),
+    }));
+    vi.stubGlobal("fetch", fetch4xx);
+    await expect(gfRequest(`${GF_API}/action-c`)).rejects.toMatchObject({
+      name: "GFRequestError",
+    });
+    expect(fetch4xx).toHaveBeenCalledTimes(1);
+
+    const fetchOffline = vi.fn(async () => {
+      throw new Error("ECONNREFUSED");
+    });
+    vi.stubGlobal("fetch", fetchOffline);
+    await expect(gfRequest(`${GF_API}/state`)).rejects.toMatchObject({
+      offline: true,
+    });
+    expect(fetchOffline).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("N9 诚实口径文案（还原度校验 / 待真机 / warnings 单列）", () => {
+  it("fidelity_ok 显示为「还原度校验」，绝不显示「编译通过」", () => {
+    const label = formatFidelityLabel({
+      fidelity_ok: true,
+      coverage: 1,
+      orphan: 0,
+      drift: 0,
+      tia_side_drift: 0,
+    });
+    expect(label.label).toContain("还原度校验");
+    expect(label.label).toContain("还原一致性");
+    expect(label.label).not.toContain("编译通过");
+    expect(label.ok).toBe(true);
+    const failed = formatFidelityLabel({
+      fidelity_ok: false,
+      coverage: 0.5,
+      orphan: 1,
+      drift: 0,
+      tia_side_drift: 0,
+    });
+    expect(failed.ok).toBe(false);
+    expect(failed.label).not.toContain("编译通过");
+  });
+
+  it("真机未跑时 formatCompileVerdict 显示「待真机」而非「成功」", () => {
+    const verdict = formatCompileVerdict({
+      status: "pending_real_machine",
+      error_count: 0,
+      warnings: [],
+      l2_status: "pending_real_machine",
+      pending_real_machine: true,
+      compile_ok: false,
+    });
+    expect(verdict.label).toContain("待真机");
+    expect(verdict.label).not.toContain("成功");
+    expect(verdict.ok).toBe(false);
+    expect(verdict.pending).toBe(true);
+    expect(verdict.detail).toContain("error_count 0");
+    expect(verdict.detail).toContain("warnings 0 条");
+  });
+
+  it("compile_ok 用 error_count / warnings 单列展示，warnings 不并入成功", () => {
+    const verdict = formatCompileVerdict({
+      status: "compiled",
+      error_count: 0,
+      warnings: ["W1: unused", "W2: implicit cast"],
+      compile_ok: true,
+      pending_real_machine: false,
+    });
+    expect(verdict.label).toContain("通过");
+    expect(verdict.detail).toContain("error_count 0");
+    expect(verdict.detail).toContain("warnings 2 条");
+    expect(verdict.detail).toContain("W1");
+    expect(verdict.detail).toContain("绝不并入成功");
+    const err = formatCompileVerdict({
+      status: "compiled",
+      error_count: 2,
+      warnings: [],
+      compile_ok: false,
+    });
+    expect(err.label).toContain("未通过");
+    expect(err.ok).toBe(false);
+  });
+
+  it("无编译诊断时诚实降级为待真机，不虚构 error_count", () => {
+    const verdict = formatCompileVerdict(null);
+    expect(verdict.label).toContain("待真机");
+    expect(verdict.pending).toBe(true);
+    expect(verdict.detail).toContain("不虚构");
+  });
+
+  it("pendingRealMachineLabel 常驻可见：真机未跑显示待真机", () => {
+    expect(pendingRealMachineLabel(true)).toContain("待真机");
+    expect(pendingRealMachineLabel(undefined)).toContain("pending_real_machine");
+    expect(pendingRealMachineLabel(true)).toContain("不宣称 L2 / L4 通过");
+  });
+});
+
+describe("§13.5 八步 step_order 与每步结果", () => {
+  it("八步顺序与服务端 ACTION_C_STEPS 一致", () => {
+    expect(GF_ACTION_C_STEPS.map((s) => s.key)).toEqual([
+      "session_reuse",
+      "spec_diff",
+      "reverse_guard",
+      "diff_confirm",
+      "pre_write_backup",
+      "block_overwrite",
+      "compile_save",
+      "incremental_fidelity_pcec",
+    ]);
+  });
+
+  it("actionStepStatus 按服务端 steps 判定 done / failed / todo", () => {
+    const steps = [
+      { step: "session_reuse", ok: true },
+      { step: "spec_diff", ok: true },
+      { step: "reverse_guard", ok: false, detail: "tia_side_drift=1" },
+    ];
+    expect(actionStepStatus(steps, "session_reuse")).toBe("done");
+    expect(actionStepStatus(steps, "reverse_guard")).toBe("failed");
+    expect(actionStepStatus(steps, "compile_save")).toBe("todo");
+    expect(actionStepStatus(undefined, "session_reuse")).toBe("todo");
   });
 });

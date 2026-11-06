@@ -43,6 +43,47 @@ from plc_engine.af.spec_diff import (
 )
 
 
+#: UC-14 可复现：zip 条目固定时间戳（DOS epoch 1980-01-01 00:00:00）。
+#: ``ZipFile.writestr(str, ...)`` 默认用当前本地时间写入条目时间戳，导致同规格两次
+#: 生成的 ZIP 字节哈希不确定；统一改用确定性 ``ZipInfo`` 即可复现，且保持既有
+#: ``path`` / 分栏结构（blocks/...、derived/...、framework_baseline/...）完全不变。
+_ZIP_FIXED_DATE_TIME = (1980, 1, 1, 0, 0, 0)
+
+
+def _zip_info(name: str) -> zipfile.ZipInfo:
+    """确定性 ZipInfo：固定时间戳 + 固定 create_system / 压缩方式 / 属性。"""
+    info = zipfile.ZipInfo(filename=name, date_time=_ZIP_FIXED_DATE_TIME)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.create_system = 0  # 与操作系统无关，跨环境字节一致
+    info.external_attr = 0o600 << 16
+    return info
+
+
+def _build_coverage_matrix(blocks_manifest: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """附录 B coverage_matrix 完整结构（交付层产物，不改动 fidelity.py 的校验器）。
+
+    逐 ``source_id`` 给出：``source_kind``（规格对象类别）、``target_kind``
+    （产物分栏类别 derived / framework_baseline）、``target``（产物定位，
+    partitioned_path）、``status``（本交付层确知的「已映射」状态）。
+    全部取自真实 ``blocks_manifest``，禁止臆造；1:1 覆盖判定仍以
+    ``fidelity_report.json`` 的 FidelityChecker 四指标为准（N9，二者不互相替代），
+    因此 ``fidelity.py`` 的 ``dict[str, str]`` coverage_matrix 保持不变、校验器可用。
+    """
+    matrix: dict[str, dict[str, Any]] = {}
+    for e in blocks_manifest:
+        sid = str(e.get("source_id") or "")
+        if not sid:
+            continue
+        matrix[sid] = {
+            "source_id": sid,
+            "source_kind": str(e.get("block_type") or e.get("af_role") or ""),
+            "target_kind": str(e.get("partition") or ""),
+            "target": str(e.get("partitioned_path") or e.get("path") or ""),
+            "status": "mapped",
+        }
+    return dict(sorted(matrix.items()))
+
+
 def _folder_for_block(block: CanvasBlock) -> str:
     role = (block.af_role or "").lower()
     btype = (block.block_type or "").upper()
@@ -132,13 +173,13 @@ class AfGreenfieldDelivery(DeliveryPort):
                 folder = _folder_for_block(blk)
                 scl_text = blk.scl_body if blk.block_type in {"DB", "UDT"} and blk.scl_body else blk.get_full_scl()
                 rel_path = f"blocks/{folder}/{blk.name}.scl"
-                zf.writestr(rel_path, scl_text.encode("utf-8"))
+                zf.writestr(_zip_info(rel_path), scl_text.encode("utf-8"))
 
                 # --- F6 派生层（B 所有权）：唯一 source_id + 产物分栏，纯追加、不改动既有 path ---
                 source_id = stable_source_id(blk.name, blk.block_type, blk.af_role, blk.number)
                 partition = partition_for_block(folder, blk.name, blk.af_role, blk.block_type)
                 partitioned_path = f"{partition}/{rel_path}"
-                zf.writestr(partitioned_path, scl_text.encode("utf-8"))
+                zf.writestr(_zip_info(partitioned_path), scl_text.encode("utf-8"))
 
                 blocks_manifest.append(
                     {
@@ -155,10 +196,10 @@ class AfGreenfieldDelivery(DeliveryPort):
                     }
                 )
 
-            zf.writestr("plc_tags/PLCTags_Frozen.csv", io_csv.encode("utf-8-sig"))
-            zf.writestr("plc_tags/PLCTags_Frozen.xml", io_xml.encode("utf-8"))
-            zf.writestr("audit/io_retention_matrix.csv", retention_csv.encode("utf-8-sig"))
-            zf.writestr("docs/architecture_spec.md", trace_md.encode("utf-8"))
+            zf.writestr(_zip_info("plc_tags/PLCTags_Frozen.csv"), io_csv.encode("utf-8-sig"))
+            zf.writestr(_zip_info("plc_tags/PLCTags_Frozen.xml"), io_xml.encode("utf-8"))
+            zf.writestr(_zip_info("audit/io_retention_matrix.csv"), retention_csv.encode("utf-8-sig"))
+            zf.writestr(_zip_info("docs/architecture_spec.md"), trace_md.encode("utf-8"))
 
             # --- F6 派生层：baseline_manifest.json（基线条目 + 版本 + 内容 sha256）---
             # framework_baseline_version 用 getattr 容错读取，兼容 A 并行期 FrozenSpec 字段漂移；
@@ -187,8 +228,17 @@ class AfGreenfieldDelivery(DeliveryPort):
                 FRAMEWORK_BASELINE_PARTITION: len(baseline_entries),
             }
             zf.writestr(
-                "baseline_manifest.json",
+                _zip_info("baseline_manifest.json"),
                 json.dumps(baseline_manifest, ensure_ascii=False, indent=2).encode("utf-8"),
+            )
+
+            # --- 附录 B coverage_matrix：完整结构（source_kind / target_kind / status）---
+            # 数据来自真实 blocks_manifest，不改动 fidelity.py 的校验器；作为独立交付产物
+            # 归档进 zip 并随返回字典透传，供 EvidenceBundle 归档（F20 遗留补齐）。
+            coverage_matrix = _build_coverage_matrix(blocks_manifest)
+            zf.writestr(
+                _zip_info("coverage_matrix.json"),
+                json.dumps(coverage_matrix, ensure_ascii=False, indent=2).encode("utf-8"),
             )
 
             verification_report = {
@@ -206,7 +256,7 @@ class AfGreenfieldDelivery(DeliveryPort):
                 "compat_integrity": compat_integrity,
             }
             zf.writestr(
-                "audit/af_verification_report.json",
+                _zip_info("audit/af_verification_report.json"),
                 json.dumps(verification_report, ensure_ascii=False, indent=2).encode("utf-8"),
             )
 
@@ -220,9 +270,11 @@ class AfGreenfieldDelivery(DeliveryPort):
                 "framework_baseline_version": framework_baseline_version,
                 "baseline_entry_count": len(baseline_entries),
                 "partition_counts": partition_counts,
+                # 附录 B coverage_matrix 条目数（纯追加，既有字段值一律不变）
+                "coverage_matrix_entry_count": len(coverage_matrix),
             }
             zf.writestr(
-                "manifest.json",
+                _zip_info("manifest.json"),
                 json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"),
             )
 
@@ -245,4 +297,11 @@ class AfGreenfieldDelivery(DeliveryPort):
             "baseline_entry_count": len(baseline_entries),
             "source_id_map": {e["source_id"]: e["partitioned_path"] for e in blocks_manifest},
             "partition_counts": partition_counts,
+            # --- 附录 B coverage_matrix 完整结构（F20 遗留补齐，纯追加、向后兼容）---
+            "coverage_matrix": coverage_matrix,
+            "coverage_matrix_note": (
+                "附录 B 完整结构：逐 source_id 含 source_kind / target_kind / target / "
+                "status（本交付层确知「已映射」）；1:1 覆盖判定仍以 fidelity_report.json "
+                "的 FidelityChecker 四指标为准（N9），二者不互相替代，不改动校验器。"
+            ),
         }
