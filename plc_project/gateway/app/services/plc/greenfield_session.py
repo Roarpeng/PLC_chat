@@ -55,8 +55,16 @@ class GreenfieldSession:
         default_factory=lambda: {"ops": 0, "disk_writes": 0, "writebacks": 0, "generations": 0}
     )
     notes: list[str] = field(default_factory=list)
-    custom_hw: dict[str, Any] = field(default_factory=dict)
     last_delivery: dict[str, Any] | None = None
+    #: WP-03 / §8：项目一等公民标识（会话 / 拓扑 / 资料 / 规格 / 产物绑定）。
+    project_id: str = ""
+    #: 确认硬门禁前置「逻辑拓扑定稿」；默认已由自动反推定稿，显式可重开。
+    topology_finalized: bool = True
+    #: 差异清单级显式确认（D11）：未确认前零副作用计数器恒 0。
+    diff_confirmed: bool = False
+    confirmed_diff_ids: list[str] = field(default_factory=list)
+    #: 统一受控写入口 apply_canvas_patch 的变更事件账本。
+    change_events: list[dict[str, Any]] = field(default_factory=list)
     #: 对话流消息（chat 化主入口）。纯内存（Q1 口径），随草稿导出/导入。
     #: 结构：{id, role: user|assistant|event, kind, text, payload, ts}
     messages: list[dict[str, Any]] = field(default_factory=list)
@@ -64,6 +72,23 @@ class GreenfieldSession:
     def __post_init__(self) -> None:
         if not self.session_id:
             self.session_id = uuid.uuid4().hex[:12]
+
+    # ---------------------------------------------------------- 逻辑拓扑兼容视图
+    @property
+    def custom_hw(self) -> dict[str, Any]:
+        """只读兼容视图：逻辑拓扑真值在 ``ir``，不再是平行状态源（WP-03 / D4）。
+
+        返回旧三键形状 ``{cm_mounts, var_bindings, extra_nodes}``，供
+        ``derive_hardware_topology`` / ``AfGreenfieldDelivery.deliver`` /
+        ``export_draft`` 消费；所有**写入**统一收敛到 ``apply_canvas_patch``。
+        """
+        if self.ir is None:
+            return {"cm_mounts": {}, "var_bindings": [], "extra_nodes": []}
+        return {
+            "cm_mounts": dict(self.ir.cm_mounts),
+            "var_bindings": [dict(b) for b in self.ir.var_bindings],
+            "extra_nodes": [dict(n) for n in self.ir.hw_nodes],
+        }
 
     # -------------------------------------------------------------- 对话消息
     def add_message(
@@ -184,6 +209,10 @@ class GreenfieldSession:
             "contract": self.contract.to_dict() if self.contract else None,
             "custom_hw": dict(self.custom_hw),
             "counters": dict(self.counters),
+            "project_id": self.project_id,
+            "topology_finalized": self.topology_finalized,
+            "diff_confirmed": self.diff_confirmed,
+            "change_events": [dict(e) for e in self.change_events],
             "messages": [dict(m) for m in self.messages],
         }
 
@@ -194,20 +223,34 @@ class GreenfieldSession:
             raise GateLockedError("草稿格式不匹配", code="GF_DRAFT_FORMAT")
         ir_data = payload.get("ir")
         if ir_data:
-            self.ir = GreenfieldIR.from_dict(dict(ir_data))
+            merged = dict(ir_data)
+            # 旧草稿的 custom_hw 三键并入 IR 逻辑拓扑字段：真值统一落在 IR，
+            # 不再写回任何平行状态，也不直接赋值 self.ir.<attr>。
+            hw = payload.get("custom_hw") or {}
+            if isinstance(hw, dict):
+                if hw.get("cm_mounts") is not None:
+                    merged["cm_mounts"] = dict(hw.get("cm_mounts") or {})
+                if hw.get("var_bindings") is not None:
+                    merged["var_bindings"] = [dict(x) for x in (hw.get("var_bindings") or [])]
+                if hw.get("extra_nodes") is not None:
+                    merged["hw_nodes"] = [dict(x) for x in (hw.get("extra_nodes") or [])]
+            self.ir = GreenfieldIR.from_dict(merged)
         receipt_data = payload.get("receipt")
         if receipt_data:
             self.receipt = ParseReceipt.from_dict(dict(receipt_data))
         contract_data = payload.get("contract")
         if contract_data:
             self.contract = CompatContract.from_dict(dict(contract_data))
-        if isinstance(payload.get("custom_hw"), dict):
-            self.custom_hw = dict(payload["custom_hw"])
         if isinstance(payload.get("messages"), list):
             self.messages = [dict(m) for m in payload["messages"] if isinstance(m, dict)]
         # 导入后统一回到「可连线」：草稿不继承来源会话的阶段（避免非法迁移），
         # 也不继承任何副作用计数（确认前恒为 0）。
         self.engineering_summary_shown = False
+        self.project_id = str(payload.get("project_id") or "")
+        self.topology_finalized = bool(payload.get("topology_finalized", True))
+        self.diff_confirmed = False
+        self.confirmed_diff_ids = []
+        self.change_events = []
         self.views = None
         self.report = None
         self.counters = {"ops": 0, "disk_writes": 0, "writebacks": 0, "generations": 0}
@@ -235,6 +278,18 @@ class GreenfieldSession:
             "counters": dict(self.counters),
             "engineering_summary_shown": self.engineering_summary_shown,
             "notes": list(self.notes),
+            # WP-03 / §3 /state 增补字段
+            "project_id": self.project_id,
+            "framework_baseline_version": (self.ir.baseline_version if self.ir else ""),
+            "spec_hash": (self.ir.spec_hash() if self.ir else ""),
+            "topology_finalized": self.topology_finalized,
+            "diff_confirmed": self.diff_confirmed,
+            "change_events": [dict(e) for e in self.change_events],
+            "fidelity": {
+                "status": "pending_real_machine",
+                "fidelity_ok": None,
+                "note": "本批次无真机；fidelity_ok 不由离线单测判定（N9 / §0.8）",
+            },
         }
 
 

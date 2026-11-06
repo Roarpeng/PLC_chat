@@ -52,6 +52,13 @@ class FrozenSpec:
     views_snapshot: dict[str, str] = field(default_factory=dict)
     contract_refs: dict[str, Any] = field(default_factory=dict)
     open_questions: list[str] = field(default_factory=list)
+    # ---------- WP-03 / §2.1 追加 ----------
+    #: 项目一等公民标识（会话 / 拓扑 / 资料 / 规格 / 产物绑定）。
+    project_id: str = ""
+    #: 框架基线版本（确认硬门禁前置「基线版本锁定」）。
+    framework_baseline_version: str = ""
+    #: 快照创建时间（与 frozen_at 同源，不进哈希）。
+    created_at: str = ""
 
     @property
     def version_label(self) -> str:
@@ -74,6 +81,9 @@ class FrozenSpec:
             "views_snapshot": dict(self.views_snapshot),
             "contract_refs": self.contract_refs,
             "open_questions": list(self.open_questions),
+            "project_id": self.project_id,
+            "framework_baseline_version": self.framework_baseline_version,
+            "created_at": self.created_at,
         }
 
     @classmethod
@@ -94,6 +104,9 @@ class FrozenSpec:
             views_snapshot=dict(data.get("views_snapshot") or {}),
             contract_refs=dict(data.get("contract_refs") or {}),
             open_questions=list(data.get("open_questions") or []),
+            project_id=str(data.get("project_id") or ""),
+            framework_baseline_version=str(data.get("framework_baseline_version") or ""),
+            created_at=str(data.get("created_at") or ""),
         )
         if compute_spec_hash(spec) != spec.spec_hash:
             raise GreenfieldError(
@@ -105,16 +118,32 @@ class FrozenSpec:
     def recompute_hash(self) -> str:
         return compute_spec_hash(self)
 
+    def rebuild_ir(self) -> GreenfieldIR:
+        """仅凭本快照完整重建画布 IR（含逻辑拓扑），不依赖会话内存态（§2.1）。"""
+        return GreenfieldIR.from_dict(self.ir_snapshot)
+
+    def rebuild_views(self):
+        """由重建的 IR 确定性重投影四视图；验证快照自洽。"""
+        from plc_engine.af.greenfield_views import project_views
+
+        return project_views(self.rebuild_ir())
+
 
 def compute_spec_hash(spec: "FrozenSpec | dict[str, Any]") -> str:
-    """§3.5.2 分层口径：版本 + IR + 三视图各自 sha + 契约 + IR 版本 + AF 档位。
+    """§3.5.2 / WP-03 全域口径。
 
-    ``frozen_at`` / ``frozen_by`` / ``layout`` / ``created_at`` 一律不进哈希。
+    ``ir_sha256`` 由 ``GreenfieldIR.canonical_json()`` 派生，已覆盖 **拓扑
+    (hw_nodes/hw_links/cm_mounts/var_bindings) + 节点 + 边 + 步序 + 资料 +
+    project_id + 基线版本** 全域；再叠加版本 / 三视图各自 sha / 契约 / IR 版本 /
+    AF 档位 / 项目标识 / 框架基线版本。``frozen_at`` / ``frozen_by`` / ``layout`` /
+    ``created_at`` 一律不进哈希，保证同一画布状态两次 ``freeze()`` 哈希一致。
     """
     d = spec.to_dict() if isinstance(spec, FrozenSpec) else dict(spec)
     parts = [
         SPEC_HASH_PREFIX,
         str(d.get("spec_version") or 1),
+        str(d.get("project_id") or ""),
+        str(d.get("framework_baseline_version") or ""),
         str(d.get("ir_sha256") or ""),
         *[str((d.get("view_hashes") or {}).get(k) or "") for k in ("flow", "seq", "state")],
         str(d.get("contract_sha") or ""),
@@ -134,13 +163,21 @@ def freeze(
     prev_spec_hash: str = "",
     frozen_by: str = "user",
     frozen_at: str = "",
+    project_id: str = "",
+    framework_baseline_version: str = "",
 ) -> FrozenSpec:
-    """构造不可变冻结 spec；**不落盘**（落盘由 ``write_spec`` 显式执行）。"""
+    """构造不可变冻结 spec；**不落盘**（落盘由 ``write_spec`` 显式执行）。
+
+    ``ir_snapshot = ir.to_dict()`` 完整含逻辑拓扑（hw_nodes/hw_links/cm_mounts/
+    var_bindings），因此 ``specs/vN.json`` 可独立重建画布，不依赖会话内存态。
+    快照即确认按钮展示的那一份（§2.1）。
+    """
     view_texts = {
         "flow": views.flow.mermaid,
         "seq": views.seq.mermaid,
         "state": views.state.mermaid,
     }
+    timestamp = frozen_at or _now_iso()
     spec = FrozenSpec(
         spec_version=spec_version,
         prev_spec_hash=prev_spec_hash,
@@ -149,13 +186,18 @@ def freeze(
         contract_sha=(contract.contract_sha if contract is not None else ""),
         ir_version=ir.ir_version,
         af_profile=ir.project.af_profile,
-        frozen_at=frozen_at or _now_iso(),
+        frozen_at=timestamp,
         frozen_by=frozen_by,
         session_id=session_id,
         ir_snapshot=ir.to_dict(),
         views_snapshot=view_texts,
         contract_refs=(contract.to_dict() if contract is not None else {}),
         open_questions=list(ir.spec_meta.open_questions or []),
+        project_id=project_id or str(getattr(ir, "project_id", "") or ""),
+        framework_baseline_version=(
+            framework_baseline_version or str(getattr(ir, "baseline_version", "") or "")
+        ),
+        created_at=timestamp,
     )
     spec.spec_hash = compute_spec_hash(spec)
     return spec
@@ -201,9 +243,21 @@ def write_spec(spec: FrozenSpec, base_dir: Path, session_id: str = "") -> Path:
     return target
 
 
-def load_spec(path: Path) -> FrozenSpec:
+def load_spec(path: Path, project_id: str = "") -> FrozenSpec:
+    """从 ``specs/vN.json`` 装载 FrozenSpec（§2.1 / §8）。
+
+    支持传入 ``project_id`` 校验规格归属；规格未绑定项目时保持向后兼容。
+    返回值可经 ``rebuild_ir()`` / ``rebuild_views()`` 仅凭该文件完整重建画布。
+    """
     with Path(path).open("r", encoding="utf-8") as handle:
-        return FrozenSpec.from_dict(json.load(handle))
+        payload = json.load(handle)
+    spec = FrozenSpec.from_dict(payload)
+    if project_id and spec.project_id and spec.project_id != project_id:
+        raise GreenfieldError(
+            f"规格 {spec.version_label} 绑定项目 {spec.project_id}，与查询项目 {project_id} 不一致",
+            code="GF_SPEC_PROJECT_MISMATCH",
+        )
+    return spec
 
 
 def export_md(spec: FrozenSpec) -> str:
@@ -217,6 +271,8 @@ def export_md(spec: FrozenSpec) -> str:
         f"- prev_spec_hash: `{spec.prev_spec_hash or '（首版）'}`",
         f"- frozen_at: {spec.frozen_at} · frozen_by: {spec.frozen_by}",
         f"- af_profile: {spec.af_profile} · ir_version: {spec.ir_version}",
+        f"- project_id: {spec.project_id or '（未绑定）'}",
+        f"- framework_baseline_version: {spec.framework_baseline_version or '（未锁定）'}",
         "",
         "> 本文件是 Phase 1 出口留痕；**确认后生成标准工程与 TIA V19 回写零错误属 Phase 2，本轮未执行**。",
         "",

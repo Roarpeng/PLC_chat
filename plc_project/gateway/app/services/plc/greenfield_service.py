@@ -6,9 +6,11 @@
 from __future__ import annotations
 
 import base64
+import io
 import os
 import re
 import tempfile
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -37,7 +39,10 @@ from plc_engine.af.greenfield_edges import (
     EdgeKind,
 )
 from plc_engine.af.greenfield_ir import (
+    HW_PATCH_OPS,
+    CanvasPatch,
     GFEdge,
+    GreenfieldIR,
     IRPatch,
     build_sample_ir,
 )
@@ -56,7 +61,8 @@ from plc_engine.af.greenfield_spec import (
     spec_path,
     write_spec,
 )
-from plc_engine.af.greenfield_validator import apply_patch, validate_ir
+from plc_engine.af.greenfield_validator import apply_canvas_patch, validate_ir
+from plc_engine.af.spec_diff import compute_spec_diff
 from plc_engine.af.greenfield_views import (
     assert_roundtrip,
     project_views,
@@ -185,7 +191,7 @@ def draft_from_prompt(
 
 
 def apply_link_patch(session: GreenfieldSession, payload: dict[str, Any]) -> dict[str, Any]:
-    """A4 手动连线：编辑 IR.edges（不是 Mermaid 文本），非法 patch 原子拒绝。"""
+    """A4 手动连线：收敛到统一 ``apply_canvas_patch``（§2.2），非法整批原子拒绝。"""
     session.assert_gate("link")
     if session.ir is None:
         raise GateLockedError("尚无首版规格，请先生成", code="GF_GATE_LOCKED")
@@ -200,14 +206,10 @@ def apply_link_patch(session: GreenfieldSession, payload: dict[str, Any]) -> dic
         field_path=str(payload.get("field_path") or ""),
         value=payload.get("value"),
     )
-    before = session.ir.ir_sha256()
-    report = apply_patch(session.ir, patch)
-    session.report = report
-    if not report.ok:
-        assert session.ir.ir_sha256() == before, "非法 patch 不得改动 IR"
-    session.views = project_views(session.ir)
-    if session.stage is GreenfieldStage.LINKABLE:
-        session.transition_stage(GreenfieldStage.VALIDATING)
+    result = apply_canvas_patch(session, CanvasPatch(ops=[patch]), advance_stage=True)
+    session.report = validate_ir(session.ir)
+    if not result.ok:
+        assert result.ir_sha256 == session.ir.ir_sha256(), "非法 patch 不得改动 IR"
     if patch.op == "add_edge" and patch.edge is not None:
         target_desc = f"{patch.edge.kind} {patch.edge.src_id} → {patch.edge.dst_id}"
     elif patch.op == "remove_edge":
@@ -216,15 +218,19 @@ def apply_link_patch(session: GreenfieldSession, payload: dict[str, Any]) -> dic
         target_desc = f"{patch.edge_id} 改为 {patch.src_id} → {patch.dst_id}"
     else:
         target_desc = str(patch.field_path or "")
-    verdict = "校验通过" if report.ok else f"被拦截：{report.violations[0].message if report.violations else '非法 patch'}"
+    first_msg = (
+        (result.violations[0].get("message") if result.violations else result.reason)
+        if not result.ok else ""
+    )
+    verdict = "校验通过" if result.ok else f"被拦截：{first_msg or '非法 patch'}"
     session.add_message(
         "event",
         "edit",
         f"画布编辑（{patch.op}）：{target_desc}（{verdict}）",
         {
             "op": patch.op,
-            "ok": report.ok,
-            "violations": [v.to_dict() for v in report.violations][:5],
+            "ok": result.ok,
+            "violations": result.violations[:5],
         },
     )
     return state_payload(session)
@@ -315,6 +321,85 @@ def engineering_summary(session: GreenfieldSession) -> dict[str, Any]:
     return summary
 
 
+#: 确认五项前置 → 前端 ``GF_ERROR_TEXT`` 认识的具体错误码（契约 §3 收口接线）。
+#: 服务端返回的 code 必须是前端可映射出具体中文原因的键，不能只有中文 reason。
+_CONFIRM_CHECK_CODES: dict[str, str] = {
+    "topology_finalized": "GF_TOPOLOGY_NOT_FINALIZED",
+    "open_questions_cleared": "GF_OPEN_QUESTIONS_PENDING",
+    "nodes_links_valid": "GF_NODE_EDGE_INVALID",
+    "equivalence_precheck": "GF_EQUIVALENCE_PRECHECK_FAILED",
+    "baseline_locked": "GF_BASELINE_NOT_LOCKED",
+}
+
+
+def check_confirm_prerequisites(session: GreenfieldSession) -> dict[str, Any]:
+    """确认硬门禁前置（§3 / 任务 7）：逐项判定并返回**具体原因 + 具体 code**。
+
+    五项：拓扑定稿 ∧ ``open_questions`` 清零 ∧ 节点/连线校验 ∧ 等价性预检 ∧
+    基线版本锁定。纯只读：不写盘、不计副作用、不改阶段、不建事务。
+    ``codes`` / ``code`` 供 ``/confirm`` 抛错时透传给前端 ``mapConfirmError``。
+    """
+    ir = session.ir
+    if ir is None:
+        return {
+            "ok": False,
+            "checks": {"ir_ready": False},
+            "reasons": ["首版规格（IR）尚未生成"],
+            "open_questions": [],
+            "codes": ["GF_TOPOLOGY_NOT_FINALIZED"],
+            "code": "GF_TOPOLOGY_NOT_FINALIZED",
+        }
+
+    checks: dict[str, bool] = {"ir_ready": True}
+    reasons: list[str] = []
+
+    # 1) 拓扑定稿
+    checks["topology_finalized"] = bool(getattr(session, "topology_finalized", True))
+    if not checks["topology_finalized"]:
+        reasons.append("逻辑拓扑尚未定稿：请在画布上确认设备逻辑拓扑")
+
+    # 2) open_questions 清零（含 inferred 来源联锁，复用 GFSpecMeta / report 机制）
+    report = session.report or validate_ir(ir)
+    questions = list(dict.fromkeys(
+        list(report.open_questions) + list(ir.spec_meta.open_questions or [])
+    ))
+    checks["open_questions_cleared"] = not questions
+    if questions:
+        reasons.append(f"仍有 {len(questions)} 项待确认问题未清零：{questions[:3]}")
+
+    # 3) 节点 / 连线校验
+    checks["nodes_links_valid"] = bool(report.ok)
+    if not report.ok:
+        first = report.violations[0].message if report.violations else "未知校验违规"
+        reasons.append(f"节点/连线校验未通过：{first}")
+
+    # 4) 等价性预检（IR 内容哈希可复现 + 与校验报告一致）
+    reproducible = GreenfieldIR.from_dict(ir.to_dict()).ir_sha256() == ir.ir_sha256()
+    hash_match = bool(report.ir_sha256) and report.ir_sha256 == ir.ir_sha256()
+    checks["equivalence_precheck"] = bool(reproducible and hash_match)
+    if not checks["equivalence_precheck"]:
+        reasons.append("等价性预检未通过：IR 内容哈希不可复现或与校验报告不一致")
+
+    # 5) 基线版本锁定
+    checks["baseline_locked"] = bool(str(ir.baseline_version or "").strip())
+    if not checks["baseline_locked"]:
+        reasons.append("框架基线版本未锁定（IR.baseline_version 为空）")
+
+    failed_codes = [
+        _CONFIRM_CHECK_CODES[key]
+        for key in _CONFIRM_CHECK_CODES
+        if checks.get(key) is False
+    ]
+    return {
+        "ok": not reasons,
+        "checks": checks,
+        "reasons": reasons,
+        "open_questions": questions,
+        "codes": failed_codes,
+        "code": failed_codes[0] if failed_codes else "",
+    }
+
+
 def confirm_and_freeze(
     session: GreenfieldSession,
     *,
@@ -331,6 +416,18 @@ def confirm_and_freeze(
     # VALIDATING——确认动作本身触发校验，不放宽门禁矩阵，仍须用户显式点击。
     if session.stage is GreenfieldStage.LINKABLE:
         revalidate(session)
+    # 硬门禁前置（§3 / 任务 7）：任一未满足即返回具体原因，按钮不可用（D 负责 UI）。
+    prereq = check_confirm_prerequisites(session)
+    if not prereq["ok"]:
+        raise GateLockedError(
+            "确认前置未满足：" + "；".join(prereq["reasons"]),
+            code=prereq.get("code") or "GF_CONFIRM_PREREQUISITE",
+            details={
+                "checks": prereq["checks"],
+                "reasons": prereq["reasons"],
+                "codes": prereq.get("codes", []),
+            },
+        )
     session.assert_gate("confirm", explicit=explicit)
     session.assert_no_side_effects()
     if session.ir is None or session.views is None:
@@ -356,10 +453,17 @@ def confirm_and_freeze(
         spec_version=version,
         prev_spec_hash=prev,
         frozen_by=frozen_by,
+        project_id=(session.ir.project_id or str(getattr(session, "project_id", "") or "")),
+        framework_baseline_version=session.ir.baseline_version,
     )
-    # 先写盘后迁移阶段：写盘失败（如磁盘只读）时阶段不被污染，可重试。
-    target = write_spec(spec, work_dir, session.session_id)
+    # 落盘只发生在 FROZEN 之后、按版本落到 specs/vN.json（契约 §3 / 任务 7）。
+    # 写盘失败则回退到 LINKABLE，保证阶段不被污染、可重试（fail-closed）。
     session.transition_stage(GreenfieldStage.FROZEN)
+    try:
+        target = write_spec(spec, work_dir, session.session_id)
+    except Exception:
+        session.transition_stage(GreenfieldStage.LINKABLE)
+        raise
     session.count("disk_writes")
     session.specs.append(spec)
     session.notes.append(f"规格 {spec.version_label} 已冻结：{spec.spec_hash}")
@@ -410,148 +514,108 @@ def state_payload(session: GreenfieldSession) -> dict[str, Any]:
     }
     data["ir_only_fields"] = session.ir.ir_only_catalog() if session.ir else []
     if session.last_delivery is not None:
-        data["delivery_summary"] = {
+        delivery_summary = {
             k: v for k, v in session.last_delivery.items() if k != "zip_bytes"
         }
+        # 前端读取的两个字段恒存在：无真实数据时给 null，不虚构通过状态。
+        delivery_summary.setdefault("compile_diagnostics", None)
+        delivery_summary.setdefault("scl_sources", None)
+        data["delivery_summary"] = delivery_summary
     else:
         data["delivery_summary"] = None
+    prereq = check_confirm_prerequisites(session)
+    data["confirm_prerequisites"] = prereq
+
+    # —— 收口接线：对齐前端 GFState 字段（增量追加，保留 A 已有字段）——
+    # gate_checks 按前端 GFGateChecks 形状给：后端 nodes_links_valid → nodes_edges_valid。
+    checks = prereq["checks"]
+    data["gate_checks"] = {
+        "ir_ready": bool(checks.get("ir_ready", False)),
+        "topology_finalized": bool(checks.get("topology_finalized", False)),
+        "open_questions_cleared": bool(checks.get("open_questions_cleared", False)),
+        "nodes_edges_valid": bool(checks.get("nodes_links_valid", False)),
+        "equivalence_precheck": bool(checks.get("equivalence_precheck", False)),
+        "baseline_locked": bool(checks.get("baseline_locked", False)),
+    }
+    # diff_confirmed / framework_baseline_version 已由 session.snapshot() 提供。
+    data["pending_real_machine"] = True
+    data["spec_diff"] = None
+    data["reverse_protection"] = None
+    summary = data["delivery_summary"] or {}
+    data["compile_diagnostics"] = summary.get("compile_diagnostics")
+    data["scl_sources"] = summary.get("scl_sources")
     return data
 
 
-def _restore_step_binding(session: GreenfieldSession, entry: dict[str, Any]) -> None:
-    """按绑定记录还原步序字段。
-
-    仅当当前值仍是绑定写入的符号时才还原，避免覆盖绑定之后的画布/对话编辑。
-    """
-    if session.ir is None:
-        return
-    target_id = str(entry.get("target_id") or "")
-    step = next((s for s in session.ir.steps if s.id == target_id), None)
-    if step is None:
-        return
-    written_cond = entry.get("written_transition_condition")
-    if written_cond and step.transition_condition == written_cond:
-        step.transition_condition = str(entry.get("prev_transition_condition") or "")
-    appended = entry.get("appended_action")
-    if appended and appended in step.actions:
-        step.actions = [a for a in step.actions if a != appended]
-
-
 def update_hardware(session: GreenfieldSession, payload: dict[str, Any]) -> dict[str, Any]:
-    """硬件拓扑（逻辑级占位）与变量面板的交互绑定。
+    """硬件拓扑（逻辑级占位）与变量面板交互：全部收敛到统一 ``apply_canvas_patch``。
 
-    硬件拓扑只是占位：具体物理组态在博途中完成，这里支持挂载/卸载、绑定/解绑
-    （含步序字段还原）、增删手工节点，以及一键重置为自动推导拓扑（可撤销）。
+    逻辑拓扑真值写入 ``IR.hw_nodes / cm_mounts / var_bindings``；``bind_var`` 的
+    撤销语义由 ``greenfield_validator`` 在候选副本上实现。本函数不再直接赋值
+    ``session.ir.*``，也不再维护 ``custom_hw`` 平行状态（其仅为只读兼容视图）。
     """
     session.assert_gate("hardware")
     op = str(payload.get("op") or "mount_cm")
-    event_text = ""
-    touched_steps = False
-    if op == "mount_cm":
-        cm_id = str(payload.get("cm_id") or "")
-        hw_node_id = str(payload.get("hw_node_id") or "")
-        if cm_id and hw_node_id:
-            mounts = dict(session.custom_hw.get("cm_mounts") or {})
-            mounts[cm_id] = hw_node_id
-            session.custom_hw["cm_mounts"] = mounts
-            event_text = f"硬件挂载：{cm_id} → {hw_node_id}"
-    elif op == "unmount_cm":
-        cm_id = str(payload.get("cm_id") or "")
-        mounts = dict(session.custom_hw.get("cm_mounts") or {})
-        if cm_id in mounts:
-            del mounts[cm_id]
-            session.custom_hw["cm_mounts"] = mounts
-            event_text = f"硬件卸载：{cm_id}（回到自动推导挂载）"
-    elif op == "bind_var":
-        var_key = str(payload.get("var_key") or "")
-        target_id = str(payload.get("target_id") or "")
-        role = str(payload.get("role") or "auto")
-        if var_key and target_id:
-            bindings = list(session.custom_hw.get("var_bindings") or [])
-            already = any(
-                b.get("var_key") == var_key and b.get("target_id") == target_id for b in bindings
-            )
-            if not already:
-                entry: dict[str, Any] = {"var_key": var_key, "target_id": target_id, "role": role}
-                bindings.append(entry)
-                session.custom_hw["var_bindings"] = bindings
-                # 若绑定目标是 Step，同步写入步序动作或转换条件，使 Mermaid 实时联动；
-                # 记录原值供解绑/重置还原（可撤销语义）。
-                if session.ir is not None and session.stage in {
-                    GreenfieldStage.LINKABLE,
-                    GreenfieldStage.VALIDATING,
-                }:
-                    step = next((s for s in session.ir.steps if s.id == target_id), None)
-                    if step is not None:
-                        short_sym = var_key.split(":", 1)[-1]
-                        entry["prev_transition_condition"] = step.transition_condition
-                        entry["prev_actions"] = list(step.actions)
-                        if role == "condition" or "%I" in var_key or "Ack" in var_key or "Recv" in var_key:
-                            step.transition_condition = short_sym
-                            entry["written_transition_condition"] = short_sym
-                        elif short_sym not in step.actions:
-                            step.actions.append(short_sym)
-                            entry["appended_action"] = short_sym
-                        touched_steps = True
-                event_text = f"变量绑定：{var_key} → {target_id}（{role}）"
-    elif op == "unbind_var":
-        var_key = str(payload.get("var_key") or "")
-        target_id = str(payload.get("target_id") or "")
-        bindings = list(session.custom_hw.get("var_bindings") or [])
-        kept: list[dict[str, Any]] = []
-        removed: list[dict[str, Any]] = []
-        for b in bindings:
-            if var_key and b.get("var_key") == var_key and (not target_id or b.get("target_id") == target_id):
-                removed.append(b)
-            else:
-                kept.append(b)
-        session.custom_hw["var_bindings"] = kept
-        for entry in removed:
-            _restore_step_binding(session, entry)
-            touched_steps = touched_steps or any(
-                k in entry for k in ("written_transition_condition", "appended_action")
-            )
-        if removed:
-            event_text = f"变量解绑：{var_key or target_id}（步序字段已还原）"
-    elif op == "add_hw_node":
-        node = payload.get("node")
-        if isinstance(node, dict) and node.get("id"):
-            extra = list(session.custom_hw.get("extra_nodes") or [])
-            extra = [n for n in extra if n.get("id") != node["id"]]
-            extra.append(dict(node))
-            session.custom_hw["extra_nodes"] = extra
-            event_text = f"新增硬件节点：{node.get('id')}"
-    elif op == "remove_hw_node":
-        hw_node_id = str(payload.get("hw_node_id") or "")
-        if hw_node_id:
-            extra = [n for n in (session.custom_hw.get("extra_nodes") or []) if n.get("id") != hw_node_id]
-            session.custom_hw["extra_nodes"] = extra
-            mounts = {
-                cm: hw
-                for cm, hw in dict(session.custom_hw.get("cm_mounts") or {}).items()
-                if hw != hw_node_id
-            }
-            session.custom_hw["cm_mounts"] = mounts
-            event_text = f"移除硬件节点：{hw_node_id}（仅手工新增节点可删）"
-    elif op == "reset_topology":
-        # 撤销全部拓扑编辑：还原绑定写入的步序字段 → 清空三键 → 回到自动推导态
-        for entry in list(session.custom_hw.get("var_bindings") or []):
-            _restore_step_binding(session, entry)
-            touched_steps = touched_steps or any(
-                k in entry for k in ("written_transition_condition", "appended_action")
-            )
-        session.custom_hw["cm_mounts"] = {}
-        session.custom_hw["extra_nodes"] = []
-        session.custom_hw["var_bindings"] = []
-        event_text = "硬件拓扑已重置为自动推导（撤销全部挂载 / 绑定 / 手工节点）"
-    else:
+    if op not in HW_PATCH_OPS:
         raise GateLockedError(f"未知硬件操作：{op}", code="GF_HW_OP_UNKNOWN")
-    if event_text:
-        session.add_message("event", "edit", event_text, {"op": op})
-        if touched_steps and session.ir is not None:
-            session.views = project_views(session.ir)
-            session.report = validate_ir(session.ir)
+
+    cm_id = str(payload.get("cm_id") or "")
+    hw_node_id = str(payload.get("hw_node_id") or "")
+    var_key = str(payload.get("var_key") or "")
+    target_id = str(payload.get("target_id") or "")
+    role = str(payload.get("role") or "auto")
+    node = payload.get("node") if isinstance(payload.get("node"), dict) else None
+
+    patch_payload = {
+        k: v for k, v in (
+            ("cm_id", cm_id), ("hw_node_id", hw_node_id),
+            ("var_key", var_key), ("target_id", target_id), ("role", role),
+        ) if v
+    }
+    patch = IRPatch(op=op, node=node, payload=patch_payload)
+    result = apply_canvas_patch(session, CanvasPatch(ops=[patch]))
+
+    event_text_map = {
+        "mount_cm": f"硬件挂载：{cm_id} → {hw_node_id}",
+        "unmount_cm": f"硬件卸载：{cm_id}（回到自动推导挂载）",
+        "bind_var": f"变量绑定：{var_key} → {target_id}（{role}）",
+        "unbind_var": f"变量解绑：{var_key or target_id}（步序字段已还原）",
+        "add_hw_node": f"新增硬件节点：{(node or {}).get('id')}",
+        "remove_hw_node": f"移除硬件节点：{hw_node_id}（仅手工新增节点可删）",
+        "reset_topology": "硬件拓扑已重置为自动推导（撤销全部挂载 / 绑定 / 手工节点）",
+    }
+    event_text = event_text_map.get(op, "")
+    has_target = bool(cm_id or hw_node_id or var_key or target_id or node)
+    if event_text and (has_target or op == "reset_topology"):
+        session.add_message("event", "edit", event_text, {"op": op, "ok": result.ok})
     return state_payload(session)
+
+
+def collect_scl_sources(delivery: dict[str, Any]) -> dict[str, str] | None:
+    """只读 SCL 预览源（F13 降级）：从真实生成产物 ZIP 按 ``blocks_manifest`` 逐块读源码。
+
+    键为块名、值为 ``.scl`` 全文，无任何写回入口。产物缺失 / ZIP 不可读 / 无
+    SCL 块时返回 ``None``，**禁止虚构**内容或地址。
+    """
+    raw = delivery.get("zip_bytes")
+    entries = delivery.get("blocks_manifest") or []
+    if not raw or not entries:
+        return None
+    sources: dict[str, str] = {}
+    try:
+        with zipfile.ZipFile(io.BytesIO(bytes(raw))) as zf:
+            for entry in entries:
+                path = str(entry.get("path") or "")
+                if not path.lower().endswith(".scl"):
+                    continue
+                try:
+                    text = zf.read(path).decode("utf-8")
+                except (KeyError, UnicodeDecodeError):
+                    continue
+                sources[str(entry.get("name") or path)] = text
+    except (OSError, ValueError, zipfile.BadZipFile):
+        return None
+    return sources or None
 
 
 def generate_project_package(session: GreenfieldSession) -> dict[str, Any]:
@@ -566,6 +630,8 @@ def generate_project_package(session: GreenfieldSession) -> dict[str, Any]:
         custom_hw=session.custom_hw,
     )
     session.count("generations")
+    # F13 降级：只读 SCL 预览源随交付摘要回流 /state，无产物时给 null（禁止虚构）。
+    delivery["scl_sources"] = collect_scl_sources(delivery)
     session.last_delivery = delivery
     session.notes.append(
         f"已生成 AF V1.2 标准博途工程包：{delivery['zip_filename']} ({delivery['block_count']} blocks)"
@@ -593,12 +659,20 @@ def get_project_package_zip(session: GreenfieldSession) -> tuple[str, bytes]:
     return str(session.last_delivery["zip_filename"]), bytes(session.last_delivery["zip_bytes"])
 
 
-def load_frozen_spec(session_id: str, version: int, base_dir: Path | None = None):
-    """按版本号装载已冻结 spec 并复现哈希（AC-5）。"""
+def load_frozen_spec(
+    session_id: str,
+    version: int,
+    base_dir: Path | None = None,
+    project_id: str = "",
+):
+    """按版本号装载已冻结 spec 并复现哈希（AC-5）；支持 ``project_id`` 归属校验。"""
     from plc_engine.af.greenfield_spec import FrozenSpec
 
     placeholder = FrozenSpec(spec_version=version, session_id=session_id)
-    return load_spec(spec_path(base_dir or _work_dir(), session_id, placeholder))
+    return load_spec(
+        spec_path(base_dir or _work_dir(), session_id, placeholder),
+        project_id=project_id,
+    )
 
 
 def load_reference_fixture(session: GreenfieldSession, prompt: str = "") -> dict[str, Any]:
@@ -633,5 +707,157 @@ def load_reference_fixture(session: GreenfieldSession, prompt: str = "") -> dict
     return draft_from_prompt(session, default_prompt, project_name="KukaVisionStation")
 
 
-def session_for(session_id: str | None) -> GreenfieldSession:
-    return registry.get(session_id)
+def session_for(session_id: str | None, project_id: str = "") -> GreenfieldSession:
+    """取（或建）会话；传入 ``project_id`` 时绑定项目一等公民标识（§8）。"""
+    session = registry.get(session_id)
+    if project_id:
+        bind_project_id(session, project_id)
+    return session
+
+
+def bind_project_id(session: GreenfieldSession, project_id: str) -> str:
+    """把 ``project_id`` 绑定到会话（§8 一等公民）；重复绑定不一致则拒绝。
+
+    只读绑定会话标识，不直接写 IR；``IR.project_id`` 由 ``/patch`` 或 ``freeze`` 落定。
+    """
+    pid = str(project_id or "").strip()
+    if not pid:
+        return session.project_id
+    existing = str(getattr(session, "project_id", "") or "")
+    if existing and existing != pid:
+        raise GateLockedError(
+            f"会话已绑定项目 {existing}，不能改绑 {pid}",
+            code="GF_PROJECT_ID_CONFLICT",
+        )
+    session.project_id = pid
+    return pid
+
+
+def apply_patch_action(session: GreenfieldSession, payload: dict[str, Any]) -> dict[str, Any]:
+    """POST /patch：统一受控写入（§2.2 / §3）。
+
+    返回 ``PatchResult`` 形状 ``{ir, spec_hash, violations, stage, ...}``；原子
+    拒绝时 router 以 422 返回，IR 字节不变。不触发存量链、不建 PCEC 事务。
+    """
+    session.assert_gate("link")
+    if session.ir is None:
+        raise GateLockedError("尚无首版规格，请先生成", code="GF_GATE_LOCKED")
+    cp = CanvasPatch.from_dict(payload)
+    result = apply_canvas_patch(
+        session, cp, advance_stage=(session.stage is GreenfieldStage.LINKABLE)
+    )
+    session.report = validate_ir(session.ir)
+    if result.ok:
+        session.add_message(
+            "event", "edit",
+            f"受控 patch 已应用 {result.applied_ops} 项（spec_hash={result.spec_hash}）",
+            {"ops": result.applied_ops, "spec_hash": result.spec_hash},
+        )
+    return result.to_dict()
+
+
+def _spec_like(spec: Any) -> Any:
+    """把 A 的 FrozenSpec 适配成契约 §2.3 SpecLike 的四个属性。
+
+    FrozenSpec 用 ``spec_version``，协议要 ``version``；在此显式映射，避免依赖
+    ``spec_version_of`` 的容错分支，保证形状与契约一致。
+    """
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        project_id=str(getattr(spec, "project_id", "") or ""),
+        version=int(getattr(spec, "spec_version", 0) or 0),
+        ir_snapshot=dict(getattr(spec, "ir_snapshot", {}) or {}),
+        spec_hash=str(getattr(spec, "spec_hash", "") or ""),
+    )
+
+
+def _source_block_dict(block: Any) -> dict[str, Any]:
+    return {
+        "source_id": str(block.source_id),
+        "kind": str(block.kind),
+        "payload": dict(block.payload),
+    }
+
+
+def _empty_diff(base: int, target: int, note: str) -> dict[str, Any]:
+    """优雅降级：空 diff + 明确说明，禁止臆造（无 placeholder 伪装）。"""
+    return {
+        "base_spec_version": base,
+        "target_spec_version": target,
+        "changed": [],
+        "added": [],
+        "removed": [],
+        "changed_source_ids": [],
+        "note": note,
+    }
+
+
+def diff_placeholder(session: GreenfieldSession, payload: dict[str, Any]) -> dict[str, Any]:
+    """POST /diff：调用 B 的 ``compute_spec_diff`` 产出带 source_id 的真实 SpecDiff（§2.3）。
+
+    用 ``load_frozen_spec`` 装载 base/target 两版 FrozenSpec，适配成 SpecLike 后计算
+    changed / added / removed / changed_source_ids。版本缺失或任一版规格无法装载时
+    优雅降级为空 diff + 明确说明，禁止臆造。零副作用、不触发存量链、不建 PCEC 事务。
+    """
+    try:
+        from_version = int(payload.get("from_version") or 0)
+        to_version = int(payload.get("to_version") or 0)
+    except (TypeError, ValueError):
+        return _empty_diff(0, 0, "版本号无法解析为整数，未计算差异（禁止臆造）")
+
+    if from_version <= 0 or to_version <= 0:
+        return _empty_diff(
+            from_version, to_version,
+            "缺少有效的两版版本号（from_version / to_version 须为正整数），未计算差异",
+        )
+
+    try:
+        base_spec = load_frozen_spec(session.session_id, from_version)
+        target_spec = load_frozen_spec(session.session_id, to_version)
+    except Exception as exc:  # noqa: BLE001 - 规格缺失/哈希不符一律降级，不臆造
+        return _empty_diff(
+            from_version, to_version,
+            f"无法装载 v{from_version} / v{to_version} 冻结规格，未计算差异：{exc}",
+        )
+
+    diff = compute_spec_diff(_spec_like(base_spec), _spec_like(target_spec))
+    return {
+        "base_spec_version": diff.base_spec_version,
+        "target_spec_version": diff.target_spec_version,
+        "changed": [_source_block_dict(b) for b in diff.changed],
+        "added": [_source_block_dict(b) for b in diff.added],
+        "removed": [_source_block_dict(b) for b in diff.removed],
+        "changed_source_ids": list(diff.changed_source_ids),
+    }
+
+
+def confirm_diff_action(session: GreenfieldSession, payload: dict[str, Any]) -> dict[str, Any]:
+    """POST /confirm-diff（D11）：``confirmed != true`` 时零副作用计数器恒 0。
+
+    确认后才置 ``diff_confirmed`` 允许后续写入；本函数自身不增加任何
+    ops / disk_writes / writebacks / generations，也不写盘、不建事务。
+    """
+    diff_id = str(payload.get("diff_id") or "")
+    confirmed = payload.get("confirmed") is True
+    before = dict(session.counters)
+    if not confirmed:
+        return {
+            "confirmed": False,
+            "diff_id": diff_id,
+            "side_effect_counters": dict(session.counters),
+            "zero_side_effects": dict(session.counters) == before,
+            "write_allowed": False,
+            "note": "差异清单未显式确认；ops/disk_writes/writebacks/generations 保持不变（确认前恒 0）",
+        }
+    session.diff_confirmed = True
+    if diff_id and diff_id not in session.confirmed_diff_ids:
+        session.confirmed_diff_ids.append(diff_id)
+        session.add_message("event", "diff", f"差异清单 {diff_id} 已显式确认", {"diff_id": diff_id})
+    return {
+        "confirmed": True,
+        "diff_id": diff_id,
+        "side_effect_counters": dict(session.counters),
+        "zero_side_effects": dict(session.counters) == before,
+        "write_allowed": True,
+    }

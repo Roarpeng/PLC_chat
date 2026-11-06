@@ -83,3 +83,31 @@ def test_ir_only_catalog_covers_all_fields(ir) -> None:
     fields = ir.ir_only_fields()
     assert len(fields) >= 10
     assert isinstance(ir.ir_only_catalog(), list)
+
+
+# ---------------------------------------------------------------------------
+# WP-03 / §2.2：CanvasPatch 原子拒绝 —— 任一 op 非法整批回滚
+# ---------------------------------------------------------------------------
+
+def test_canvas_patch_atomic_reject_rolls_back_whole_batch(ir) -> None:
+    """⑥ 一批 ops 中任一非法则整批回滚，IR 字节不变、事件不入账。"""
+    from gateway.app.services.plc.greenfield_session import GreenfieldSession
+    from plc_engine.af.greenfield_ir import CanvasPatch
+    from plc_engine.af.greenfield_validator import apply_canvas_patch
+
+    session = GreenfieldSession()
+    session.ir = ir
+    before = ir.ir_sha256()
+    cms_before = len(ir.cms)
+    events_before = len(session.change_events)
+
+    batch = CanvasPatch(ops=[
+        IRPatch(op="add_cm", node={"em_id": "U1EM1", "business_label": "新增执行件"}),  # 合法
+        IRPatch(op="add_edge", edge=_edge("E_CN_TO_CM", "U1EM1_CM1", "U1EM2_CM3")),  # 非法 I2
+    ])
+    result = apply_canvas_patch(session, batch)
+    assert result.ok is False
+    assert result.violations, "应给出具体拦截原因"
+    assert session.ir.ir_sha256() == before, "整批回滚：IR 字节不变"
+    assert len(session.ir.cms) == cms_before, "第一个合法 op 也随整批回滚"
+    assert len(session.change_events) == events_before, "失败批次不入账变更事件"

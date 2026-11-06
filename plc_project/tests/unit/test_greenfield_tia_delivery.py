@@ -1,8 +1,10 @@
 """Phase 2 最后一公里（§9 P2-4..P2-8）：/deliver-tia 的 XML 补充包、四层静态门禁、
-PCEC 账本编排（调用顺序与参数）与 Openness 优雅降级。
+PCEC 账本编排（调用顺序与参数）、结构化编译诊断（P0-A / UC-02）与
+TIA 不可用显式失败（UC-03）。
 
 全 mock 不起 TIA：Openness 探测 / 执行均在 ``tia_delivery`` 模块边界 monkeypatch，
-真机验收走报告中的手动步骤（本轮不自动编译）。
+真机验收走报告中的手动步骤（本轮不自动编译，一律 ``pending_real_machine``）。
+本文件所有 mock 仅验证判定口径与编排，**不构成 L2 证据**。
 """
 from __future__ import annotations
 
@@ -163,43 +165,186 @@ def test_baseline_mismatch_fail_closed(isolated_work: Path, monkeypatch: pytest.
     )
 
 
-# --------------------------------------------------------- Openness 优雅降级
+# --------------------------------------- 结构化编译诊断（P0-A / UC-02）
 
 
-def test_openness_unavailable_degrades(isolated_work: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """worker/CLI 不可用 → HTTP 200 + status=tia_unavailable + 人工导入指引；
-    事务保持 approved 并标注事件；ZIP 交付不受影响。"""
-    session = _frozen_session("tia-degrade")
+def test_uc02_warning_separated_from_compile_ok() -> None:
+    """UC-02：Given 一次含 warning 的编译，Then ``error_count == 0`` 与 warning
+    清单分离，``compile_ok`` 不被 warning 污染（warning 单列、禁止并入成功）。"""
+    diag = tia_delivery.build_compile_diagnostics(
+        {
+            "ok": True,
+            "compile": {
+                "state": "SuccessWithWarnings",
+                "errorCount": 0,
+                "warnings": ["W1: unused temp var", "W2: implicit cast"],
+                "elapsedMs": 321.5,
+            },
+        },
+        static_gate_passed=True,
+        tia_version="V19",
+        project_path="C:/mock/Greenfield.ap19",
+        blocks=["U1_KukaVisionStation_Main", "U1_KukaVisionStation_Startup"],
+    )
+    assert diag.error_count == 0
+    assert diag.warnings == ["W1: unused temp var", "W2: implicit cast"]
+    assert diag.compile_ok is True  # warning 单列，未并入成功
+    assert diag.status == tia_delivery.COMPILE_STATUS_COMPILED
+    assert diag.static_gate_passed is True
+    assert diag.tia_unavailable is False
+    assert diag.pending_real_machine is False
+    # 可复现报告字段（EvidenceBundle）
+    assert diag.blocks == ["U1_KukaVisionStation_Main", "U1_KukaVisionStation_Startup"]
+    assert diag.elapsed_ms == 321.5
+    assert diag.tia_version == "V19"
+    assert diag.project_path == "C:/mock/Greenfield.ap19"
+    report = diag.to_dict()
+    assert report["error_count"] == 0
+    assert report["warnings"] == ["W1: unused temp var", "W2: implicit cast"]
+
+
+def test_uc02_old_warning_state_no_longer_pollutes_success() -> None:
+    """回归旧口径：``state`` 含 ``warning`` 但 ``error_count > 0`` 时绝不能判成功。"""
+    diag = tia_delivery.build_compile_diagnostics(
+        {
+            "ok": True,
+            "compile": {"state": "SuccessWithWarnings", "errorCount": 1, "warnings": ["W1"]},
+        },
+        static_gate_passed=True,
+        tia_version="V19",
+        project_path="C:/mock/Greenfield.ap19",
+    )
+    assert diag.error_count == 1
+    assert diag.warnings == ["W1"]
+    assert diag.compile_ok is False
+
+
+def test_static_gate_interception_blocks_compile_ok() -> None:
+    """负例：四层静态门禁任一拦截时，即使 ``error_count == 0`` 也 ``compile_ok == False``。"""
+    diag = tia_delivery.evaluate_compile(
+        error_count=0,
+        static_gate_passed=False,
+        warnings=["W1"],
+        blocks=["U1_Main"],
+        tia_version="V19",
+        project_path="C:/mock/Greenfield.ap19",
+    )
+    assert diag.error_count == 0
+    assert diag.static_gate_passed is False
+    assert diag.compile_ok is False
+
+
+def test_tia_unavailable_vs_pending_real_machine_are_distinct() -> None:
+    """``tia_unavailable``（探测失败）与 ``pending_real_machine``（真机未跑）显式区分。"""
+    unavailable = tia_delivery.unavailable_diagnostics(
+        reason="exe 未构建", static_gate_passed=True, tia_version="V19", project_path="p"
+    )
+    pending = tia_delivery.pending_real_machine_diagnostics(
+        static_gate_passed=True, tia_version="V19", project_path="p"
+    )
+    for diag in (unavailable, pending):
+        assert diag.compile_ok is False
+        assert diag.error_count == 0
+    assert unavailable.status == tia_delivery.COMPILE_STATUS_TIA_UNAVAILABLE
+    assert unavailable.tia_unavailable is True
+    assert unavailable.pending_real_machine is False
+    assert pending.status == tia_delivery.COMPILE_STATUS_PENDING_REAL_MACHINE
+    assert pending.pending_real_machine is True
+    assert pending.tia_unavailable is False
+
+
+# ----------------------------------- TIA 不可用显式失败（UC-03 / P0-A）
+
+
+def test_uc03_tia_unavailable_is_explicit_non_200(
+    isolated_work: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """UC-03：Given TIA 不可用，Then 返回显式非成功状态且**非 HTTP 200**
+    （``ok=false`` + 明确 error code），禁止静默降级为 200 成功。"""
+    session = _frozen_session("tia-unavailable")
     monkeypatch.setattr(
         tia_delivery,
         "_openness_probe",
         lambda: {"available": False, "reason": "测试模拟：exe 未构建", "exe": ""},
     )
     client = TestClient(app)
-    resp = client.post(f"{PREFIX}/deliver-tia", json={"session_id": "tia-degrade", "mode": "auto"})
-    assert resp.status_code == 200
-    data = resp.json()["data"]
-    assert data["ok"] is True
-    assert data["status"] == "tia_unavailable"
-    assert data["openness"]["status"] == "tia_unavailable"
-    assert "人工导入" in data["guidance"]
-    assert data["change_id"]
+    resp = client.post(f"{PREFIX}/deliver-tia", json={"session_id": "tia-unavailable", "mode": "auto"})
+    assert resp.status_code != 200
+    assert resp.status_code >= 400
+    body = resp.json()
+    assert body["ok"] is False
+    assert body["error"]["code"] == tia_delivery.TIA_UNAVAILABLE_ERROR_CODE
 
-    stored = pcec.get_change(data["change_id"])
+    details = body["error"]["details"]
+    assert details["tia_unavailable"] is True
+    assert details["pending_real_machine"] is False
+    assert "人工导入" in details["guidance"]
+    diag = details["compile_diagnostics"]
+    assert diag["compile_ok"] is False
+    assert diag["error_count"] == 0
+    assert diag["status"] == tia_delivery.COMPILE_STATUS_TIA_UNAVAILABLE
+
+    # 账本留痕：tia_unavailable 事件 + 事务未被误标 applied
+    stored = pcec.get_change(details["change_id"])
     assert stored is not None and stored["status"] == "approved"
     assert any(e.get("event") == "tia_unavailable" for e in stored["events"])
-    # 事件消息存在（对话流）
+    # 对话流事件存在
     assert any(
         m.get("payload", {}).get("status") == "tia_unavailable" and m.get("kind") == "delivery"
         for m in session.messages
     )
-    # 交付计数 + ZIP 已产出
-    assert session.counters["generations"] >= 1
-    assert data["package"]["zip_size_bytes"] > 0
+
+
+def test_tia_unavailable_raises_explicit_error_at_service_layer(
+    isolated_work: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """service 层同样是显式失败（抛 ``GateLockedError``），不返回静默成功的 dict。"""
+    session = _frozen_session("tia-unavailable-svc")
+    monkeypatch.setattr(
+        tia_delivery,
+        "_openness_probe",
+        lambda: {"available": False, "reason": "mock", "exe": ""},
+    )
+    with pytest.raises(tia_delivery.GateLockedError) as excinfo:
+        tia_delivery.deliver_tia(session, mode="auto")
+    assert excinfo.value.code == tia_delivery.TIA_UNAVAILABLE_ERROR_CODE
+    assert excinfo.value.details["compile_diagnostics"]["compile_ok"] is False
+
+
+def test_package_mode_reports_pending_real_machine(isolated_work: Path) -> None:
+    """package 模式（离线可推进部分）：真机未跑，``pending_real_machine=True``，
+    结构化报告字段齐全；``xml_package_unverified`` 保持 True（本批次无真机导入验证）。"""
+    session = _frozen_session("tia-package-pending")
+    result = tia_delivery.deliver_tia(session, mode="package")
+    assert result["status"] == "package_only"
+    diag = result["compile_diagnostics"]
+    assert diag["status"] == tia_delivery.COMPILE_STATUS_PENDING_REAL_MACHINE
+    assert diag["pending_real_machine"] is True
+    assert diag["tia_unavailable"] is False
+    assert diag["compile_ok"] is False
+    assert result["pending_real_machine"] is True
+    assert result["l2_status"] == "pending_real_machine"
+    assert result["xml_package_unverified"] is True
+    for key in (
+        "error_count",
+        "warnings",
+        "blocks",
+        "elapsed_ms",
+        "tia_version",
+        "project_path",
+        "static_gate_passed",
+        "compile_ok",
+    ):
+        assert key in diag
+    assert diag["blocks"]
 
 
 def test_openness_mocked_success_applies_change(isolated_work: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Openness 通道 mock 成功（编译零错误）→ 事务 applied、V2=pass、事件回流。"""
+    """Openness 通道 mock 成功（``error_count == 0``）→ 事务 applied、V2=pass、事件回流。
+
+    注意：mock 仅验证编排与结构化判定口径，**不构成 L2 证据**；本批次真机
+    结论一律 ``pending_real_machine``，禁止以离线单测宣称「编译零错误」。
+    """
     session = _frozen_session("tia-auto")
     monkeypatch.setattr(
         tia_delivery,
@@ -229,6 +374,14 @@ def test_openness_mocked_success_applies_change(isolated_work: Path, monkeypatch
     assert any(
         m.get("payload", {}).get("status") == "compile_ok" for m in session.messages
     )
+    # P0-A 结构化诊断随回执归档；离线批次仍标 pending_real_machine（不宣称 L2 通过）
+    diag = data["compile_diagnostics"]
+    assert diag["compile_ok"] is True
+    assert diag["error_count"] == 0
+    assert diag["static_gate_passed"] is True
+    assert diag["status"] == tia_delivery.COMPILE_STATUS_COMPILED
+    assert data["l2_status"] == "pending_real_machine"
+    assert data["l2_note"]
 
 
 # ------------------------------------------------------------ XML 补充包内容

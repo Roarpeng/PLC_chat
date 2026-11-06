@@ -33,6 +33,14 @@ from plc_engine.af.greenfield_ports import DeliveryPort, GateLockedError
 from plc_engine.af.greenfield_spec import FrozenSpec
 from plc_engine.af.greenfield_views import project_views, render_export_md, render_step_flowchart
 from plc_engine.canvas_model import CanvasBlock, CanvasState
+from plc_engine.af.spec_diff import (
+    DEFAULT_FRAMEWORK_BASELINE_VERSION,
+    DERIVED_PARTITION,
+    FRAMEWORK_BASELINE_PARTITION,
+    build_baseline_manifest,
+    partition_for_block,
+    stable_source_id,
+)
 
 
 def _folder_for_block(block: CanvasBlock) -> str:
@@ -125,6 +133,13 @@ class AfGreenfieldDelivery(DeliveryPort):
                 scl_text = blk.scl_body if blk.block_type in {"DB", "UDT"} and blk.scl_body else blk.get_full_scl()
                 rel_path = f"blocks/{folder}/{blk.name}.scl"
                 zf.writestr(rel_path, scl_text.encode("utf-8"))
+
+                # --- F6 派生层（B 所有权）：唯一 source_id + 产物分栏，纯追加、不改动既有 path ---
+                source_id = stable_source_id(blk.name, blk.block_type, blk.af_role, blk.number)
+                partition = partition_for_block(folder, blk.name, blk.af_role, blk.block_type)
+                partitioned_path = f"{partition}/{rel_path}"
+                zf.writestr(partitioned_path, scl_text.encode("utf-8"))
+
                 blocks_manifest.append(
                     {
                         "name": blk.name,
@@ -134,6 +149,9 @@ class AfGreenfieldDelivery(DeliveryPort):
                         "folder": folder,
                         "path": rel_path,
                         "sha256": sha256_prefixed(scl_text),
+                        "source_id": source_id,
+                        "partition": partition,
+                        "partitioned_path": partitioned_path,
                     }
                 )
 
@@ -141,6 +159,37 @@ class AfGreenfieldDelivery(DeliveryPort):
             zf.writestr("plc_tags/PLCTags_Frozen.xml", io_xml.encode("utf-8"))
             zf.writestr("audit/io_retention_matrix.csv", retention_csv.encode("utf-8-sig"))
             zf.writestr("docs/architecture_spec.md", trace_md.encode("utf-8"))
+
+            # --- F6 派生层：baseline_manifest.json（基线条目 + 版本 + 内容 sha256）---
+            # framework_baseline_version 用 getattr 容错读取，兼容 A 并行期 FrozenSpec 字段漂移；
+            # source_id 映射完全在新通道自有派生层内完成，绝不触碰 planner.py。
+            framework_baseline_version = str(
+                getattr(spec, "framework_baseline_version", None)
+                or getattr(spec, "baseline_version", None)
+                or DEFAULT_FRAMEWORK_BASELINE_VERSION
+            )
+            baseline_entries = [
+                {
+                    "source_id": e["source_id"],
+                    "name": e["name"],
+                    "block_type": e["block_type"],
+                    "path": e["partitioned_path"],
+                    "sha256": e["sha256"],
+                }
+                for e in blocks_manifest
+                if e["partition"] == FRAMEWORK_BASELINE_PARTITION
+            ]
+            baseline_manifest = build_baseline_manifest(baseline_entries, framework_baseline_version)
+            partition_counts = {
+                DERIVED_PARTITION: sum(
+                    1 for e in blocks_manifest if e["partition"] == DERIVED_PARTITION
+                ),
+                FRAMEWORK_BASELINE_PARTITION: len(baseline_entries),
+            }
+            zf.writestr(
+                "baseline_manifest.json",
+                json.dumps(baseline_manifest, ensure_ascii=False, indent=2).encode("utf-8"),
+            )
 
             verification_report = {
                 "ok": len(errors) == 0 and single_writer["ok"] and compat_integrity["ok"],
@@ -168,6 +217,9 @@ class AfGreenfieldDelivery(DeliveryPort):
                 "block_count": len(blocks_manifest),
                 "blocks": blocks_manifest,
                 "verification": verification_report,
+                "framework_baseline_version": framework_baseline_version,
+                "baseline_entry_count": len(baseline_entries),
+                "partition_counts": partition_counts,
             }
             zf.writestr(
                 "manifest.json",
@@ -187,4 +239,10 @@ class AfGreenfieldDelivery(DeliveryPort):
             "zip_sha256": sha256_prefixed(zip_bytes.hex()),
             "zip_size_bytes": len(zip_bytes),
             "zip_bytes": zip_bytes,
+            # --- F6 派生层追加字段（向后兼容，既有字段值一律不变）---
+            "framework_baseline_version": framework_baseline_version,
+            "baseline_manifest": baseline_manifest,
+            "baseline_entry_count": len(baseline_entries),
+            "source_id_map": {e["source_id"]: e["partitioned_path"] for e in blocks_manifest},
+            "partition_counts": partition_counts,
         }

@@ -3,8 +3,16 @@
 编排 docs/greenfield/02-architecture.md §9 的 P2-4（补 SimaticML XML——OB 与
 文件夹不能由 SCL 外部源生成，BR-3）、P2-5（四层静态门禁）、P2-6（PCEC 事务
 与基线 fail-closed）与 P2-7/P2-8 的自动导入编译（新建 TIA 项目 → 导入 →
-编译 → 结构化结果回传）。Openness 不可用或 TIA 被占用时**优雅降级**：返回
-``tia_unavailable`` + 人工导入指引，ZIP 交付不受影响。
+编译 → 结构化结果回传）。Openness 不可用或 TIA 被占用时**显式失败**
+（``GF_TIA_UNAVAILABLE`` / ``GF_TIA_EXEC_ERROR`` + ``ok=false`` + 非 HTTP 200），
+**禁止**静默降级、禁止返回 200 成功；人工导入指引随错误体回传。
+
+**P0-A 编译判定口径（本批次）**：``CompileDiagnostics`` 结构化诊断，
+``compile_ok = (error_count == 0 and static_gate_passed)``；warning 单列、
+**禁止并入成功**；四层静态门禁任一拦截即不算通过；``tia_unavailable``
+（TIA 不可用）与 ``pending_real_machine``（真机未跑）显式区分，二者均不
+视为通过。本批次为离线可推进部分，真机导入编译未执行，一律标
+``pending_real_machine``，禁止以离线单测宣称 L2 通过或「编译零错误」。
 
 **sanctioned 边界（§9.2 / R1 裁定）**：本模块刻意不叫 ``greenfield_*``，
 是 ``tests/unit/test_greenfield_legacy_guard.py`` 白名单里唯一允许 import
@@ -26,6 +34,7 @@ import re
 import shutil
 import time
 import zipfile
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape
@@ -69,6 +78,256 @@ _MANUAL_GUIDANCE_TEMPLATE = (
     "6. 编译 PLC 软件，零错误即验收通过（AC-P2-3），把 compile_receipt 回填"
     "给 change_id={change_id} 的事务。"
 )
+
+
+# --------------------------------------------- 结构化编译诊断（P0-A / UC-02）
+
+#: 编译诊断的三种来源状态：真机已编译 / TIA 不可用 / 真机未跑（离线）。
+COMPILE_STATUS_COMPILED = "compiled"
+COMPILE_STATUS_TIA_UNAVAILABLE = "tia_unavailable"
+COMPILE_STATUS_PENDING_REAL_MACHINE = "pending_real_machine"
+
+#: TIA 不可用 / 执行中断：显式失败错误码。由网关 ``_fail`` 产出 ``ok=false``
+#: + 非 200 状态码（收口阶段 ``_error_status`` 显式映射为 HTTP 503）。
+TIA_UNAVAILABLE_ERROR_CODE = "GF_TIA_UNAVAILABLE"
+TIA_EXEC_ERROR_CODE = "GF_TIA_EXEC_ERROR"
+
+#: 本批次离线口径：L2 相关验收项全部挂起，M4 发布门禁保持未通过。
+L2_STATUS_PENDING = "pending_real_machine"
+
+
+@dataclass
+class CompileDiagnostics:
+    """结构化编译诊断（P0-A / UC-02 / G1 L2 证据物）。
+
+    字段覆盖 EvidenceBundle 要求：error 数 / warning 单列清单 / 块清单 /
+    耗时 / TIA 版本 / 项目路径 / 静态门禁结论 / 最终判定。``warnings`` 只作
+    清单留痕，**绝不参与** ``compile_ok``；``tia_unavailable`` 与
+    ``pending_real_machine`` 显式区分，二者都不是一次真机编译结论。
+    """
+
+    error_count: int
+    warnings: list[str] = field(default_factory=list)
+    blocks: list[str] = field(default_factory=list)
+    elapsed_ms: float = 0.0
+    tia_version: str = ""
+    project_path: str = ""
+    static_gate_passed: bool = False
+    compile_ok: bool = False
+    status: str = COMPILE_STATUS_COMPILED
+    tia_unavailable: bool = False
+    pending_real_machine: bool = False
+    xml_package_unverified: bool = True
+    reason: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        """可复现报告数据（纯 JSON 类型），供 EvidenceBundle / 错误体归档。"""
+        return asdict(self)
+
+
+def evaluate_compile(
+    *,
+    error_count: int,
+    static_gate_passed: bool,
+    warnings: list[str] | None = None,
+    blocks: list[str] | None = None,
+    elapsed_ms: float = 0.0,
+    tia_version: str = "",
+    project_path: str = "",
+    status: str = COMPILE_STATUS_COMPILED,
+    reason: str = "",
+    xml_package_unverified: bool = True,
+) -> CompileDiagnostics:
+    """P0-A 唯一判定口径（纯函数，单测直接调用，不连真机）。
+
+    ``compile_ok = (error_count == 0 and static_gate_passed)``；warning 单列、
+    禁止并入成功；四层静态门禁任一拦截即 False；``tia_unavailable`` /
+    ``pending_real_machine`` 不是一次真机编译结论，一律 False（RK4 / N9）。
+    """
+    tia_unavailable = status == COMPILE_STATUS_TIA_UNAVAILABLE
+    pending = status == COMPILE_STATUS_PENDING_REAL_MACHINE
+
+    # P0-A 唯一判定式：error_count == 0 且四层静态门禁无拦截。
+    compile_ok = (error_count == 0 and static_gate_passed)
+    # 真机未跑 / TIA 不可用不得被计为编译通过（禁止静默降级）。
+    if tia_unavailable or pending or status != COMPILE_STATUS_COMPILED:
+        compile_ok = False
+
+    return CompileDiagnostics(
+        error_count=error_count,
+        warnings=list(warnings or []),
+        blocks=list(blocks or []),
+        elapsed_ms=elapsed_ms,
+        tia_version=tia_version,
+        project_path=project_path,
+        static_gate_passed=static_gate_passed,
+        compile_ok=compile_ok,
+        status=status,
+        tia_unavailable=tia_unavailable,
+        pending_real_machine=pending,
+        xml_package_unverified=xml_package_unverified,
+        reason=reason,
+    )
+
+
+def _as_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _as_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _warning_list(inner: dict[str, Any]) -> list[str]:
+    """warning 单列清单：只收 warning 文本，绝不把 error / state 混进来。"""
+    raw = inner.get("warnings")
+    if raw is None:
+        raw = inner.get("warningMessages") or inner.get("warningList") or []
+    items: list[str] = []
+    if isinstance(raw, (list, tuple)):
+        for item in raw:
+            if isinstance(item, dict):
+                items.append(str(item.get("message") or item.get("text") or item))
+            else:
+                items.append(str(item))
+    elif isinstance(raw, str) and raw:
+        items.append(raw)
+    return items
+
+
+def build_compile_diagnostics(
+    compiled: dict[str, Any] | None,
+    *,
+    static_gate_passed: bool,
+    tia_version: str,
+    project_path: str,
+    blocks: list[str] | None = None,
+    elapsed_ms: float = 0.0,
+) -> CompileDiagnostics:
+    """把 Openness CLI ``compile-plc`` 原始结果解析为可复现的结构化诊断。
+
+    只读取字段、不改 CLI 语义；解析不出 error 数时按 fail-closed 记非零，
+    **绝不**因 ``state`` 含 ``warning`` / ``Success`` 就把编译判为成功（RK4）。
+    """
+    compiled = compiled if isinstance(compiled, dict) else {}
+    inner = compiled.get("compile") if isinstance(compiled.get("compile"), dict) else {}
+    state = str(inner.get("state") or compiled.get("state") or "")
+
+    raw_errors = inner.get("errorCount", inner.get("error_count"))
+    if raw_errors is None:
+        raw_errors = inner.get("errors")
+    if isinstance(raw_errors, (list, tuple)):
+        error_count = len(raw_errors)
+    elif raw_errors is not None:
+        error_count = _as_int(raw_errors, 0)
+    else:
+        # 无显式计数：ok=false 或 state 含 error/fail 时 fail-closed 记非零。
+        ok_flag = bool(compiled.get("ok")) or bool(inner.get("ok"))
+        error_count = 0 if ok_flag and "error" not in state.lower() and "fail" not in state.lower() else 1
+
+    warnings = _warning_list(inner)
+    if not warnings and "warnings" in compiled:
+        warnings = _warning_list({"warnings": compiled.get("warnings")})
+
+    if elapsed_ms <= 0:
+        elapsed_ms = _as_float(
+            inner.get("elapsedMs", inner.get("compileMs", compiled.get("elapsedMs"))), 0.0
+        )
+
+    return evaluate_compile(
+        error_count=error_count,
+        static_gate_passed=static_gate_passed,
+        warnings=warnings,
+        blocks=blocks,
+        elapsed_ms=elapsed_ms,
+        tia_version=tia_version,
+        project_path=project_path,
+        status=COMPILE_STATUS_COMPILED,
+    )
+
+
+def unavailable_diagnostics(
+    *,
+    reason: str,
+    static_gate_passed: bool,
+    tia_version: str,
+    project_path: str,
+    blocks: list[str] | None = None,
+) -> CompileDiagnostics:
+    """TIA / Openness 不可用：显式失败诊断（不是「真机未跑」，更不是成功）。"""
+    return evaluate_compile(
+        error_count=0,
+        static_gate_passed=static_gate_passed,
+        blocks=blocks,
+        tia_version=tia_version,
+        project_path=project_path,
+        status=COMPILE_STATUS_TIA_UNAVAILABLE,
+        reason=reason,
+    )
+
+
+def pending_real_machine_diagnostics(
+    *,
+    static_gate_passed: bool,
+    tia_version: str,
+    project_path: str,
+    blocks: list[str] | None = None,
+) -> CompileDiagnostics:
+    """``package`` 模式 / 离线批次：真机未跑，显式标 ``pending_real_machine``。
+
+    与 ``tia_unavailable``（探测到 TIA 不可用而失败）严格区分；本函数只表示
+    「本次未尝试真机编译」，不构成 L2 证据。
+    """
+    return evaluate_compile(
+        error_count=0,
+        static_gate_passed=static_gate_passed,
+        blocks=blocks,
+        tia_version=tia_version,
+        project_path=project_path,
+        status=COMPILE_STATUS_PENDING_REAL_MACHINE,
+        reason="本批次为离线可推进部分，真机导入编译未执行（WP-01 K1 探针 / P0-B 属真机项，不在本批次）",
+    )
+
+
+def _diagnostics_from_run(
+    run: dict[str, Any],
+    *,
+    gates: dict[str, Any],
+    delivery: dict[str, Any],
+    tia_version: str,
+) -> CompileDiagnostics:
+    """auto 通道结果归一：块清单以 ``delivery`` 为权威、门禁结论以 ``gates`` 为准，
+    判定式统一走 :func:`evaluate_compile`，禁止 mock / 旧口径数据绕过。
+    """
+    blocks = [str(entry["name"]) for entry in delivery["blocks_manifest"]]
+    static_gate_passed = bool(gates.get("ok"))
+    raw = run.get("diagnostics")
+    if isinstance(raw, dict):
+        return evaluate_compile(
+            error_count=_as_int(raw.get("error_count"), 0),
+            static_gate_passed=static_gate_passed,
+            warnings=list(raw.get("warnings") or []),
+            blocks=blocks,
+            elapsed_ms=_as_float(raw.get("elapsed_ms"), 0.0),
+            tia_version=str(raw.get("tia_version") or tia_version),
+            project_path=str(raw.get("project_path") or run.get("project_path") or ""),
+            status=str(raw.get("status") or COMPILE_STATUS_COMPILED),
+            reason=str(raw.get("reason") or ""),
+        )
+    return build_compile_diagnostics(
+        run.get("compile"),
+        static_gate_passed=static_gate_passed,
+        tia_version=tia_version,
+        project_path=str(run.get("project_path") or ""),
+        blocks=blocks,
+        elapsed_ms=_as_float(run.get("elapsed_ms"), 0.0),
+    )
 
 
 # ---------------------------------------------------------------- XML 补充包
@@ -481,6 +740,11 @@ def _stage_package(
 
     manifest = {
         "xml_package_unverified": supplement["xml_package_unverified"],
+        "pending_real_machine": True,
+        "pending_reason": (
+            "本批次无真机导入验证（WP-01 K1 探针 / P0-B 属真机项，不在本批次）；"
+            "自产 OB XML 与 folders.json 的可导入性待 V19 真机确证"
+        ),
         "generated_obs": supplement["generated_obs"],
         "skipped_obs": supplement["skipped_obs"],
         "template_source": (
@@ -572,7 +836,9 @@ def _run_openness_import_compile(
 ) -> dict[str, Any]:
     """自动通道主体：新建 TIA 项目 → 导入 SCL/XML/标签表 → 编译 → 结构化回传。
 
-    任一步失败都返回 ``{"status": "tia_error", ...}``（不抛异常），由上层降级。
+    任一步失败都返回 ``{"status": "tia_error", ...}``（不抛异常），由上层
+    **显式失败**（抛 ``GF_TIA_EXEC_ERROR``），禁止静默降级为 200 成功。
+    编译步骤产出 :class:`CompileDiagnostics`（warning 单列、不并入成功）。
     """
     from agents.plc.tia.openness_cli import (
         compile_plc_via_openness_cli,
@@ -640,18 +906,38 @@ def _run_openness_import_compile(
             return {"status": "tia_error", "steps": steps, "compile": None, "project_path": project_path,
                     "error": "标签表 XML 导入失败"}
 
-    # 6. fail-closed 编译（结构化结果回传）
+    # 6. fail-closed 编译（P0-A：结构化诊断；warning 单列、禁止并入成功）
+    t0 = time.perf_counter()
     compiled = compile_plc_via_openness_cli(project_path, timeout_s=900)
+    elapsed_ms = (time.perf_counter() - t0) * 1000.0
     inner = compiled.get("compile") if isinstance(compiled.get("compile"), dict) else {}
     state = str(inner.get("state") or "")
-    compile_ok = bool(compiled.get("ok")) or "success" in state.lower() or "warning" in state.lower()
-    _record("compile-plc", compile_ok, state or str(compiled.get("error") or ""))
+    diagnostics = build_compile_diagnostics(
+        compiled,
+        static_gate_passed=True,  # 能进入编译说明四层静态门禁已 fail-closed 通过
+        tia_version=tia_version,
+        project_path=str(project_path),
+        blocks=sorted(supplement["ob_files"]),
+        elapsed_ms=elapsed_ms,
+    )
+    # 旧口径 ``or "warning" in state.lower()`` 会把含 warning 的编译算成功，
+    # 本批次删除：唯一判定来自 CompileDiagnostics（error 数 + 静态门禁）。
+    compile_ok = diagnostics.compile_ok
+    _record(
+        "compile-plc",
+        compile_ok,
+        (state or str(compiled.get("error") or ""))
+        + f" | error_count={diagnostics.error_count}, warnings={len(diagnostics.warnings)}, "
+        + f"elapsed_ms={elapsed_ms:.1f}",
+    )
     return {
         "status": "compile_ok" if compile_ok else "compile_failed",
         "steps": steps,
         "compile": compiled,
+        "diagnostics": diagnostics.to_dict(),
         "project_path": project_path,
         "tia_version": tia_version,
+        "elapsed_ms": elapsed_ms,
     }
 
 
@@ -676,7 +962,10 @@ def deliver_tia(session: GreenfieldSession, *, mode: str = "auto") -> dict[str, 
     """Greenfield 冻结规格 → AF 工程包 + XML 补充包 → 静态门禁 → PCEC 账本 →（可选）Openness 自动导入编译。
 
     流程对应 §9 P2-4..P2-8；副作用计数沿用 ``session.count("generations")``；
-    Openness 不可用 / TIA 占用 → 优雅降级（HTTP 仍 200，ZIP 交付不受影响）。
+    Openness 不可用 / TIA 占用 → **显式失败**（抛 ``GF_TIA_UNAVAILABLE`` /
+    ``GF_TIA_EXEC_ERROR``，由网关 ``_fail`` 产出 ``ok=false`` + 非 HTTP 200），
+    **禁止**静默降级、禁止返回 200 成功。``package`` 模式不触 Openness，产出
+    ``pending_real_machine`` 诊断；所有回执附 ``compile_diagnostics`` 供归档。
     """
     if mode not in MODES:
         raise GateLockedError(f"未知交付模式 {mode!r}，可选：{'/'.join(MODES)}", code="GF_TIA_MODE_INVALID")
@@ -711,6 +1000,7 @@ def deliver_tia(session: GreenfieldSession, *, mode: str = "auto") -> dict[str, 
             "ob_count": len(supplement["generated_obs"]),
             "skipped_ob_count": len(supplement["skipped_obs"]),
             "xml_package_unverified": supplement["xml_package_unverified"],
+            "pending_real_machine": True,
         },
     )
 
@@ -803,26 +1093,61 @@ def deliver_tia(session: GreenfieldSession, *, mode: str = "auto") -> dict[str, 
             details={"change_id": change_id, "package_dir": str(package_dir)},
         )
 
-    # f. P2-7/P2-8 Openness 自动导入编译（优雅降级）
+    # f. P2-7/P2-8 Openness 自动导入编译（TIA 不可用 → 显式失败，禁止 200 静默通过）
     openness: dict[str, Any] = {"attempted": False, "status": "skipped_package_mode"}
     guidance: str | None = None
+    tia_version = str(ir.project.tia_version or "V19")
+    block_names = [str(entry["name"]) for entry in delivery["blocks_manifest"]]
+    tia_project_path = str(package_dir / "tia_project")
+    diagnostics: CompileDiagnostics
     if mode == "auto":
         probe = _openness_probe()
         if not probe.get("available"):
+            # UC-03：显式非成功状态，禁止 HTTP 200 静默通过 / 静默降级。
+            diagnostics = unavailable_diagnostics(
+                reason=str(probe.get("reason") or "未知"),
+                static_gate_passed=bool(gates.get("ok")),
+                tia_version=tia_version,
+                project_path=tia_project_path,
+                blocks=block_names,
+            )
             openness = {
                 "attempted": True,
                 "status": "tia_unavailable",
                 "probe": probe,
+                "compile_diagnostics": diagnostics.to_dict(),
             }
-            guidance = _MANUAL_GUIDANCE_TEMPLATE.format(reason=probe.get("reason") or "未知", change_id=change_id)
+            guidance = _MANUAL_GUIDANCE_TEMPLATE.format(
+                reason=str(probe.get("reason") or "未知"), change_id=change_id
+            )
             change["events"].append(
-                {"ts": time.time(), "event": "tia_unavailable", "detail": probe.get("reason") or ""}
+                {
+                    "ts": time.time(),
+                    "event": "tia_unavailable",
+                    "detail": str(probe.get("reason") or ""),
+                    "compile_diagnostics": diagnostics.to_dict(),
+                }
             )
             pcec.put_change(change)
             _event(
                 session,
-                f"Openness 自动通道不可用，已降级为人工导入（事务 {change_id} 保持 approved 并标注）",
-                {"change_id": change_id, "status": "tia_unavailable", "reason": probe.get("reason")},
+                "Openness 自动通道不可用：显式失败（GF_TIA_UNAVAILABLE，非 HTTP 200）；"
+                "事务保持 approved 并标注 tia_unavailable，L2 未达成",
+                {"change_id": change_id, "status": "tia_unavailable", "reason": str(probe.get("reason") or "")},
+            )
+            raise GateLockedError(
+                "TIA / Openness 不可用，交付链显式失败："
+                + str(probe.get("reason") or "未知")
+                + "（error_code=GF_TIA_UNAVAILABLE；禁止静默降级或返回 200 成功）",
+                code=TIA_UNAVAILABLE_ERROR_CODE,
+                details={
+                    "change_id": change_id,
+                    "reason": str(probe.get("reason") or ""),
+                    "compile_diagnostics": diagnostics.to_dict(),
+                    "tia_unavailable": True,
+                    "pending_real_machine": False,
+                    "guidance": guidance,
+                },
             )
         else:
             run = _run_openness_import_compile(
@@ -831,9 +1156,12 @@ def deliver_tia(session: GreenfieldSession, *, mode: str = "auto") -> dict[str, 
                 workspace=package_dir.parent,
                 planned_text=str(gates.get("planned_text") or ""),
                 supplement=supplement,
-                tia_version=str(ir.project.tia_version or "V19"),
+                tia_version=tia_version,
             )
-            if run.get("status") == "compile_ok":
+            diagnostics = _diagnostics_from_run(
+                run, gates=gates, delivery=delivery, tia_version=tia_version
+            )
+            if run.get("status") == "compile_ok" and diagnostics.compile_ok:
                 change = pcec.transition(
                     change,
                     "applied",
@@ -841,17 +1169,26 @@ def deliver_tia(session: GreenfieldSession, *, mode: str = "auto") -> dict[str, 
                     verification=_merge_verification(
                         change,
                         {"v2_tia_compile": "pass"},
-                        {"compile_steps": [s["step"] for s in run.get("steps") or []]},
+                        {
+                            "compile_steps": [s["step"] for s in run.get("steps") or []],
+                            "compile_diagnostics": diagnostics.to_dict(),
+                        },
                     ),
                 )
                 pcec.put_change(change)
-                openness = {"attempted": True, "status": "compile_ok", **run}
+                openness = {
+                    **{k: v for k, v in run.items() if k != "diagnostics"},
+                    "attempted": True,
+                    "status": "compile_ok",
+                    "compile_diagnostics": diagnostics.to_dict(),
+                }
                 _event(
                     session,
-                    f"Openness 自动导入编译零错误，事务 {change_id} → applied",
+                    f"Openness 编译判定 compile_ok=true，事务 {change_id} → applied"
+                    "（真机结论以 G1 验收为准，离线 mock 不构成 L2 证据）",
                     {"change_id": change_id, "status": "compile_ok", "project_path": run.get("project_path")},
                 )
-            elif run.get("status") == "compile_failed":
+            elif run.get("status") == "compile_failed" or not diagnostics.compile_ok:
                 change = pcec.transition(
                     change,
                     "failed",
@@ -859,30 +1196,80 @@ def deliver_tia(session: GreenfieldSession, *, mode: str = "auto") -> dict[str, 
                     verification=_merge_verification(
                         change,
                         {"v2_tia_compile": "fail"},
-                        {"compile_steps": [s["step"] for s in run.get("steps") or []]},
+                        {
+                            "compile_steps": [s["step"] for s in run.get("steps") or []],
+                            "compile_diagnostics": diagnostics.to_dict(),
+                        },
                     ),
                 )
                 pcec.put_change(change)
-                openness = {"attempted": True, "status": "compile_failed", **run}
+                openness = {
+                    **{k: v for k, v in run.items() if k != "diagnostics"},
+                    "attempted": True,
+                    "status": "compile_failed",
+                    "compile_diagnostics": diagnostics.to_dict(),
+                }
                 _event(
                     session,
                     f"Openness 编译未过零错误口径，事务 {change_id} → failed（结构化诊断见回执）",
-                    {"change_id": change_id, "status": "compile_failed"},
+                    {"change_id": change_id, "status": "compile_failed", "error_count": diagnostics.error_count},
                 )
             else:
+                # 执行中断（未产出编译结论）同样是显式失败，禁止静默降级为 200。
+                diagnostics = unavailable_diagnostics(
+                    reason=str(run.get("error") or "Openness 执行中断"),
+                    static_gate_passed=bool(gates.get("ok")),
+                    tia_version=tia_version,
+                    project_path=str(run.get("project_path") or tia_project_path),
+                    blocks=block_names,
+                )
                 change["events"].append(
-                    {"ts": time.time(), "event": "tia_error", "detail": str(run.get("error") or "")[:400]}
+                    {
+                        "ts": time.time(),
+                        "event": "tia_error",
+                        "detail": str(run.get("error") or "")[:400],
+                        "compile_diagnostics": diagnostics.to_dict(),
+                    }
                 )
                 pcec.put_change(change)
-                openness = {"attempted": True, "status": "tia_error", **run}
-                guidance = _MANUAL_GUIDANCE_TEMPLATE.format(reason=str(run.get("error") or "执行中断"), change_id=change_id)
+                guidance = _MANUAL_GUIDANCE_TEMPLATE.format(
+                    reason=str(run.get("error") or "执行中断"), change_id=change_id
+                )
                 _event(
                     session,
-                    f"Openness 执行中断（{run.get('error') or '未知'}），已降级为人工导入；事务 {change_id} 保持 approved",
+                    f"Openness 执行中断（{run.get('error') or '未知'}）：显式失败 GF_TIA_EXEC_ERROR，事务 {change_id} 保持 approved",
                     {"change_id": change_id, "status": "tia_error"},
                 )
+                raise GateLockedError(
+                    "Openness 自动通道执行中断，交付链显式失败："
+                    + str(run.get("error") or "未知")
+                    + "（error_code=GF_TIA_EXEC_ERROR；禁止静默降级或返回 200 成功）",
+                    code=TIA_EXEC_ERROR_CODE,
+                    details={
+                        "change_id": change_id,
+                        "reason": str(run.get("error") or "未知"),
+                        "compile_diagnostics": diagnostics.to_dict(),
+                        "tia_unavailable": True,
+                        "pending_real_machine": False,
+                        "guidance": guidance,
+                    },
+                )
     else:
-        change["events"].append({"ts": time.time(), "event": "package_only"})
+        # package 模式：不触 Openness，真机未跑，显式 pending_real_machine。
+        diagnostics = pending_real_machine_diagnostics(
+            static_gate_passed=bool(gates.get("ok")),
+            tia_version=tia_version,
+            project_path=tia_project_path,
+            blocks=block_names,
+        )
+        openness = {
+            "attempted": False,
+            "status": "skipped_package_mode",
+            "compile_diagnostics": diagnostics.to_dict(),
+        }
+        change["events"].append(
+            {"ts": time.time(), "event": "package_only", "pending_real_machine": True}
+        )
         pcec.put_change(change)
 
     # g. 收尾：回执 + 最终 ZIP + 计数
@@ -892,6 +1279,8 @@ def deliver_tia(session: GreenfieldSession, *, mode: str = "auto") -> dict[str, 
         "compile_failed": "delivered_compile_failed",
         "skipped_package_mode": "package_only",
     }.get(status, status)
+    # ``ok`` 只表示交付编排完成（ApiResponse 信封语义），**绝不代表** L2 通过
+    # 或「编译零错误」；L2 状态由 compile_diagnostics.compile_ok 与 l2_status 独立表达（N9）。
     receipt = {
         "ok": True,
         "status": final_status,
@@ -902,7 +1291,15 @@ def deliver_tia(session: GreenfieldSession, *, mode: str = "auto") -> dict[str, 
         "spec_hash": spec.spec_hash,
         "gates": {k: v for k, v in gates.items() if k != "planned_text"},
         "openness": openness,
+        "compile_diagnostics": diagnostics.to_dict(),
         "xml_package_unverified": supplement["xml_package_unverified"],
+        "pending_real_machine": diagnostics.pending_real_machine,
+        "l2_status": L2_STATUS_PENDING,
+        "l2_note": (
+            "本批次为离线可推进部分（WP-01 P0-A/P0-C）：真机导入编译与 G1/L2 验收未执行；"
+            "compile_diagnostics 仅为离线/mock 口径验证，不构成 L2 证据；"
+            "AF 档位（P0-D）结论待 G0 真机实测后拍板，结论前映射层维持档位无关"
+        ),
         "generated_obs": supplement["generated_obs"],
         "skipped_obs": supplement["skipped_obs"],
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -923,4 +1320,9 @@ def deliver_tia(session: GreenfieldSession, *, mode: str = "auto") -> dict[str, 
         "zip_bytes": zip_bytes,
     }
     session.count("generations")
+    # 收口接线（J7）：把结构化编译诊断与只读 SCL 预览源回写到会话交付摘要，
+    # 供 /state.delivery_summary 与前端读取；无真实产物时 collect 返回 None（禁止虚构）。
+    delivery["compile_diagnostics"] = diagnostics.to_dict()
+    delivery["scl_sources"] = gf_service.collect_scl_sources(delivery)
+    result["scl_sources"] = delivery["scl_sources"]
     return result

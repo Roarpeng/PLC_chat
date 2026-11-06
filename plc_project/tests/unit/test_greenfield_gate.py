@@ -106,3 +106,78 @@ def test_views_and_export_available_before_confirm(tmp_path: Path) -> None:
     md = svc.export_first_mermaid(session)
     assert "flowchart" in md and "确认前禁止" in md
     assert all(value == 0 for value in session.counters.values())
+
+
+# ---------------------------------------------------------------------------
+# WP-03 / §3：确认硬门禁具体原因 + 差异清单未确认零副作用
+# ---------------------------------------------------------------------------
+
+def test_confirm_prerequisites_return_specific_reasons(tmp_path: Path) -> None:
+    """前置任一未满足返回具体原因（非笼统报错），并阻止确认，零副作用。"""
+    session = _ready("gate-prereq")
+    good = svc.check_confirm_prerequisites(session)
+    assert good["ok"] is True, good["reasons"]
+    assert good["checks"]["baseline_locked"] is True
+    assert good["checks"]["open_questions_cleared"] is True
+
+    session.topology_finalized = False
+    bad = svc.check_confirm_prerequisites(session)
+    assert bad["ok"] is False
+    assert bad["checks"]["topology_finalized"] is False
+    assert any("拓扑" in r for r in bad["reasons"]), bad["reasons"]
+    with pytest.raises(GateLockedError) as exc:
+        svc.confirm_and_freeze(session, explicit=True, base_dir=tmp_path)
+    assert "拓扑" in str(exc.value)  # 具体原因透传
+    assert not session.specs
+    assert all(v == 0 for v in session.counters.values())
+
+
+def test_confirm_diff_unconfirmed_keeps_zero_side_effects() -> None:
+    """④ /confirm-diff 在 confirmed != true 时零副作用计数器恒 0。"""
+    session = _ready("gate-diff")
+    result = svc.confirm_diff_action(session, {"diff_id": "D1", "confirmed": False})
+    assert result["confirmed"] is False
+    assert result["zero_side_effects"] is True
+    assert result["side_effect_counters"] == {
+        "ops": 0, "disk_writes": 0, "writebacks": 0, "generations": 0
+    }
+    assert session.diff_confirmed is False
+    assert all(v == 0 for v in session.counters.values())
+    # 显式确认本身也不产生任何副作用计数
+    ok = svc.confirm_diff_action(session, {"diff_id": "D1", "confirmed": True})
+    assert ok["write_allowed"] is True
+    assert all(v == 0 for v in session.counters.values())
+
+
+def test_new_endpoints_produce_zero_side_effects_before_confirm() -> None:
+    """④ HTTP 层：/patch /diff /confirm-diff 未确认时 counters 恒 0、阶段非 FROZEN。"""
+    from fastapi.testclient import TestClient
+
+    from gateway.app.main import app
+    from gateway.app.services.plc.greenfield_session import registry
+
+    registry.reset()
+    client = TestClient(app)
+    prefix = "/api/v1/plc/canvas/greenfield"
+    sid = client.get(f"{prefix}/state?project_id=PRJ_Z").json()["data"]["session_id"]
+    assert client.post(f"{prefix}/draft", json={"session_id": sid, "prompt": ""}).status_code == 200
+    r_patch = client.post(
+        f"{prefix}/patch",
+        json={"session_id": sid, "project_id": "PRJ_Z",
+              "ops": [{"op": "add_unit", "node": {"name": "S2"}}]},
+    )
+    assert r_patch.status_code == 200
+    assert r_patch.json()["data"]["ok"] is True
+    assert client.post(
+        f"{prefix}/diff", json={"session_id": sid, "from_version": 1, "to_version": 2}
+    ).status_code == 200
+    r_cd = client.post(
+        f"{prefix}/confirm-diff",
+        json={"session_id": sid, "diff_id": "D1", "confirmed": False},
+    )
+    assert r_cd.status_code == 200
+    assert r_cd.json()["data"]["zero_side_effects"] is True
+    state = client.get(f"{prefix}/state?session_id={sid}").json()["data"]
+    assert state["stage"] != "FROZEN"
+    assert all(v == 0 for v in state["counters"].values())
+    assert not state["specs"]

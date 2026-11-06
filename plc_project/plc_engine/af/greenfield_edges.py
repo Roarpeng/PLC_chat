@@ -19,7 +19,12 @@ from typing import Any
 
 
 class EdgeKind(str, Enum):
-    """12 类合法边规则对应的 13 个具体边类型（§3.7.1）。"""
+    """§3.7.1 的 12 类合法边规则（L1–L12）对应的具体边类型。
+
+    WP-07 节点编辑（D6）追加 ``E_HW_MOUNT``：逻辑硬件占位节点（``HW_NODE``）
+    与业务节点之间的挂载边，用于「用户主动选择拓扑」而非仅靠契约反推。
+    该具体类型不属于 L1–L12 建议边分组，故 ``LEGAL_EDGE_GROUPS`` 仍为 12 组。
+    """
 
     E_HIER_UNIT_EM = "E_HIER_UNIT_EM"
     E_HIER_EM_CM = "E_HIER_EM_CM"
@@ -34,6 +39,7 @@ class EdgeKind(str, Enum):
     E_BRANCH_ALT_OPT = "E_BRANCH_ALT_OPT"
     E_PACKML_TRANSITION = "E_PACKML_TRANSITION"
     E_MODE_SWITCH = "E_MODE_SWITCH"
+    E_HW_MOUNT = "E_HW_MOUNT"
 
 
 class NodeKind(str, Enum):
@@ -53,6 +59,7 @@ class NodeKind(str, Enum):
     STEP = "STEP"
     INTERLOCK = "INTERLOCK"
     IO_BINDING = "IO_BINDING"
+    HW_NODE = "HW_NODE"
     UNKNOWN = "UNKNOWN"
 
 
@@ -207,6 +214,15 @@ ALLOWED_EDGES: dict[str, EdgeRule] = {
         views=(VIEW_STATE,),
         requires=("mode_switch_only",),
         note="仅自动模式 ↔ 手动模式互切，不得连到状态节点",
+    ),
+    # WP-07 / D4：逻辑拓扑占位挂载边。真值在 IR.hw_nodes / cm_mounts，
+    # 该边只描述「业务节点 → 逻辑硬件占位」关系，不携带型号/槽位/物理地址。
+    EdgeKind.E_HW_MOUNT.value: EdgeRule(
+        src_kinds=_kinds("EM", "CM"),
+        dst_kinds=_kinds("HW_NODE"),
+        views=(VIEW_FLOW,),
+        requires=("logical_mount",),
+        note="逻辑占位挂载：用户主动选择的拓扑关系，不含物理组态",
     ),
 }
 

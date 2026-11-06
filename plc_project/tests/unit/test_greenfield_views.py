@@ -173,5 +173,45 @@ def test_default_visible_states_are_subset_of_packml_17() -> None:
     assert "Suspending" not in DEFAULT_VISIBLE_STATES  # 保留在 IR，不上首版图
 
 
+# ---------------------------------------------------------------------------
+# WP-03 / WP-07 / D6：节点编辑 op 后 validate_ir 通过且四视图重投影同步
+# ---------------------------------------------------------------------------
+
+def test_node_edit_ops_keep_validate_ir_and_four_views_in_sync() -> None:
+    """⑤ 增删改 / 改名 / 改标签 / 改层级节点后 validate_ir 通过、四视图同步。"""
+    from gateway.app.services.plc import greenfield_service as svc
+    from gateway.app.services.plc.greenfield_session import GreenfieldSession
+    from plc_engine.af.greenfield_ir import CanvasPatch, IRPatch
+    from plc_engine.af.greenfield_validator import apply_canvas_patch
+
+    session = GreenfieldSession()
+    svc.draft_from_prompt(session, "")
+
+    batch = CanvasPatch(ops=[
+        IRPatch(op="add_unit", node={"name": "Station2", "business_label": "二号工位"}),
+        IRPatch(op="add_em", node={"unit_id": "U2", "name": "Feeding2", "business_label": "二号上料"}),
+        IRPatch(op="add_cm", node={"em_id": "U2EM1", "business_label": "二号输送带"}),
+    ])
+    result = apply_canvas_patch(session, batch)
+    assert result.ok is True, result.reason
+    assert validate_ir(session.ir).ok
+    assert_roundtrip(session.ir, session.views)  # 四视图同步
+    flow_nodes = set(session.views.flow.node_ids)
+    assert {"U2", "U2EM1", "U2EM1_CM1"} <= flow_nodes
+
+    batch2 = CanvasPatch(ops=[
+        IRPatch(op="rename_node", node_id="U2", name="StationTwo"),
+        IRPatch(op="relabel_node", node_id="U2EM1", label="二号工序(改)"),
+        IRPatch(op="reparent_node", node_id="U2EM1", parent_id="U1"),
+        IRPatch(op="remove_node", node_id="U2EM1_CM1"),
+    ])
+    result2 = apply_canvas_patch(session, batch2)
+    assert result2.ok is True, result2.reason
+    assert validate_ir(session.ir).ok
+    assert_roundtrip(session.ir, session.views)
+    assert all(c.id != "U2EM1_CM1" for c in session.ir.cms)
+    assert len(session.change_events) == 7, "每个 op 均入账变更事件"
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

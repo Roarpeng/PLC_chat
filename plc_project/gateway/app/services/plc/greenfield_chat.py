@@ -27,10 +27,11 @@ from gateway.app.services.plc.llm_explain import (
 from plc_engine.af.greenfield_ir import (
     IR_PATCH_OPS,
     IRPatch,
+    CanvasPatch,
     GreenfieldIR,
 )
 from plc_engine.af.greenfield_ports import GreenfieldError, GreenfieldStage
-from plc_engine.af.greenfield_validator import apply_patch, validate_ir
+from plc_engine.af.greenfield_validator import apply_canvas_patch, validate_ir
 from plc_engine.af.greenfield_views import assert_roundtrip, project_views
 
 #: 单轮最多 patch 数（防 LLM 输出风暴）。
@@ -274,17 +275,9 @@ def _parse_and_normalize(
     return (intent, reply, patches), ""
 
 
-def _apply_patches_atomically(
-    ir: GreenfieldIR, patches: list[dict[str, Any]]
-) -> tuple[bool, Any, GreenfieldIR | None]:
-    """候选副本上逐条应用；任一违规整批放弃（对会话 IR 而言原子）。"""
-    candidate = GreenfieldIR.from_dict(ir.to_dict())
-    report = None
-    for patch_data in patches:
-        report = apply_patch(candidate, IRPatch.from_dict(patch_data))
-        if not report.ok:
-            return False, report, None
-    return True, report, candidate
+# 收口接线（J6 / 契约 §2.2）：增量修改统一走 apply_canvas_patch，
+# 不再自行复制候选副本、也不再直接赋值 session.ir。原子拒绝、四视图重投影、
+# 变更事件入账全部由该统一入口裁定。
 
 
 def _patch_summary(patch: dict[str, Any]) -> str:
@@ -426,30 +419,28 @@ def chat_turn(session: Any, message: str) -> dict[str, Any]:
             )
             return {"state": svc.state_payload(session), "reply": msg["text"], "message": msg}
 
-        # 分支三：增量修改 —— 原子批量应用
-        ok, report, candidate = _apply_patches_atomically(session.ir, patches)
-        if ok and candidate is not None:
-            session.ir = candidate
-            session.report = report
-            session.views = project_views(candidate)
-            if session.stage is GreenfieldStage.LINKABLE:
-                session.transition_stage(GreenfieldStage.VALIDATING)
+        # 分支三：增量修改 —— 收敛到契约 §2.2 统一受控入口 apply_canvas_patch。
+        # LLM 自纠循环里每次尝试都是一次原子试跑：失败不提交、IR 字节不变；
+        # 成功则由统一入口完成提交、重投影、变更事件入账与阶段推进。
+        result = apply_canvas_patch(
+            session,
+            CanvasPatch(ops=[IRPatch.from_dict(p) for p in patches]),
+            advance_stage=True,
+        )
+        if result.ok:
             applied = "；".join(_patch_summary(p) for p in patches)
-            verdict = (
-                "（全部校验通过）"
-                if report.ok
-                else f"（注意：校验存在 {len(report.violations)} 项待处理问题）"
-            )
+            report_ok = bool(session.report.ok) if session.report is not None else True
+            verdict = "（全部校验通过）" if report_ok else "（注意：校验存在待处理问题）"
             msg = session.add_message(
                 "assistant",
                 "edit",
                 (reply or "已按你的要求修改规格。") + f"\n已应用：{applied}{verdict}",
-                {"applied": True, "patches": patches, "report_ok": report.ok},
+                {"applied": True, "patches": patches, "report_ok": report_ok},
             )
             return {"state": svc.state_payload(session), "reply": msg["text"], "message": msg}
 
         # 校验拒绝 → 违规明细反馈 LLM 自纠重试
-        last_violations = [v.to_dict() for v in report.violations[:8]]
+        last_violations = list(result.violations)[:8]
         feedback = (
             "上次的 patches 被规格白名单整批拒绝，IR 未变动。违规明细："
             + json.dumps(last_violations, ensure_ascii=False)

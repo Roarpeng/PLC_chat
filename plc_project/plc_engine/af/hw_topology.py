@@ -1,4 +1,12 @@
-"""Greenfield 物理硬件拓扑推导与内外部变量目录聚合器（P2）。
+"""Greenfield 硬件拓扑：契约反推展示层 + 逻辑占位真值 + 变量目录聚合器（P2 / D4）。
+
+WP-03 口径：本模块提供**两条**路径，职责严格分离：
+- 反推展示层 ``derive_hardware_topology()``：由冻结契约派生只读物理拓扑与变量
+  目录（保留既有 HW_* id 与计数，向后兼容，不进 spec_hash）；
+- 逻辑占位真值 ``make_logical_node()`` / ``normalize_logical_node()`` /
+  ``ir_logical_topology()``：用户主动选择的**逻辑**拓扑，写入 ``GreenfieldIR``
+  的 hw_nodes / hw_links / cm_mounts / var_bindings，去型号 / 槽位 / 物理地址，
+  进 spec_hash、可确认、可仅凭 specs/vN.json 重建画布。
 
 职责：
 1. 从 ``CompatContract``（IO 表 + 标准访问 DB 块）与 ``GreenfieldIR`` 自动推导物理硬件拓扑：
@@ -22,9 +30,123 @@ BIT_IO_RE = re.compile(r"^%([IQ])(\d+)\.(\d+)$")
 WORD_IO_RE = re.compile(r"^%([IQ])([BWD])(\d+)$")
 
 
+# ---------------------------------------------------------------------------
+# D4 逻辑占位拓扑（WP-03）：拓扑真值在 GreenfieldIR.hw_nodes，纯逻辑、去物理化
+# ---------------------------------------------------------------------------
+# 设计口径：本文件上半部的 derive_hardware_topology() 是「由冻结契约反推」的
+# **展示层派生**（保留 HW_CPU / HW_DI_* / HW_DO_* 等既有 id 与变量目录计数，供
+# 前端只读展示与既有链路向后兼容）。真正进入 spec_hash、可确认、可重建画布
+# 的「逻辑拓扑」是 IR.hw_nodes / hw_links / cm_mounts / var_bindings —— 由用户
+# 主动选择，不含型号 / 槽位 / 物理地址（物理组态交由 TIA 补全，N8）。
+
+#: 用户可主动选择的逻辑硬件占位类型（Q6 业务语言，无 AF / 型号 / 物理地址）。
+LOGICAL_HW_KINDS: tuple[str, ...] = (
+    "LOGICAL_PLC",       # 控制器逻辑占位
+    "LOGICAL_IO_GROUP",  # IO 信号组占位
+    "LOGICAL_ROBOT",     # 机器人 / 运动设备占位
+    "LOGICAL_HOST",      # 上位机 / 通信伙伴占位
+    "LOGICAL_PANEL",     # 面板 / 交互终端占位
+    "LOGICAL_SAFETY",    # 安全回路占位
+    "LOGICAL_GENERIC",   # 通用逻辑占位
+)
+
+#: 每类逻辑占位的默认展示标签。
+LOGICAL_KIND_LABELS: dict[str, str] = {
+    "LOGICAL_PLC": "控制器逻辑占位",
+    "LOGICAL_IO_GROUP": "信号组逻辑占位",
+    "LOGICAL_ROBOT": "运动设备逻辑占位",
+    "LOGICAL_HOST": "上位机逻辑占位",
+    "LOGICAL_PANEL": "交互终端逻辑占位",
+    "LOGICAL_SAFETY": "安全回路逻辑占位",
+    "LOGICAL_GENERIC": "通用逻辑占位",
+}
+
+#: 逻辑占位节点 id 前缀（仅在调用方未提供 id 时使用，避免与反推层 HW_* 冲突）。
+LOGICAL_NODE_ID_PREFIX = "LHW_"
+
+#: 明确禁止进入 IR 逻辑占位的物理字段（D4 去型号 / 槽位 / 地址）。
+PHYSICAL_HW_FIELDS: frozenset[str] = frozenset(
+    {"slot", "address_range", "model", "order_no", "rack", "module_type", "firmware"}
+)
+
+
+def make_logical_node(
+    node_id: str,
+    kind: str,
+    label: str = "",
+    *,
+    role: str = "",
+    note: str = "",
+) -> dict[str, Any]:
+    """构造一个纯逻辑占位节点（不含任何型号 / 槽位 / 物理地址字段）。"""
+    resolved_kind = kind if kind in LOGICAL_HW_KINDS else "LOGICAL_GENERIC"
+    nid = str(node_id or "").strip()
+    return {
+        "id": nid,
+        "kind": resolved_kind,
+        "label": str(label or LOGICAL_KIND_LABELS.get(resolved_kind, resolved_kind) or nid),
+        "logical_role": str(role or ""),
+        "note": str(note or ""),
+        "source": "user_selected",
+    }
+
+
+def normalize_logical_node(raw: dict[str, Any]) -> dict[str, Any]:
+    """把外部输入（可能含旧物理字段）归一为逻辑占位，剥离物理字段。
+
+    保留 ``id`` / ``kind`` / ``label`` 以兼容展示层反推合并（extra_nodes）；
+    显式剔除 ``slot`` / ``address_range`` / 型号等物理字段，并标注来源为用户主动选择。
+    """
+    node_id = str(raw.get("id") or "").strip()
+    kind = str(raw.get("kind") or "LOGICAL_GENERIC")
+    label = str(raw.get("label") or "")
+    node = make_logical_node(node_id, kind if kind in LOGICAL_HW_KINDS else "LOGICAL_GENERIC", label)
+    # 旧物理 kind（HMI_PANEL / PLC_CPU / ...）保留在 logical_role，供展示层识别，
+    # 但绝不把物理字段写回 IR。
+    if kind not in LOGICAL_HW_KINDS:
+        node["logical_role"] = kind
+    if raw.get("role"):
+        node["logical_role"] = str(raw["role"])
+    if raw.get("note"):
+        node["note"] = str(raw["note"])
+    return node
+
+
+def next_logical_node_id(ir: GreenfieldIR | None) -> str:
+    """基于 IR.hw_nodes 单调递增生成 ``LHW_N``（确定性）。"""
+    used = {str(n.get("id") or "") for n in (ir.hw_nodes if ir is not None else [])}
+    idx = 1
+    while f"{LOGICAL_NODE_ID_PREFIX}{idx}" in used:
+        idx += 1
+    return f"{LOGICAL_NODE_ID_PREFIX}{idx}"
+
+
+def logical_selection_catalog() -> dict[str, Any]:
+    """用户主动选择面板的数据源：可选逻辑占位类型 + 去物理化声明。"""
+    return {
+        "kinds": [
+            {"kind": k, "label": LOGICAL_KIND_LABELS[k]} for k in LOGICAL_HW_KINDS
+        ],
+        "physical_fields_forbidden": sorted(PHYSICAL_HW_FIELDS),
+        "note": "逻辑拓扑由用户主动选择并写入 IR；具体物理组态在 TIA 侧补全，本产品不虚构地址/型号/槽位",
+    }
+
+
+def ir_logical_topology(ir: GreenfieldIR | None) -> dict[str, Any]:
+    """从 IR 抽取逻辑拓扑真值（供 specs/vN.json 重建与展示层合并）。"""
+    if ir is None:
+        return {"hw_nodes": [], "hw_links": [], "cm_mounts": {}, "var_bindings": []}
+    return {
+        "hw_nodes": [dict(n) for n in ir.hw_nodes],
+        "hw_links": [dict(l) for l in ir.hw_links],
+        "cm_mounts": dict(ir.cm_mounts),
+        "var_bindings": [dict(b) for b in ir.var_bindings],
+    }
+
+
 @dataclass
 class GFHwNode:
-    """物理硬件拓扑节点。"""
+    """物理硬件拓扑节点（仅用于契约反推的展示层；逻辑拓扑真值见 IR.hw_nodes）。"""
 
     id: str
     kind: str  # PLC_CPU | DI_MODULE | DO_MODULE | AI_MODULE | AO_MODULE | ROBOT_KUKA | HOST_PC | HMI_PANEL

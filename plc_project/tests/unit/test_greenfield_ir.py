@@ -287,5 +287,89 @@ def test_no_greenfield_delivery_file_created() -> None:
     assert not list((PROJECT_ROOT / "plc_engine" / "af").glob("greenfield_*.xml"))
 
 
+# ---------------------------------------------------------------------------
+# WP-03 / UC-06 / UC-07：spec_hash 全域确定性与 specs/vN.json 独立重建
+# ---------------------------------------------------------------------------
+
+def test_spec_hash_is_deterministic_and_covers_full_domain() -> None:
+    """① 同一画布状态两次序列化 spec_hash 一致；拓扑/节点/边/步序/资料均进哈希。"""
+    from plc_engine.af.greenfield_spec import freeze
+    from plc_engine.af.greenfield_views import project_views
+
+    ir = build_sample_ir()
+    ir.project_id = "PRJ_HASH"
+    ir.hw_nodes = [{"id": "LHW_1", "kind": "LOGICAL_PLC", "label": "控制器逻辑占位"}]
+    ir.hw_links = [{"id": "L1", "src_hw_id": "LHW_1", "dst_hw_id": "LHW_2"}]
+    ir.cm_mounts = {"U1EM1_CM1": "LHW_1"}
+    ir.var_bindings = [{"var_key": "IO:X", "target_id": "U1EM1_S10"}]
+    baseline = ir.spec_hash()
+
+    a = GreenfieldIR.from_dict(ir.to_dict())
+    b = GreenfieldIR.from_dict(a.to_dict())
+    assert a.spec_hash() == b.spec_hash() == baseline
+    assert a.canonical_json() == b.canonical_json()
+
+    # 同一份画布两次 freeze（含视图/契约投影）哈希一致
+    views = project_views(ir)
+    s1 = freeze(ir, views, None, spec_version=1, project_id="PRJ_HASH",
+                frozen_at="2026-01-01T00:00:00Z")
+    s2 = freeze(ir, views, None, spec_version=1, project_id="PRJ_HASH",
+                frozen_at="2026-01-01T00:00:00Z")
+    assert s1.spec_hash == s2.spec_hash
+
+    # 任一类域变化都改变全域哈希（拓扑 / 节点 / 步序 / 项目标识）
+    def _add_hw(x: GreenfieldIR) -> None:
+        x.hw_nodes.append({"id": "LHW_9", "kind": "LOGICAL_GENERIC", "label": "x"})
+
+    def _edit_cm(x: GreenfieldIR) -> None:
+        x.cms[0].parameters["timeout_ms"] = 9999
+
+    def _edit_step(x: GreenfieldIR) -> None:
+        x.steps[0].actions.append("// new")
+
+    def _edit_project(x: GreenfieldIR) -> None:
+        x.project_id = "OTHER"
+
+    for mutate in (_add_hw, _edit_cm, _edit_step, _edit_project):
+        changed = GreenfieldIR.from_dict(ir.to_dict())
+        mutate(changed)
+        assert changed.spec_hash() != baseline
+
+
+def test_specs_vn_json_rebuilds_canvas_including_topology(tmp_path) -> None:
+    """③ 仅凭 specs/vN.json 完整重建画布（含逻辑拓扑），不依赖会话内存态。"""
+    from plc_engine.af.greenfield_spec import freeze, write_spec, load_spec
+    from plc_engine.af.greenfield_views import project_views, assert_roundtrip
+
+    ir = build_sample_ir()
+    ir.project_id = "PRJ_REBUILD"
+    ir.hw_nodes = [
+        {"id": "LHW_1", "kind": "LOGICAL_PLC", "label": "控制器"},
+        {"id": "LHW_2", "kind": "LOGICAL_ROBOT", "label": "机器人"},
+    ]
+    ir.hw_links = [{"id": "L1", "src_hw_id": "LHW_1", "dst_hw_id": "LHW_2"}]
+    ir.cm_mounts = {"U1EM1_CM1": "LHW_1", "U1EM2_CM3": "LHW_2"}
+    ir.var_bindings = [
+        {"var_key": "DB:DB720.Ack", "target_id": "U1EM1_S10", "role": "condition"}
+    ]
+    views = project_views(ir)
+    spec = freeze(ir, views, None, session_id="S_REBUILD", spec_version=1,
+                  project_id="PRJ_REBUILD")
+    path = write_spec(spec, tmp_path, "S_REBUILD")
+
+    loaded = load_spec(path, project_id="PRJ_REBUILD")
+    rebuilt = loaded.rebuild_ir()
+    assert rebuilt.to_dict() == ir.to_dict()
+    assert rebuilt.hw_nodes == ir.hw_nodes
+    assert rebuilt.hw_links == ir.hw_links
+    assert rebuilt.cm_mounts == ir.cm_mounts
+    assert rebuilt.var_bindings == ir.var_bindings
+    assert rebuilt.project_id == "PRJ_REBUILD"
+    assert rebuilt.ir_sha256() == ir.ir_sha256()
+    assert loaded.spec_hash == spec.spec_hash
+    # 四视图亦可由快照确定性重建
+    assert_roundtrip(rebuilt, loaded.rebuild_views())
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

@@ -1,16 +1,19 @@
 /**
  * 新建工程画布右栏（绑定变量工作台 + 外部只读契约解析 + 结构校验）：
  * - 支持上传外部文档（PDF / XLSX / CSV / SCL）或一键载入参考实例（PLC_IO.pdf + KUKA DB720 + PC DB1900）
- * - 展示三类变量：外部锁定 IO 表（%I/%Q/%IW/%QW）、外部冻结标准访问 DB（DB720 / DB1900 带 @Byte.Bit 偏移）、内部生成的 AF 变量（ControlNode & CM PLCOpen 五信号）
- * - 支持一键将任意变量绑定至当前选中的工艺步序（Step）或设备模块（CM），并实时同步至 Mermaid 逻辑图
+ * - 展示三类变量：外部锁定 IO 表（%I/%Q/%IW/%QW）、外部冻结标准访问 DB（DB720 / DB1900 带 @Byte.Bit 偏移）、内部生成的变量（控制节点与执行件 PLCOpen 五信号）
+ * - 支持一键将任意变量绑定至当前选中的工艺步序或执行件，并实时同步至 Mermaid 逻辑图
+ * - 用户可见文案统一业务语言（工站 / 执行单元 / 执行件 / 设备交互），仅工程视角可切换
  */
 import React, { useMemo, useRef, useState } from "react";
 import type {
+  GFCanvasOp,
   GFReport,
   GFState,
   GFVariableCatalog,
   GFWhitelist,
 } from "../state/greenfield";
+import { NodeEditor } from "./GreenfieldPanel";
 
 export interface GreenfieldLinkPanelProps {
   whitelist: GFWhitelist | null;
@@ -26,9 +29,13 @@ export interface GreenfieldLinkPanelProps {
   onBindVar: (varKey: string, targetId: string, role: string) => void;
   onUnbindVar: (varKey: string, targetId?: string) => void;
   onValidate: () => void;
+  /** 结构节点增删改 / 重命名 / 重挂 / 改标签：走契约 §3 `POST /patch` op。 */
+  onPatchNodes?: (ops: GFCanvasOp[]) => void;
+  /** 最近一次变更事件的反馈文案。 */
+  actionFeedback?: string;
 }
 
-type RightTab = "ext_io" | "ext_db" | "int_var" | "rules";
+type RightTab = "ext_io" | "ext_db" | "int_var" | "rules" | "nodes";
 
 function asArray(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? (value as Array<Record<string, unknown>>) : [];
@@ -48,6 +55,8 @@ export const GreenfieldLinkPanel: React.FC<GreenfieldLinkPanelProps> = ({
   onBindVar,
   onUnbindVar,
   onValidate,
+  onPatchNodes,
+  actionFeedback,
 }) => {
   const [activeTab, setActiveTab] = useState<RightTab>("ext_io");
   const [search, setSearch] = useState<string>("");
@@ -79,8 +88,8 @@ export const GreenfieldLinkPanel: React.FC<GreenfieldLinkPanelProps> = ({
     }));
     const cms = asArray(state.ir?.cms).map((c) => ({
       id: String(c.id),
-      label: `[设备 CM] ${String(c.business_label ?? c.name ?? c.id)} (${String(c.cm_type ?? c.device_type ?? "")})`,
-      kind: "CM",
+      label: `[执行件] ${String(c.business_label ?? c.name ?? c.id)} (${String(c.cm_type ?? c.device_type ?? "")})`,
+      kind: "执行件",
     }));
     return [...steps, ...cms];
   }, [state.ir]);
@@ -292,6 +301,14 @@ export const GreenfieldLinkPanel: React.FC<GreenfieldLinkPanelProps> = ({
         >
           校验 {report?.ok ? "通过" : `(${violations.length})`}
         </button>
+        <button
+          type="button"
+          className={activeTab === "nodes" ? "gf-var-tab gf-var-tab--active" : "gf-var-tab"}
+          onClick={() => setActiveTab("nodes")}
+          title="工站 / 执行单元 / 执行件的增删改、重命名、重挂与改标签"
+        >
+          结构节点
+        </button>
       </div>
 
       {/* 标签内容列表 */}
@@ -448,7 +465,7 @@ export const GreenfieldLinkPanel: React.FC<GreenfieldLinkPanelProps> = ({
           <>
             {filteredInternal.length === 0 ? (
               <div className="gf-muted gf-var-empty">
-                请先在下方生成工艺结构图，系统将自动生成 ControlNode 与 CM PLCOpen 五信号内部变量
+                请先在对话中生成工艺结构图，系统将自动生成控制节点与执行件 PLCOpen 五信号内部变量
               </div>
             ) : (
               filteredInternal.map((v) => (
@@ -493,7 +510,7 @@ export const GreenfieldLinkPanel: React.FC<GreenfieldLinkPanelProps> = ({
                 重新校验
               </button>
               {!report && <div className="gf-muted">尚未生成规格</div>}
-              {report?.ok && <div className="gf-ok">全部通过，可以继续确认并生成标准 AF 工程</div>}
+              {report?.ok && <div className="gf-ok">全部通过，可以继续「确认设备逻辑并锁定还原契约」</div>}
               {violations.map((item, index) => (
                 <div className="gf-bad" key={`${item.code}-${index}`}>
                   <span className="gf-bad__code">{item.code}</span>
@@ -533,6 +550,23 @@ export const GreenfieldLinkPanel: React.FC<GreenfieldLinkPanelProps> = ({
                 ))
               )}
             </div>
+          </div>
+        )}
+
+        {activeTab === "nodes" && (
+          <div className="gf-node-editor-wrap" data-ui="greenfield-link-node-editor">
+            <div className="gf-node-editor__hint">
+              工站 / 执行单元 / 执行件的增删改、重命名、重挂与改标签；变更走
+              <code> POST /patch </code> 原子 op，提交后四视图同步刷新。
+            </div>
+            <NodeEditor
+              ir={state.ir}
+              busy={busy}
+              onPatch={onPatchNodes ?? (() => undefined)}
+            />
+            {actionFeedback && (
+              <div className="gf-action-feedback" role="status">{actionFeedback}</div>
+            )}
           </div>
         )}
       </div>

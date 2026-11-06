@@ -34,8 +34,10 @@ def _error_status(code: str) -> int:
 
     Phase 2 追加（§9.2 / P2-5 / P2-6）：``GF_PCEC_*`` 基线/账本 fail-closed → 409；
     ``GF_TIA_STATIC_GATE_FAILED`` / ``GF_TIA_OB_*`` 校验类 → 422；其余 ``GF_TIA_*``
-    参数类 → 400。
+    参数类 → 400。UC-03 收口：TIA 不可用 / 执行中断 → **503**（显式非成功、非 200）。
     """
+    if code in ("GF_TIA_UNAVAILABLE", "GF_TIA_EXEC_ERROR"):
+        return 503
     if code.startswith(("GF_GATE", "GF_SPEC_IMMUTABLE", "GF_PCEC_")):
         return 409
     if code.startswith(("GF_EDGE", "GF_VIEW", "GF_TIA_OB")) or code == "GF_TIA_STATIC_GATE_FAILED":
@@ -103,19 +105,48 @@ class ChatIn(SessionIn):
 
 
 class DeliverTiaIn(SessionIn):
-    """POST /deliver-tia：mode=auto 尝试 Openness 自动导入编译（不可用优雅降级）；
-    mode=package 只出 SCL+XML 补充包。§9 P2-4..P2-8。"""
+    """POST /deliver-tia：mode=auto 尝试 Openness 自动导入编译（TIA 不可用时显式失败、
+    非 200，禁止静默降级）；mode=package 只出 SCL+XML 补充包并标 pending_real_machine。
+    §9 P2-4..P2-8。"""
 
     mode: str = "auto"
 
 
-def _session(session_id: str | None):
-    return svc.session_for(session_id)
+class PatchIn(SessionIn):
+    """POST /patch：{project_id, ops, base_spec_version, expected_ir_sha256}。"""
+
+    project_id: str = ""
+    ops: list[dict[str, Any]] = Field(default_factory=list)
+    base_spec_version: int | None = None
+    expected_ir_sha256: str = ""
+
+
+class DiffIn(SessionIn):
+    """POST /diff：{project_id, from_version, to_version}。"""
+
+    project_id: str = ""
+    from_version: int = 0
+    to_version: int = 0
+
+
+class ConfirmDiffIn(SessionIn):
+    """POST /confirm-diff：{project_id, diff_id, confirmed}。"""
+
+    project_id: str = ""
+    diff_id: str = ""
+    confirmed: bool = False
+
+
+def _session(session_id: str | None, project_id: str = ""):
+    return svc.session_for(session_id, project_id)
 
 
 @router.get("/state")
-def get_state(session_id: str | None = None) -> ApiResponse[dict[str, Any]]:
-    return _ok(svc.state_payload(_session(session_id)))
+def get_state(
+    session_id: str | None = None, project_id: str | None = None
+) -> ApiResponse[dict[str, Any]]:
+    """GET /state?project_id=：附带项目标识 / 基线版本 / fidelity 状态 / 副作用计数器。"""
+    return _ok(svc.state_payload(_session(session_id, project_id or "")))
 
 
 @router.get("/whitelist")
@@ -223,9 +254,16 @@ def import_draft(body: DraftImportIn = Body(...)) -> ApiResponse[dict[str, Any]]
 
 
 @router.get("/specs/{version}")
-def get_spec(version: int, session_id: str | None = None) -> ApiResponse[dict[str, Any]]:
+def get_spec(
+    version: int, session_id: str | None = None, project_id: str | None = None
+) -> ApiResponse[dict[str, Any]]:
+    """GET /specs/{v}?project_id=：完整 FrozenSpec 快照（可独立重建画布含拓扑）。"""
     try:
-        return _ok({"spec": svc.load_frozen_spec(session_id or "", version).to_dict()})
+        return _ok({
+            "spec": svc.load_frozen_spec(
+                session_id or "", version, project_id=project_id or ""
+            ).to_dict()
+        })
     except GreenfieldError as exc:
         return _fail(exc)
     except (OSError, KeyError, ValueError) as exc:
@@ -275,8 +313,9 @@ def load_reference(body: DraftIn = Body(...)) -> ApiResponse[dict[str, Any]]:
 def deliver_tia(body: DeliverTiaIn = Body(...)) -> ApiResponse[dict[str, Any]]:
     """Phase 2 最后一公里：XML 补充包 + 静态门禁 + PCEC 账本 +（auto）Openness 自动导入编译。
 
-    Openness 不可用 / TIA 被占用 → ``status="tia_unavailable"`` + 人工导入指引
-    （HTTP 200，ZIP 交付不受影响）；静态门禁或 PCEC 基线 fail-closed → 4xx。
+    Openness 不可用 / TIA 被占用 → ``GF_TIA_UNAVAILABLE`` / ``GF_TIA_EXEC_ERROR``
+    显式失败（HTTP **503**、非 200，附结构化诊断与人工导入指引），禁止静默降级为 200 成功；
+    静态门禁或 PCEC 基线 fail-closed → 4xx。``mode=package`` 不触真机，标 pending_real_machine。
     """
     try:
         result = tia_delivery.deliver_tia(_session(body.session_id), mode=body.mode)
@@ -296,3 +335,48 @@ def download_package(session_id: str | None = None) -> Response:
         )
     except GreenfieldError as exc:
         return _fail(exc)
+
+
+# ---------------------------------------------------------------------------
+# WP-03 / §3 新增端点：统一受控 patch / 差异占位 / 差异清单确认（零存量链、零 PCEC）
+# ---------------------------------------------------------------------------
+
+@router.post("/patch")
+def patch_canvas(body: PatchIn = Body(...)) -> ApiResponse[dict[str, Any]]:
+    """POST /patch：统一受控写入口；原子拒绝时 422，IR 字节不变。"""
+    try:
+        session = _session(body.session_id, body.project_id)
+        payload = body.model_dump(exclude={"session_id"})
+        result = svc.apply_patch_action(session, payload)
+        if not result.get("ok"):
+            error_body = ApiResponse(
+                ok=False,
+                data=result,
+                error=ErrorBody(
+                    code="GF_PATCH_ATOMIC_REJECTED",
+                    message=result.get("reason") or "原子拒绝：任一 op 非法，整批回滚",
+                    details={"violations": result.get("violations") or []},
+                ),
+                request_id=_rid(),
+            )
+            return JSONResponse(status_code=422, content=error_body.model_dump())
+        return _ok(result)
+    except GreenfieldError as exc:
+        return _fail(exc)
+
+
+@router.post("/diff")
+def diff_spec(body: DiffIn = Body(...)) -> ApiResponse[dict[str, Any]]:
+    """POST /diff：调用 B 的 spec_diff 产出带 source_id 的真实 SpecDiff（§2.3）；
+    缺版本 / 缺规格时优雅降级为空 diff + 明确说明，禁止臆造。"""
+    session = _session(body.session_id, body.project_id)
+    payload = body.model_dump(exclude={"session_id", "project_id"})
+    return _ok(svc.diff_placeholder(session, payload))
+
+
+@router.post("/confirm-diff")
+def confirm_diff(body: ConfirmDiffIn = Body(...)) -> ApiResponse[dict[str, Any]]:
+    """POST /confirm-diff：``confirmed != true`` 时零副作用计数器恒 0。"""
+    session = _session(body.session_id, body.project_id)
+    payload = body.model_dump(exclude={"session_id", "project_id"})
+    return _ok(svc.confirm_diff_action(session, payload))

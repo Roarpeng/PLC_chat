@@ -31,12 +31,20 @@ from plc_engine.af.greenfield_edges import (
     matches_namespace,
 )
 from plc_engine.af.greenfield_ir import (
-    IR_PATCH_OPS,
+    CANVAS_PATCH_OPS,
+    HW_PATCH_OPS,
+    NODE_PATCH_OPS,
+    CanvasPatch,
     GFEdge,
+    GFEm,
+    GFCm,
+    GFUnit,
     GreenfieldIR,
     IRPatch,
+    PatchResult,
 )
-from plc_engine.af.greenfield_ports import EdgeRejectedError
+from plc_engine.af.greenfield_ports import EdgeRejectedError, GreenfieldStage
+from plc_engine.af.greenfield_views import assert_roundtrip, project_views
 
 
 @dataclass
@@ -543,12 +551,12 @@ def apply_patch(ir: GreenfieldIR, patch: IRPatch) -> ValidationReport:
 
     流程：深拷贝候选 → 在候选上应用 → 全量校验 → 通过才整体替换原 IR。
     """
-    if patch.op not in IR_PATCH_OPS:
+    if patch.op not in CANVAS_PATCH_OPS:
         return ValidationReport(
             ok=False,
             violations=[
                 _generic_violation("GF_EDGE_RULE_VIOLATION", "", GFEdge(),
-                                   f"未知 patch 操作 {patch.op!r}，仅允许 {sorted(IR_PATCH_OPS)}")
+                                   f"未知 patch 操作 {patch.op!r}，仅允许 {sorted(CANVAS_PATCH_OPS)}")
             ],
             checked_at=_now_iso(),
             ir_sha256=ir.ir_sha256(),
@@ -611,8 +619,14 @@ def apply_patch(ir: GreenfieldIR, patch: IRPatch) -> ValidationReport:
                     _generic_violation("GF_EDGE_RULE_VIOLATION", target.dst_id, target,
                                        "改向后的边 ID 与已有边冲突")
                 )
-    else:  # set_ir_only_field
+    elif patch.op == "set_ir_only_field":
         local_violations.extend(_set_ir_only_field(candidate, patch.field_path, patch.value))
+    elif patch.op in NODE_PATCH_OPS:
+        # WP-07 / D6 节点编辑：在候选副本上改结构，随后由 apply_canvas_patch 重投影。
+        local_violations.extend(_apply_node_op(candidate, patch))
+    elif patch.op in HW_PATCH_OPS:
+        # WP-03 / D4 逻辑拓扑与变量绑定（含 bind_var 撤销语义）。
+        local_violations.extend(_apply_hw_op(candidate, patch))
 
     if local_violations:
         return ValidationReport(
@@ -631,6 +645,470 @@ def apply_patch(ir: GreenfieldIR, patch: IRPatch) -> ValidationReport:
     ir._replace_from(candidate)
     report.ir_sha256 = ir.ir_sha256()
     return report
+
+
+# ---------------------------------------------------------------------------
+# WP-07 / D6 节点编辑 op 与 WP-03 / D4 逻辑拓扑 op（复用 apply_patch 原子框架）
+# ---------------------------------------------------------------------------
+
+def _nv(code: str, message: str, node_id: str = "", view: str = VIEW_FLOW) -> EdgeViolation:
+    """构造一条不依赖具体 GFEdge 负载的节点编辑违规。"""
+    return EdgeViolation(code=code, view=view, node_id=node_id, edge_id="", message=message)
+
+
+def _next_id(prefix: str, existing: set[str], *, start: int = 1, cap: int = 99) -> str | None:
+    """按 ``prefix+N`` 生成不与 existing 冲突的确定性 id；超出 cap 返回 None。"""
+    for n in range(start, cap + 1):
+        candidate = f"{prefix}{n}"
+        if candidate not in existing:
+            return candidate
+    return None
+
+
+def _sync_parent_edge(ir: GreenfieldIR, dst_id: str, new_parent: str, kind: EdgeKind) -> None:
+    """reparent_node：同步层级骨架边起点并重建边 ID，保证 validate_ir 仍通过。"""
+    for edge in ir.edges:
+        if edge.kind_value() == kind.value and edge.dst_id == dst_id:
+            edge.src_id = new_parent
+            edge.id = edge_id(edge.kind, edge.src_id, edge.dst_id)
+
+
+def _apply_node_op(ir: GreenfieldIR, patch: IRPatch) -> list[EdgeViolation]:
+    """七类节点编辑 op，全部在候选副本上操作；合法性最终由 apply_patch 的
+    ``validate_ir`` + ``apply_canvas_patch`` 的四视图重投影裁定。"""
+    node = dict(patch.node or {})
+    node_id = str(patch.node_id or node.get("id") or "").strip()
+
+    if patch.op == "add_unit":
+        unit_ids = {u.id for u in ir.units}
+        uid = node_id or _next_id("U", unit_ids, start=1, cap=9)
+        if not uid:
+            return [_nv("GF_EDGE_NAMESPACE_INVALID", "工站数量已达命名空间上限 U1..U9")]
+        if not matches_namespace("unit_id", uid):
+            return [_nv("GF_EDGE_NAMESPACE_INVALID", f"新工站 id {uid!r} 不符合 U[1-9] 规则", uid)]
+        if uid in unit_ids:
+            return [_nv("GF_EDGE_RULE_VIOLATION", f"工站 {uid} 已存在", uid)]
+        ir.units.append(
+            GFUnit(
+                id=uid, unit_idx=int(uid[1:]),
+                name=str(node.get("name") or uid),
+                business_label=str(node.get("business_label") or node.get("label") or uid),
+                namespace_prefix=f"{uid}_", parent_id=None, ob_numbers={},
+            )
+        )
+        return []
+
+    if patch.op == "add_em":
+        unit_ids = {u.id for u in ir.units}
+        parent = str(node.get("unit_id") or patch.parent_id or "").strip()
+        if parent not in unit_ids:
+            return [_nv("GF_EDGE_RULE_VIOLATION", f"新增执行单元缺少有效父工站 {parent!r}", parent)]
+        em_ids = {e.id for e in ir.ems}
+        eid = node_id or _next_id(f"{parent}EM", em_ids, start=1, cap=99)
+        if not eid or not matches_namespace("em_id", eid):
+            return [_nv("GF_EDGE_NAMESPACE_INVALID", f"新执行单元 id {eid!r} 不符合命名空间规则", eid or "")]
+        if eid in em_ids:
+            return [_nv("GF_EDGE_RULE_VIOLATION", f"执行单元 {eid} 已存在", eid)]
+        ir.ems.append(
+            GFEm(
+                id=eid, em_idx=int(eid.split("EM")[-1]), unit_id=parent,
+                name=str(node.get("name") or eid),
+                business_label=str(node.get("business_label") or node.get("label") or eid),
+                namespace_prefix=f"{eid}_", control_node_id="", job_ids=[],
+                initial_step_id=10, ob_numbers={}, sc_policy="SC_ON_COMPLETE",
+            )
+        )
+        return []
+
+    if patch.op == "add_cm":
+        em_ids = {e.id for e in ir.ems}
+        parent = str(node.get("em_id") or patch.parent_id or "").strip()
+        if parent not in em_ids:
+            return [_nv("GF_EDGE_RULE_VIOLATION", f"新增执行件缺少有效父执行单元 {parent!r}", parent)]
+        cm_ids = {c.id for c in ir.cms}
+        cid = node_id or _next_id(f"{parent}_CM", cm_ids, start=1, cap=999)
+        if not cid or not matches_namespace("cm_id", cid):
+            return [_nv("GF_EDGE_NAMESPACE_INVALID", f"新执行件 id {cid!r} 不符合命名空间规则", cid or "")]
+        if cid in cm_ids:
+            return [_nv("GF_EDGE_RULE_VIOLATION", f"执行件 {cid} 已存在", cid)]
+        ir.cms.append(
+            GFCm(
+                id=cid, em_id=parent,
+                cm_type=str(node.get("cm_type") or "GENERIC"),
+                business_label=str(node.get("business_label") or node.get("label") or cid),
+                plcopen={sig: True for sig in PLCOPEN_SIGNALS},
+                io_binding_ids=[], parameters=dict(node.get("parameters") or {}),
+            )
+        )
+        return []
+
+    if patch.op == "remove_node":
+        if not node_id:
+            return [_nv("GF_EDGE_RULE_VIOLATION", "remove_node 缺少 node_id")]
+        if node_id == "U1":
+            return [_nv("GF_EDGE_IMMUTABLE", "根工站 U1 为系统骨架，不可删除", node_id)]
+        unit_ids = {u.id for u in ir.units}
+        em_ids = {e.id for e in ir.ems}
+        cm_ids = {c.id for c in ir.cms}
+        cn_ids = {c.id for c in ir.control_nodes}
+        job_ids = {j.id for j in ir.jobs}
+        step_ids = {s.id for s in ir.steps}
+        il_ids = {x.id for x in ir.interlocks}
+        hw_ids = {str(n.get("id") or "") for n in ir.hw_nodes}
+
+        to_delete: set[str] = set()
+        if node_id in unit_ids:
+            child_ems = {e.id for e in ir.ems if e.unit_id == node_id}
+            to_delete = (
+                {node_id} | child_ems
+                | {c.id for c in ir.cms if c.em_id in child_ems}
+                | {c.id for c in ir.control_nodes if c.em_id in child_ems}
+                | {j.id for j in ir.jobs if j.em_id in child_ems}
+                | {s.id for s in ir.steps if s.em_id in child_ems}
+            )
+        elif node_id in em_ids:
+            to_delete = (
+                {node_id}
+                | {c.id for c in ir.cms if c.em_id == node_id}
+                | {c.id for c in ir.control_nodes if c.em_id == node_id}
+                | {j.id for j in ir.jobs if j.em_id == node_id}
+                | {s.id for s in ir.steps if s.em_id == node_id}
+            )
+        elif node_id in cm_ids:
+            to_delete = {node_id}
+        elif node_id in (cn_ids | job_ids | step_ids | il_ids):
+            to_delete = {node_id}
+        elif node_id in hw_ids:
+            ir.hw_nodes = [n for n in ir.hw_nodes if str(n.get("id") or "") != node_id]
+            ir.cm_mounts = {cm: hw for cm, hw in ir.cm_mounts.items() if hw != node_id}
+            ir.hw_links = [
+                l for l in ir.hw_links
+                if node_id not in (str(l.get("src_hw_id") or ""), str(l.get("dst_hw_id") or ""))
+            ]
+            return []
+        else:
+            return [_nv("GF_EDGE_RULE_VIOLATION", f"待删除节点 {node_id!r} 不存在", node_id)]
+
+        for edge in ir.edges:
+            if edge.immutable and (edge.src_id in to_delete or edge.dst_id in to_delete):
+                return [_nv("GF_EDGE_IMMUTABLE",
+                            f"节点 {node_id} 被系统层级骨架边 {edge.id} 引用，不可删除", node_id)]
+
+        ir.units = [u for u in ir.units if u.id not in to_delete]
+        ir.ems = [e for e in ir.ems if e.id not in to_delete]
+        ir.cms = [c for c in ir.cms if c.id not in to_delete]
+        ir.control_nodes = [c for c in ir.control_nodes if c.id not in to_delete]
+        ir.jobs = [j for j in ir.jobs if j.id not in to_delete]
+        ir.steps = [s for s in ir.steps if s.id not in to_delete]
+        ir.interlocks = [x for x in ir.interlocks if x.id not in to_delete]
+        ir.io_bindings = [b for b in ir.io_bindings if b.cm_id not in to_delete]
+        ir.edges = [e for e in ir.edges if e.src_id not in to_delete and e.dst_id not in to_delete]
+        ir.cm_mounts = {cm: hw for cm, hw in ir.cm_mounts.items() if cm not in to_delete}
+        ir.var_bindings = [b for b in ir.var_bindings if str(b.get("target_id") or "") not in to_delete]
+        return []
+
+    if patch.op in ("rename_node", "relabel_node"):
+        if not node_id:
+            return [_nv("GF_EDGE_RULE_VIOLATION", f"{patch.op} 缺少 node_id")]
+        entity: Any = None
+        for coll in (ir.units, ir.ems, ir.cms, ir.control_nodes, ir.jobs, ir.steps, ir.modes, ir.interlocks):
+            entity = next((x for x in coll if getattr(x, "id", None) == node_id), None)
+            if entity is not None:
+                break
+        if entity is None:
+            logical = next((n for n in ir.hw_nodes if str(n.get("id") or "") == node_id), None)
+            if isinstance(logical, dict):
+                if patch.op == "rename_node":
+                    logical["label"] = str(patch.name or logical.get("label") or "")
+                else:
+                    logical["label"] = str(patch.label or logical.get("label") or "")
+                return []
+            return [_nv("GF_EDGE_RULE_VIOLATION", f"待编辑节点 {node_id!r} 不存在", node_id)]
+        if patch.op == "rename_node":
+            value = str(patch.name or "").strip()
+            if not value:
+                return [_nv("GF_EDGE_RULE_VIOLATION", "rename_node 需要非空 name", node_id)]
+            if not hasattr(entity, "name"):
+                return [_nv("GF_EDGE_RULE_VIOLATION", f"节点 {node_id} 无 name 字段", node_id)]
+            entity.name = value
+        else:
+            value = str(patch.label or "")
+            if not hasattr(entity, "business_label"):
+                return [_nv("GF_EDGE_RULE_VIOLATION", f"节点 {node_id} 无 business_label 字段", node_id)]
+            entity.business_label = value
+        return []
+
+    if patch.op == "reparent_node":
+        if not node_id or not str(patch.parent_id or "").strip():
+            return [_nv("GF_EDGE_RULE_VIOLATION", "reparent_node 需要 node_id 与 parent_id")]
+        new_parent = str(patch.parent_id).strip()
+        em = next((e for e in ir.ems if e.id == node_id), None)
+        cm = next((c for c in ir.cms if c.id == node_id), None)
+        if em is not None:
+            if new_parent not in {u.id for u in ir.units}:
+                return [_nv("GF_EDGE_RULE_VIOLATION", f"目标父工站 {new_parent!r} 不存在", node_id)]
+            em.unit_id = new_parent
+            _sync_parent_edge(ir, node_id, new_parent, EdgeKind.E_HIER_UNIT_EM)
+        elif cm is not None:
+            if new_parent not in {e.id for e in ir.ems}:
+                return [_nv("GF_EDGE_RULE_VIOLATION", f"目标父执行单元 {new_parent!r} 不存在", node_id)]
+            cm.em_id = new_parent
+            _sync_parent_edge(ir, node_id, new_parent, EdgeKind.E_HIER_EM_CM)
+        else:
+            return [_nv("GF_EDGE_RULE_VIOLATION",
+                        "reparent_node 仅支持执行单元（换工站）或执行件（换执行单元）", node_id)]
+        return []
+
+    return [_nv("GF_EDGE_RULE_VIOLATION", f"未知节点编辑 op：{patch.op}")]
+
+
+def _restore_step_binding(ir: GreenfieldIR, entry: dict[str, Any]) -> None:
+    """按绑定记录还原步序字段（仅当当前值仍是绑定写入的符号时才还原，保留撤销语义）。"""
+    step = next((s for s in ir.steps if s.id == str(entry.get("target_id") or "")), None)
+    if step is None:
+        return
+    written_cond = entry.get("written_transition_condition")
+    if written_cond and step.transition_condition == written_cond:
+        step.transition_condition = str(entry.get("prev_transition_condition") or "")
+    appended = entry.get("appended_action")
+    if appended and appended in step.actions:
+        step.actions = [a for a in step.actions if a != appended]
+
+
+def _apply_hw_op(ir: GreenfieldIR, patch: IRPatch) -> list[EdgeViolation]:
+    """逻辑拓扑与变量绑定 op（D4）。真值全部写入 IR，替代 session.custom_hw 平行状态。"""
+    p = dict(patch.payload or {})
+    op = patch.op
+
+    if op == "mount_cm":
+        cm_id = str(p.get("cm_id") or patch.node_id or "").strip()
+        hw_id = str(p.get("hw_node_id") or "").strip()
+        if not cm_id or not hw_id:
+            return [_nv("GF_HW_OP_INVALID", "mount_cm 需要 cm_id 与 hw_node_id", cm_id)]
+        ir.cm_mounts[cm_id] = hw_id
+        return []
+
+    if op == "unmount_cm":
+        cm_id = str(p.get("cm_id") or patch.node_id or "").strip()
+        ir.cm_mounts.pop(cm_id, None)
+        return []
+
+    if op == "bind_var":
+        var_key = str(p.get("var_key") or "").strip()
+        target_id = str(p.get("target_id") or patch.node_id or "").strip()
+        role = str(p.get("role") or "auto")
+        if not var_key or not target_id:
+            return [_nv("GF_HW_OP_INVALID", "bind_var 需要 var_key 与 target_id", target_id)]
+        if any(b.get("var_key") == var_key and b.get("target_id") == target_id for b in ir.var_bindings):
+            return []
+        entry: dict[str, Any] = {"var_key": var_key, "target_id": target_id, "role": role}
+        step = next((s for s in ir.steps if s.id == target_id), None)
+        if step is not None:
+            short_sym = var_key.split(":", 1)[-1]
+            entry["prev_transition_condition"] = step.transition_condition
+            entry["prev_actions"] = list(step.actions)
+            if role == "condition" or "%I" in var_key or "Ack" in var_key or "Recv" in var_key:
+                step.transition_condition = short_sym
+                entry["written_transition_condition"] = short_sym
+            elif short_sym not in step.actions:
+                step.actions.append(short_sym)
+                entry["appended_action"] = short_sym
+        ir.var_bindings.append(entry)
+        return []
+
+    if op == "unbind_var":
+        var_key = str(p.get("var_key") or "").strip()
+        target_id = str(p.get("target_id") or patch.node_id or "").strip()
+        kept: list[dict[str, Any]] = []
+        removed: list[dict[str, Any]] = []
+        for b in ir.var_bindings:
+            if var_key and b.get("var_key") == var_key and (not target_id or b.get("target_id") == target_id):
+                removed.append(b)
+            else:
+                kept.append(b)
+        ir.var_bindings = kept
+        for entry in removed:
+            _restore_step_binding(ir, entry)
+        return []
+
+    if op == "add_hw_node":
+        raw = patch.node if isinstance(patch.node, dict) else (
+            p.get("node") if isinstance(p.get("node"), dict) else {}
+        )
+        if not str(raw.get("id") or "").strip():
+            return [_nv("GF_HW_OP_INVALID", "add_hw_node 需要带 id 的 node")]
+        from plc_engine.af.hw_topology import normalize_logical_node
+
+        logical = normalize_logical_node(raw)
+        ir.hw_nodes = [n for n in ir.hw_nodes if str(n.get("id") or "") != logical["id"]]
+        ir.hw_nodes.append(logical)
+        return []
+
+    if op == "remove_hw_node":
+        hw_id = str(p.get("hw_node_id") or patch.node_id or "").strip()
+        if not hw_id:
+            return [_nv("GF_HW_OP_INVALID", "remove_hw_node 需要 hw_node_id")]
+        ir.hw_nodes = [n for n in ir.hw_nodes if str(n.get("id") or "") != hw_id]
+        ir.cm_mounts = {cm: hw for cm, hw in ir.cm_mounts.items() if hw != hw_id}
+        ir.hw_links = [
+            l for l in ir.hw_links
+            if hw_id not in (str(l.get("src_hw_id") or ""), str(l.get("dst_hw_id") or ""))
+        ]
+        return []
+
+    if op == "reset_topology":
+        for entry in list(ir.var_bindings):
+            _restore_step_binding(ir, entry)
+        ir.cm_mounts = {}
+        ir.hw_nodes = []
+        ir.hw_links = []
+        ir.var_bindings = []
+        return []
+
+    return [_nv("GF_HW_OP_UNKNOWN", f"未知硬件/拓扑 op：{op}")]
+
+
+# ---------------------------------------------------------------------------
+# 统一受控写入口 CanvasPatch（§2.2）
+# ---------------------------------------------------------------------------
+
+def _normalize_canvas_patch(patch: Any) -> CanvasPatch | None:
+    """把 dict / 单个 IRPatch / op 列表归一为 CanvasPatch。"""
+    if isinstance(patch, CanvasPatch):
+        return patch
+    if isinstance(patch, dict):
+        return CanvasPatch.from_dict(patch)
+    if isinstance(patch, IRPatch):
+        return CanvasPatch(ops=[patch])
+    if isinstance(patch, (list, tuple)):
+        ops = [IRPatch.from_dict(x) if isinstance(x, dict) else x for x in patch]
+        return CanvasPatch(ops=[o for o in ops if isinstance(o, IRPatch)])
+    return None
+
+
+def _op_target(op: IRPatch) -> str:
+    """变更事件里对单个 op 的可读定位。"""
+    if op.op == "add_edge" and op.edge is not None:
+        return f"{op.edge.kind_value()} {op.edge.src_id} -> {op.edge.dst_id}"
+    if op.op in ("remove_edge", "redirect_edge"):
+        return str(op.edge_id or "")
+    if op.op == "set_ir_only_field":
+        return str(op.field_path or "")
+    p = dict(op.payload or {})
+    return str(
+        op.node_id or op.name
+        or p.get("cm_id") or p.get("hw_node_id") or p.get("var_key")
+        or (op.node or {}).get("id") or op.op
+    )
+
+
+def _stage_value(session: Any) -> str:
+    stage = getattr(session, "stage", "")
+    return stage.value if hasattr(stage, "value") else str(stage)
+
+
+def apply_canvas_patch(
+    session: Any,
+    patch: Any,
+    *,
+    gate_action: str | None = None,
+    advance_stage: bool = False,
+) -> PatchResult:
+    """统一受控写入口（§2.2）：chat_turn / /links / /hardware / /patch 全部收敛于此。
+
+    会话 IR **只能通过本函数修改**；任一 op 非法则整批回滚（IR 字节不变），
+    ``validate_ir`` 通过且四视图重投影一致才提交，并提交变更事件入账。
+    ``chat_turn`` 因走同一底层 ``apply_patch`` 白名单（其源不属本工作包）亦受同一机制约束。
+    """
+    cp = _normalize_canvas_patch(patch)
+    stage_value = _stage_value(session)
+    if cp is None:
+        return PatchResult(ok=False, reason="不支持的 patch 类型", stage=stage_value)
+
+    if gate_action:
+        session.assert_gate(gate_action)
+
+    if getattr(session, "ir", None) is None:
+        return PatchResult(ok=False, reason="尚无首版规格（IR 未就绪）", stage=stage_value)
+
+    ir = session.ir
+    before = ir.ir_sha256()
+
+    # 绕过 patch 直写检测：调用方可带上一次合法状态的 ir_sha256（乐观并发）。
+    if cp.expected_ir_sha256 and cp.expected_ir_sha256 != before:
+        return PatchResult(
+            ok=False, ir_sha256=before, spec_hash=ir.spec_hash(), stage=stage_value,
+            reason="IR 指纹漂移：检测到绕过 patch 的直接写入",
+        )
+
+    # project_id 一等公民绑定
+    if cp.project_id:
+        bound = str(getattr(session, "project_id", "") or "")
+        if bound and bound != cp.project_id:
+            return PatchResult(
+                ok=False, ir_sha256=before, spec_hash=ir.spec_hash(), stage=stage_value,
+                reason=f"project_id 冲突：会话已绑定 {bound}，请求 {cp.project_id}",
+            )
+
+    candidate = GreenfieldIR.from_dict(ir.to_dict())
+    if cp.project_id:
+        candidate.project_id = cp.project_id
+
+    violations: list[dict[str, Any]] = []
+    applied = 0
+    for op in cp.ops:
+        report = apply_patch(candidate, op)
+        if not report.ok:
+            violations.extend(v.to_dict() for v in report.violations)
+            return PatchResult(
+                ok=False, violations=violations, ir_sha256=before, spec_hash=ir.spec_hash(),
+                stage=stage_value, applied_ops=applied,
+                reason="任一 op 非法，整批回滚（IR 未改动）",
+            )
+        applied += 1
+
+    # 契约：validate_ir 通过才提交
+    final_report = validate_ir(candidate)
+    if not final_report.ok:
+        violations.extend(v.to_dict() for v in final_report.violations)
+        return PatchResult(
+            ok=False, violations=violations, ir_sha256=before, spec_hash=ir.spec_hash(),
+            stage=stage_value, applied_ops=applied,
+            reason="validate_ir 未通过，整批回滚",
+        )
+
+    # 四视图重投影同步（D6 节点编辑后必须一致）
+    try:
+        new_views = project_views(candidate)
+        assert_roundtrip(candidate, new_views)
+    except Exception as exc:  # noqa: BLE001 - 投影不一致一律原子拒绝
+        return PatchResult(
+            ok=False, ir_sha256=before, spec_hash=ir.spec_hash(), stage=stage_value,
+            applied_ops=applied, reason=f"四视图重投影不一致：{exc}",
+        )
+
+    # 唯一写入点：整体替换字段（不直接赋值 session.ir.<attr>）
+    session.ir._replace_from(candidate)
+    session.views = new_views
+    session.report = validate_ir(session.ir)
+    if cp.project_id and not str(getattr(session, "project_id", "") or ""):
+        session.project_id = cp.project_id
+    if advance_stage and session.stage is GreenfieldStage.LINKABLE:
+        session.transition_stage(GreenfieldStage.VALIDATING)
+
+    # 变更事件入账（结构化账本；对话消息由各写入口按原文案追加）
+    events: list[dict[str, Any]] = [
+        {"op": op.op, "target": _op_target(op), "ts": _now_iso()} for op in cp.ops
+    ]
+    bucket = getattr(session, "change_events", None)
+    if isinstance(bucket, list):
+        bucket.extend(events)
+
+    return PatchResult(
+        ok=True, violations=[], ir_sha256=session.ir.ir_sha256(),
+        spec_hash=session.ir.spec_hash(), stage=_stage_value(session),
+        applied_ops=applied, change_events=events, ir=session.ir.to_dict(),
+    )
 
 
 def assert_edge_accepted(edge: GFEdge, ir: GreenfieldIR) -> None:

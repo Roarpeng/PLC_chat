@@ -21,6 +21,10 @@ export interface GreenfieldChatFeedProps {
   onSendFiles: (files: File[]) => void;
   onSendPastedScl: (text: string) => void;
   onConfirmReceipt: () => void;
+  /** 项目上下文：project_id 贯穿会话 / 拓扑 / 资料 / 规格 / 产物（P1-F / P1-G）。 */
+  projectId?: string;
+  /** 已定拓扑约束摘要：对话结果不得与已定拓扑矛盾。 */
+  constraintNote?: string;
 }
 
 /** 事件类别 → 图例桩色（母题小方点） */
@@ -74,6 +78,8 @@ export const GreenfieldChatFeed: React.FC<GreenfieldChatFeedProps> = ({
   onSendFiles,
   onSendPastedScl,
   onConfirmReceipt,
+  projectId,
+  constraintNote,
 }) => {
   const messages = state.messages ?? [];
   const [draft, setDraft] = useState("");
@@ -143,7 +149,18 @@ export const GreenfieldChatFeed: React.FC<GreenfieldChatFeedProps> = ({
       <div className="gf-chat__head">
         <strong>对话</strong>
         <span className="gf-muted">资料上传 · 工艺描述 · 修改指令，都在这里</span>
+        {projectId && (
+          <span className="gf-chat-project" title="本轮对话绑定 project_id，结果不得与已定拓扑矛盾">
+            项目 {projectId}
+          </span>
+        )}
       </div>
+
+      {constraintNote && (
+        <div className="gf-chat-constraint" title="对话请求已注入已定拓扑作为约束">
+          已定拓扑约束：{constraintNote}
+        </div>
+      )}
 
       <div className="gf-chat-feed" ref={feedRef}>
         {messages.length === 0 && (

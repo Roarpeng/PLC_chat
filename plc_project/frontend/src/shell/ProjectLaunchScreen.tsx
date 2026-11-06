@@ -1,18 +1,19 @@
 /**
- * ProjectLaunchScreen —— 工作台启动态两入口(docs/23-af-builtin-contract.md §1,F1 自建)。
+ * ProjectLaunchScreen —— 工作台启动态入口(F10 / P1-F,本批次合并双入口)。
  *
- * 出现条件(App.tsx 控制):无活跃会话(activeSessionId 为空且 canvas.blocks 为空)
- * 且历史会话为空 —— 全新工作台的第一屏。两个入口:
+ * 出现条件(App.tsx 控制):无活跃会话且历史会话为空 —— 全新工作台的第一屏。
+ * 原有「新建工程」与「从零生成标准工程」两个入口**合并为一个四步向导入口**:
  *   1. 继续最近项目:最近 3 个会话卡片(历史为空时整块隐藏);
  *   2. 导入工程:与顶栏「导入项目」按钮同一逻辑(打开 ImportDialog);
- *   3. 新建工程:需求先行 —— 打开需求卡草稿(输入框为空时由 App 复用 improve
- *      任务引导预填工艺描述),「确认工艺意图」后进入最小创建确认
- *      (创建链与逻辑生成接线在 App.tsx,本组件只做入口)。
+ *   3. 新建工程 · 四步向导:打开 NewProjectWizard,第一步生成 project_id 并
+ *      贯穿全程,DB 编号 / IO 表上传为可选(D7),完成后才进入 Greenfield 通道。
+ * 回调签名保持与 App.tsx 兼容(`onEnterGreenfield` 的 context 参数可选,不新增必需 props)。
  * 有历史会话时 App 不挂载本组件,保持既有「空白画布+引导」。
- * 样式走现有设计令牌,低显著度、居中卡片式;用户可见文案零专业术语。
  */
-import React from "react";
+import React, { useState } from "react";
+import type { GFLaunchContext } from "../state/greenfield";
 import type { ChatSession } from "../state/sessions";
+import { NewProjectWizard } from "./NewProjectWizard";
 
 export interface ProjectLaunchScreenProps {
   /** 全部历史会话(取 updatedAt 最新的前 3 张卡片;空则隐藏「继续最近项目」) */
@@ -23,8 +24,10 @@ export interface ProjectLaunchScreenProps {
   onNewProject: () => void;
   /** 点历史卡片 = 选中该会话(进画布) */
   onSelectSession: (id: string) => void;
-  /** 从零生成标准工程:进入独立的规格工作台(确认前不产生任何修改) */
-  onEnterGreenfield?: () => void;
+  /** 从零生成标准工程:进入独立的规格工作台(确认前不产生任何修改)。
+   * 收口接线(J9):把向导的工艺描述直接透出,供 App 作为 initialPrompt 传入通道,
+   * 不再只依赖 loadLaunchContext() 兜底。参数可选,兼容 `() => void` 调用方。 */
+  onEnterGreenfield?: (context?: GFLaunchContext) => void;
 }
 
 const SESSION_CARD_STYLE: React.CSSProperties = {
@@ -77,12 +80,15 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
   onSelectSession,
   onEnterGreenfield,
 }) => {
+  const [wizardOpen, setWizardOpen] = useState(false);
+
   // 防御性排序:即使上游未按 updatedAt 降序,这里也取最新的前 3 个
   const recent = [...sessions]
     .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
     .slice(0, 3);
 
   return (
+    <>
     <div
       className="launch"
       data-ui="project-launch-screen"
@@ -105,7 +111,7 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
           开始你的 PLC 工程
         </div>
         <div style={{ marginTop: 6, fontSize: 13.5, color: "var(--ink-2)" }}>
-          导入既有博图工程,或从工艺需求开始新建 —— 需求先行,确认不产生任何修改
+          导入既有博图工程,或用四步向导从零开始 —— project_id 贯穿全程,确认前不产生任何修改
         </div>
       </div>
 
@@ -153,38 +159,36 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
           </span>
         </button>
 
-        {/* 入口 3:新建工程(弹出三区域画布：上区硬件拓扑 · 下区工艺 Mermaid 逻辑 · 右区绑定变量) */}
+        {/* 入口 3(合并原「新建工程」+「从零生成标准工程」双入口):四步向导 */}
         <button
           type="button"
           className="launch-entry"
           style={{ ...ENTRY_STYLE, borderTopColor: "var(--accent, #1f2de6)" }}
-          onClick={onNewProject}
+          onClick={() => setWizardOpen(true)}
         >
           <span style={{ fontSize: 15, color: "var(--accent, #1f2de6)", fontWeight: 600 }}>
-            新建工程
+            新建工程 · 四步向导
           </span>
           <span style={{ fontSize: 13, color: "var(--ink-2)" }}>
-            进入三区域工程画布：上区硬件物理拓扑 · 下区对话生成 Mermaid 逻辑 · 右区外部锁定与内部绑定变量，确认后生成标准 AF 博途工程
+            合并后的单一入口：第一步生成 project_id 并贯穿全程 → 工艺描述 →
+            可选资料（DB 编号 / IO 表可跳过，D7）→ 确认进入。无上传资料也能完成拓扑与逻辑确认，
+            UI 不虚构地址 / OB 条目；确认设备逻辑前不产生任何修改
           </span>
         </button>
-
-        {/* 入口 4:从零生成标准工程(独立通道,确认图中架构与功能前不生成任何工程) */}
-        {onEnterGreenfield && (
-          <button
-            type="button"
-            className="launch-entry"
-            style={ENTRY_STYLE}
-            onClick={onEnterGreenfield}
-          >
-            <span style={{ fontSize: 15, color: "var(--ink)", fontWeight: 500 }}>
-              从零生成标准工程
-            </span>
-            <span style={{ fontSize: 13, color: "var(--ink-2)" }}>
-              用自然语言描述工艺,生成结构图后手动连线;确认图中架构与功能之前不产生任何修改
-            </span>
-          </button>
-        )}
       </div>
     </div>
+    {wizardOpen && (
+      <NewProjectWizard
+        onCancel={() => setWizardOpen(false)}
+        onComplete={(context) => {
+          setWizardOpen(false);
+          // 两个既有回调在 App.tsx 中都是切到 greenfield 通道；优先用独立通道入口，
+          // 并把向导 context（含工艺描述）直接透传给 App 的 initialPrompt。
+          if (onEnterGreenfield) onEnterGreenfield(context);
+          else onNewProject();
+        }}
+      />
+    )}
+    </>
   );
 };

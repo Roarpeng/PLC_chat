@@ -1383,3 +1383,51 @@ P2-1…P2-9；并线前必须挂 PCEC 账本（事务/基线/V0-V3），
 | 时序图提取 | `docs/greenfield/sequence-diagram.mermaid` | §4.1 |
 
 > 本设计为增量架构基线，供工程师（寇豆码）执行 T01–T05、测试（严过关）据此编写 AC-1~AC-7 断言。所有「待明确事项」（§5 Q1–Q11）需主理人 / 用户拍板后收敛，**架构不静默假设**。
+
+---
+
+## 11. 当前实现现状与批次执行状态（P0-C / F14，2026-11-06 追加）
+
+> 本节为**现状描述**。§3.8 的 A1–A11 是 Phase 1 **设计态**接口清单（如
+> `POST /session`、`POST /link`、`GET /spec`、`GET /export`、`GET /stage`），
+> 与当前 `gateway/app/routers/greenfield.py` 实际注册的端点**并非一一对应**；
+> 集成与文档引用一律以下表「实际注册端点」为准。§9 的 P2-1..P2-9 为管线设计，
+> 其中 P2-4..P2-8 的落地实现位于 `gateway/app/services/plc/tia_delivery.py`
+> （§9.2 sanctioned 模块），本批次仅推进编译判定口径与文档，不含真机验收。
+
+### 11.1 实际注册端点（与 `greenfield.py` 一致）
+
+统一前缀 `/api/v1/plc/canvas/greenfield`，统一 `ApiResponse` 信封。
+
+| 类别 | 方法与路径 | 说明 |
+|---|---|---|
+| 状态 / 会话 | `GET /state`、`GET /whitelist`、`GET /views` | 阶段、白名单、三视图 |
+| 上传 / 草稿 | `POST /upload`、`POST /receipt/confirm`、`POST /draft`、`POST /draft/export`、`POST /draft/import`、`POST /load-reference` | 只读冻结契约、首版草稿、留痕 |
+| 编辑 / 校验 | `POST /links`、`POST /validate`、`POST /hardware`、`POST /chat`、`POST /begin-edit` | 连线、校验、硬件、对话、重新编辑 |
+| 冻结 / 规格 | `POST /confirm`、`GET /specs/{version}` | 硬门禁确认、冻结 spec 快照 |
+| 导出 / 交付 | `GET /export/mermaid`、`POST /generate`、`POST /engineering-summary`、`POST /deliver-tia`、`GET /download-package` | Mermaid 导出、工程包、TIA 交付链 |
+
+契约 `04-parallel-wp-contract.md` §3 约定的 `POST /patch` / `POST /diff` / `POST /confirm-diff` 由 Agent A 并行开发，集成收口前以路由实际注册为准，**不预先宣称**已上线。
+
+### 11.2 P2-5..P2-8 现状与 P0-A 口径
+
+- 四层静态门禁 `run_static_gates()`：`af_linter → scl_precheck → writeback_linter → mega_source`，任一拦截即 `GF_TIA_STATIC_GATE_FAILED` fail-closed，不进入 PCEC / Openness。
+- PCEC 账本：`new_change → analyzed → validated → approved → put_change → baseline_matches`，基线变化 `expired` fail-closed。
+- P2-8 编译判定本批次改为 `CompileDiagnostics` 结构化诊断：`compile_ok = (error_count == 0 and static_gate_passed)`；warning 单列、禁止并入成功；四层静态门禁任一拦截即不算通过（UC-02）。旧口径 `or "warning" in state.lower()` 已删除（RK4）。
+- `tia_unavailable` / Openness 执行中断改为**显式失败**：抛 `GF_TIA_UNAVAILABLE` / `GF_TIA_EXEC_ERROR`，由网关 `_fail` 产出 `ok=false` + 非 HTTP 200，**禁止** HTTP 200 静默通过（UC-03）。
+- `POST /deliver-tia` 回执新增 `compile_diagnostics`（可复现报告：error 数 / warning 清单 / 块清单 / 耗时 / TIA 版本 / 路径 / 静态门禁 / `compile_ok`），供 EvidenceBundle 归档；`tia_unavailable`（探测失败）与 `pending_real_machine`（真机未跑 / `package` 模式）显式区分，二者 `compile_ok=false`。
+- `xml_package_unverified` 保持 `true`（§9.3 K1 探针未做）；manifest 与报告统一标 `pending_real_machine`。
+
+### 11.3 真机全绿归属、离线口径与待拍板项
+
+- 「真机全绿」= `L1 ∧ L2 ∧ L3 ∧ L4` 全绿，归属 **WP-10 全量验收 / M4 发布门禁**（Plan §2.2、§3、§6.2）；**尚未达成**。禁止以离线单测或「生成成功 / lint 通过」宣称 L2 / L4 通过（N9）。
+- 本批次为**离线可推进部分**（WP-01 的 P0-A + P0-C；Plan §6.3）；P0-B（K1 探针）、P0-G 三次增量、D10 负例等真机项不在本批次。L2 / L4 相关验收项一律标 `pending_real_machine`，**M4 发布门禁在这些 pending 清零前保持未通过**。
+- AF 档位（P0-D）结论**待 G0 真机实测后拍板**（Plan §3 M0 / §9.3）；结论前映射层维持「**档位无关**」，禁止据推断定型。
+
+### 11.4 证据路径（P0-A / P0-B）
+
+| 项 | 证据路径 | 状态 |
+|---|---|---|
+| P0-A 编译判定口径 | `tests/unit/test_greenfield_tia_delivery.py`（UC-02 / UC-03 / 静态门禁负例）；`tia_delivery.json` → `compile_diagnostics` | 离线口径已落地；真机结论 `pending_real_machine` |
+| P0-B K1 探针 | `xml_supplement/manifest.json` 的 `xml_package_unverified: true` + `pending_real_machine: true`；V19 导入日志 + `.zap19` | **`pending_real_machine`**（本批次不做） |
+| L2 / L4 真机全绿 | WP-10 全量验收报告、结构化编译报告、增量 fidelity 报告、PCEC 账本 | **尚未达成**，M4 门禁未通过 |

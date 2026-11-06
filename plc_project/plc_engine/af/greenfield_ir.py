@@ -642,12 +642,17 @@ class GFSpecMeta(_GFEntity):
 
 @dataclass
 class IRPatch(_GFEntity):
-    """四种结构化 IRPatch（§3.6.2 M2）：编辑的唯一入口。
+    """结构化 IRPatch：编辑的唯一入口（§3.6.2 M2；WP-03/WP-07 复用扩展）。
+
+    原始四种 op（``IR_PATCH_OPS``，chat LLM 白名单口径保持不变）：
 
     - ``add_edge``    : ``edge`` 必填，追加一条边
     - ``remove_edge`` : ``edge_id`` 必填，删除一条边（系统骨架不可删）
     - ``redirect_edge``: ``edge_id`` + ``src_id`` / ``dst_id``，改向并重建边 ID
     - ``set_ir_only_field``: ``field_path`` + ``value``，只改 ir_only 字段
+
+    追加字段用于承载节点编辑 op（D6）与硬件拓扑 op（D4）的负载；
+    旧字段语义完全不变，保证 4-op 机制向后兼容。
     """
 
     op: str = "add_edge"
@@ -657,6 +662,19 @@ class IRPatch(_GFEntity):
     dst_id: str = ""
     field_path: str = ""
     value: Any = None
+    #: 节点负载（add_unit / add_em / add_cm / add_hw_node）。
+    node: dict[str, Any] | None = None
+    #: 目标节点 id（remove_node / rename_node / relabel_node / reparent_node /
+    #: unmount_cm / remove_hw_node 等）。
+    node_id: str = ""
+    #: 新父节点 id（reparent_node；add_em/add_cm 也可用 node["unit_id"] / ["em_id"]）。
+    parent_id: str = ""
+    #: rename_node 的新 name。
+    name: str = ""
+    #: relabel_node 的新 business_label。
+    label: str = ""
+    #: 通用负载（硬件 op 的 cm_id / hw_node_id / var_key / target_id / role 等）。
+    payload: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -667,12 +685,30 @@ class IRPatch(_GFEntity):
             "dst_id": self.dst_id,
             "field_path": self.field_path,
             "value": _to_plain(self.value),
+            "node": _to_plain(self.node) if self.node is not None else None,
+            "node_id": self.node_id,
+            "parent_id": self.parent_id,
+            "name": self.name,
+            "label": self.label,
+            "payload": _to_plain(self.payload),
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "IRPatch":
         raw_edge = data.get("edge")
         edge = GFEdge.from_dict(raw_edge) if isinstance(raw_edge, dict) else None
+        raw_node = data.get("node")
+        if isinstance(raw_node, dict):
+            node = dict(raw_node)
+        else:
+            # 收口接线（J4）：前端 NodeEditor 早期把 add_* 负载放在 op 顶层
+            # （unit_id / em_id / business_label / name / label 等），在此折叠为
+            # node，保持服务端 _apply_node_op 为唯一裁定，不改 IR 语义。
+            node = {
+                k: v for k, v in data.items()
+                if k in ("id", "name", "business_label", "label",
+                         "unit_id", "em_id", "cm_type", "parameters")
+            } or None
         return cls(
             op=str(data.get("op") or "add_edge"),
             edge=edge,
@@ -681,13 +717,120 @@ class IRPatch(_GFEntity):
             dst_id=str(data.get("dst_id") or ""),
             field_path=str(data.get("field_path") or ""),
             value=data.get("value"),
+            node=node,
+            node_id=str(data.get("node_id") or ""),
+            parent_id=str(data.get("parent_id") or ""),
+            name=str(data.get("name") or ""),
+            label=str(data.get("label") or data.get("business_label") or ""),
+            payload=dict(data.get("payload") or {}),
         )
 
 
-#: 四种合法 patch 操作。
+#: 原始四种合法 patch 操作（chat LLM 归一化仍以此为白名单，保持不变）。
 IR_PATCH_OPS: frozenset[str] = frozenset(
     {"add_edge", "remove_edge", "redirect_edge", "set_ir_only_field"}
 )
+
+#: WP-07 / D6 节点编辑 op。
+NODE_PATCH_OPS: frozenset[str] = frozenset(
+    {
+        "add_unit", "add_em", "add_cm", "remove_node",
+        "rename_node", "relabel_node", "reparent_node",
+    }
+)
+
+#: WP-03 / D4 逻辑拓扑与变量绑定 op（bind_var 保留撤销语义）。
+HW_PATCH_OPS: frozenset[str] = frozenset(
+    {
+        "mount_cm", "unmount_cm", "bind_var", "unbind_var",
+        "add_hw_node", "remove_hw_node", "reset_topology",
+    }
+)
+
+#: apply_patch 的完整 op 白名单（复用并扩展 4-op，禁止另起炉灶）。
+CANVAS_PATCH_OPS: frozenset[str] = IR_PATCH_OPS | NODE_PATCH_OPS | HW_PATCH_OPS
+
+
+@dataclass
+class CanvasPatch(_GFEntity):
+    """统一受控写入口 ``apply_canvas_patch`` 的批量载荷（§2.2）。
+
+    一批 op 要么全部通过校验并提交，要么整批回滚；``expected_ir_sha256``
+    用于检测「绕过 patch 直接写 IR」导致的指纹漂移。
+    """
+
+    ops: list[IRPatch] = field(default_factory=list)
+    project_id: str = ""
+    base_spec_version: int | None = None
+    expected_ir_sha256: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "ops": [op.to_dict() if isinstance(op, IRPatch) else _to_plain(op) for op in self.ops],
+            "project_id": self.project_id,
+            "base_spec_version": self.base_spec_version,
+            "expected_ir_sha256": self.expected_ir_sha256,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "CanvasPatch":
+        raw_ops = data.get("ops") or []
+        ops: list[IRPatch] = []
+        for item in raw_ops:
+            if isinstance(item, IRPatch):
+                ops.append(item)
+            elif isinstance(item, dict):
+                ops.append(IRPatch.from_dict(item))
+        bsv = data.get("base_spec_version")
+        version = None if bsv in (None, "") else _as_int(bsv, 0)
+        return cls(
+            ops=ops,
+            project_id=str(data.get("project_id") or ""),
+            base_spec_version=version,
+            expected_ir_sha256=str(data.get("expected_ir_sha256") or ""),
+        )
+
+
+@dataclass
+class PatchResult(_GFEntity):
+    """``apply_canvas_patch`` 的结构化结果（§3 /patch 响应形状）。"""
+
+    ok: bool = True
+    violations: list[dict[str, Any]] = field(default_factory=list)
+    ir_sha256: str = ""
+    spec_hash: str = ""
+    stage: str = ""
+    applied_ops: int = 0
+    change_events: list[dict[str, Any]] = field(default_factory=list)
+    ir: dict[str, Any] | None = None
+    reason: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "ok": self.ok,
+            "violations": [dict(v) for v in self.violations],
+            "ir_sha256": self.ir_sha256,
+            "spec_hash": self.spec_hash,
+            "stage": self.stage,
+            "applied_ops": self.applied_ops,
+            "change_events": [dict(e) for e in self.change_events],
+            "ir": self.ir,
+            "reason": self.reason,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "PatchResult":
+        return cls(
+            ok=bool(data.get("ok", True)),
+            violations=[dict(v) for v in (data.get("violations") or []) if isinstance(v, dict)],
+            ir_sha256=str(data.get("ir_sha256") or ""),
+            spec_hash=str(data.get("spec_hash") or ""),
+            stage=str(data.get("stage") or ""),
+            applied_ops=_as_int(data.get("applied_ops"), 0),
+            change_events=[dict(e) for e in (data.get("change_events") or []) if isinstance(e, dict)],
+            ir=data.get("ir"),
+            reason=str(data.get("reason") or ""),
+        )
 
 
 @dataclass
@@ -714,6 +857,21 @@ class GreenfieldIR(_GFEntity):
     views: GFViews = field(default_factory=GFViews)
     spec_meta: GFSpecMeta = field(default_factory=GFSpecMeta)
 
+    # ---------- WP-03 / D4：逻辑拓扑一等公民（全部进 spec_hash） ----------
+    #: 项目一等公民标识；会话 / 拓扑 / 资料 / 规格 / 产物均绑定此 id。
+    project_id: str = ""
+    #: 框架基线版本（确认时锁定；升级须走显式变更流程）。
+    baseline_version: str = "GF-BASELINE-1.0"
+    #: 逻辑硬件占位节点（纯逻辑类型，不含型号 / 槽位 / 物理地址）。
+    #: 用户主动选择的拓扑真值；反推拓扑只是展示层派生，不进 IR。
+    hw_nodes: list[dict[str, Any]] = field(default_factory=list)
+    #: 逻辑硬件占位节点之间的连接关系。
+    hw_links: list[dict[str, Any]] = field(default_factory=list)
+    #: 设备（CM）→ 逻辑硬件占位的挂载映射（替代旧的 session.custom_hw.cm_mounts）。
+    cm_mounts: dict[str, str] = field(default_factory=dict)
+    #: 变量绑定记录（含撤销元数据 prev_* / written_* / appended_*）。
+    var_bindings: list[dict[str, Any]] = field(default_factory=list)
+
     # ---------- 序列化 ----------
 
     def to_dict(self) -> dict[str, Any]:
@@ -739,6 +897,12 @@ class GreenfieldIR(_GFEntity):
             edges=_list_of(data, "edges", GFEdge),
             views=_entity_of(data, "views", GFViews, GFViews()),
             spec_meta=_entity_of(data, "spec_meta", GFSpecMeta, GFSpecMeta()),
+            project_id=str(data.get("project_id") or ""),
+            baseline_version=str(data.get("baseline_version") or "GF-BASELINE-1.0"),
+            hw_nodes=[dict(x) for x in (data.get("hw_nodes") or []) if isinstance(x, dict)],
+            hw_links=[dict(x) for x in (data.get("hw_links") or []) if isinstance(x, dict)],
+            cm_mounts=dict(data.get("cm_mounts") or {}),
+            var_bindings=[dict(x) for x in (data.get("var_bindings") or []) if isinstance(x, dict)],
         )
 
     def _canonical_payload(self) -> dict[str, Any]:
@@ -759,6 +923,17 @@ class GreenfieldIR(_GFEntity):
     def ir_sha256(self) -> str:
         """IR 内容哈希（``sha256:<64hex>``），排除布局与冻结元数据。"""
         return sha256_prefixed(self.canonical_json())
+
+    def spec_hash(self) -> str:
+        """当前画布状态的全域内容哈希。
+
+        覆盖 拓扑(hw_nodes/hw_links/cm_mounts/var_bindings) + 节点(units/ems/cms/
+        control_nodes/jobs/steps/modes/interlocks/io_bindings/compat_refs) +
+        边(edges) + 步序(steps) + 资料(compat_refs/contract 投影) + 项目标识与
+        基线版本；仅剔除 ``views.layout`` 与冻结元数据/边时间戳等易变字段。
+        同一画布状态两次调用必同值（WP-03 / UC-06）。
+        """
+        return self.ir_sha256()
 
     def _replace_from(self, other: "GreenfieldIR") -> None:
         """用候选 IR 的字段整体替换自身（供 ``apply_patch`` 原子提交）。"""
@@ -829,6 +1004,16 @@ class GreenfieldIR(_GFEntity):
                 "kind": NodeKind.COMPAT_REF.value, "label": ref.raw_ref,
                 "immutable": True, "ref": ref, "raw_ref": ref.raw_ref,
                 "contract_id": ref.contract_id, "contract_sha": ref.contract_sha,
+            }
+        # D4：逻辑硬件占位节点进入全局 ID 命名空间，供 E_HW_MOUNT 边裁定。
+        for node in self.hw_nodes:
+            nid = str(node.get("id") or "")
+            if not nid or nid in index:
+                continue
+            index[nid] = {
+                "kind": NodeKind.HW_NODE.value,
+                "label": str(node.get("label") or nid),
+                "immutable": False, "ref": None,
             }
         for node_id, kind in VIRTUAL_NODE_IDS.items():
             label = {"DB_UNITS": "接口数据区", "IOMAP": "信号适配层", "OP": "操作员"}[node_id]

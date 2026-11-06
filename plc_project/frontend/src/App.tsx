@@ -3040,7 +3040,12 @@ const App: React.FC = () => {
                     onImport={() => setImportOpen(true)}
                     onNewProject={() => setChannel("greenfield")}
                     onSelectSession={handleSelectSession}
-                    onEnterGreenfield={() => setChannel("greenfield")}
+                    onEnterGreenfield={(context) => {
+                      // J9 收口：向导工艺描述直接作为 initialPrompt 传入通道，
+                      // 不再只依赖 GreenfieldChannel 内的 loadLaunchContext() 兜底。
+                      if (context?.prompt) setGreenfieldPrompt(context.prompt);
+                      setChannel("greenfield");
+                    }}
                   />
                 </div>
               )}
