@@ -10,10 +10,11 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Body
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from gateway.app.schemas.common import ApiResponse, ErrorBody
+from gateway.app.services.plc import greenfield_chat, tia_delivery
 from gateway.app.services.plc import greenfield_service as svc
 from plc_engine.af.greenfield_ports import GreenfieldError
 
@@ -29,11 +30,18 @@ def _ok(data: Any) -> ApiResponse[dict[str, Any]]:
 
 
 def _error_status(code: str) -> int:
-    """§3.8 错误码映射：门禁/不可变 409，连线/投影 422，其余 400。"""
-    if code.startswith("GF_GATE") or code.startswith("GF_SPEC_IMMUTABLE"):
+    """§3.8 错误码映射：门禁/不可变 409，连线/投影 422，LLM 网关错 502，其余 400。
+
+    Phase 2 追加（§9.2 / P2-5 / P2-6）：``GF_PCEC_*`` 基线/账本 fail-closed → 409；
+    ``GF_TIA_STATIC_GATE_FAILED`` / ``GF_TIA_OB_*`` 校验类 → 422；其余 ``GF_TIA_*``
+    参数类 → 400。
+    """
+    if code.startswith(("GF_GATE", "GF_SPEC_IMMUTABLE", "GF_PCEC_")):
         return 409
-    if code.startswith("GF_EDGE") or code.startswith("GF_VIEW"):
+    if code.startswith(("GF_EDGE", "GF_VIEW", "GF_TIA_OB")) or code == "GF_TIA_STATIC_GATE_FAILED":
         return 422
+    if code == "LLM_CALL_FAILED":
+        return 502
     return 400
 
 
@@ -78,6 +86,27 @@ class ConfirmIn(SessionIn):
 
 class DraftImportIn(SessionIn):
     payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class HardwarePatchIn(SessionIn):
+    op: str = "mount_cm"
+    cm_id: str = ""
+    hw_node_id: str = ""
+    var_key: str = ""
+    target_id: str = ""
+    role: str = "auto"
+    node: dict[str, Any] | None = None
+
+
+class ChatIn(SessionIn):
+    message: str = ""
+
+
+class DeliverTiaIn(SessionIn):
+    """POST /deliver-tia：mode=auto 尝试 Openness 自动导入编译（不可用优雅降级）；
+    mode=package 只出 SCL+XML 补充包。§9 P2-4..P2-8。"""
+
+    mode: str = "auto"
 
 
 def _session(session_id: str | None):
@@ -205,3 +234,65 @@ def get_spec(version: int, session_id: str | None = None) -> ApiResponse[dict[st
             error=ErrorBody(code="GF_SPEC_NOT_FOUND", message=str(exc)),
             request_id=_rid(),
         )
+
+
+@router.post("/hardware")
+def update_hardware(body: HardwarePatchIn = Body(...)) -> ApiResponse[dict[str, Any]]:
+    try:
+        payload = body.model_dump(exclude={"session_id"})
+        return _ok(svc.update_hardware(_session(body.session_id), payload))
+    except GreenfieldError as exc:
+        return _fail(exc)
+
+
+@router.post("/chat")
+def chat_message(body: ChatIn = Body(...)) -> ApiResponse[dict[str, Any]]:
+    """chat ↔ 画布 双向联动的对话入口（问答 / LLM 增量修改 / 首版生成）。"""
+    try:
+        result = greenfield_chat.chat_turn(_session(body.session_id), body.message)
+        return _ok(result)
+    except GreenfieldError as exc:
+        return _fail(exc)
+
+
+@router.post("/generate")
+def generate_project(body: SessionIn = Body(...)) -> ApiResponse[dict[str, Any]]:
+    try:
+        return _ok({"delivery": svc.generate_project_package(_session(body.session_id))})
+    except GreenfieldError as exc:
+        return _fail(exc)
+
+
+@router.post("/load-reference")
+def load_reference(body: DraftIn = Body(...)) -> ApiResponse[dict[str, Any]]:
+    try:
+        return _ok(svc.load_reference_fixture(_session(body.session_id), body.prompt))
+    except GreenfieldError as exc:
+        return _fail(exc)
+
+
+@router.post("/deliver-tia")
+def deliver_tia(body: DeliverTiaIn = Body(...)) -> ApiResponse[dict[str, Any]]:
+    """Phase 2 最后一公里：XML 补充包 + 静态门禁 + PCEC 账本 +（auto）Openness 自动导入编译。
+
+    Openness 不可用 / TIA 被占用 → ``status="tia_unavailable"`` + 人工导入指引
+    （HTTP 200，ZIP 交付不受影响）；静态门禁或 PCEC 基线 fail-closed → 4xx。
+    """
+    try:
+        result = tia_delivery.deliver_tia(_session(body.session_id), mode=body.mode)
+        return _ok({k: v for k, v in result.items() if k != "zip_bytes"})
+    except GreenfieldError as exc:
+        return _fail(exc)
+
+
+@router.get("/download-package")
+def download_package(session_id: str | None = None) -> Response:
+    try:
+        filename, zip_bytes = svc.get_project_package_zip(_session(session_id))
+        return Response(
+            content=zip_bytes,
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except GreenfieldError as exc:
+        return _fail(exc)

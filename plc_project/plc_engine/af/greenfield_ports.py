@@ -46,18 +46,20 @@ STAGE_BADGES: dict[GreenfieldStage, str] = {
 }
 
 #: 阶段 → 允许的动作集合。``assert_gate`` 的唯一裁定表（§4.3 G1）。
+#: ``chat`` = 对话式交互（问答 + LLM 增量修改 IR）；FROZEN 阶段仅允许问答，
+#: 编辑类 patch 由 ``greenfield_chat`` 自行拒绝（不放开 link 语义）。
 STAGE_ALLOWED_ACTIONS: dict[GreenfieldStage, frozenset[str]] = {
     GreenfieldStage.DRAFT: frozenset(
-        {"read", "upload", "receipt_confirm", "draft", "validate", "views", "export", "stage", "spec"}
+        {"read", "upload", "receipt_confirm", "draft", "validate", "views", "export", "stage", "spec", "hardware", "chat"}
     ),
     GreenfieldStage.LINKABLE: frozenset(
-        {"read", "upload", "receipt_confirm", "link", "validate", "views", "export", "stage", "spec"}
+        {"read", "upload", "receipt_confirm", "link", "validate", "views", "export", "stage", "spec", "hardware", "chat"}
     ),
     GreenfieldStage.VALIDATING: frozenset(
-        {"read", "link", "validate", "confirm", "views", "export", "stage", "spec"}
+        {"read", "link", "validate", "confirm", "views", "export", "stage", "spec", "hardware", "chat"}
     ),
     GreenfieldStage.FROZEN: frozenset(
-        {"read", "views", "export", "stage", "spec", "begin_edit"}
+        {"read", "views", "export", "stage", "spec", "begin_edit", "generate", "generate_project", "hardware", "chat"}
     ),
     GreenfieldStage.LOCKED: frozenset({"read"}),
 }

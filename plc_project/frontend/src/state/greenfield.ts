@@ -23,12 +23,151 @@ export interface GFEdge {
   immutable?: boolean;
 }
 
+export interface GFStepNode {
+  id: string;
+  em_id: string;
+  step_id: number;
+  name: string;
+  actions: string[];
+  transition_condition: string;
+  next_step_id: number;
+  error_step_id: number;
+  timeout_ms: number;
+  is_initial?: boolean;
+  is_error?: boolean;
+}
+
+export interface GFStepEdge {
+  id: string;
+  src_id: string;
+  dst_id: string;
+  src_step_id?: number;
+  dst_step_id?: number;
+  kind: string;
+  label: string;
+}
+
+export interface GFStepFlowView {
+  mermaid: string;
+  nodes: GFStepNode[];
+  edges: GFStepEdge[];
+  em_tabs: Array<{ id: string; name: string; business_label?: string; unit_id?: string; em_idx?: number }>;
+}
+
 export interface GFViews {
   flow: string;
   seq: string;
   state: string;
+  step_flow?: GFStepFlowView;
   node_ids: Record<string, string[]>;
   edge_ids: Record<string, string[]>;
+}
+
+export interface GFHwNode {
+  id: string;
+  kind: string;
+  label: string;
+  slot: string;
+  protocol: string;
+  address_range: string;
+  tag_count: number;
+  mounted_cm_ids: string[];
+  tags_preview?: Array<Record<string, unknown>>;
+}
+
+export interface GFNetLink {
+  id: string;
+  src_hw_id: string;
+  dst_hw_id: string;
+  protocol: string;
+  label: string;
+}
+
+export interface GFVariableCatalog {
+  external_io: Array<{
+    key: string;
+    name: string;
+    logical_address: string;
+    direction: string;
+    data_type: string;
+    comment: string;
+    hw_node_id: string;
+    locked: boolean;
+    bound_targets: string[];
+  }>;
+  external_db: Array<{
+    key: string;
+    db_name: string;
+    name: string;
+    full_symbol: string;
+    data_type: string;
+    offset: number;
+    initial_value: string;
+    comment: string;
+    hw_node_id: string;
+    locked: boolean;
+    bound_targets: string[];
+  }>;
+  internal_vars: Array<{
+    key: string;
+    group: string;
+    owner_id: string;
+    em_id: string;
+    name: string;
+    data_type: string;
+    role: string;
+    locked: boolean;
+  }>;
+  counts: {
+    external_io: number;
+    external_db: number;
+    internal_vars: number;
+  };
+}
+
+export interface GFHardwareTopology {
+  nodes: GFHwNode[];
+  links: GFNetLink[];
+  variable_catalog: GFVariableCatalog;
+  custom_var_bindings?: Array<{ var_key: string; target_id: string; role: string }>;
+  /** 用户手工指定的挂载（cm_id → hw_node_id；可卸载回自动推导）。 */
+  custom_cm_mounts?: Record<string, string>;
+  /** 用户手工新增的硬件节点 id（可移除；其余为自动推导）。 */
+  custom_node_ids?: string[];
+}
+
+export interface GFDeliverySummary {
+  ok: boolean;
+  project_name: string;
+  spec_version: string;
+  spec_hash: string;
+  block_count: number;
+  blocks_manifest: Array<{
+    name: string;
+    block_type: string;
+    number: number;
+    af_role: string;
+    folder: string;
+    path: string;
+    sha256: string;
+  }>;
+  verification: {
+    ok: boolean;
+    linter_error_count: number;
+    linter_warning_count: number;
+    single_writer_audit: {
+      ok: boolean;
+      violations?: string[];
+      total_q_tags: number;
+      mapped_q_tags: number;
+    };
+    compat_integrity?: {
+      ok: boolean;
+    };
+  };
+  zip_filename: string;
+  zip_sha256?: string;
+  zip_size_bytes?: number;
 }
 
 export interface GFViolation {
@@ -57,6 +196,16 @@ export interface GFReceipt {
   contract_draft_hash?: string;
 }
 
+/** 对话流消息（真值在后端会话，前端只渲染 state.messages）。 */
+export interface GFChatMessage {
+  id: string;
+  role: "user" | "assistant" | "event";
+  kind: string; // text | receipt | contract | views | validation | freeze | delivery | edit
+  text: string;
+  payload: Record<string, unknown>;
+  ts: string;
+}
+
 export interface GFState {
   session_id: string;
   stage: GFStage;
@@ -72,7 +221,10 @@ export interface GFState {
   notes: string[];
   ir: Record<string, unknown> | null;
   views: GFViews | null;
-  summary: { units: number; ems: number; cms: number; edges: number };
+  messages?: GFChatMessage[];
+  hardware?: GFHardwareTopology | null;
+  delivery_summary?: GFDeliverySummary | null;
+  summary: { units: number; ems: number; cms: number; steps?: number; edges: number };
   ir_only_fields: Array<{ field?: string; path?: string; label?: string; [key: string]: unknown }>;
 }
 
@@ -211,6 +363,55 @@ export async function importDraft(sessionId: string, payload: GFDraftPayload): P
   return requestPlc<GFState>(`${GF_API}/draft/import`, jsonBody({ session_id: sessionId, payload }));
 }
 
+export async function updateHardware(
+  sessionId: string,
+  payload: Record<string, unknown>,
+): Promise<GFState> {
+  return requestPlc<GFState>(`${GF_API}/hardware`, jsonBody({ session_id: sessionId, ...payload }));
+}
+
+/** chat ↔ 画布 双向联动：问答 / LLM 增量修改 / 首版生成（服务端为唯一裁定）。 */
+export async function sendChat(
+  sessionId: string,
+  message: string,
+): Promise<{ state: GFState; reply: string; message: GFChatMessage }> {
+  return requestPlc<{ state: GFState; reply: string; message: GFChatMessage }>(
+    `${GF_API}/chat`,
+    jsonBody({ session_id: sessionId, message }),
+  );
+}
+
+export async function loadReferenceFixture(
+  sessionId: string,
+  prompt = "",
+): Promise<GFState> {
+  return requestPlc<GFState>(`${GF_API}/load-reference`, jsonBody({ session_id: sessionId, prompt }));
+}
+
+export async function generateProjectPackage(
+  sessionId: string,
+): Promise<{ delivery: GFDeliverySummary & Record<string, unknown> }> {
+  return requestPlc<{ delivery: GFDeliverySummary & Record<string, unknown> }>(
+    `${GF_API}/generate`,
+    jsonBody({ session_id: sessionId }),
+  );
+}
+
+/** 博途真机交付：XML 补充包 + PCEC 事务 + Openness 自动导入编译（不可用则诚实降级）。 */
+export async function deliverTia(
+  sessionId: string,
+  mode: "auto" | "package" = "auto",
+): Promise<{ delivery: Record<string, unknown> }> {
+  return requestPlc<{ delivery: Record<string, unknown> }>(
+    `${GF_API}/deliver-tia`,
+    jsonBody({ session_id: sessionId, mode }),
+  );
+}
+
+export function downloadPackageUrl(sessionId: string): string {
+  return `${GF_API}/download-package?session_id=${encodeURIComponent(sessionId)}`;
+}
+
 // -------------------------------------------------------------- 纯函数守卫
 type SideEffectView = {
   counters: Record<string, number>;
@@ -272,7 +473,11 @@ export async function fileToUploadItem(file: File): Promise<{
 }> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const lower = file.name.toLowerCase();
-  const kind = lower.endsWith(".xlsx") || lower.endsWith(".xlsm") || lower.endsWith(".csv") ? "io" : "db";
+  const kind = lower.endsWith(".pdf")
+    ? "pdf"
+    : lower.endsWith(".xlsx") || lower.endsWith(".xlsm") || lower.endsWith(".csv")
+      ? "io"
+      : "db";
   return { filename: file.name, content_base64: bytesToBase64(bytes), kind };
 }
 

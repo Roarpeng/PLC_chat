@@ -453,10 +453,22 @@ def _set_ir_only_field(
         if step is None:
             return reject(f"步序 {obj_id} 不存在")
         key = tail[0]
-        if key not in {"actions", "transition_condition", "timeout_ms", "error_step_id", "branch"}:
+        if key not in {
+            "actions",
+            "transition_condition",
+            "timeout_ms",
+            "error_step_id",
+            "next_step_id",
+            "name",
+            "branch",
+        }:
             return reject(f"步序字段 {key} 不可编辑")
-        if key in {"timeout_ms", "error_step_id"} and (not isinstance(value, int) or value < 0):
+        if key in {"timeout_ms", "error_step_id", "next_step_id"} and (
+            not isinstance(value, int) or isinstance(value, bool) or value < 0
+        ):
             return reject(f"{key} 必须是非负整数")
+        if key == "name" and (not isinstance(value, str) or not value.strip()):
+            return reject("name 必须是非空字符串")
         if key == "actions" and not isinstance(value, list):
             return reject("actions 必须是字符串列表")
         if key == "branch" and not isinstance(value, dict):

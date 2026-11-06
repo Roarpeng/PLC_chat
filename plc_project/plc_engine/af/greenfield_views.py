@@ -248,6 +248,107 @@ def render_state(ir: GreenfieldIR) -> str:
     return project_views(ir).state.mermaid
 
 
+def render_step_flowchart(ir: GreenfieldIR, em_id: str | None = None) -> dict[str, Any]:
+    """将步序（``ir.steps`` + ``E_SEQ_NEXT``）投影为交互式步序流程图与结构化节点/边。
+
+    用于工程画布下半区『逻辑区（SFC 步序流程图 + Mermaid 源码抽屉同步）』，
+    不改动既有三视图 ``GFViews`` 字段，保持 ``ALL_VIEWS`` 100% 兼容。
+    """
+    lines: list[str] = ["flowchart TB"]
+    flow_nodes: list[dict[str, Any]] = []
+    flow_edges: list[dict[str, Any]] = []
+    em_tabs: list[dict[str, Any]] = [
+        {
+            "id": em.id,
+            "name": em.name,
+            "business_label": em.business_label,
+            "unit_id": em.unit_id,
+            "em_idx": em.em_idx,
+        }
+        for em in ir.ems
+    ]
+
+    target_ems = [em for em in ir.ems if em_id is None or em.id == em_id]
+    for em in target_ems:
+        em_steps = sorted(
+            [s for s in ir.steps if s.em_id == em.id],
+            key=lambda s: s.step_id,
+        )
+        if not em_steps:
+            continue
+        lines.append(f'    subgraph {em.id}_SG ["{_safe_label(em.id + " · " + em.business_label)}"]')
+        step_by_num = {s.step_id: s for s in em_steps}
+
+        for idx, step in enumerate(em_steps):
+            act_text = ", ".join(step.actions) if step.actions else "等待/保持"
+            label = (
+                f"S{step.step_id} · {step.name}<br/>"
+                f"动作: {act_text}<br/>"
+                f"条件: {step.transition_condition} | 超时: {step.timeout_ms}ms"
+            )
+            lines.append(f'        {step.id}["{_safe_label(label)}"]')
+            flow_nodes.append(
+                {
+                    "id": step.id,
+                    "em_id": em.id,
+                    "step_id": step.step_id,
+                    "name": step.name,
+                    "actions": list(step.actions),
+                    "transition_condition": step.transition_condition,
+                    "next_step_id": step.next_step_id,
+                    "error_step_id": step.error_step_id,
+                    "timeout_ms": step.timeout_ms,
+                    "is_initial": step.step_id == em.initial_step_id or idx == 0,
+                    "is_error": step.step_id >= 900 or step.branch.get("kind") == "else",
+                }
+            )
+
+        for step in em_steps:
+            next_step = step_by_num.get(step.next_step_id)
+            if next_step is not None and next_step.id != step.id:
+                cond = _safe_label(step.transition_condition or "TRUE")
+                lines.append(f"        {step.id} -->|{cond}| {next_step.id}")
+                flow_edges.append(
+                    {
+                        "id": f"STEP_NEXT_{step.id}__{next_step.id}",
+                        "src_id": step.id,
+                        "dst_id": next_step.id,
+                        "src_step_id": step.step_id,
+                        "dst_step_id": next_step.step_id,
+                        "label": step.transition_condition or "TRUE",
+                        "kind": "NORMAL",
+                    }
+                )
+            err_step = step_by_num.get(step.error_step_id)
+            if err_step is not None and err_step.id != step.id:
+                lines.append(f"        {step.id} -.->|超时 {step.timeout_ms}ms| {err_step.id}")
+                flow_edges.append(
+                    {
+                        "id": f"STEP_ERR_{step.id}__{err_step.id}",
+                        "src_id": step.id,
+                        "dst_id": err_step.id,
+                        "src_step_id": step.step_id,
+                        "dst_step_id": err_step.step_id,
+                        "label": f"超时 {step.timeout_ms}ms → S{step.error_step_id}",
+                        "kind": "FAULT",
+                    }
+                )
+            elif step.error_step_id >= 900 and step.step_id < 900:
+                err_node_id = f"{em.id}_ERR_{step.error_step_id}"
+                lines.append(
+                    f'        {err_node_id}(["S{step.error_step_id} · 故障安全步 (SafeHold)"])'
+                )
+                lines.append(f"        {step.id} -.->|超时 {step.timeout_ms}ms| {err_node_id}")
+        lines.append("    end")
+
+    return {
+        "mermaid": "\n".join(lines),
+        "nodes": flow_nodes,
+        "edges": flow_edges,
+        "em_tabs": em_tabs,
+    }
+
+
 def _extract_ids(view: str, text: str) -> tuple[set[str], set[str]]:
     """只做**结构层** ID 提取，不用文本重建语义（M4 / S4 防线）。"""
     node_re = {

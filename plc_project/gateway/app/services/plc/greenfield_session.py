@@ -5,6 +5,7 @@ Q1 裁定：确认前工程写盘恒为 0；草稿仅驻留内存，防刷新丢
 """
 from __future__ import annotations
 
+import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
@@ -54,10 +55,51 @@ class GreenfieldSession:
         default_factory=lambda: {"ops": 0, "disk_writes": 0, "writebacks": 0, "generations": 0}
     )
     notes: list[str] = field(default_factory=list)
+    custom_hw: dict[str, Any] = field(default_factory=dict)
+    last_delivery: dict[str, Any] | None = None
+    #: 对话流消息（chat 化主入口）。纯内存（Q1 口径），随草稿导出/导入。
+    #: 结构：{id, role: user|assistant|event, kind, text, payload, ts}
+    messages: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not self.session_id:
             self.session_id = uuid.uuid4().hex[:12]
+
+    # -------------------------------------------------------------- 对话消息
+    def add_message(
+        self,
+        role: str,
+        kind: str,
+        text: str,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """追加一条对话消息并返回它（前端不自建消息真值，全部以会话为源）。"""
+        message: dict[str, Any] = {
+            "id": uuid.uuid4().hex[:12],
+            "role": role,
+            "kind": kind,
+            "text": text,
+            "payload": payload or {},
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+        self.messages.append(message)
+        if len(self.messages) > 500:  # 防御性上限，超限丢最旧
+            self.messages = self.messages[-500:]
+        return message
+
+    def recent_messages(self, limit: int = 8) -> list[dict[str, Any]]:
+        """最近若干条消息摘要（供 LLM 上下文；事件消息也纳入以感知画布改动）。"""
+        picked = self.messages[-limit:]
+        out = []
+        for m in picked:
+            out.append(
+                {
+                    "role": m.get("role"),
+                    "kind": m.get("kind"),
+                    "text": str(m.get("text") or "")[:400],
+                }
+            )
+        return out
 
     # ------------------------------------------------------------------ 门禁
     def assert_gate(self, action: str, *, explicit: bool = False) -> None:
@@ -140,7 +182,9 @@ class GreenfieldSession:
             "ir": self.ir.to_dict() if self.ir else None,
             "receipt": self.receipt.to_dict() if self.receipt else None,
             "contract": self.contract.to_dict() if self.contract else None,
+            "custom_hw": dict(self.custom_hw),
             "counters": dict(self.counters),
+            "messages": [dict(m) for m in self.messages],
         }
 
     def import_draft(self, payload: dict[str, Any]) -> None:
@@ -157,6 +201,10 @@ class GreenfieldSession:
         contract_data = payload.get("contract")
         if contract_data:
             self.contract = CompatContract.from_dict(dict(contract_data))
+        if isinstance(payload.get("custom_hw"), dict):
+            self.custom_hw = dict(payload["custom_hw"])
+        if isinstance(payload.get("messages"), list):
+            self.messages = [dict(m) for m in payload["messages"] if isinstance(m, dict)]
         # 导入后统一回到「可连线」：草稿不继承来源会话的阶段（避免非法迁移），
         # 也不继承任何副作用计数（确认前恒为 0）。
         self.engineering_summary_shown = False

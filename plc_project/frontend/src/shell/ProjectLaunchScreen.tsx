@@ -153,7 +153,7 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
           </span>
         </button>
 
-        {/* 入口 3:新建工程(需求先行 → 确认工艺意图 → 最小创建确认) */}
+        {/* 入口 3:新建工程(弹出三区域画布：上区硬件拓扑 · 下区工艺 Mermaid 逻辑 · 右区绑定变量) */}
         <button
           type="button"
           className="launch-entry"
@@ -164,7 +164,7 @@ export const ProjectLaunchScreen: React.FC<ProjectLaunchScreenProps> = ({
             新建工程
           </span>
           <span style={{ fontSize: 13, color: "var(--ink-2)" }}>
-            从工艺需求开始,自动生成标准结构工程 —— 先生成需求卡,确认工艺意图后创建
+            进入三区域工程画布：上区硬件物理拓扑 · 下区对话生成 Mermaid 逻辑 · 右区外部锁定与内部绑定变量，确认后生成标准 AF 博途工程
           </span>
         </button>
 

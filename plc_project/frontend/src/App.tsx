@@ -292,6 +292,7 @@ const ChangeLogIcon: React.FC = () => (
 const App: React.FC = () => {
   /* Greenfield 独立通道（与既有工作台互不触发） */
   const [channel, setChannel] = useState<"workbench" | "greenfield">("workbench");
+  const [greenfieldPrompt, setGreenfieldPrompt] = useState<string>("");
   /* 画布与会话 */
   const [canvas, setCanvas] = useState<CanvasStateData>(() => blankCanvas(""));
   const [backendConnected, setBackendConnected] = useState<boolean | null>(null);
@@ -529,8 +530,8 @@ const App: React.FC = () => {
     [blockList],
   );
   const tagTotal = Object.keys(canvas.tags).length;
-  /** 启动态三入口:无活跃会话(无 activeSessionId 且画布为空)且历史为空 */
-  const showLaunchScreen = !activeSessionId && canvasEmpty && sessions.length === 0;
+  /** 启动态三入口:无活跃会话(无 activeSessionId 且画布为空)时展示 */
+  const showLaunchScreen = !activeSessionId && canvasEmpty;
   /** 工程概览头:活跃项目(有会话且画布有块)时常驻 */
   const showWorkbenchHeader = !!activeSessionId && !canvasEmpty;
 
@@ -2681,7 +2682,12 @@ const App: React.FC = () => {
   const npfValid = npfName.length > 0 && npfNameError === "";
 
   if (channel === "greenfield") {
-    return <GreenfieldChannel onBack={() => setChannel("workbench")} />;
+    return (
+      <GreenfieldChannel
+        initialPrompt={greenfieldPrompt}
+        onBack={() => setChannel("workbench")}
+      />
+    );
   }
 
   return (
@@ -2703,6 +2709,15 @@ const App: React.FC = () => {
           currentSessionId={activeSessionId}
           onJump={handleJumpToLongTask}
         />
+
+        <button
+          className="topbar__toggle"
+          onClick={() => setChannel("greenfield")}
+          aria-label="新建工程画布"
+          title="打开三区域新建工程画布（上区硬件拓扑 · 下区工艺 Mermaid 逻辑 · 右区绑定变量）"
+        >
+          + 新建工程
+        </button>
 
         {/* 工程进度看板:单一数据源作业/进度视图(/jobs + /brief + /export) */}
         <button
@@ -2840,9 +2855,8 @@ const App: React.FC = () => {
           }}
           onNewFromChat={(prompt) => {
             setShowOnboarding(false);
-            handleNewSession();
-            /* 引导屏里敲好的工艺句子随行带入新对话（handleNewSession 会清空输入，故在其后写回） */
-            if (prompt) setChatInput(prompt);
+            if (prompt) setGreenfieldPrompt(prompt);
+            setChannel("greenfield");
           }}
         />
       )}
@@ -2864,7 +2878,7 @@ const App: React.FC = () => {
           onSelectConversation={handleSelectConversation}
           onDeleteConversation={handleDeleteConversation}
           onNewConversation={() => handleNewSession()}
-          onNewProject={() => setShowOnboarding(true)}
+          onNewProject={() => setChannel("greenfield")}
           onDeleteProject={(pid) => {
             void apiDeleteProject(pid).then(() => {
               setProjectList((prev) => prev.filter((p) => p.id !== pid));
@@ -3024,7 +3038,7 @@ const App: React.FC = () => {
                   <ProjectLaunchScreen
                     sessions={sessions}
                     onImport={() => setImportOpen(true)}
-                    onNewProject={handleNewProjectEntry}
+                    onNewProject={() => setChannel("greenfield")}
                     onSelectSession={handleSelectSession}
                     onEnterGreenfield={() => setChannel("greenfield")}
                   />

@@ -19,6 +19,7 @@ from typing import Any
 
 from gateway.app.services.plc import db_import as _db
 from gateway.app.services.plc import io_import as _io
+from gateway.app.services.plc import pdf_import as _pdf
 from plc_engine.af.greenfield_contract import ParseReceipt, ReceiptError
 from plc_engine.af.greenfield_ir import canonical_dumps, sha256_hex, sha256_prefixed
 
@@ -28,6 +29,8 @@ from plc_engine.af.greenfield_ir import canonical_dumps, sha256_hex, sha256_pref
 
 IO_SUFFIXES: frozenset[str] = frozenset({".xlsx", ".xlsm", ".csv"})
 DB_SUFFIXES: frozenset[str] = frozenset({".scl", ".txt", ".db"})
+PDF_SUFFIXES: frozenset[str] = frozenset({".pdf"})
+PDF_MAX_FILE_BYTES = 10 * 1024 * 1024
 
 IO_MAX_FILE_BYTES = 5 * 1024 * 1024
 IO_MAX_ROWS = 5000
@@ -47,7 +50,8 @@ NAME_RE = re.compile(r"^[A-Za-z_\u4e00-\u9fff][A-Za-z0-9_\u4e00-\u9fff]{0,63}$")
 ADDRESS_RE = re.compile(r"^%[IQ][BWD]?\d+(\.\d+)?$")
 ARRAY_RE = re.compile(r"(?i)^Array\[(\d+)\.\.(\d+)\]\s+of\s+\w+$")
 LITERAL_RE = re.compile(
-    r"^(?:TRUE|FALSE|-?\d+(?:\.\d+)?|'[^']*'|\"[^\"]*\")$", re.IGNORECASE
+    r"^(?:TRUE|FALSE|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|(?:2|8|10|16)#[0-9A-Fa-f_]+|(?:T|TIME|LT|LTIME)#[0-9A-Za-z_.+-]+|'[^']*'|\"[^\"]*\")$",
+    re.IGNORECASE,
 )
 OPTIMIZED_ACCESS_RE = re.compile(
     r"(?i)S7_Optimized_Access\s*:=\s*'([^']+)'"
@@ -96,6 +100,9 @@ UPLOAD_ERROR_CODES: frozenset[str] = frozenset(
         "GF_UPLOAD_DB_STRUCT_DEPTH",
         "GF_UPLOAD_DB_TOTAL_MEMBER_LIMIT",
         "GF_UPLOAD_DB_HEADER_MISSING",
+        "GF_UPLOAD_PDF_PARSE_FAILED",
+        "GF_UPLOAD_PDF_UNRECOGNIZED",
+        "GF_UPLOAD_PDF_LAYOUT_MISMATCH",
         "GF_UPLOAD_EMPTY_BATCH",
     }
 )
@@ -265,9 +272,17 @@ def strict_validate_io(item: UploadItem) -> tuple[list[dict[str, str]], list[Rec
     filename = item.display_name
     suffix = item.suffix
 
+    if suffix in PDF_SUFFIXES:
+        io_list, db_list, pdf_errors = strict_validate_pdf(item)
+        if pdf_errors:
+            return [], pdf_errors
+        if db_list and not io_list:
+            return [], [_err(filename, 0, "file", "GF_UPLOAD_IO_HEADER_MISSING", "该 PDF 为 DB 块打印表而非 IO 变量表")]
+        return io_list, []
+
     if suffix not in IO_SUFFIXES:
         return [], [_err(filename, 0, "file", "GF_UPLOAD_EXT_UNSUPPORTED",
-                         f"不支持的 IO 表格式 {suffix or '(无后缀)'}，仅支持 .xlsx/.xlsm/.csv")]
+                         f"不支持的 IO 表格式 {suffix or '(无后缀)'}，仅支持 .xlsx/.xlsm/.csv/.pdf")]
 
     is_workbook = suffix in {".xlsx", ".xlsm"}
     raw_bytes = b""
@@ -382,9 +397,17 @@ def strict_validate_db(item: UploadItem) -> tuple[list[dict[str, Any]], list[Rec
     filename = item.display_name
     suffix = item.suffix
 
+    if suffix in PDF_SUFFIXES:
+        io_list, db_list, pdf_errors = strict_validate_pdf(item)
+        if pdf_errors:
+            return [], pdf_errors
+        if io_list and not db_list:
+            return [], [_err(filename, 0, "DATA_BLOCK", "GF_UPLOAD_DB_HEADER_MISSING", "该 PDF 为 IO 变量表而非 DB 块打印表")]
+        return db_list, []
+
     if suffix not in DB_SUFFIXES:
         return [], [_err(filename, 0, "file", "GF_UPLOAD_EXT_UNSUPPORTED",
-                         f"不支持的 DB 格式 {suffix or '(无后缀)'}，仅支持 .scl/.txt/.db 或粘贴文本")]
+                         f"不支持的 DB 格式 {suffix or '(无后缀)'}，仅支持 .scl/.txt/.db/.pdf 或粘贴文本")]
 
     if item.is_paste:
         text = item.text
@@ -521,15 +544,120 @@ def strict_validate_db(item: UploadItem) -> tuple[list[dict[str, Any]], list[Rec
     return structs, errors
 
 
+def strict_validate_pdf(
+    item: UploadItem,
+) -> tuple[list[dict[str, str]], list[dict[str, Any]], list[ReceiptError]]:
+    """严格解析单个 TIA Portal PDF（自动识别 PLC 变量表或标准访问 DB 块）。"""
+    filename = item.display_name
+    if item.suffix not in PDF_SUFFIXES:
+        return [], [], [
+            _err(filename, 0, "file", "GF_UPLOAD_EXT_UNSUPPORTED", f"非 PDF 文件：{filename}")
+        ]
+    if len(item.data) > PDF_MAX_FILE_BYTES:
+        return [], [], [
+            _err(
+                filename,
+                0,
+                "file",
+                "GF_UPLOAD_FILE_TOO_LARGE",
+                f"PDF 文件 {len(item.data)}B 超过上限 {PDF_MAX_FILE_BYTES}B",
+            )
+        ]
+    raw_io, raw_dbs, errors = _pdf.parse_pdf_bytes(item.data, filename)
+    if errors:
+        return [], [], errors
+
+    if raw_io:
+        rows: list[list[str]] = [["Name", "Path", "Data Type", "Logical Address", "Comment"]]
+        for entry in raw_io:
+            rows.append(
+                [
+                    entry.get("name", ""),
+                    entry.get("path", ""),
+                    entry.get("data_type", ""),
+                    entry.get("logical_address", ""),
+                    entry.get("comment", ""),
+                ]
+            )
+        mapping, data_start = _locate_header(rows)
+        assert mapping is not None
+        validated_io = _validate_io_rows(rows, mapping, data_start, filename, errors)
+        return validated_io, [], errors
+
+    if raw_dbs:
+        validated_dbs: list[dict[str, Any]] = []
+        for unit_idx, db in enumerate(raw_dbs, start=1):
+            members = list(db.get("members") or [])
+            if len(members) > DB_MAX_MEMBERS_PER_UNIT:
+                errors.append(
+                    _err(
+                        filename,
+                        unit_idx,
+                        "members",
+                        "GF_UPLOAD_DB_MEMBER_LIMIT",
+                        f"DB {db.get('name')!r} 成员 {len(members)} 超过单 DB 上限 {DB_MAX_MEMBERS_PER_UNIT}",
+                    )
+                )
+            seen_paths: set[str] = set()
+            for m_idx, member in enumerate(members, start=1):
+                m_name = str(member.get("name") or "")
+                m_type = str(member.get("data_type") or "")
+                m_init = str(member.get("initial_value") or "").strip()
+                if m_name in seen_paths:
+                    errors.append(
+                        _err(
+                            filename,
+                            m_idx,
+                            "name",
+                            "GF_UPLOAD_DB_MEMBER_DUPLICATE",
+                            f"成员点路径 {m_name!r} 在 DB {db.get('name')!r} 内重复",
+                        )
+                    )
+                seen_paths.add(m_name)
+                arr_match = ARRAY_RE.match(m_type)
+                if arr_match:
+                    lower, upper = int(arr_match.group(1)), int(arr_match.group(2))
+                    if not (0 <= lower <= upper <= 65535):
+                        errors.append(
+                            _err(
+                                filename,
+                                m_idx,
+                                "data_type",
+                                "GF_UPLOAD_DB_ARRAY_BOUNDS",
+                                f"Array[{lower}..{upper}] 上下界须满足 0 ≤ a ≤ b ≤ 65535",
+                            )
+                        )
+                if m_init and not LITERAL_RE.match(m_init):
+                    errors.append(
+                        _err(
+                            filename,
+                            m_idx,
+                            "initial_value",
+                            "GF_UPLOAD_DB_INITIAL_EXPRESSION",
+                            f"初值 {m_init!r} 非字面量，禁止表达式",
+                        )
+                    )
+            validated_dbs.append(db)
+        return [], validated_dbs, errors
+
+    return [], [], [
+        _err(filename, 0, "file", "GF_UPLOAD_PDF_UNRECOGNIZED", "PDF 未识别出有效 IO 表或 DB 块")
+    ]
+
+
 def _classify(item: UploadItem) -> str:
-    """判定上传项类别：io / db / unknown。"""
-    if item.kind in {"io", "db"}:
-        return item.kind
+    """判定上传项类别：io / db / pdf / unknown。"""
     suffix = item.suffix
+    if suffix in PDF_SUFFIXES and item.kind not in {"io", "db"}:
+        return "pdf"
+    if item.kind in {"io", "db", "pdf"}:
+        return item.kind
     if suffix in IO_SUFFIXES:
         return "io"
     if suffix in DB_SUFFIXES:
         return "db"
+    if suffix in PDF_SUFFIXES:
+        return "pdf"
     return "unknown"
 
 
@@ -566,6 +694,11 @@ def parse_upload_batch(items: list[UploadItem]) -> ParseReceipt:
             errors.extend(item_errors)
         elif category == "db":
             structs, item_errors = strict_validate_db(item)
+            db_structs.extend(structs)
+            errors.extend(item_errors)
+        elif category == "pdf":
+            entries, structs, item_errors = strict_validate_pdf(item)
+            io_entries.extend(entries)
             db_structs.extend(structs)
             errors.extend(item_errors)
         else:
