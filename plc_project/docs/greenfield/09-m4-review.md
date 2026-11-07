@@ -217,3 +217,43 @@ cd <R>/frontend && npm run test && npm run build
 **签署前仍需完成**：① UC-04 完整 AF 包（含 Call 网络 OB）导入编译闭环；② UC-16 增量
 `FidelityChecker(mode=incremental)` 与真实 `specs/vN.json` 规格链闭环；③ pending 台账逐条核验清零；
 ④ 用户本人签署。以上四项任一未完成，M4 保持未通过。
+
+---
+
+## 附录 2 · 批次 4 复核结论（2026-11-07，主 agent 收口，不代签）
+
+> 签署栏状态不变：**待用户本人签署**。本节为追加记录，不修改上文任何既有结论。
+
+### 1. 本轮闭环的两个 UC
+
+| UC | 根因 | 闭环证据 | 结论 |
+|---|---|---|---|
+| **UC-04** | 完整 AF 包只含 OB、缺被引用的 FB / 全局实例 DB；`_render_call_network` 从 `call_db` 反推 FB 名（真实先例是独立命名） | U 修模板 + X 接入正式产品通道 `build_xml_supplement` + W 独立包真机 5/5 导入编译 0/0 + **Y 正式包两轮独立干净副本各 10/10 导入 + 编译 `errorCount=0/warningCount=0/Success`** | **pass** |
+| **UC-16** | `base_spec_version=null`、增量 `FidelityChecker` 未闭环（纯 CLI 覆盖无真实规格链） | V 真实 `specs/v1.json→v2.json` + 增量四指标 + W 真机 Action C（`/open`=1、PCEC 3 条、4× 编译 0/0、六字段真值、`reverse_protection.allowed=true`、`fidelity_ok=true`） | **pass** |
+
+RTM 最终 **`pass=19 / fail=0 / pending_real_machine=0 / not_run=0`**。批次 2 的失败事实（K1 探针失败、`conditional-go`、P0-D 待拍板）在 `gate0_facts` 里**原样保留**，仅更新 `cases` 当前状态，保证可追溯。
+
+### 2. 判定不变项（明确不放水）
+
+| 项 | 结论 |
+|---|---|
+| `xml_package_unverified` | **仍为 `True`**（主 agent 按契约 14 §1.7 决定）。包级真机虽闭环，但 3 个 ProDiag OB 未验证、`deliver_tia auto` 端到端全链未跑、块与分组归属未逐一验证、FB/DB 模板精简差异、culture 仅 `zh-CN`、正式包非字节级可复现。消除须逐条闭环后**由用户拍板** |
+| `L1∧L2∧L3∧L4` | **未全绿**。RTM 全 pass ≠ L 层通过：L2 需 auto 全链 + 四层静态门禁 + ProDiag/分组闭环，L4 需增量规格链在 auto 全链下复核；`--offline` 口径下 L2/L4 恒 `pending_real_machine`；产品 `compile_diagnostics` 仍保留 `pending_real_machine=true` |
+| pending 台账 | `cleared=false`、10 条历史 items **不删**（M4 门禁）。RTM pending 归零不等于台账清零 |
+| **M4** | **未通过 / 不可签署**，最多「证据齐备 / 待用户签署」；`requires_user_signoff=True`、`m4_signable` 恒 False |
+
+### 3. 验收编排器门禁强化
+`test_m4_fails_when_pending_not_cleared` 改为双分支：显式构造未清零 pending 负例 + 真实台账负例（pending 归零但 `cleared=false` 仍拦住 M4）。白名单扩展为批次 2/3/4 全部结构化真机报告，仍强制「pass 必须带真机证据四件套」。
+
+### 4. 签署前仍需完成（六项，任一未完成 M4 保持未通过）
+1. pending 台账逐条核验清零（`cleared` / items）；
+2. `deliver_tia auto` 端到端全链与四层静态门禁复核（L2）；
+3. 增量规格链在 auto 全链下的 L4 复核；
+4. EvidenceBundle 真实全链实例化归档；
+5. `xml_package_unverified` 消除条件逐条闭环 + **用户拍板**；
+6. **用户本人签署 M4**。
+
+### 5. 诚实边界（引用既有报告）
+UC-16：IR 层 `U1EM1_CM3` 与派生产物层命名空间不同、运行时 `SclBridgingPort` 等价映射、Action C 首跑 `GF_ACTION_C_ROLLBACK` 失败留痕、`tia_side_snapshot` 为内容哈希、`writtenBlockCount=0`。
+UC-04：`SW.PlcBlockGroup` XML 仍走 `create-block-group` API、正式包 `<Created>` 用 `time.gmtime()` 非字节级可复现。
+详见 `16-batch4-real-machine.md` / `18-product-package-real.md` / `15-uc16-spec-chain.md`。

@@ -1,0 +1,839 @@
+{
+  "schema": "gf-uc04-full-package-real-v1",
+  "uc": "UC-04",
+  "title": "完整 AF 包（Call 网络 OB + FB + 全局实例 DB + 文件夹）V19 真机联合导入编译",
+  "agent": "Agent W · V19 真机联合验证（批次 4，唯一连真机 / TIA / SessionServer）",
+  "generated_at": "2026-11-07T11:09:24.566162+00:00",
+  "tia_version": "V19",
+  "status": "pass",
+  "source_raw": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/raw_all.json#cases/W1-full-package",
+  "source_raw_sha256": "a8069c0004a10f413094d266e686499bc629aaf8bce66cddd0d3bfa7db6396c3",
+  "environment": {
+    "exe": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe",
+    "python": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/.venv/Scripts/python.exe",
+    "status_probe": {
+      "ok": true,
+      "tiaRunning": false,
+      "processCount": 0,
+      "opennessAvailable": true,
+      "opennessGroupInToken": true,
+      "tiaVersion": "V19",
+      "engineeringDll": "C:\\Program Files\\Siemens\\Automation\\Portal V19\\PublicAPI\\V19\\Siemens.Engineering.dll",
+      "connected": false,
+      "projectOpen": false,
+      "message": "TIA Portal process not detected (Openness can still start WithoutUserInterface)."
+    },
+    "read_only_source": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/PLC_Openness_data/openness_e2e/CanvasE2E",
+    "temp_copy_root": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package",
+    "temp_copy_ap19": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19",
+    "source_opened_or_written_back": false,
+    "note": "所有真机操作只在 AppData/Local/Temp/gf_real_w4_20261107/ 临时副本；源项目仅 shutil.copytree 读取"
+  },
+  "package_generation": {
+    "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/.venv/Scripts/python.exe C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/tools/build_full_af_package.py --out C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package",
+    "exit_code": 0,
+    "stdout_original": "{\n  \"out\": \"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\w1_package\",\n  \"tia_version\": \"V19\",\n  \"import_order\": [\n    \"blocks/FB1000_StdSignal.xml\",\n    \"blocks/DB1000_StdSignal.xml\",\n    \"ob/GF_U1_Startup.xml\",\n    \"ob/GF_U1_Main.xml\",\n    \"ob/GF_U1EM1_CallOB.xml\"\n  ],\n  \"generated_ob_count\": 3,\n  \"references\": [\n    {\n      \"call_db\": \"DB1000_StdSignal\",\n      \"call_fb\": \"FB1000_StdSignal\",\n      \"db_block\": \"DB1000_StdSignal\",\n      \"db_xml\": \"blocks/DB1000_StdSignal.xml\",\n      \"fb_block\": \"FB1000_StdSignal\",\n      \"fb_xml\": \"blocks/FB1000_StdSignal.xml\",\n      \"ob\": \"GF_U1EM1_CallOB\",\n      \"ob_xml\": \"ob/GF_U1EM1_CallOB.xml\"\n    }\n  ],\n  \"references_self_consistent\": true,\n  \"xml_package_unverified\": true,\n  \"pending_real_machine\": true,\n  \"file_count\": 6\n}",
+    "package_dir": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package",
+    "generator": "U 的 tools/build_full_af_package.py（阶段 A 交付，W 只调用不修改）"
+  },
+  "manifest_sha256_check": {
+    "computed": "827cdac0041c4ea4719c617248a91acc4476e499db5337f464b8a626cc0b13d2",
+    "expected": "827cdac0041c4ea4719c617248a91acc4476e499db5337f464b8a626cc0b13d2",
+    "match": true,
+    "algorithm": "hashlib.sha256(manifest.json 原始字节).hexdigest()",
+    "note": "与 U 报告 §5.4 / 任务书给定值一致，确认为同一份完整包"
+  },
+  "per_file_sha256_recompute": [
+    {
+      "path": "blocks/DB1000_StdSignal.xml",
+      "kind": "instance_db",
+      "expected_sha256": "2bd03bcbb896aeed1b3830e9681188383dc921e2bd5c2ee1ce32e685f95ea062",
+      "computed_sha256": "2bd03bcbb896aeed1b3830e9681188383dc921e2bd5c2ee1ce32e685f95ea062",
+      "expected_bytes": 1636,
+      "computed_bytes": 1636,
+      "match": true
+    },
+    {
+      "path": "blocks/FB1000_StdSignal.xml",
+      "kind": "fb",
+      "expected_sha256": "718dd096b13b94f7e6d25d2992a73b0215a19fee3dd4f782604fd316c3a4f6f2",
+      "computed_sha256": "718dd096b13b94f7e6d25d2992a73b0215a19fee3dd4f782604fd316c3a4f6f2",
+      "expected_bytes": 1293,
+      "computed_bytes": 1293,
+      "match": true
+    },
+    {
+      "path": "folders.json",
+      "kind": "folders",
+      "expected_sha256": "c903e59b4f27b6f7e62e3a75dc3ae956376a89c28c2dca7f48fb9ff229bcb0b5",
+      "computed_sha256": "c903e59b4f27b6f7e62e3a75dc3ae956376a89c28c2dca7f48fb9ff229bcb0b5",
+      "expected_bytes": 702,
+      "computed_bytes": 702,
+      "match": true
+    },
+    {
+      "path": "ob/GF_U1EM1_CallOB.xml",
+      "kind": "ob",
+      "expected_sha256": "91997246f371a3a414aa9e76ba1b2da57e08a3602ebc4e64cd6b13bd347a3eb7",
+      "computed_sha256": "91997246f371a3a414aa9e76ba1b2da57e08a3602ebc4e64cd6b13bd347a3eb7",
+      "expected_bytes": 2811,
+      "computed_bytes": 2811,
+      "match": true
+    },
+    {
+      "path": "ob/GF_U1_Main.xml",
+      "kind": "ob",
+      "expected_sha256": "fb910255935be87f38195047e815954eaf0c86e7154db0b15b976891c223184f",
+      "computed_sha256": "fb910255935be87f38195047e815954eaf0c86e7154db0b15b976891c223184f",
+      "expected_bytes": 2335,
+      "computed_bytes": 2335,
+      "match": true
+    },
+    {
+      "path": "ob/GF_U1_Startup.xml",
+      "kind": "ob",
+      "expected_sha256": "e03a43bfe60ad50521bb9dffe4fd239ac4c61da94a75fc53f4da35141ed0da97",
+      "computed_sha256": "e03a43bfe60ad50521bb9dffe4fd239ac4c61da94a75fc53f4da35141ed0da97",
+      "expected_bytes": 2336,
+      "computed_bytes": 2336,
+      "match": true
+    }
+  ],
+  "per_file_sha256_all_match": true,
+  "manifest_summary": {
+    "tia_version": "V19",
+    "import_order": [
+      "blocks/FB1000_StdSignal.xml",
+      "blocks/DB1000_StdSignal.xml",
+      "ob/GF_U1_Startup.xml",
+      "ob/GF_U1_Main.xml",
+      "ob/GF_U1EM1_CallOB.xml"
+    ],
+    "references": [
+      {
+        "call_db": "DB1000_StdSignal",
+        "call_fb": "FB1000_StdSignal",
+        "db_block": "DB1000_StdSignal",
+        "db_xml": "blocks/DB1000_StdSignal.xml",
+        "fb_block": "FB1000_StdSignal",
+        "fb_xml": "blocks/FB1000_StdSignal.xml",
+        "ob": "GF_U1EM1_CallOB",
+        "ob_xml": "ob/GF_U1EM1_CallOB.xml"
+      }
+    ],
+    "references_self_consistent": true,
+    "ob_entries": [
+      {
+        "call_db": "",
+        "call_fb": "",
+        "name": "GF_U1_Startup",
+        "number": 1000,
+        "secondary_type": "Startup"
+      },
+      {
+        "call_db": "",
+        "call_fb": "",
+        "name": "GF_U1_Main",
+        "number": 1001,
+        "secondary_type": "ProgramCycle"
+      },
+      {
+        "call_db": "DB1000_StdSignal",
+        "call_fb": "FB1000_StdSignal",
+        "name": "GF_U1EM1_CallOB",
+        "number": 1012,
+        "secondary_type": "ProgramCycle"
+      }
+    ],
+    "generated_ob_count": 3,
+    "xml_package_unverified": true,
+    "pending_real_machine": true,
+    "files": [
+      {
+        "bytes": 1636,
+        "kind": "instance_db",
+        "path": "blocks/DB1000_StdSignal.xml",
+        "sha256": "2bd03bcbb896aeed1b3830e9681188383dc921e2bd5c2ee1ce32e685f95ea062"
+      },
+      {
+        "bytes": 1293,
+        "kind": "fb",
+        "path": "blocks/FB1000_StdSignal.xml",
+        "sha256": "718dd096b13b94f7e6d25d2992a73b0215a19fee3dd4f782604fd316c3a4f6f2"
+      },
+      {
+        "bytes": 702,
+        "kind": "folders",
+        "path": "folders.json",
+        "sha256": "c903e59b4f27b6f7e62e3a75dc3ae956376a89c28c2dca7f48fb9ff229bcb0b5"
+      },
+      {
+        "bytes": 2811,
+        "kind": "ob",
+        "path": "ob/GF_U1EM1_CallOB.xml",
+        "sha256": "91997246f371a3a414aa9e76ba1b2da57e08a3602ebc4e64cd6b13bd347a3eb7"
+      },
+      {
+        "bytes": 2335,
+        "kind": "ob",
+        "path": "ob/GF_U1_Main.xml",
+        "sha256": "fb910255935be87f38195047e815954eaf0c86e7154db0b15b976891c223184f"
+      },
+      {
+        "bytes": 2336,
+        "kind": "ob",
+        "path": "ob/GF_U1_Startup.xml",
+        "sha256": "e03a43bfe60ad50521bb9dffe4fd239ac4c61da94a75fc53f4da35141ed0da97"
+      }
+    ]
+  },
+  "imports_itemized": [
+    {
+      "path": "blocks/FB1000_StdSignal.xml",
+      "kind": "fb",
+      "name": "FB1000_StdSignal",
+      "ok": true,
+      "exit_code": 0,
+      "importedNames": [
+        "FB1000_StdSignal"
+      ],
+      "error_code": null,
+      "error_message_original": null,
+      "raw_original": {
+        "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package/blocks/FB1000_StdSignal.xml --kind auto",
+        "args": [
+          "import-xml",
+          "--project",
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19",
+          "--xml",
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package/blocks/FB1000_StdSignal.xml",
+          "--kind",
+          "auto"
+        ],
+        "_exit_code": 0,
+        "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\W1-full-package\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\w1_package\\\\blocks\\\\FB1000_StdSignal.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"FB1000_StdSignal\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): FB1000_StdSignal.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\W1-full-package\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+        "_stderr": "",
+        "json": {
+          "ok": true,
+          "project": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "plcName": "PLC_1",
+            "deviceName": "PLC_1",
+            "message": "Project opened via TIA Openness."
+          },
+          "import": {
+            "ok": true,
+            "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\w1_package\\blocks\\FB1000_StdSignal.xml",
+            "overwrite": true,
+            "kind": "block",
+            "importedNames": [
+              "FB1000_StdSignal"
+            ],
+            "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+            "message": "Imported 1 item(s): FB1000_StdSignal."
+          },
+          "save": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "message": "Project saved."
+          }
+        }
+      }
+    },
+    {
+      "path": "blocks/DB1000_StdSignal.xml",
+      "kind": "instance_db",
+      "name": "DB1000_StdSignal",
+      "ok": true,
+      "exit_code": 0,
+      "importedNames": [
+        "DB1000_StdSignal"
+      ],
+      "error_code": null,
+      "error_message_original": null,
+      "raw_original": {
+        "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package/blocks/DB1000_StdSignal.xml --kind auto",
+        "args": [
+          "import-xml",
+          "--project",
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19",
+          "--xml",
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package/blocks/DB1000_StdSignal.xml",
+          "--kind",
+          "auto"
+        ],
+        "_exit_code": 0,
+        "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\W1-full-package\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\w1_package\\\\blocks\\\\DB1000_StdSignal.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"DB1000_StdSignal\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): DB1000_StdSignal.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\W1-full-package\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+        "_stderr": "",
+        "json": {
+          "ok": true,
+          "project": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "plcName": "PLC_1",
+            "deviceName": "PLC_1",
+            "message": "Project opened via TIA Openness."
+          },
+          "import": {
+            "ok": true,
+            "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\w1_package\\blocks\\DB1000_StdSignal.xml",
+            "overwrite": true,
+            "kind": "block",
+            "importedNames": [
+              "DB1000_StdSignal"
+            ],
+            "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+            "message": "Imported 1 item(s): DB1000_StdSignal."
+          },
+          "save": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "message": "Project saved."
+          }
+        }
+      }
+    },
+    {
+      "path": "ob/GF_U1_Startup.xml",
+      "kind": "ob",
+      "name": "GF_U1_Startup",
+      "ok": true,
+      "exit_code": 0,
+      "importedNames": [
+        "GF_U1_Startup"
+      ],
+      "error_code": null,
+      "error_message_original": null,
+      "raw_original": {
+        "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package/ob/GF_U1_Startup.xml --kind auto",
+        "args": [
+          "import-xml",
+          "--project",
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19",
+          "--xml",
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package/ob/GF_U1_Startup.xml",
+          "--kind",
+          "auto"
+        ],
+        "_exit_code": 0,
+        "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\W1-full-package\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\w1_package\\\\ob\\\\GF_U1_Startup.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"GF_U1_Startup\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): GF_U1_Startup.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\W1-full-package\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+        "_stderr": "",
+        "json": {
+          "ok": true,
+          "project": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "plcName": "PLC_1",
+            "deviceName": "PLC_1",
+            "message": "Project opened via TIA Openness."
+          },
+          "import": {
+            "ok": true,
+            "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\w1_package\\ob\\GF_U1_Startup.xml",
+            "overwrite": true,
+            "kind": "block",
+            "importedNames": [
+              "GF_U1_Startup"
+            ],
+            "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+            "message": "Imported 1 item(s): GF_U1_Startup."
+          },
+          "save": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "message": "Project saved."
+          }
+        }
+      }
+    },
+    {
+      "path": "ob/GF_U1_Main.xml",
+      "kind": "ob",
+      "name": "GF_U1_Main",
+      "ok": true,
+      "exit_code": 0,
+      "importedNames": [
+        "GF_U1_Main"
+      ],
+      "error_code": null,
+      "error_message_original": null,
+      "raw_original": {
+        "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package/ob/GF_U1_Main.xml --kind auto",
+        "args": [
+          "import-xml",
+          "--project",
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19",
+          "--xml",
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package/ob/GF_U1_Main.xml",
+          "--kind",
+          "auto"
+        ],
+        "_exit_code": 0,
+        "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\W1-full-package\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\w1_package\\\\ob\\\\GF_U1_Main.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"GF_U1_Main\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): GF_U1_Main.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\W1-full-package\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+        "_stderr": "",
+        "json": {
+          "ok": true,
+          "project": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "plcName": "PLC_1",
+            "deviceName": "PLC_1",
+            "message": "Project opened via TIA Openness."
+          },
+          "import": {
+            "ok": true,
+            "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\w1_package\\ob\\GF_U1_Main.xml",
+            "overwrite": true,
+            "kind": "block",
+            "importedNames": [
+              "GF_U1_Main"
+            ],
+            "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+            "message": "Imported 1 item(s): GF_U1_Main."
+          },
+          "save": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "message": "Project saved."
+          }
+        }
+      }
+    },
+    {
+      "path": "ob/GF_U1EM1_CallOB.xml",
+      "kind": "ob",
+      "name": "GF_U1EM1_CallOB",
+      "ok": true,
+      "exit_code": 0,
+      "importedNames": [
+        "GF_U1EM1_CallOB"
+      ],
+      "error_code": null,
+      "error_message_original": null,
+      "raw_original": {
+        "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package/ob/GF_U1EM1_CallOB.xml --kind auto",
+        "args": [
+          "import-xml",
+          "--project",
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19",
+          "--xml",
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package/ob/GF_U1EM1_CallOB.xml",
+          "--kind",
+          "auto"
+        ],
+        "_exit_code": 0,
+        "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\W1-full-package\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\w1_package\\\\ob\\\\GF_U1EM1_CallOB.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"GF_U1EM1_CallOB\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): GF_U1EM1_CallOB.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_w4_20261107\\\\W1-full-package\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+        "_stderr": "",
+        "json": {
+          "ok": true,
+          "project": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "plcName": "PLC_1",
+            "deviceName": "PLC_1",
+            "message": "Project opened via TIA Openness."
+          },
+          "import": {
+            "ok": true,
+            "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\w1_package\\ob\\GF_U1EM1_CallOB.xml",
+            "overwrite": true,
+            "kind": "block",
+            "importedNames": [
+              "GF_U1EM1_CallOB"
+            ],
+            "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+            "message": "Imported 1 item(s): GF_U1EM1_CallOB."
+          },
+          "save": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "message": "Project saved."
+          }
+        }
+      }
+    }
+  ],
+  "imports_all_ok": true,
+  "create_block_groups": [
+    {
+      "group": "AF_Unit_01",
+      "ok": true,
+      "saved": true,
+      "exit_code": 0,
+      "raw_original": {
+        "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli create-block-group --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19 --plc PLC_1 --group AF_Unit_01",
+        "args": [
+          "create-block-group",
+          "--project",
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19",
+          "--plc",
+          "PLC_1",
+          "--group",
+          "AF_Unit_01"
+        ],
+        "_exit_code": 0,
+        "_stdout": "{\"ok\":true,\"group\":\"AF_Unit_01\",\"saved\":true}",
+        "_stderr": "",
+        "json": {
+          "ok": true,
+          "group": "AF_Unit_01",
+          "saved": true
+        }
+      }
+    },
+    {
+      "group": "AF_Unit_01/AF_EM_01",
+      "ok": true,
+      "saved": true,
+      "exit_code": 0,
+      "raw_original": {
+        "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli create-block-group --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19 --plc PLC_1 --group AF_Unit_01/AF_EM_01",
+        "args": [
+          "create-block-group",
+          "--project",
+          "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W1-full-package/proj/CanvasE2E.ap19",
+          "--plc",
+          "PLC_1",
+          "--group",
+          "AF_Unit_01/AF_EM_01"
+        ],
+        "_exit_code": 0,
+        "_stdout": "{\"ok\":true,\"group\":\"AF_Unit_01/AF_EM_01\",\"saved\":true}",
+        "_stderr": "",
+        "json": {
+          "ok": true,
+          "group": "AF_Unit_01/AF_EM_01",
+          "saved": true
+        }
+      }
+    }
+  ],
+  "create_block_groups_all_ok": true,
+  "folders_json_original": {
+    "folders": {
+      "AF_Unit_01": [
+        "GF_U1_Startup",
+        "GF_U1_Main"
+      ],
+      "AF_Unit_01/AF_EM_01": [
+        "GF_U1EM1_CallOB"
+      ],
+      "root": [
+        "FB1000_StdSignal",
+        "DB1000_StdSignal"
+      ]
+    },
+    "mechanism": "create-block-group Openness API (NOT SW.PlcBlockGroup XML import-xml)",
+    "note": "SW.PlcBlockGroup XML 经 import-xml --kind auto|block 真机确证不可导入（exit=4 / openness_error，见 evidence/uc04_package_probe.json#probe_a）。文件夹由 create-block-group Openness API 建立（F 已真机验证 ok=true/saved=true）。本清单是文档化清单、非可 import-xml 的 SimaticML 对象，供该 API 消费。",
+    "schema": "gf-uc04-folders-v1"
+  },
+  "list_blocks": {
+    "all": {
+      "exit_code": 0,
+      "raw_original": {
+        "ok": true,
+        "project": {
+          "ok": true,
+          "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+          "projectName": "CanvasE2E",
+          "plcName": "PLC_1",
+          "deviceName": "PLC_1",
+          "message": "Project opened via TIA Openness."
+        },
+        "blocks": {
+          "ok": true,
+          "plcName": "PLC_1",
+          "count": 7,
+          "blocks": [
+            {
+              "name": "GF_U1EM1_CallOB",
+              "type": "OB",
+              "path": "GF_U1EM1_CallOB",
+              "programmingLanguage": "LAD",
+              "number": 1012,
+              "knowHowProtected": false
+            },
+            {
+              "name": "GF_U1_Main",
+              "type": "OB",
+              "path": "GF_U1_Main",
+              "programmingLanguage": "LAD",
+              "number": 1001,
+              "knowHowProtected": false
+            },
+            {
+              "name": "GF_U1_Startup",
+              "type": "OB",
+              "path": "GF_U1_Startup",
+              "programmingLanguage": "LAD",
+              "number": 1000,
+              "knowHowProtected": false
+            },
+            {
+              "name": "Main",
+              "type": "OB",
+              "path": "Main",
+              "programmingLanguage": "LAD",
+              "number": 1,
+              "knowHowProtected": false
+            },
+            {
+              "name": "FB1000_StdSignal",
+              "type": "FB",
+              "path": "FB1000_StdSignal",
+              "programmingLanguage": "LAD",
+              "number": 1000,
+              "knowHowProtected": false
+            },
+            {
+              "name": "PumpCtrl",
+              "type": "FB",
+              "path": "PumpCtrl",
+              "programmingLanguage": "SCL",
+              "number": 1,
+              "knowHowProtected": false
+            },
+            {
+              "name": "DB1000_StdSignal",
+              "type": "DB",
+              "path": "DB1000_StdSignal",
+              "programmingLanguage": "DB",
+              "number": 1000,
+              "knowHowProtected": false
+            }
+          ],
+          "byType": {
+            "OB": 4,
+            "FB": 2,
+            "DB": 1
+          }
+        }
+      }
+    },
+    "OB": {
+      "exit_code": 0,
+      "raw_original": {
+        "ok": true,
+        "project": {
+          "ok": true,
+          "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+          "projectName": "CanvasE2E",
+          "plcName": "PLC_1",
+          "deviceName": "PLC_1",
+          "message": "Project opened via TIA Openness."
+        },
+        "blocks": {
+          "ok": true,
+          "plcName": "PLC_1",
+          "count": 4,
+          "blocks": [
+            {
+              "name": "GF_U1EM1_CallOB",
+              "type": "OB",
+              "path": "GF_U1EM1_CallOB",
+              "programmingLanguage": "LAD",
+              "number": 1012,
+              "knowHowProtected": false
+            },
+            {
+              "name": "GF_U1_Main",
+              "type": "OB",
+              "path": "GF_U1_Main",
+              "programmingLanguage": "LAD",
+              "number": 1001,
+              "knowHowProtected": false
+            },
+            {
+              "name": "GF_U1_Startup",
+              "type": "OB",
+              "path": "GF_U1_Startup",
+              "programmingLanguage": "LAD",
+              "number": 1000,
+              "knowHowProtected": false
+            },
+            {
+              "name": "Main",
+              "type": "OB",
+              "path": "Main",
+              "programmingLanguage": "LAD",
+              "number": 1,
+              "knowHowProtected": false
+            }
+          ],
+          "byType": {
+            "OB": 4
+          }
+        }
+      }
+    },
+    "FB": {
+      "exit_code": 0,
+      "raw_original": {
+        "ok": true,
+        "project": {
+          "ok": true,
+          "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+          "projectName": "CanvasE2E",
+          "plcName": "PLC_1",
+          "deviceName": "PLC_1",
+          "message": "Project opened via TIA Openness."
+        },
+        "blocks": {
+          "ok": true,
+          "plcName": "PLC_1",
+          "count": 2,
+          "blocks": [
+            {
+              "name": "FB1000_StdSignal",
+              "type": "FB",
+              "path": "FB1000_StdSignal",
+              "programmingLanguage": "LAD",
+              "number": 1000,
+              "knowHowProtected": false
+            },
+            {
+              "name": "PumpCtrl",
+              "type": "FB",
+              "path": "PumpCtrl",
+              "programmingLanguage": "SCL",
+              "number": 1,
+              "knowHowProtected": false
+            }
+          ],
+          "byType": {
+            "FB": 2
+          }
+        }
+      }
+    },
+    "DB": {
+      "exit_code": 0,
+      "raw_original": {
+        "ok": true,
+        "project": {
+          "ok": true,
+          "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+          "projectName": "CanvasE2E",
+          "plcName": "PLC_1",
+          "deviceName": "PLC_1",
+          "message": "Project opened via TIA Openness."
+        },
+        "blocks": {
+          "ok": true,
+          "plcName": "PLC_1",
+          "count": 1,
+          "blocks": [
+            {
+              "name": "DB1000_StdSignal",
+              "type": "DB",
+              "path": "DB1000_StdSignal",
+              "programmingLanguage": "DB",
+              "number": 1000,
+              "knowHowProtected": false
+            }
+          ],
+          "byType": {
+            "DB": 1
+          }
+        }
+      }
+    }
+  },
+  "compile_raw_original": {
+    "ok": true,
+    "project": {
+      "ok": true,
+      "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W1-full-package\\proj\\CanvasE2E.ap19",
+      "projectName": "CanvasE2E",
+      "plcName": "PLC_1",
+      "deviceName": "PLC_1",
+      "message": "Project opened via TIA Openness."
+    },
+    "compile": {
+      "ok": true,
+      "apiAvailable": true,
+      "state": "Success",
+      "errorCount": 0,
+      "warningCount": 0,
+      "inconsistentBlocks": [
+        "Compiling finished (errors: 0; warnings: 0)"
+      ],
+      "message": "Compile State=Success errors=0 warnings=0"
+    }
+  },
+  "compile_exit_code": 0,
+  "compile_summary": {
+    "errorCount": 0,
+    "warningCount": 0,
+    "state": "Success",
+    "inconsistentBlocks": [
+      "Compiling finished (errors: 0; warnings: 0)"
+    ],
+    "message": "Compile State=Success errors=0 warnings=0",
+    "compile_ok": true
+  },
+  "uc04_closed": true,
+  "closed_criteria": {
+    "FB_DB_OB_all_import_ok": true,
+    "folders_via_create_block_group_api": true,
+    "compile_errorCount_eq_0": true,
+    "compile_warningCount_eq_0": true,
+    "compile_state_Success": true,
+    "verdict": "契约 14-batch4-contract.md §3 UC-04 闭环判据逐条达成（真机）"
+  },
+  "xml_package_unverified_disposition": {
+    "recommendation": "本轮已取得消除的主要真机依据，建议主 agent 收口时按证据考虑消除；但严格限定范围，且不擅自改 False",
+    "code_flag_changed_by_this_agent": false,
+    "basis": [
+      "① U 的完整 AF 包 5 个自产块 XML（FB1000_StdSignal / DB1000_StdSignal / GF_U1_Startup / GF_U1_Main / GF_U1EM1_CallOB 含 Call 网络）经 import-xml --kind auto 逐项真实 ok=true（5/5，exit=0，importedNames 逐项核对），编译真实 errorCount=0/warningCount=0/state=Success —— 批次 3 的『Call 网络 OB 导入即失败』根因（包不自洽 + call_db 反推 FB 名）已由 U 修复并经 W 真机确证。",
+      "② 文件夹清单 folders.json 经 create-block-group Openness API 真实建立（AF_Unit_01、AF_Unit_01/AF_EM_01，2/2 ok=true/saved=true），与产品链 API 路径一致。",
+      "③ 契约 §3 UC-04 判据（自洽完整包 / 按 import_order 导入 ok=true / 文件夹走 API / 编译 0/0 Success / 结构化证据）逐条有真机原始返回支撑。"
+    ],
+    "limits": [
+      "SW.PlcBlockGroup XML 仍不可经 import-xml 导入（批次 3 uc04_package_probe.json 已确证 exit=4/openness_error），本次未试图改变该边界事实；文件夹仍走 create-block-group API，不在 import_order。",
+      "本次是临时副本上的【包级】联合导入编译，非 deliver_tia auto 通道端到端全链（自然语言 → 冻结 → 生成 → 导入 → 编译，UC-15 / M4），后者由主 agent 收口。",
+      "FB / 实例 DB 相对真实 V19 先例有精简（空 Section 无 Member、省略 UDA、culture 收敛 zh-CN，U 报告 §8.6）；真机证明可导入可编译，非逐字段等同先例。",
+      "culture 收敛 zh-CN 的适用边界（K §7）：对含 zh-CN 的中文项目已验证；纯英文 / 其它语言项目未测。"
+    ],
+    "note": "本 Agent 未改产品代码任何标志位赋值；是否消除 xml_package_unverified 由主 agent 在 W 的真实结果出来后按证据决定（契约 §1.7）。"
+  },
+  "honest_boundary": [
+    "FB/DB/OB 全部导入成功 + 编译 errorCount=0 为真实 CLI 原始返回，非 mock / 非离线推断。",
+    "不宣称 L2 / L4 通过、不宣称『Greenfield 全链编译零错误』、不宣称 M4 可签署。",
+    "不据此认为『自产 XML 包整体已验证』而无视上述 limits：SW.PlcBlockGroup 走 API、非端到端全链、精简差异与语言边界。",
+    "warning 单列（warningCount=0），不并入成功；N9 fidelity_ok ≠ compile_ok。"
+  ],
+  "repro_commands": [
+    "cd \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project\" && \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/.venv/Scripts/python.exe\" tools/build_full_af_package.py --out C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w1_package",
+    "timeout -k 5 180 \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe\" --cli import-xml --project <Temp副本.ap19> --xml <w1_package/blocks/*.xml|ob/*.xml> --kind auto  # 按 import_order 逐个",
+    "timeout -k 5 180 \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe\" --cli create-block-group --project <Temp副本.ap19> --plc PLC_1 --group AF_Unit_01[/AF_EM_01]",
+    "timeout -k 5 180 \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe\" --cli list-blocks --project <Temp副本.ap19> [--type OB|FB|DB]",
+    "timeout -k 5 180 \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe\" --cli compile-plc --project <Temp副本.ap19> --plc PLC_1",
+    "cd \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project\" && \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/.venv/Scripts/python.exe\" tools/run_batch4_real_machine.py --only W1"
+  ],
+  "distinction_this_run_vs_referenced": {
+    "this_run_new_real_machine": [
+      "U 完整包 manifest sha256 / 逐文件 sha256 复算核对",
+      "5 个块（FB/DB/3 OB）按 import_order 逐项 import-xml 真实返回",
+      "2 组文件夹 create-block-group 真实返回",
+      "list-blocks（all/OB/FB/DB）真实返回",
+      "compile-plc 真实 errorCount/warningCount/state/inconsistentBlocks"
+    ],
+    "referenced_existing": [
+      "U：14-uc04-package-fix.md、tools/build_full_af_package.py、evidence/uc04_package_probe.json（阶段 A 交付 / 批次 3 失败原始返回）",
+      "K：08-k1-probe-fix.md（_render_ob_xml 修复、culture/namespace、caseA/caseB）",
+      "F/M/R：create-block-group 可行性、CLI 复现命令、uc04_package_probe.json#probe_a（SW.PlcBlockGroup 不可导入）"
+    ]
+  }
+}

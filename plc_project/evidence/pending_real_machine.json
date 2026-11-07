@@ -128,7 +128,7 @@
     "Gate-0=conditional-go，未到完整 go",
     "L1 / L3 离线链、UC-15 九步端到端、UC-18 编译错误回喂、EvidenceBundle 完整归档仍未闭环"
   ],
-  "honest_note": "本台账为『未清零』态，cleared=false / items 未删。Agent M 本次对 UC-02/03/05/12/13 逐条产出真实 V19 真机证据并更新 RTM 主状态为 pass，但不代主 agent 清零本台账（clear_condition 要求主 agent 逐条核验 + 全部 items 闭环）。任何离线单测通过（含 test_greenfield_acceptance.py）都不得用于清零；UC 主状态 pass 不等于 L1∧L2∧L3∧L4 通过，也不等于 M4 可签署。注意：tests/unit/test_greenfield_acceptance.py 中锁定『收口实测前 pass=0 / pending=10』的护栏断言会因本次 RTM 状态更新而失败，须由主 agent 在台账清零阶段同步；本 Agent 未改该单测（不在独占可写清单）。 批次 3：仅登记证据索引与状态说明，未删 items、未置 cleared=true、未代签 M4。",
+  "honest_note": "本台账为『未清零』态，cleared=false / items 未删。Agent M 本次对 UC-02/03/05/12/13 逐条产出真实 V19 真机证据并更新 RTM 主状态为 pass，但不代主 agent 清零本台账（clear_condition 要求主 agent 逐条核验 + 全部 items 闭环）。任何离线单测通过（含 test_greenfield_acceptance.py）都不得用于清零；UC 主状态 pass 不等于 L1∧L2∧L3∧L4 通过，也不等于 M4 可签署。注意：tests/unit/test_greenfield_acceptance.py 中锁定『收口实测前 pass=0 / pending=10』的护栏断言会因本次 RTM 状态更新而失败，须由主 agent 在台账清零阶段同步；本 Agent 未改该单测（不在独占可写清单）。 批次 3：仅登记证据索引与状态说明，未删 items、未置 cleared=true、未代签 M4。 批次 4：RTM 19/19 UC 全部有证据、pending_uc_ids 归零，但台账 cleared 仍 false / items 不删（M4 门禁），不代签 M4，不宣称 L1∧L2∧L3∧L4 全绿。",
   "batch3_closeout": {
     "date": "2026-11-07",
     "agent": "主 agent 收口",
@@ -147,5 +147,21 @@
       "UC-16": "增量 fidelity / base_spec_version 未闭环（evidence/uc16_incremental_real.json）"
     },
     "policy": "cleared 保持 false、items 历史项不删（M4 门禁）；离线 pass 不使台账清零；M4 签署权归用户。"
+  },
+  "batch4_closeout": {
+    "date": "2026-11-07",
+    "agent": "主 agent 收口",
+    "current_pending": [],
+    "uc04_closed": "U 模板修复 + X 产品通道接线 + W 独立包真机 + Y 正式包真机（两轮各 10/10 import + compile 0/0）",
+    "uc16_closed": "V 真实 v1→v2 规格链 + W 真机 Action C（/open=1、PCEC 3 条、4× compile 0/0、六字段真值）",
+    "policy": "cleared 保持 false、10 条历史 items 不删（M4 门禁）；RTM pending 归零不等于台账清零；L2/L4 仍需 auto 端到端全链复核；M4 签署权归用户。",
+    "m4_remaining_gates": [
+      "pending 台账逐条核验清零（cleared / items）",
+      "deliver_tia auto 端到端全链与四层静态门禁复核（L2）",
+      "增量规格链在 auto 全链下的 L4 复核",
+      "EvidenceBundle 真实全链实例化归档",
+      "xml_package_unverified 消除条件的逐条闭环与用户拍板",
+      "用户本人签署 M4"
+    ]
   }
 }

@@ -426,3 +426,18 @@ cd <R>/frontend && npm run test && npm run build
 - 所有 UC 状态变更须带**证据三件套**（真实返回 / 复现命令 / 证据文件路径）；真机失败项一律 `pending_real_machine` + 失败码 + 复现命令，绝不降级冒充（`13-batch3-contract.md` §5）。
 - 台账（`evidence/rtm.json` / `pending_real_machine.json`）与 `10-real-machine-acceptance.md` 由主 agent 收口统一更新；Q 不连真机、不启动 SessionServer；**只有 Agent R 独占 TIA**。
 - 本节不改动 §2.1 / §10.1 / §11.2 任何 RTM 状态计数；`M4 未通过 / 不可签署`、签署栏「待用户签署」口径不变。
+
+---
+
+## 附录 · 批次 4 RTM 状态迁移（2026-11-07，主 agent 收口）
+
+| UC | 批次 3 状态 | 批次 4 状态 | 依据 |
+|---|---|---|---|
+| UC-04 | `pending_real_machine` | **pass** | `evidence/uc04_full_package_real.json`（W 独立包 5/5 + 0/0）、`evidence/uc04_product_package_real.json`（Y 正式包两轮各 10/10 + 0/0） |
+| UC-16 | `pending_real_machine` | **pass** | `evidence/uc16_incremental_spec_chain.json`（V 真实 v1→v2）、`evidence/uc16_incremental_closed_real.json`（W 真机 Action C） |
+
+最终 `by_status`: **`pass=19 / fail=0 / pending_real_machine=0 / not_run=0`**；`pending_uc_ids=[]`。
+`gate0_facts` 的批次 2 历史快照（`uc04_k1_probe=fail`、`gate0_verdict=conditional-go`、`p0d_recommendation=pending_user_decision`）**未改动**，保留失败事实可追溯。
+
+**不放水声明**：RTM 全 pass 不等于 L 层通过、不等于 `L1∧L2∧L3∧L4` 全绿、不等于 M4 可签署。
+`xml_package_unverified` 仍 `True`、pending 台账 `cleared=false`、签署栏「待用户签署」。

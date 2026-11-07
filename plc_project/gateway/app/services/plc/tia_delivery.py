@@ -380,14 +380,25 @@ def _render_multilingual(id_base: int, composition: str, text: str) -> str:
     )
 
 
-def _render_call_network(call_db: str) -> str:
-    """LAD FlgNet：经全局实例 DB 调用 FB（复刻 OB1Main.xml 真机先例）。"""
-    call_fb = re.sub(r"_DB$", "", call_db)
+def _render_call_network(call_db: str, call_fb: str = "") -> str:
+    """LAD FlgNet：经全局实例 DB 调用 FB（复刻 OB1Main.xml 真机先例）。
+
+    FB 名与实例 DB 名在真实 V19 先例中是**独立命名**（``FB1000_StdSignal`` /
+    ``DB1000_StdSignal``），并非 ``xxx_DB`` → ``xxx`` 关系；批次 3 传
+    ``GF_U1EM1_InstDB``（不以 ``_DB`` 结尾）导致旧推导退化为整个字符串，
+    V19 在导入阶段即拒绝「The name ... cannot be used for "Call"」。
+
+    ``call_fb`` 为新路径的显式 FB 名（与包内 FB 块 ``<Name>`` 逐字一致）。
+    未传（旧调用，仅给 ``call_db``）时**保守回退**到既有 ``_DB`` 后缀剥离
+    推导，保持 ``build_xml_supplement`` 与 K1 探针旧调用的向后兼容。
+    旧路径局限：无法表达 FB/DB 独立命名，见 14-uc04-package-fix.md。
+    """
+    fb_name = call_fb or re.sub(r"_DB$", "", call_db)
     return (
         '<NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">\n'
         "  <Parts>\n"
         '    <Call UId="21">\n'
-        f'      <CallInfo Name="{escape(call_fb)}" BlockType="FB">\n'
+        f'      <CallInfo Name="{escape(fb_name)}" BlockType="FB">\n'
         '        <Instance Scope="GlobalVariable" UId="22">\n'
         f'          <Component Name="{escape(call_db)}" />\n'
         "        </Instance>\n"
@@ -425,15 +436,28 @@ def _render_ob_xml(
     call_db: str,
     title: str,
     tia_version: str,
+    call_fb: str = "",
+    created: str = "",
 ) -> str:
-    """渲染最小可导入的 SW.Blocks.OB 文档（模板改参自真机 V19 导出 OB1Main.xml）。"""
-    network = _render_call_network(call_db) if call_db else _render_empty_network()
+    """渲染最小可导入的 SW.Blocks.OB 文档（模板改参自真机 V19 导出 OB1Main.xml）。
+
+    ``call_fb`` 为 U1 新增的可选 FB 名（FB/DB 独立命名），透传给
+    ``_render_call_network``；不传时走旧路径，向后兼容 ``build_xml_supplement``
+    与 K1 探针。``created`` 为可选的固定 ``<Created>`` 时间戳：不传时沿用
+    ``time.gmtime()`` 当前时间（旧行为不变）；传入固定值用于完整包构造的
+    字节级幂等可复现（U3）。K 的 culture 收敛、空网络 ``<NetworkSource />``、
+    ``FlgNet/v5`` 与 ``<Number>`` 原生指定均保持不变。
+    """
+    network = (
+        _render_call_network(call_db, call_fb) if call_db else _render_empty_network()
+    )
+    created_stamp = created or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     return (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         "<Document>\n"
         f'  <Engineering version="{escape(tia_version)}" />\n'
         "  <DocumentInfo>\n"
-        f"    <Created>{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}</Created>\n"
+        f"    <Created>{escape(created_stamp)}</Created>\n"
         "    <ExportSetting>WithDefaults</ExportSetting>\n"
         "  </DocumentInfo>\n"
         '  <SW.Blocks.OB ID="0">\n'
@@ -470,6 +494,119 @@ def _render_ob_xml(
         f"{_render_multilingual(10, 'Title', title)}\n"
         "    </ObjectList>\n"
         "  </SW.Blocks.OB>\n"
+        "</Document>\n"
+    )
+
+
+#: FB / InstanceDB 的最小 Interface（与真实 V19 导出先例的 Section 名一致）。
+#: 四个空 Section、不含任何 Member → 不虚构变量 / 地址 / Datatype；namespace
+#: 沿用 K 已修复并真机确证可导入的 ``SW/Interface/v5``，不引入 StructuredText。
+#: 先例 FB 用 Input/Output/InOut/Static（OB 才是 Temp/Constant），此处以先例为准。
+_FB_DB_INTERFACE_V5 = (
+    '      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">\n'
+    '  <Section Name="Input" />\n'
+    '  <Section Name="Output" />\n'
+    '  <Section Name="InOut" />\n'
+    '  <Section Name="Static" />\n'
+    "</Sections></Interface>\n"
+)
+
+
+def render_fb_xml(
+    *,
+    fb_name: str,
+    fb_number: int,
+    programming_language: str = "LAD",
+    title: str = "",
+    tia_version: str = "V19",
+    created: str = "",
+) -> str:
+    """渲染最小可导入的 ``SW.Blocks.FB`` 文档（结构照 V19 导出先例）。
+
+    逐字段对照 ``001_KL_Standard_FB_FB1000_StdSignal.xml``：根元素
+    ``SW.Blocks.FB``、``ProgrammingLanguage=LAD``、``Interface`` 为
+    ``Interface/v5`` 下四个空 Section、``<Number>`` 原生指定、culture 仅
+    ``zh-CN``（复用 ``_render_multilingual``）。先例 FB 的 ObjectList 只有
+    Title MultilingualText、无 CompileUnit/网络，故此处同样不构造网络，
+    保持最小、不虚构 rung。``Name`` 必须与 Call 网络 ``call_fb`` 逐字一致。
+    """
+    created_stamp = created or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    return (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        "<Document>\n"
+        f'  <Engineering version="{escape(tia_version)}" />\n'
+        "  <DocumentInfo>\n"
+        f"    <Created>{escape(created_stamp)}</Created>\n"
+        "    <ExportSetting>WithDefaults</ExportSetting>\n"
+        "  </DocumentInfo>\n"
+        '  <SW.Blocks.FB ID="0">\n'
+        "    <AttributeList>\n"
+        "      <HeaderAuthor />\n"
+        "      <HeaderFamily />\n"
+        "      <HeaderName />\n"
+        "      <HeaderVersion>0.1</HeaderVersion>\n"
+        f"{_FB_DB_INTERFACE_V5}"
+        "      <IsIECCheckEnabled>false</IsIECCheckEnabled>\n"
+        f"      <Name>{escape(fb_name)}</Name>\n"
+        "      <Namespace />\n"
+        f"      <Number>{int(fb_number)}</Number>\n"
+        f"      <ProgrammingLanguage>{escape(programming_language)}</ProgrammingLanguage>\n"
+        "      <SetENOAutomatically>false</SetENOAutomatically>\n"
+        "    </AttributeList>\n"
+        "    <ObjectList>\n"
+        f"{_render_multilingual(1, 'Title', title)}\n"
+        "    </ObjectList>\n"
+        "  </SW.Blocks.FB>\n"
+        "</Document>\n"
+    )
+
+
+def render_instance_db_xml(
+    *,
+    db_name: str,
+    db_number: int,
+    instance_of_fb: str,
+    programming_language: str = "DB",
+    title: str = "",
+    tia_version: str = "V19",
+    created: str = "",
+) -> str:
+    """渲染最小可导入的 ``SW.Blocks.InstanceDB``（全局实例 DB，照 V19 先例）。
+
+    **根元素以先例为准**：真实导出 ``001_KL_Standard_FB_DB1000_StdSignal.xml``
+    用的是 ``SW.Blocks.InstanceDB``（**不是** ``SW.Blocks.GlobalDB``），故不猜。
+    ``InstanceOfName`` / ``InstanceOfType=FB`` 把 DB 关联到 FB，其
+    ``InstanceOfName`` 必须与 ``_render_call_network`` 新路径 ``call_fb`` 及包内
+    FB 块 ``<Name>`` 逐字一致，保证「Call OB → FB → 实例 DB」引用自洽。
+    ``ProgrammingLanguage=DB``、``Interface`` 同 FB 四个空 Section、
+    ``<Number>`` 原生指定、culture 仅 ``zh-CN``。
+    """
+    created_stamp = created or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    return (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        "<Document>\n"
+        f'  <Engineering version="{escape(tia_version)}" />\n'
+        "  <DocumentInfo>\n"
+        f"    <Created>{escape(created_stamp)}</Created>\n"
+        "    <ExportSetting>WithDefaults</ExportSetting>\n"
+        "  </DocumentInfo>\n"
+        '  <SW.Blocks.InstanceDB ID="0">\n'
+        "    <AttributeList>\n"
+        "      <AutoNumber>false</AutoNumber>\n"
+        "      <DBAccessibleFromOPCUA>true</DBAccessibleFromOPCUA>\n"
+        f"      <InstanceOfName>{escape(instance_of_fb)}</InstanceOfName>\n"
+        "      <InstanceOfType>FB</InstanceOfType>\n"
+        f"{_FB_DB_INTERFACE_V5}"
+        f"      <Name>{escape(db_name)}</Name>\n"
+        "      <Namespace />\n"
+        f"      <Number>{int(db_number)}</Number>\n"
+        f"      <ProgrammingLanguage>{escape(programming_language)}</ProgrammingLanguage>\n"
+        "    </AttributeList>\n"
+        "    <ObjectList>\n"
+        f"{_render_multilingual(1, 'Comment', '')}\n"
+        f"{_render_multilingual(5, 'Title', title)}\n"
+        "    </ObjectList>\n"
+        "  </SW.Blocks.InstanceDB>\n"
         "</Document>\n"
     )
 
@@ -526,19 +663,47 @@ def expected_ob_numbers(ir: GreenfieldIR) -> dict[str, int]:
 
 
 def build_xml_supplement(delivery: dict[str, Any], ir: GreenfieldIR) -> dict[str, Any]:
-    """P2-4 XML 补充包：OB SimaticML XML + 文档化文件夹清单 + 诚实 manifest。
+    """P2-4 XML 补充包：OB + 配套 FB/实例 DB SimaticML XML + 文件夹清单 + 诚实 manifest。
 
     OB 号以 ``blocks_manifest`` 为准并与 IR ``ob_numbers`` 交叉核对（K6/K7），
     不一致 → fail-closed ``GF_TIA_OB_MISMATCH``。
+
+    X1（正式产品通道自洽接线）：对每个带 ``call_db`` 的 OB，按产品通道命名约定
+    ``call_fb = re.sub(r"_DB$", "", call_db)`` / ``DB 名 = call_db``，在
+    ``blocks_manifest`` 里查真实 FB / DB 条目并取其真实 ``number``，调用同文件
+    U 已新增的 ``render_fb_xml`` / ``render_instance_db_xml`` 生成
+    ``xml_supplement/blocks/*.xml``；找不到真实条目或 ``call_db`` 不以 ``_DB``
+    结尾 → 不虚构编号、跳过并留痕（``skipped_blocks``）。同名块被多个 OB 引用
+    时只生成一次；给 ``_render_ob_xml`` 传 ``call_fb`` 保证 CallInfo / Component /
+    InstanceOfName 与包内 FB/DB 的 ``<Name>`` 逐字一致。
+
+    诚实边界：本函数纯离线；正式产品通道产出的本包尚未单独真机验证，返回 dict
+    与 manifest 的 ``xml_package_unverified`` / ``pending_real_machine`` 保持 True。
     """
     zf = zipfile.ZipFile(io.BytesIO(delivery["zip_bytes"]))
     tia_version = str(ir.project.tia_version or "V19")
     ir_numbers = expected_ob_numbers(ir)
     ir_number_values = set(ir_numbers.values())
 
+    # 预索引真实 FB / DB 条目（含真实 number）；缺失绝不虚构（K1 口径）。
+    fb_entries: dict[str, dict[str, Any]] = {}
+    db_entries: dict[str, dict[str, Any]] = {}
+    for entry in delivery["blocks_manifest"]:
+        btype = str(entry.get("block_type") or "").upper()
+        bname = str(entry.get("name") or "")
+        if btype == "FB":
+            fb_entries.setdefault(bname, entry)
+        elif btype == "DB":
+            db_entries.setdefault(bname, entry)
+
     ob_files: dict[str, bytes] = {}
+    block_files: dict[str, bytes] = {}
     generated: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
+    generated_blocks: list[dict[str, Any]] = []
+    skipped_blocks: list[dict[str, Any]] = []
+    # 阶段 A：收集 OB 规格（合法性校验 + 从 SCL 提取 call_db），保持 generated_obs 顺序。
+    ob_specs: list[dict[str, Any]] = []
     for entry in delivery["blocks_manifest"]:
         if str(entry.get("block_type") or "").upper() != "OB":
             continue
@@ -568,20 +733,118 @@ def build_xml_supplement(delivery: dict[str, Any], ir: GreenfieldIR) -> dict[str
             if call_match:
                 break
         call_db = call_match.group(1) if call_match else ""
-        rel = f"xml_supplement/ob/{name}.xml"
+        ob_specs.append(
+            {"name": name, "number": number, "secondary": secondary, "call_db": call_db}
+        )
+
+    # 阶段 B：按 call_db 分组解析配套 FB / 实例 DB（同组多 OB 引用只生成一次）。
+    refs_by_call_db: dict[str, list[str]] = {}
+    for spec in ob_specs:
+        if spec["call_db"]:
+            refs_by_call_db.setdefault(spec["call_db"], []).append(spec["name"])
+    # 成功解析的 call_db → call_fb；供阶段 C 给 _render_ob_xml 传参与自洽校验。
+    resolved: dict[str, str] = {}
+    seen_blocks: set[str] = set()
+    for call_db, ref_obs in refs_by_call_db.items():
+        if not call_db.endswith("_DB"):
+            skipped_blocks.append(
+                {
+                    "call_db": call_db,
+                    "referenced_by_obs": list(ref_obs),
+                    "reason": (
+                        "call_db 不以 _DB 结尾，按产品通道命名约定"
+                        "（FB 名 = re.sub(r'_DB$', '', call_db)）无法推导 FB 名，"
+                        "不猜 FB 名、不生成块"
+                    ),
+                }
+            )
+            continue
+        call_fb = re.sub(r"_DB$", "", call_db)
+        fb_entry = fb_entries.get(call_fb)
+        db_entry = db_entries.get(call_db)
+        if fb_entry is None or db_entry is None:
+            missing: list[str] = []
+            if fb_entry is None:
+                missing.append(f"FB:{call_fb}")
+            if db_entry is None:
+                missing.append(f"DB:{call_db}")
+            skipped_blocks.append(
+                {
+                    "call_fb": call_fb,
+                    "call_db": call_db,
+                    "referenced_by_obs": list(ref_obs),
+                    "reason": (
+                        "blocks_manifest 无对应 FB/DB 条目（缺 "
+                        + "/".join(missing)
+                        + "），按 K1 口径不虚构编号"
+                    ),
+                }
+            )
+            continue
+        fb_number = int(fb_entry.get("number") or 0)
+        db_number = int(db_entry.get("number") or 0)
+        fb_rel = f"xml_supplement/blocks/{call_fb}.xml"
+        db_rel = f"xml_supplement/blocks/{call_db}.xml"
+        if call_fb not in seen_blocks:
+            fb_bytes = render_fb_xml(
+                fb_name=call_fb,
+                fb_number=fb_number,
+                title=f"AF V1.2 {call_fb}",
+                tia_version=tia_version,
+            ).encode("utf-8-sig")
+            block_files[fb_rel] = fb_bytes
+            generated_blocks.append(
+                {
+                    "name": call_fb,
+                    "type": "FB",
+                    "number": fb_number,
+                    "path": fb_rel,
+                    "sha256": sha256_prefixed(fb_bytes),
+                    "referenced_by_obs": list(ref_obs),
+                }
+            )
+            seen_blocks.add(call_fb)
+        if call_db not in seen_blocks:
+            db_bytes = render_instance_db_xml(
+                db_name=call_db,
+                db_number=db_number,
+                instance_of_fb=call_fb,
+                title=f"AF V1.2 {call_db}",
+                tia_version=tia_version,
+            ).encode("utf-8-sig")
+            block_files[db_rel] = db_bytes
+            generated_blocks.append(
+                {
+                    "name": call_db,
+                    "type": "InstanceDB",
+                    "number": db_number,
+                    "path": db_rel,
+                    "sha256": sha256_prefixed(db_bytes),
+                    "referenced_by_obs": list(ref_obs),
+                    "instance_of_fb": call_fb,
+                }
+            )
+            seen_blocks.add(call_db)
+        resolved[call_db] = call_fb
+
+    # 阶段 C：生成 OB XML（成功解析 call_fb 时透传，保证引用逐字一致）。
+    for spec in ob_specs:
+        call_db = spec["call_db"]
+        rel = f"xml_supplement/ob/{spec['name']}.xml"
         ob_files[rel] = _render_ob_xml(
-            ob_name=name,
-            ob_number=number,
-            secondary_type=secondary,
+            ob_name=spec["name"],
+            ob_number=spec["number"],
+            secondary_type=spec["secondary"],
             call_db=call_db,
-            title=f"AF V1.2 {name}",
+            call_fb=resolved.get(call_db, ""),
+            title=f"AF V1.2 {spec['name']}",
             tia_version=tia_version,
         ).encode("utf-8-sig")
         generated.append(
             {
-                "name": name,
-                "number": number,
-                "secondary_type": secondary,
+                "name": spec["name"],
+                "number": spec["number"],
+                "secondary_type": spec["secondary"],
                 "call_db": call_db,
                 "path": rel,
                 "sha256": sha256_prefixed(ob_files[rel]),
@@ -594,15 +857,35 @@ def build_xml_supplement(delivery: dict[str, Any], ir: GreenfieldIR) -> dict[str
     folders_json = json.dumps(
         {"folders": folders, "note": _FOLDER_NOTE}, ensure_ascii=False, indent=2
     ).encode("utf-8")
+
+    # import_order：严格 FB → DB → OB（先建被调用块，再建引用它们的 Call OB）。
+    import_order = (
+        [b["path"] for b in generated_blocks if b["type"] == "FB"]
+        + [b["path"] for b in generated_blocks if b["type"] == "InstanceDB"]
+        + [g["path"] for g in generated]
+    )
+    # 自洽判定：无跳过块，且每个带 call_db 的 OB 都成功配套生成了 FB/DB。
+    references_self_consistent = not skipped_blocks and all(
+        spec["call_db"] in resolved for spec in ob_specs if spec["call_db"]
+    )
+
     supplement_files: dict[str, bytes] = {
         **ob_files,
+        **block_files,
         "xml_supplement/folders.json": folders_json,
         "xml_supplement/README.md": (
             "# XML 补充包（P2-4 / BR-3）\n\n"
             "- `ob/*.xml`：OB SimaticML XML（Main/Startup 调用 Unit/EM 的实例 DB；"
             "模板改参自真机 V19 Openness 导出先例）。\n"
+            "- `blocks/*.xml`：OB Call 网络引用的 FB 块与实例 DB 块 SimaticML XML"
+            "（编号取自 blocks_manifest 真实条目，不虚构；同块多 OB 引用只生成一次）。\n"
             "- `folders.json`：文档化文件夹清单（SW.PlcBlockGroup XML 可导入性未确证）。\n"
-            "- `manifest.json`：生成清单与诚实标注（`xml_package_unverified`）。\n"
+            "- `manifest.json`：生成清单 + import_order（FB → DB → OB）+ "
+            "references_self_consistent + 诚实标注（xml_package_unverified / pending_real_machine）。\n"
+            "- 导入顺序：严格按 manifest.json 的 import_order（先 FB、再实例 DB、最后 OB），"
+            "保证 Call 引用先于被引用块存在。\n"
+            "- 诚实边界：自产 OB/FB/DB XML 已在独立包探针级真机验证"
+            "（见 evidence/uc04_full_package_real.json），但正式产品通道产出的本包尚未单独真机验证。\n"
         ).encode(),
         "xml_supplement/manifest.json": b"",  # 占位，稍后由调用方写入
     }
@@ -613,6 +896,11 @@ def build_xml_supplement(delivery: dict[str, Any], ir: GreenfieldIR) -> dict[str
         "folders": folders,
         "supplement_files": supplement_files,
         "xml_package_unverified": True,
+        # X2 增量键（向后兼容：原键全部保留、不改语义）。
+        "generated_blocks": generated_blocks,
+        "skipped_blocks": skipped_blocks,
+        "import_order": import_order,
+        "references_self_consistent": references_self_consistent,
     }
 
 
@@ -763,19 +1051,34 @@ def _stage_package(
         "xml_package_unverified": supplement["xml_package_unverified"],
         "pending_real_machine": True,
         "pending_reason": (
-            "本批次无真机导入验证（WP-01 K1 探针 / P0-B 属真机项，不在本批次）；"
-            "自产 OB XML 与 folders.json 的可导入性待 V19 真机确证"
+            "自产 OB/FB/DB XML 已在独立包探针级真机验证"
+            "（见 evidence/uc04_full_package_real.json）；"
+            "但正式产品通道 build_xml_supplement 产出的本 XML 补充包尚未单独做真机导入编译验证，"
+            "xml_package_unverified / pending_real_machine 保持 True，"
+            "待后续 agent 在临时副本上按 import_order 验证"
         ),
         "generated_obs": supplement["generated_obs"],
         "skipped_obs": supplement["skipped_obs"],
+        # X2 增量键：与 build_xml_supplement 返回值、receipt 同步，避免缺 generated_blocks。
+        "generated_blocks": supplement["generated_blocks"],
+        "skipped_blocks": supplement["skipped_blocks"],
+        "import_order": supplement["import_order"],
+        "references_self_consistent": supplement["references_self_consistent"],
         "template_source": (
             ".researchos/plc_export_cache/<hash>/plc/CPU_1200/blocks/OB1Main.xml"
             "（TIA V19 Openness 真机导出先例，模板改参）"
         ),
         "ob_count": len(supplement["generated_obs"]),
         "note": (
-            "OB Main/Startup XML 结构复刻真机 V19 导出，但自产 XML 尚未在真机验证"
-            "导入（K1 探针项），导入前请先在 .ap19 副本上试导。"
+            "本包由正式产品通道 build_xml_supplement 离线产出"
+            "（OB + 配套 FB / 实例 DB XML + 文件夹清单）；"
+            "FB / 实例 DB 块编号取自 blocks_manifest 真实条目，不虚构。"
+            "自产 OB/FB/DB XML 已在独立包探针级真机验证"
+            "（见 evidence/uc04_full_package_real.json），"
+            "但该验证针对 tools/build_full_af_package.py 的独立包，"
+            "正式产品通道产出的本包尚未单独真机验证，"
+            "不宣称已验证 / 不宣称 UC-04 完全闭环；"
+            "导入前请先在 .ap19 副本上按本 manifest 的 import_order（FB → DB → OB）试导。"
         ),
     }
     supplement["supplement_files"]["xml_supplement/manifest.json"] = json.dumps(
@@ -1337,6 +1640,12 @@ def deliver_tia(session: GreenfieldSession, *, mode: str = "auto", session_mode:
         ),
         "generated_obs": supplement["generated_obs"],
         "skipped_obs": supplement["skipped_obs"],
+        # X2 增量键：与 build_xml_supplement 返回值、xml_supplement/manifest.json
+        # 同步，避免这条交付路径缺 generated_blocks。
+        "generated_blocks": supplement["generated_blocks"],
+        "skipped_blocks": supplement["skipped_blocks"],
+        "import_order": supplement["import_order"],
+        "references_self_consistent": supplement["references_self_consistent"],
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     zip_bytes = _assemble_tia_zip(delivery, supplement, receipt)

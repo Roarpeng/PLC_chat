@@ -2903,7 +2903,7 @@
     "compile_note": "Action A 不写 TIA、不产出编译结论；fidelity_ok 是 L1 逻辑等价，不等同编译通过（N9）",
     "bundle_sha256": "sha256:62e497eff71294bdf91428bfc39af1472e8d0bc41090cea16b8a6162110e076e"
   },
-  "gap_note": "批次 2 离线实例化的 3 项真机缺项已由 Agent R 的 evidence/uc15_step7_real.json 真实补齐（非补假数据）：结构化编译报告 / .zap19 归档 / PCEC 账本引用。注意：6 个 incremental_fields 仍为 UC-15 full 模式离线真实值，不构成 UC-16 增量真机证据；UC-16 增量证据另见 evidence/uc16_incremental_real.json，且 L4 仍 pending_real_machine。",
+  "gap_note": "批次 2 离线实例化的 3 项真机缺项已由 Agent R 的 evidence/uc15_step7_real.json 真实补齐（非补假数据）：结构化编译报告 / .zap19 归档 / PCEC 账本引用。注意：6 个 incremental_fields 仍为 UC-15 full 模式离线真实值，不构成 UC-16 增量真机证据；UC-16 增量证据另见 evidence/uc16_incremental_real.json，且 L4 仍 pending_real_machine。 【批次 4】UC-16 增量真机值已由 evidence/uc16_incremental_closed_real.json（W）与evidence/uc16_incremental_spec_chain.json（V）产出：base_spec_version=1、reverse_protection.allowed=true、fidelity_ok=true、tia_side_drift=0。本文件的 6 个 incremental_fields 仍属 UC-15 full 模式离线值，未被替换、不冒充增量真机证据。",
   "honest_note": "fidelity_ok 与 compile_ok 严格分离（N9）：A 的 fidelity_ok=true 仅 L1 离线逻辑等价，compile_ok 恒 None；warning 单列不并入成功。本包为 UC-15 full 模式离线实例化，不构成 UC-16 增量证据，不宣称 L2/L4 通过、编译零错误、L1∧L2∧L3∧L4 全绿，不构成 M4 通过或代签；M4 签署权归用户本人。 批次 3 补充：12 项全量工件齐备不代表 L1∧L2∧L3∧L4 全绿、不代表编译零错误结论可外推到完整 AF 包（UC-04 的 Call 网络 OB 仍导入失败）、不使 M4 可签署。",
   "batch3_filled_by": "主 agent 收口"
 }

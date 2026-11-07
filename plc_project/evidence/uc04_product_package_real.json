@@ -1,0 +1,2989 @@
+{
+  "schema": "gf-uc04-product-package-real-v1",
+  "uc": "UC-04",
+  "title": "正式产品通道 deliver_tia(mode='package') 产出的 xml_supplement/ V19 真机验证",
+  "agent": "Agent Y · 正式产品通道 XML 补充包 V19 真机验证（本阶段唯一连真机 / TIA / SessionServer；W、X 已结束）",
+  "generated_at": "2026-11-07T12:06:54.537186+00:00",
+  "tia_version": "V19",
+  "status": "real_machine_pass_disposition_pending",
+  "status_note": "正式包 10 项 FB/DB/OB 按 import_order 逐项真机导入成功、编译 errorCount=0/warningCount=0/state=Success（两轮独立验证）；但 xml_package_unverified 的消除、UC-04 是否完全闭环由主 agent 收口决定，本 Agent 不代拍、不改标志位。",
+  "source_raw": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/raw_all.json",
+  "source_raw_sha256": "sha256:0e3146b3db41e7b0a73ee2956c07e5a522d08b6d6051f9ad8d16acff7f77ee35",
+  "environment": {
+    "exe": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe",
+    "python": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/.venv/Scripts/python.exe",
+    "read_only_source": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/PLC_Openness_data/openness_e2e/CanvasE2E",
+    "temp_root": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107",
+    "cli_timeout_s": 180.0,
+    "repro_timeout_wrapper": "timeout -k 5 180"
+  },
+  "safety": {
+    "only_temp_copies": true,
+    "original_ap19_opened_or_written_back": false,
+    "git_operations": 0,
+    "product_code_modified": false,
+    "serve_started": false,
+    "serve_leftover_after_all": {
+      "reachable": false,
+      "error": "HTTPError: HTTP Error 502: Bad Gateway"
+    },
+    "d12_hard_refuse_honored": true,
+    "each_cli_has_timeout": true,
+    "note": "全程 --cli 一次性调用，未启动 serve 常驻进程、8791 从未监听；源项目仅 shutil.copytree 复制到 Temp 副本后在其上打开/保存，从不打开/写回 PLC_Openness_data 下原始 .ap19/.zap19。"
+  },
+  "y1_structure": {
+    "method": "deliver_tia(_frozen_session(...), mode='package') 正式产品通道",
+    "zip_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/product_package.zip",
+    "zip_bytes": 76756,
+    "zip_sha256": "sha256:631c72d18f293ad23d7e8433f539ed60f05b57bbdf04afcdae1540e03ab79900",
+    "manifest_sha256": "sha256:51939a8d5977cdc5572107ac5749ee3374d3d3f9c91c97c00f09470d672f1950",
+    "manifest_from_zip_equals_disk": true,
+    "xml_supplement_dir": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement",
+    "xml_supplement_member_count": 13,
+    "result_vs_manifest_sync": {
+      "generated_blocks_equal": true,
+      "skipped_blocks_equal": true,
+      "import_order_equal": true,
+      "references_self_consistent_equal": true,
+      "xml_package_unverified": true,
+      "pending_real_machine": true
+    },
+    "manifest_real_values": {
+      "xml_package_unverified": true,
+      "pending_real_machine": true,
+      "references_self_consistent": true,
+      "ob_count": 6,
+      "generated_blocks": [
+        {
+          "name": "U1Em1_Station1_CallEquipment",
+          "type": "FB",
+          "number": 1010,
+          "path": "xml_supplement/blocks/U1Em1_Station1_CallEquipment.xml",
+          "sha256": "sha256:214c07e0373c78eb33fdf9ace92919aab8955085bece6839d774bd1649f73659",
+          "referenced_by_obs": [
+            "U1Em1_Station1_Main",
+            "U1Em1_Station1_Startup"
+          ]
+        },
+        {
+          "name": "U1Em1_Station1_CallEquipment_DB",
+          "type": "InstanceDB",
+          "number": 1015,
+          "path": "xml_supplement/blocks/U1Em1_Station1_CallEquipment_DB.xml",
+          "sha256": "sha256:8429e4816096c1c4ccdbe80a02a9501f7eb04ddfc485b261f887bbca88f2fd94",
+          "referenced_by_obs": [
+            "U1Em1_Station1_Main",
+            "U1Em1_Station1_Startup"
+          ],
+          "instance_of_fb": "U1Em1_Station1_CallEquipment"
+        },
+        {
+          "name": "U1_KukaVisionStation_CallUnit",
+          "type": "FB",
+          "number": 1001,
+          "path": "xml_supplement/blocks/U1_KukaVisionStation_CallUnit.xml",
+          "sha256": "sha256:e8dc4f0bc36605e369d964c4dcee6cbc4bd2d6e4fcf0c7f412f66f1e1263f65c",
+          "referenced_by_obs": [
+            "U1_KukaVisionStation_Main",
+            "U1_KukaVisionStation_Startup"
+          ]
+        },
+        {
+          "name": "U1_KukaVisionStation_CallUnit_DB",
+          "type": "InstanceDB",
+          "number": 1011,
+          "path": "xml_supplement/blocks/U1_KukaVisionStation_CallUnit_DB.xml",
+          "sha256": "sha256:c06106d5b8c0944c6cd99972a1c2b1e00c20adf945c36303d8f2657b80e0ac6f",
+          "referenced_by_obs": [
+            "U1_KukaVisionStation_Main",
+            "U1_KukaVisionStation_Startup"
+          ],
+          "instance_of_fb": "U1_KukaVisionStation_CallUnit"
+        }
+      ],
+      "skipped_blocks": [],
+      "import_order": [
+        "xml_supplement/blocks/U1Em1_Station1_CallEquipment.xml",
+        "xml_supplement/blocks/U1_KukaVisionStation_CallUnit.xml",
+        "xml_supplement/blocks/U1Em1_Station1_CallEquipment_DB.xml",
+        "xml_supplement/blocks/U1_KukaVisionStation_CallUnit_DB.xml",
+        "xml_supplement/ob/U1Em0_General_Main.xml",
+        "xml_supplement/ob/U1Em0_General_Startup.xml",
+        "xml_supplement/ob/U1Em1_Station1_Main.xml",
+        "xml_supplement/ob/U1Em1_Station1_Startup.xml",
+        "xml_supplement/ob/U1_KukaVisionStation_Main.xml",
+        "xml_supplement/ob/U1_KukaVisionStation_Startup.xml"
+      ],
+      "generated_obs": [
+        {
+          "name": "U1Em0_General_Main",
+          "number": 1006,
+          "secondary_type": "ProgramCycle",
+          "call_db": "",
+          "path": "xml_supplement/ob/U1Em0_General_Main.xml",
+          "sha256": "sha256:4d97a247c7cb4b959bff7498d2e868d5f157342ecde012b51a3d970691bb16a9"
+        },
+        {
+          "name": "U1Em0_General_Startup",
+          "number": 1005,
+          "secondary_type": "Startup",
+          "call_db": "",
+          "path": "xml_supplement/ob/U1Em0_General_Startup.xml",
+          "sha256": "sha256:316a8a9fa8b8242214f5f717a272e463c3d6abd5b6e46f5d2413978c0da151bd"
+        },
+        {
+          "name": "U1Em1_Station1_Main",
+          "number": 1011,
+          "secondary_type": "ProgramCycle",
+          "call_db": "U1Em1_Station1_CallEquipment_DB",
+          "path": "xml_supplement/ob/U1Em1_Station1_Main.xml",
+          "sha256": "sha256:4a0a7532fa0389c7a8ba198b99129f0576b5c2debee96eaba7b011b4a317ef2d"
+        },
+        {
+          "name": "U1Em1_Station1_Startup",
+          "number": 1010,
+          "secondary_type": "Startup",
+          "call_db": "U1Em1_Station1_CallEquipment_DB",
+          "path": "xml_supplement/ob/U1Em1_Station1_Startup.xml",
+          "sha256": "sha256:39ce324036fa7f1decf717b8a13b3212f729cba218a67f2eb9de753f289a6e55"
+        },
+        {
+          "name": "U1_KukaVisionStation_Main",
+          "number": 1001,
+          "secondary_type": "ProgramCycle",
+          "call_db": "U1_KukaVisionStation_CallUnit_DB",
+          "path": "xml_supplement/ob/U1_KukaVisionStation_Main.xml",
+          "sha256": "sha256:d08999fc6def1172322c26468e773261708ca6793088fc01cf07e7f134cbfb5d"
+        },
+        {
+          "name": "U1_KukaVisionStation_Startup",
+          "number": 1000,
+          "secondary_type": "Startup",
+          "call_db": "U1_KukaVisionStation_CallUnit_DB",
+          "path": "xml_supplement/ob/U1_KukaVisionStation_Startup.xml",
+          "sha256": "sha256:27ac9ff5f0a9667435dda30868513ae94c1898564c422d1039b8eb4cd2dc8394"
+        }
+      ],
+      "skipped_obs": [
+        {
+          "name": "U1Em0_General_ProDiag",
+          "number": 1007,
+          "reason": "SecondaryType 未在本轮真机确证（ProDiag 类），按 K1 探针口径跳过，工程内预置"
+        },
+        {
+          "name": "U1Em1_Station1_ProDiag",
+          "number": 1012,
+          "reason": "SecondaryType 未在本轮真机确证（ProDiag 类），按 K1 探针口径跳过，工程内预置"
+        },
+        {
+          "name": "U1_KukaVisionStation_ProDiag",
+          "number": 1002,
+          "reason": "SecondaryType 未在本轮真机确证（ProDiag 类），按 K1 探针口径跳过，工程内预置"
+        }
+      ],
+      "pending_reason": "自产 OB/FB/DB XML 已在独立包探针级真机验证（见 evidence/uc04_full_package_real.json）；但正式产品通道 build_xml_supplement 产出的本 XML 补充包尚未单独做真机导入编译验证，xml_package_unverified / pending_real_machine 保持 True，待后续 agent 在临时副本上按 import_order 验证",
+      "note": "本包由正式产品通道 build_xml_supplement 离线产出（OB + 配套 FB / 实例 DB XML + 文件夹清单）；FB / 实例 DB 块编号取自 blocks_manifest 真实条目，不虚构。自产 OB/FB/DB XML 已在独立包探针级真机验证（见 evidence/uc04_full_package_real.json），但该验证针对 tools/build_full_af_package.py 的独立包，正式产品通道产出的本包尚未单独真机验证，不宣称已验证 / 不宣称 UC-04 完全闭环；导入前请先在 .ap19 副本上按本 manifest 的 import_order（FB → DB → OB）试导。",
+      "template_source": ".researchos/plc_export_cache/<hash>/plc/CPU_1200/blocks/OB1Main.xml（TIA V19 Openness 真机导出先例，模板改参）"
+    },
+    "per_file_sha256_recompute": [
+      {
+        "path": "xml_supplement/blocks/U1Em1_Station1_CallEquipment.xml",
+        "kind": "blocks",
+        "name": "U1Em1_Station1_CallEquipment",
+        "expected_sha256": "sha256:214c07e0373c78eb33fdf9ace92919aab8955085bece6839d774bd1649f73659",
+        "computed_sha256": "sha256:214c07e0373c78eb33fdf9ace92919aab8955085bece6839d774bd1649f73659",
+        "expected_bytes_in_zip": 1317,
+        "computed_bytes": 1317,
+        "match": true
+      },
+      {
+        "path": "xml_supplement/blocks/U1Em1_Station1_CallEquipment_DB.xml",
+        "kind": "blocks",
+        "name": "U1Em1_Station1_CallEquipment_DB",
+        "expected_sha256": "sha256:8429e4816096c1c4ccdbe80a02a9501f7eb04ddfc485b261f887bbca88f2fd94",
+        "computed_sha256": "sha256:8429e4816096c1c4ccdbe80a02a9501f7eb04ddfc485b261f887bbca88f2fd94",
+        "expected_bytes_in_zip": 1678,
+        "computed_bytes": 1678,
+        "match": true
+      },
+      {
+        "path": "xml_supplement/blocks/U1_KukaVisionStation_CallUnit.xml",
+        "kind": "blocks",
+        "name": "U1_KukaVisionStation_CallUnit",
+        "expected_sha256": "sha256:e8dc4f0bc36605e369d964c4dcee6cbc4bd2d6e4fcf0c7f412f66f1e1263f65c",
+        "computed_sha256": "sha256:e8dc4f0bc36605e369d964c4dcee6cbc4bd2d6e4fcf0c7f412f66f1e1263f65c",
+        "expected_bytes_in_zip": 1319,
+        "computed_bytes": 1319,
+        "match": true
+      },
+      {
+        "path": "xml_supplement/blocks/U1_KukaVisionStation_CallUnit_DB.xml",
+        "kind": "blocks",
+        "name": "U1_KukaVisionStation_CallUnit_DB",
+        "expected_sha256": "sha256:c06106d5b8c0944c6cd99972a1c2b1e00c20adf945c36303d8f2657b80e0ac6f",
+        "computed_sha256": "sha256:c06106d5b8c0944c6cd99972a1c2b1e00c20adf945c36303d8f2657b80e0ac6f",
+        "expected_bytes_in_zip": 1681,
+        "computed_bytes": 1681,
+        "match": true
+      },
+      {
+        "path": "xml_supplement/ob/U1Em0_General_Main.xml",
+        "kind": "ob",
+        "name": "U1Em0_General_Main",
+        "expected_sha256": "sha256:4d97a247c7cb4b959bff7498d2e868d5f157342ecde012b51a3d970691bb16a9",
+        "computed_sha256": "sha256:4d97a247c7cb4b959bff7498d2e868d5f157342ecde012b51a3d970691bb16a9",
+        "expected_bytes_in_zip": 2351,
+        "computed_bytes": 2351,
+        "match": true
+      },
+      {
+        "path": "xml_supplement/ob/U1Em0_General_Startup.xml",
+        "kind": "ob",
+        "name": "U1Em0_General_Startup",
+        "expected_sha256": "sha256:316a8a9fa8b8242214f5f717a272e463c3d6abd5b6e46f5d2413978c0da151bd",
+        "computed_sha256": "sha256:316a8a9fa8b8242214f5f717a272e463c3d6abd5b6e46f5d2413978c0da151bd",
+        "expected_bytes_in_zip": 2352,
+        "computed_bytes": 2352,
+        "match": true
+      },
+      {
+        "path": "xml_supplement/ob/U1Em1_Station1_Main.xml",
+        "kind": "ob",
+        "name": "U1Em1_Station1_Main",
+        "expected_sha256": "sha256:4a0a7532fa0389c7a8ba198b99129f0576b5c2debee96eaba7b011b4a317ef2d",
+        "computed_sha256": "sha256:4a0a7532fa0389c7a8ba198b99129f0576b5c2debee96eaba7b011b4a317ef2d",
+        "expected_bytes_in_zip": 2846,
+        "computed_bytes": 2846,
+        "match": true
+      },
+      {
+        "path": "xml_supplement/ob/U1Em1_Station1_Startup.xml",
+        "kind": "ob",
+        "name": "U1Em1_Station1_Startup",
+        "expected_sha256": "sha256:39ce324036fa7f1decf717b8a13b3212f729cba218a67f2eb9de753f289a6e55",
+        "computed_sha256": "sha256:39ce324036fa7f1decf717b8a13b3212f729cba218a67f2eb9de753f289a6e55",
+        "expected_bytes_in_zip": 2847,
+        "computed_bytes": 2847,
+        "match": true
+      },
+      {
+        "path": "xml_supplement/ob/U1_KukaVisionStation_Main.xml",
+        "kind": "ob",
+        "name": "U1_KukaVisionStation_Main",
+        "expected_sha256": "sha256:d08999fc6def1172322c26468e773261708ca6793088fc01cf07e7f134cbfb5d",
+        "computed_sha256": "sha256:d08999fc6def1172322c26468e773261708ca6793088fc01cf07e7f134cbfb5d",
+        "expected_bytes_in_zip": 2860,
+        "computed_bytes": 2860,
+        "match": true
+      },
+      {
+        "path": "xml_supplement/ob/U1_KukaVisionStation_Startup.xml",
+        "kind": "ob",
+        "name": "U1_KukaVisionStation_Startup",
+        "expected_sha256": "sha256:27ac9ff5f0a9667435dda30868513ae94c1898564c422d1039b8eb4cd2dc8394",
+        "computed_sha256": "sha256:27ac9ff5f0a9667435dda30868513ae94c1898564c422d1039b8eb4cd2dc8394",
+        "expected_bytes_in_zip": 2861,
+        "computed_bytes": 2861,
+        "match": true
+      }
+    ],
+    "per_file_sha256_all_match": true,
+    "all_members_sha256": [
+      {
+        "path": "xml_supplement/README.md",
+        "bytes": 937,
+        "sha256": "sha256:58e989c78c27bdf5fec13d9832fd6c9b2aa74c3f94a48fc24f048b3eea2a85bc"
+      },
+      {
+        "path": "xml_supplement/blocks/U1Em1_Station1_CallEquipment.xml",
+        "bytes": 1317,
+        "sha256": "sha256:214c07e0373c78eb33fdf9ace92919aab8955085bece6839d774bd1649f73659"
+      },
+      {
+        "path": "xml_supplement/blocks/U1Em1_Station1_CallEquipment_DB.xml",
+        "bytes": 1678,
+        "sha256": "sha256:8429e4816096c1c4ccdbe80a02a9501f7eb04ddfc485b261f887bbca88f2fd94"
+      },
+      {
+        "path": "xml_supplement/blocks/U1_KukaVisionStation_CallUnit.xml",
+        "bytes": 1319,
+        "sha256": "sha256:e8dc4f0bc36605e369d964c4dcee6cbc4bd2d6e4fcf0c7f412f66f1e1263f65c"
+      },
+      {
+        "path": "xml_supplement/blocks/U1_KukaVisionStation_CallUnit_DB.xml",
+        "bytes": 1681,
+        "sha256": "sha256:c06106d5b8c0944c6cd99972a1c2b1e00c20adf945c36303d8f2657b80e0ac6f"
+      },
+      {
+        "path": "xml_supplement/folders.json",
+        "bytes": 1444,
+        "sha256": "sha256:2483f3255cbe6e0244b3d00583f142e7013b390ffec9597bac3e822ab838e001"
+      },
+      {
+        "path": "xml_supplement/manifest.json",
+        "bytes": 5966,
+        "sha256": "sha256:51939a8d5977cdc5572107ac5749ee3374d3d3f9c91c97c00f09470d672f1950"
+      },
+      {
+        "path": "xml_supplement/ob/U1Em0_General_Main.xml",
+        "bytes": 2351,
+        "sha256": "sha256:4d97a247c7cb4b959bff7498d2e868d5f157342ecde012b51a3d970691bb16a9"
+      },
+      {
+        "path": "xml_supplement/ob/U1Em0_General_Startup.xml",
+        "bytes": 2352,
+        "sha256": "sha256:316a8a9fa8b8242214f5f717a272e463c3d6abd5b6e46f5d2413978c0da151bd"
+      },
+      {
+        "path": "xml_supplement/ob/U1Em1_Station1_Main.xml",
+        "bytes": 2846,
+        "sha256": "sha256:4a0a7532fa0389c7a8ba198b99129f0576b5c2debee96eaba7b011b4a317ef2d"
+      },
+      {
+        "path": "xml_supplement/ob/U1Em1_Station1_Startup.xml",
+        "bytes": 2847,
+        "sha256": "sha256:39ce324036fa7f1decf717b8a13b3212f729cba218a67f2eb9de753f289a6e55"
+      },
+      {
+        "path": "xml_supplement/ob/U1_KukaVisionStation_Main.xml",
+        "bytes": 2860,
+        "sha256": "sha256:d08999fc6def1172322c26468e773261708ca6793088fc01cf07e7f134cbfb5d"
+      },
+      {
+        "path": "xml_supplement/ob/U1_KukaVisionStation_Startup.xml",
+        "bytes": 2861,
+        "sha256": "sha256:27ac9ff5f0a9667435dda30868513ae94c1898564c422d1039b8eb4cd2dc8394"
+      }
+    ],
+    "fb_xml_names": [
+      "U1Em1_Station1_CallEquipment",
+      "U1_KukaVisionStation_CallUnit"
+    ],
+    "db_xml_names": [
+      "U1Em1_Station1_CallEquipment_DB",
+      "U1_KukaVisionStation_CallUnit_DB"
+    ],
+    "xml_reference_checks": [
+      {
+        "ob": "U1Em0_General_Main",
+        "ob_number": 1006,
+        "path": "xml_supplement/ob/U1Em0_General_Main.xml",
+        "ob_xml_name": "U1Em0_General_Main",
+        "call_db_from_manifest": "",
+        "has_call_network": false,
+        "callinfo_name": null,
+        "component_name": null,
+        "verdict": "empty_network_ob_no_call_reference"
+      },
+      {
+        "ob": "U1Em0_General_Startup",
+        "ob_number": 1005,
+        "path": "xml_supplement/ob/U1Em0_General_Startup.xml",
+        "ob_xml_name": "U1Em0_General_Startup",
+        "call_db_from_manifest": "",
+        "has_call_network": false,
+        "callinfo_name": null,
+        "component_name": null,
+        "verdict": "empty_network_ob_no_call_reference"
+      },
+      {
+        "ob": "U1Em1_Station1_Main",
+        "ob_number": 1011,
+        "path": "xml_supplement/ob/U1Em1_Station1_Main.xml",
+        "ob_xml_name": "U1Em1_Station1_Main",
+        "call_db_from_manifest": "U1Em1_Station1_CallEquipment_DB",
+        "has_call_network": true,
+        "callinfo_name": "U1Em1_Station1_CallEquipment",
+        "component_name": "U1Em1_Station1_CallEquipment_DB",
+        "callinfo_matches_fb_xml_name": true,
+        "component_matches_db_xml_name": true,
+        "db_instance_of_name": "U1Em1_Station1_CallEquipment",
+        "instance_of_name_matches_fb_xml_name": true,
+        "product_convention_callfb_eq_strip_db_suffix": true,
+        "verdict": "all_consistent"
+      },
+      {
+        "ob": "U1Em1_Station1_Startup",
+        "ob_number": 1010,
+        "path": "xml_supplement/ob/U1Em1_Station1_Startup.xml",
+        "ob_xml_name": "U1Em1_Station1_Startup",
+        "call_db_from_manifest": "U1Em1_Station1_CallEquipment_DB",
+        "has_call_network": true,
+        "callinfo_name": "U1Em1_Station1_CallEquipment",
+        "component_name": "U1Em1_Station1_CallEquipment_DB",
+        "callinfo_matches_fb_xml_name": true,
+        "component_matches_db_xml_name": true,
+        "db_instance_of_name": "U1Em1_Station1_CallEquipment",
+        "instance_of_name_matches_fb_xml_name": true,
+        "product_convention_callfb_eq_strip_db_suffix": true,
+        "verdict": "all_consistent"
+      },
+      {
+        "ob": "U1_KukaVisionStation_Main",
+        "ob_number": 1001,
+        "path": "xml_supplement/ob/U1_KukaVisionStation_Main.xml",
+        "ob_xml_name": "U1_KukaVisionStation_Main",
+        "call_db_from_manifest": "U1_KukaVisionStation_CallUnit_DB",
+        "has_call_network": true,
+        "callinfo_name": "U1_KukaVisionStation_CallUnit",
+        "component_name": "U1_KukaVisionStation_CallUnit_DB",
+        "callinfo_matches_fb_xml_name": true,
+        "component_matches_db_xml_name": true,
+        "db_instance_of_name": "U1_KukaVisionStation_CallUnit",
+        "instance_of_name_matches_fb_xml_name": true,
+        "product_convention_callfb_eq_strip_db_suffix": true,
+        "verdict": "all_consistent"
+      },
+      {
+        "ob": "U1_KukaVisionStation_Startup",
+        "ob_number": 1000,
+        "path": "xml_supplement/ob/U1_KukaVisionStation_Startup.xml",
+        "ob_xml_name": "U1_KukaVisionStation_Startup",
+        "call_db_from_manifest": "U1_KukaVisionStation_CallUnit_DB",
+        "has_call_network": true,
+        "callinfo_name": "U1_KukaVisionStation_CallUnit",
+        "component_name": "U1_KukaVisionStation_CallUnit_DB",
+        "callinfo_matches_fb_xml_name": true,
+        "component_matches_db_xml_name": true,
+        "db_instance_of_name": "U1_KukaVisionStation_CallUnit",
+        "instance_of_name_matches_fb_xml_name": true,
+        "product_convention_callfb_eq_strip_db_suffix": true,
+        "verdict": "all_consistent"
+      }
+    ],
+    "xml_references_all_consistent": true,
+    "folders_json_original": {
+      "folders": {
+        "00_Types_UDT": [
+          "AF_typeAnalogInput",
+          "AF_typeAnalogOutput",
+          "AF_typeAxisControl",
+          "AF_typeDigitalSignal",
+          "AF_typeGeneralControl",
+          "AF_typeJobs",
+          "AF_typeSequence",
+          "AF_typeSimpleActuator",
+          "AF_typeTwoWayActuator"
+        ],
+        "90_Compat_Frozen_Boundary": [
+          "DB1900_Communication_PC",
+          "DB720_KuKa_MainCtrl",
+          "FC_Compat_DB1900_Communication_PC",
+          "FC_Compat_DB720_KuKa_MainCtrl",
+          "FC_IoMap_ReadWrite"
+        ],
+        "30_Equipment_Modules": [
+          "U1Em0_General_Main",
+          "U1Em0_General_ProDiag",
+          "U1Em0_General_Startup",
+          "U1Em1_Station1_CallEquipment",
+          "U1Em1_Station1_CallEquipment_DB",
+          "U1Em1_Station1_ControlNodes",
+          "U1Em1_Station1_Main",
+          "U1Em1_Station1_ProDiag",
+          "U1Em1_Station1_Sequence",
+          "U1Em1_Station1_Startup",
+          "U1Em1_Station1_StepToString",
+          "U1_KukaVisionStation_CallUnit",
+          "U1_KukaVisionStation_CallUnit_DB",
+          "U1_KukaVisionStation_EmNodes",
+          "U1_KukaVisionStation_Main",
+          "U1_KukaVisionStation_ProDiag",
+          "U1_KukaVisionStation_Startup"
+        ]
+      },
+      "note": "文件夹（软件单元分组）与 OB 一样不能由 SCL 外部源生成（BR-3）。本轮未确证 SW.PlcBlockGroup XML 的可导入性，故以文档化清单交付：可在博途中按本清单手工建立分组，或由 Openness BlockGroup API（Phase 3）自动建立。"
+    },
+    "note": "未修改 ZIP 内任何内容；sha256 格式与清单一致为 'sha256:'+hex。正式包 XML 的 <Created> 用 time.gmtime() 当前时间，非字节级可复现，故两次生成包 zip/manifest sha256 不同（见两轮 package_zip_sha256），本核对针对各自同一份包。"
+  },
+  "y2_real_machine": {
+    "runs": [
+      {
+        "run_id": "Y-1",
+        "generated_at": "2026-11-07T11:42:49.132175+00:00",
+        "package_zip_sha256": "sha256:631c72d18f293ad23d7e8433f539ed60f05b57bbdf04afcdae1540e03ab79900",
+        "package_manifest_sha256": "sha256:51939a8d5977cdc5572107ac5749ee3374d3d3f9c91c97c00f09470d672f1950",
+        "package_per_file_sha256_all_match": true,
+        "package_xml_references_all_consistent": true,
+        "ap_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+        "case_dir": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1",
+        "source_copied_from": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/PLC_Openness_data/openness_e2e/CanvasE2E",
+        "source_opened_or_written_back": false,
+        "status_probe_original": {
+          "ok": true,
+          "tiaRunning": false,
+          "processCount": 0,
+          "opennessAvailable": true,
+          "opennessGroupInToken": true,
+          "tiaVersion": "V19",
+          "engineeringDll": "C:\\Program Files\\Siemens\\Automation\\Portal V19\\PublicAPI\\V19\\Siemens.Engineering.dll",
+          "connected": false,
+          "projectOpen": false,
+          "message": "TIA Portal process not detected (Openness can still start WithoutUserInterface)."
+        },
+        "baseline_before_import": {
+          "count": 2,
+          "byType": {
+            "OB": 1,
+            "FB": 1
+          },
+          "blocks": [
+            {
+              "name": "Main",
+              "type": "OB",
+              "path": "Main",
+              "programmingLanguage": "LAD",
+              "number": 1,
+              "knowHowProtected": false
+            },
+            {
+              "name": "PumpCtrl",
+              "type": "FB",
+              "path": "PumpCtrl",
+              "programmingLanguage": "SCL",
+              "number": 1,
+              "knowHowProtected": false
+            }
+          ],
+          "raw_original": {
+            "ok": true,
+            "project": {
+              "ok": true,
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+              "projectName": "CanvasE2E",
+              "plcName": "PLC_1",
+              "deviceName": "PLC_1",
+              "message": "Project opened via TIA Openness."
+            },
+            "blocks": {
+              "ok": true,
+              "plcName": "PLC_1",
+              "count": 2,
+              "blocks": [
+                {
+                  "name": "Main",
+                  "type": "OB",
+                  "path": "Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "PumpCtrl",
+                  "type": "FB",
+                  "path": "PumpCtrl",
+                  "programmingLanguage": "SCL",
+                  "number": 1,
+                  "knowHowProtected": false
+                }
+              ],
+              "byType": {
+                "OB": 1,
+                "FB": 1
+              }
+            }
+          },
+          "note": "导入前基线：干净副本仅含源项目 2 块（Main OB1 / PumpCtrl FB1），不含 W 独立包遗留的任何同号块（本副本与 gf_real_w4_* 完全隔离）。"
+        },
+        "imports_itemized": [
+          {
+            "path": "xml_supplement/blocks/U1Em1_Station1_CallEquipment.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1Em1_Station1_CallEquipment.xml",
+            "xml_sha256": "sha256:214c07e0373c78eb33fdf9ace92919aab8955085bece6839d774bd1649f73659",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1Em1_Station1_CallEquipment"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1Em1_Station1_CallEquipment.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1Em1_Station1_CallEquipment.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\blocks\\\\U1Em1_Station1_CallEquipment.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1Em1_Station1_CallEquipment\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1Em1_Station1_CallEquipment.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\blocks\\U1Em1_Station1_CallEquipment.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1Em1_Station1_CallEquipment"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1Em1_Station1_CallEquipment."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/blocks/U1_KukaVisionStation_CallUnit.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1_KukaVisionStation_CallUnit.xml",
+            "xml_sha256": "sha256:e8dc4f0bc36605e369d964c4dcee6cbc4bd2d6e4fcf0c7f412f66f1e1263f65c",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1_KukaVisionStation_CallUnit"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1_KukaVisionStation_CallUnit.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1_KukaVisionStation_CallUnit.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\blocks\\\\U1_KukaVisionStation_CallUnit.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1_KukaVisionStation_CallUnit\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1_KukaVisionStation_CallUnit.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\blocks\\U1_KukaVisionStation_CallUnit.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1_KukaVisionStation_CallUnit"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1_KukaVisionStation_CallUnit."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/blocks/U1Em1_Station1_CallEquipment_DB.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1Em1_Station1_CallEquipment_DB.xml",
+            "xml_sha256": "sha256:8429e4816096c1c4ccdbe80a02a9501f7eb04ddfc485b261f887bbca88f2fd94",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1Em1_Station1_CallEquipment_DB"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1Em1_Station1_CallEquipment_DB.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1Em1_Station1_CallEquipment_DB.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\blocks\\\\U1Em1_Station1_CallEquipment_DB.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1Em1_Station1_CallEquipment_DB\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1Em1_Station1_CallEquipment_DB.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\blocks\\U1Em1_Station1_CallEquipment_DB.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1Em1_Station1_CallEquipment_DB"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1Em1_Station1_CallEquipment_DB."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/blocks/U1_KukaVisionStation_CallUnit_DB.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1_KukaVisionStation_CallUnit_DB.xml",
+            "xml_sha256": "sha256:c06106d5b8c0944c6cd99972a1c2b1e00c20adf945c36303d8f2657b80e0ac6f",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1_KukaVisionStation_CallUnit_DB"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1_KukaVisionStation_CallUnit_DB.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1_KukaVisionStation_CallUnit_DB.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\blocks\\\\U1_KukaVisionStation_CallUnit_DB.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1_KukaVisionStation_CallUnit_DB\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1_KukaVisionStation_CallUnit_DB.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\blocks\\U1_KukaVisionStation_CallUnit_DB.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1_KukaVisionStation_CallUnit_DB"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1_KukaVisionStation_CallUnit_DB."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/ob/U1Em0_General_Main.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em0_General_Main.xml",
+            "xml_sha256": "sha256:4d97a247c7cb4b959bff7498d2e868d5f157342ecde012b51a3d970691bb16a9",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1Em0_General_Main"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em0_General_Main.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em0_General_Main.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\ob\\\\U1Em0_General_Main.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1Em0_General_Main\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1Em0_General_Main.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\ob\\U1Em0_General_Main.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1Em0_General_Main"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1Em0_General_Main."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/ob/U1Em0_General_Startup.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em0_General_Startup.xml",
+            "xml_sha256": "sha256:316a8a9fa8b8242214f5f717a272e463c3d6abd5b6e46f5d2413978c0da151bd",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1Em0_General_Startup"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em0_General_Startup.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em0_General_Startup.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\ob\\\\U1Em0_General_Startup.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1Em0_General_Startup\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1Em0_General_Startup.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\ob\\U1Em0_General_Startup.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1Em0_General_Startup"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1Em0_General_Startup."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/ob/U1Em1_Station1_Main.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em1_Station1_Main.xml",
+            "xml_sha256": "sha256:4a0a7532fa0389c7a8ba198b99129f0576b5c2debee96eaba7b011b4a317ef2d",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1Em1_Station1_Main"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em1_Station1_Main.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em1_Station1_Main.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\ob\\\\U1Em1_Station1_Main.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1Em1_Station1_Main\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1Em1_Station1_Main.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\ob\\U1Em1_Station1_Main.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1Em1_Station1_Main"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1Em1_Station1_Main."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/ob/U1Em1_Station1_Startup.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em1_Station1_Startup.xml",
+            "xml_sha256": "sha256:39ce324036fa7f1decf717b8a13b3212f729cba218a67f2eb9de753f289a6e55",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1Em1_Station1_Startup"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em1_Station1_Startup.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em1_Station1_Startup.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\ob\\\\U1Em1_Station1_Startup.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1Em1_Station1_Startup\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1Em1_Station1_Startup.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\ob\\U1Em1_Station1_Startup.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1Em1_Station1_Startup"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1Em1_Station1_Startup."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/ob/U1_KukaVisionStation_Main.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1_KukaVisionStation_Main.xml",
+            "xml_sha256": "sha256:d08999fc6def1172322c26468e773261708ca6793088fc01cf07e7f134cbfb5d",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1_KukaVisionStation_Main"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1_KukaVisionStation_Main.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1_KukaVisionStation_Main.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\ob\\\\U1_KukaVisionStation_Main.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1_KukaVisionStation_Main\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1_KukaVisionStation_Main.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\ob\\U1_KukaVisionStation_Main.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1_KukaVisionStation_Main"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1_KukaVisionStation_Main."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/ob/U1_KukaVisionStation_Startup.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1_KukaVisionStation_Startup.xml",
+            "xml_sha256": "sha256:27ac9ff5f0a9667435dda30868513ae94c1898564c422d1039b8eb4cd2dc8394",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1_KukaVisionStation_Startup"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1_KukaVisionStation_Startup.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1_KukaVisionStation_Startup.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\ob\\\\U1_KukaVisionStation_Startup.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1_KukaVisionStation_Startup\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1_KukaVisionStation_Startup.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\ob\\U1_KukaVisionStation_Startup.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1_KukaVisionStation_Startup"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1_KukaVisionStation_Startup."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          }
+        ],
+        "imports_all_ok": true,
+        "create_block_groups": [
+          {
+            "group": "00_Types_UDT",
+            "ok": true,
+            "saved": true,
+            "exit_code": 0,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli create-block-group --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --plc PLC_1 --group 00_Types_UDT",
+              "args": [
+                "create-block-group",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--plc",
+                "PLC_1",
+                "--group",
+                "00_Types_UDT"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"group\":\"00_Types_UDT\",\"saved\":true}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "group": "00_Types_UDT",
+                "saved": true
+              }
+            }
+          },
+          {
+            "group": "30_Equipment_Modules",
+            "ok": true,
+            "saved": true,
+            "exit_code": 0,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli create-block-group --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --plc PLC_1 --group 30_Equipment_Modules",
+              "args": [
+                "create-block-group",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--plc",
+                "PLC_1",
+                "--group",
+                "30_Equipment_Modules"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"group\":\"30_Equipment_Modules\",\"saved\":true}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "group": "30_Equipment_Modules",
+                "saved": true
+              }
+            }
+          },
+          {
+            "group": "90_Compat_Frozen_Boundary",
+            "ok": true,
+            "saved": true,
+            "exit_code": 0,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli create-block-group --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --plc PLC_1 --group 90_Compat_Frozen_Boundary",
+              "args": [
+                "create-block-group",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19",
+                "--plc",
+                "PLC_1",
+                "--group",
+                "90_Compat_Frozen_Boundary"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"group\":\"90_Compat_Frozen_Boundary\",\"saved\":true}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "group": "90_Compat_Frozen_Boundary",
+                "saved": true
+              }
+            }
+          }
+        ],
+        "create_block_groups_all_ok": true,
+        "list_blocks_after": {
+          "count": 12,
+          "byType": {
+            "OB": 7,
+            "FB": 3,
+            "DB": 2
+          },
+          "blocks": [
+            {
+              "name": "Main",
+              "type": "OB",
+              "path": "Main",
+              "programmingLanguage": "LAD",
+              "number": 1,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1Em0_General_Main",
+              "type": "OB",
+              "path": "U1Em0_General_Main",
+              "programmingLanguage": "LAD",
+              "number": 1006,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1Em0_General_Startup",
+              "type": "OB",
+              "path": "U1Em0_General_Startup",
+              "programmingLanguage": "LAD",
+              "number": 1005,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1Em1_Station1_Main",
+              "type": "OB",
+              "path": "U1Em1_Station1_Main",
+              "programmingLanguage": "LAD",
+              "number": 1011,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1Em1_Station1_Startup",
+              "type": "OB",
+              "path": "U1Em1_Station1_Startup",
+              "programmingLanguage": "LAD",
+              "number": 1010,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1_KukaVisionStation_Main",
+              "type": "OB",
+              "path": "U1_KukaVisionStation_Main",
+              "programmingLanguage": "LAD",
+              "number": 1001,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1_KukaVisionStation_Startup",
+              "type": "OB",
+              "path": "U1_KukaVisionStation_Startup",
+              "programmingLanguage": "LAD",
+              "number": 1000,
+              "knowHowProtected": false
+            },
+            {
+              "name": "PumpCtrl",
+              "type": "FB",
+              "path": "PumpCtrl",
+              "programmingLanguage": "SCL",
+              "number": 1,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1Em1_Station1_CallEquipment",
+              "type": "FB",
+              "path": "U1Em1_Station1_CallEquipment",
+              "programmingLanguage": "LAD",
+              "number": 1010,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1_KukaVisionStation_CallUnit",
+              "type": "FB",
+              "path": "U1_KukaVisionStation_CallUnit",
+              "programmingLanguage": "LAD",
+              "number": 1001,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1Em1_Station1_CallEquipment_DB",
+              "type": "DB",
+              "path": "U1Em1_Station1_CallEquipment_DB",
+              "programmingLanguage": "DB",
+              "number": 1015,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1_KukaVisionStation_CallUnit_DB",
+              "type": "DB",
+              "path": "U1_KukaVisionStation_CallUnit_DB",
+              "programmingLanguage": "DB",
+              "number": 1011,
+              "knowHowProtected": false
+            }
+          ],
+          "raw_all": {
+            "ok": true,
+            "project": {
+              "ok": true,
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+              "projectName": "CanvasE2E",
+              "plcName": "PLC_1",
+              "deviceName": "PLC_1",
+              "message": "Project opened via TIA Openness."
+            },
+            "blocks": {
+              "ok": true,
+              "plcName": "PLC_1",
+              "count": 12,
+              "blocks": [
+                {
+                  "name": "Main",
+                  "type": "OB",
+                  "path": "Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em0_General_Main",
+                  "type": "OB",
+                  "path": "U1Em0_General_Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1006,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em0_General_Startup",
+                  "type": "OB",
+                  "path": "U1Em0_General_Startup",
+                  "programmingLanguage": "LAD",
+                  "number": 1005,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_Main",
+                  "type": "OB",
+                  "path": "U1Em1_Station1_Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1011,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_Startup",
+                  "type": "OB",
+                  "path": "U1Em1_Station1_Startup",
+                  "programmingLanguage": "LAD",
+                  "number": 1010,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_Main",
+                  "type": "OB",
+                  "path": "U1_KukaVisionStation_Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1001,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_Startup",
+                  "type": "OB",
+                  "path": "U1_KukaVisionStation_Startup",
+                  "programmingLanguage": "LAD",
+                  "number": 1000,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "PumpCtrl",
+                  "type": "FB",
+                  "path": "PumpCtrl",
+                  "programmingLanguage": "SCL",
+                  "number": 1,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_CallEquipment",
+                  "type": "FB",
+                  "path": "U1Em1_Station1_CallEquipment",
+                  "programmingLanguage": "LAD",
+                  "number": 1010,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_CallUnit",
+                  "type": "FB",
+                  "path": "U1_KukaVisionStation_CallUnit",
+                  "programmingLanguage": "LAD",
+                  "number": 1001,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_CallEquipment_DB",
+                  "type": "DB",
+                  "path": "U1Em1_Station1_CallEquipment_DB",
+                  "programmingLanguage": "DB",
+                  "number": 1015,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_CallUnit_DB",
+                  "type": "DB",
+                  "path": "U1_KukaVisionStation_CallUnit_DB",
+                  "programmingLanguage": "DB",
+                  "number": 1011,
+                  "knowHowProtected": false
+                }
+              ],
+              "byType": {
+                "OB": 7,
+                "FB": 3,
+                "DB": 2
+              }
+            }
+          },
+          "raw_OB": {
+            "ok": true,
+            "project": {
+              "ok": true,
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+              "projectName": "CanvasE2E",
+              "plcName": "PLC_1",
+              "deviceName": "PLC_1",
+              "message": "Project opened via TIA Openness."
+            },
+            "blocks": {
+              "ok": true,
+              "plcName": "PLC_1",
+              "count": 7,
+              "blocks": [
+                {
+                  "name": "Main",
+                  "type": "OB",
+                  "path": "Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em0_General_Main",
+                  "type": "OB",
+                  "path": "U1Em0_General_Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1006,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em0_General_Startup",
+                  "type": "OB",
+                  "path": "U1Em0_General_Startup",
+                  "programmingLanguage": "LAD",
+                  "number": 1005,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_Main",
+                  "type": "OB",
+                  "path": "U1Em1_Station1_Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1011,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_Startup",
+                  "type": "OB",
+                  "path": "U1Em1_Station1_Startup",
+                  "programmingLanguage": "LAD",
+                  "number": 1010,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_Main",
+                  "type": "OB",
+                  "path": "U1_KukaVisionStation_Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1001,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_Startup",
+                  "type": "OB",
+                  "path": "U1_KukaVisionStation_Startup",
+                  "programmingLanguage": "LAD",
+                  "number": 1000,
+                  "knowHowProtected": false
+                }
+              ],
+              "byType": {
+                "OB": 7
+              }
+            }
+          },
+          "raw_FB": {
+            "ok": true,
+            "project": {
+              "ok": true,
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+              "projectName": "CanvasE2E",
+              "plcName": "PLC_1",
+              "deviceName": "PLC_1",
+              "message": "Project opened via TIA Openness."
+            },
+            "blocks": {
+              "ok": true,
+              "plcName": "PLC_1",
+              "count": 3,
+              "blocks": [
+                {
+                  "name": "PumpCtrl",
+                  "type": "FB",
+                  "path": "PumpCtrl",
+                  "programmingLanguage": "SCL",
+                  "number": 1,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_CallEquipment",
+                  "type": "FB",
+                  "path": "U1Em1_Station1_CallEquipment",
+                  "programmingLanguage": "LAD",
+                  "number": 1010,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_CallUnit",
+                  "type": "FB",
+                  "path": "U1_KukaVisionStation_CallUnit",
+                  "programmingLanguage": "LAD",
+                  "number": 1001,
+                  "knowHowProtected": false
+                }
+              ],
+              "byType": {
+                "FB": 3
+              }
+            }
+          },
+          "raw_DB": {
+            "ok": true,
+            "project": {
+              "ok": true,
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+              "projectName": "CanvasE2E",
+              "plcName": "PLC_1",
+              "deviceName": "PLC_1",
+              "message": "Project opened via TIA Openness."
+            },
+            "blocks": {
+              "ok": true,
+              "plcName": "PLC_1",
+              "count": 2,
+              "blocks": [
+                {
+                  "name": "U1Em1_Station1_CallEquipment_DB",
+                  "type": "DB",
+                  "path": "U1Em1_Station1_CallEquipment_DB",
+                  "programmingLanguage": "DB",
+                  "number": 1015,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_CallUnit_DB",
+                  "type": "DB",
+                  "path": "U1_KukaVisionStation_CallUnit_DB",
+                  "programmingLanguage": "DB",
+                  "number": 1011,
+                  "knowHowProtected": false
+                }
+              ],
+              "byType": {
+                "DB": 2
+              }
+            }
+          }
+        },
+        "compile_raw_original": {
+          "ok": true,
+          "project": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-1\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "plcName": "PLC_1",
+            "deviceName": "PLC_1",
+            "message": "Project opened via TIA Openness."
+          },
+          "compile": {
+            "ok": true,
+            "apiAvailable": true,
+            "state": "Success",
+            "errorCount": 0,
+            "warningCount": 0,
+            "inconsistentBlocks": [
+              "Compiling finished (errors: 0; warnings: 0)"
+            ],
+            "message": "Compile State=Success errors=0 warnings=0"
+          }
+        },
+        "compile_raw_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-1\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"compile\":{\"ok\":true,\"apiAvailable\":true,\"state\":\"Success\",\"errorCount\":0,\"warningCount\":0,\"inconsistentBlocks\":[\"Compiling finished (errors: 0; warnings: 0)\"],\"message\":\"Compile State=Success errors=0 warnings=0\"}}",
+        "compile_exit_code": 0,
+        "compile_summary": {
+          "ok": true,
+          "errorCount": 0,
+          "warningCount": 0,
+          "state": "Success",
+          "inconsistentBlocks": [
+            "Compiling finished (errors: 0; warnings: 0)"
+          ],
+          "message": "Compile State=Success errors=0 warnings=0",
+          "error": null
+        }
+      },
+      {
+        "run_id": "Y-2",
+        "generated_at": "2026-11-07T11:53:50.269894+00:00",
+        "package_zip_sha256": "sha256:5d11adee70b87f058943a983b50ce6c1ba1565ceb218659586d4475d59e7b6d6",
+        "package_manifest_sha256": "sha256:005ce2db6410e8c8e23c9861fe0925abfa338b01bac8f7e33ba7513b7fb8c252",
+        "package_per_file_sha256_all_match": true,
+        "package_xml_references_all_consistent": true,
+        "ap_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+        "case_dir": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2",
+        "source_copied_from": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/PLC_Openness_data/openness_e2e/CanvasE2E",
+        "source_opened_or_written_back": false,
+        "status_probe_original": {
+          "ok": true,
+          "tiaRunning": false,
+          "processCount": 0,
+          "opennessAvailable": true,
+          "opennessGroupInToken": true,
+          "tiaVersion": "V19",
+          "engineeringDll": "C:\\Program Files\\Siemens\\Automation\\Portal V19\\PublicAPI\\V19\\Siemens.Engineering.dll",
+          "connected": false,
+          "projectOpen": false,
+          "message": "TIA Portal process not detected (Openness can still start WithoutUserInterface)."
+        },
+        "baseline_before_import": {
+          "count": 2,
+          "byType": {
+            "OB": 1,
+            "FB": 1
+          },
+          "blocks": [
+            {
+              "name": "Main",
+              "type": "OB",
+              "path": "Main",
+              "programmingLanguage": "LAD",
+              "number": 1,
+              "knowHowProtected": false
+            },
+            {
+              "name": "PumpCtrl",
+              "type": "FB",
+              "path": "PumpCtrl",
+              "programmingLanguage": "SCL",
+              "number": 1,
+              "knowHowProtected": false
+            }
+          ],
+          "raw_original": {
+            "ok": true,
+            "project": {
+              "ok": true,
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+              "projectName": "CanvasE2E",
+              "plcName": "PLC_1",
+              "deviceName": "PLC_1",
+              "message": "Project opened via TIA Openness."
+            },
+            "blocks": {
+              "ok": true,
+              "plcName": "PLC_1",
+              "count": 2,
+              "blocks": [
+                {
+                  "name": "Main",
+                  "type": "OB",
+                  "path": "Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "PumpCtrl",
+                  "type": "FB",
+                  "path": "PumpCtrl",
+                  "programmingLanguage": "SCL",
+                  "number": 1,
+                  "knowHowProtected": false
+                }
+              ],
+              "byType": {
+                "OB": 1,
+                "FB": 1
+              }
+            }
+          },
+          "note": "导入前基线：干净副本仅含源项目 2 块（Main OB1 / PumpCtrl FB1），不含 W 独立包遗留的任何同号块（本副本与 gf_real_w4_* 完全隔离）。"
+        },
+        "imports_itemized": [
+          {
+            "path": "xml_supplement/blocks/U1Em1_Station1_CallEquipment.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1Em1_Station1_CallEquipment.xml",
+            "xml_sha256": "sha256:1a5ca7775fe03dd13febd53040b55c8a73b3af64b6671406df8e5a637c4fa2eb",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1Em1_Station1_CallEquipment"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1Em1_Station1_CallEquipment.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1Em1_Station1_CallEquipment.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\blocks\\\\U1Em1_Station1_CallEquipment.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1Em1_Station1_CallEquipment\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1Em1_Station1_CallEquipment.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\blocks\\U1Em1_Station1_CallEquipment.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1Em1_Station1_CallEquipment"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1Em1_Station1_CallEquipment."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/blocks/U1_KukaVisionStation_CallUnit.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1_KukaVisionStation_CallUnit.xml",
+            "xml_sha256": "sha256:7d496b7a5d0d860618f49baaa245a0f134dc561b6ca43e07c44ca4cc67f13150",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1_KukaVisionStation_CallUnit"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1_KukaVisionStation_CallUnit.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1_KukaVisionStation_CallUnit.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\blocks\\\\U1_KukaVisionStation_CallUnit.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1_KukaVisionStation_CallUnit\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1_KukaVisionStation_CallUnit.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\blocks\\U1_KukaVisionStation_CallUnit.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1_KukaVisionStation_CallUnit"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1_KukaVisionStation_CallUnit."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/blocks/U1Em1_Station1_CallEquipment_DB.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1Em1_Station1_CallEquipment_DB.xml",
+            "xml_sha256": "sha256:c5fc50f405b285104b4c0233e68603f8b0729849ede4e62f4790d89c8200b0cb",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1Em1_Station1_CallEquipment_DB"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1Em1_Station1_CallEquipment_DB.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1Em1_Station1_CallEquipment_DB.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\blocks\\\\U1Em1_Station1_CallEquipment_DB.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1Em1_Station1_CallEquipment_DB\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1Em1_Station1_CallEquipment_DB.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\blocks\\U1Em1_Station1_CallEquipment_DB.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1Em1_Station1_CallEquipment_DB"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1Em1_Station1_CallEquipment_DB."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/blocks/U1_KukaVisionStation_CallUnit_DB.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1_KukaVisionStation_CallUnit_DB.xml",
+            "xml_sha256": "sha256:e74897abd241d2d8520d62bdbc2b3a7d32ee828110fba75d21b47c3a320c2a80",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1_KukaVisionStation_CallUnit_DB"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1_KukaVisionStation_CallUnit_DB.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/blocks/U1_KukaVisionStation_CallUnit_DB.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\blocks\\\\U1_KukaVisionStation_CallUnit_DB.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1_KukaVisionStation_CallUnit_DB\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1_KukaVisionStation_CallUnit_DB.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\blocks\\U1_KukaVisionStation_CallUnit_DB.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1_KukaVisionStation_CallUnit_DB"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1_KukaVisionStation_CallUnit_DB."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/ob/U1Em0_General_Main.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em0_General_Main.xml",
+            "xml_sha256": "sha256:af012fe3579e8ce3a88ffaa36c56e5594bb6698f6cb5230d2a58eecee0d04d58",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1Em0_General_Main"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em0_General_Main.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em0_General_Main.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\ob\\\\U1Em0_General_Main.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1Em0_General_Main\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1Em0_General_Main.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\ob\\U1Em0_General_Main.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1Em0_General_Main"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1Em0_General_Main."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/ob/U1Em0_General_Startup.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em0_General_Startup.xml",
+            "xml_sha256": "sha256:ea78c9ddf37451b46ccf9d5d262c77e5ada153a0c3b30a870aa4e28c679d4e92",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1Em0_General_Startup"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em0_General_Startup.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em0_General_Startup.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\ob\\\\U1Em0_General_Startup.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1Em0_General_Startup\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1Em0_General_Startup.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\ob\\U1Em0_General_Startup.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1Em0_General_Startup"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1Em0_General_Startup."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/ob/U1Em1_Station1_Main.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em1_Station1_Main.xml",
+            "xml_sha256": "sha256:d00c7ead5b317a1631d1b9f2b38d5a2c66c52f759230e76d6851445992b90222",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1Em1_Station1_Main"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em1_Station1_Main.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em1_Station1_Main.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\ob\\\\U1Em1_Station1_Main.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1Em1_Station1_Main\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1Em1_Station1_Main.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\ob\\U1Em1_Station1_Main.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1Em1_Station1_Main"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1Em1_Station1_Main."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/ob/U1Em1_Station1_Startup.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em1_Station1_Startup.xml",
+            "xml_sha256": "sha256:efc091a5dcfcf41898c590a43d3dff9bae5473254121e80363bd211366cd1476",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1Em1_Station1_Startup"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em1_Station1_Startup.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1Em1_Station1_Startup.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\ob\\\\U1Em1_Station1_Startup.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1Em1_Station1_Startup\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1Em1_Station1_Startup.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\ob\\U1Em1_Station1_Startup.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1Em1_Station1_Startup"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1Em1_Station1_Startup."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/ob/U1_KukaVisionStation_Main.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1_KukaVisionStation_Main.xml",
+            "xml_sha256": "sha256:7c8f784bd7d9abc88d79dbe223f8f2902df7388f40efb1146f6df69f482f35ad",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1_KukaVisionStation_Main"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1_KukaVisionStation_Main.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1_KukaVisionStation_Main.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\ob\\\\U1_KukaVisionStation_Main.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1_KukaVisionStation_Main\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1_KukaVisionStation_Main.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\ob\\U1_KukaVisionStation_Main.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1_KukaVisionStation_Main"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1_KukaVisionStation_Main."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          },
+          {
+            "path": "xml_supplement/ob/U1_KukaVisionStation_Startup.xml",
+            "xml_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1_KukaVisionStation_Startup.xml",
+            "xml_sha256": "sha256:325586d9d992c6461fea31027b27096f873c61672cbc8778f338041482d4e2ed",
+            "ok": true,
+            "top_level_ok": true,
+            "import_sub_ok": true,
+            "exit_code": 0,
+            "importedNames": [
+              "U1_KukaVisionStation_Startup"
+            ],
+            "kind_resolved": "block",
+            "error_code": null,
+            "error_message_original": null,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --xml C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1_KukaVisionStation_Startup.xml --kind auto",
+              "args": [
+                "import-xml",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--xml",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/xml_supplement/ob/U1_KukaVisionStation_Startup.xml",
+                "--kind",
+                "auto"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"import\":{\"ok\":true,\"xmlPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\xml_supplement\\\\ob\\\\U1_KukaVisionStation_Startup.xml\",\"overwrite\":true,\"kind\":\"block\",\"importedNames\":[\"U1_KukaVisionStation_Startup\"],\"api\":\"BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)\",\"message\":\"Imported 1 item(s): U1_KukaVisionStation_Startup.\"},\"save\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"message\":\"Project saved.\"}}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "project": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "plcName": "PLC_1",
+                  "deviceName": "PLC_1",
+                  "message": "Project opened via TIA Openness."
+                },
+                "import": {
+                  "ok": true,
+                  "xmlPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\xml_supplement\\ob\\U1_KukaVisionStation_Startup.xml",
+                  "overwrite": true,
+                  "kind": "block",
+                  "importedNames": [
+                    "U1_KukaVisionStation_Startup"
+                  ],
+                  "api": "BlockGroup.Blocks.Import(FileInfo, ImportOptions.Override)",
+                  "message": "Imported 1 item(s): U1_KukaVisionStation_Startup."
+                },
+                "save": {
+                  "ok": true,
+                  "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+                  "projectName": "CanvasE2E",
+                  "message": "Project saved."
+                }
+              }
+            }
+          }
+        ],
+        "imports_all_ok": true,
+        "create_block_groups": [
+          {
+            "group": "00_Types_UDT",
+            "ok": true,
+            "saved": true,
+            "exit_code": 0,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli create-block-group --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --plc PLC_1 --group 00_Types_UDT",
+              "args": [
+                "create-block-group",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--plc",
+                "PLC_1",
+                "--group",
+                "00_Types_UDT"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"group\":\"00_Types_UDT\",\"saved\":true}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "group": "00_Types_UDT",
+                "saved": true
+              }
+            }
+          },
+          {
+            "group": "30_Equipment_Modules",
+            "ok": true,
+            "saved": true,
+            "exit_code": 0,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli create-block-group --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --plc PLC_1 --group 30_Equipment_Modules",
+              "args": [
+                "create-block-group",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--plc",
+                "PLC_1",
+                "--group",
+                "30_Equipment_Modules"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"group\":\"30_Equipment_Modules\",\"saved\":true}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "group": "30_Equipment_Modules",
+                "saved": true
+              }
+            }
+          },
+          {
+            "group": "90_Compat_Frozen_Boundary",
+            "ok": true,
+            "saved": true,
+            "exit_code": 0,
+            "raw_original": {
+              "command": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe --cli create-block-group --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19 --plc PLC_1 --group 90_Compat_Frozen_Boundary",
+              "args": [
+                "create-block-group",
+                "--project",
+                "C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-2/proj/CanvasE2E.ap19",
+                "--plc",
+                "PLC_1",
+                "--group",
+                "90_Compat_Frozen_Boundary"
+              ],
+              "timeout_s": 180.0,
+              "_exit_code": 0,
+              "_stdout": "{\"ok\":true,\"group\":\"90_Compat_Frozen_Boundary\",\"saved\":true}",
+              "_stderr": "",
+              "json": {
+                "ok": true,
+                "group": "90_Compat_Frozen_Boundary",
+                "saved": true
+              }
+            }
+          }
+        ],
+        "create_block_groups_all_ok": true,
+        "list_blocks_after": {
+          "count": 12,
+          "byType": {
+            "OB": 7,
+            "FB": 3,
+            "DB": 2
+          },
+          "blocks": [
+            {
+              "name": "Main",
+              "type": "OB",
+              "path": "Main",
+              "programmingLanguage": "LAD",
+              "number": 1,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1Em0_General_Main",
+              "type": "OB",
+              "path": "U1Em0_General_Main",
+              "programmingLanguage": "LAD",
+              "number": 1006,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1Em0_General_Startup",
+              "type": "OB",
+              "path": "U1Em0_General_Startup",
+              "programmingLanguage": "LAD",
+              "number": 1005,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1Em1_Station1_Main",
+              "type": "OB",
+              "path": "U1Em1_Station1_Main",
+              "programmingLanguage": "LAD",
+              "number": 1011,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1Em1_Station1_Startup",
+              "type": "OB",
+              "path": "U1Em1_Station1_Startup",
+              "programmingLanguage": "LAD",
+              "number": 1010,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1_KukaVisionStation_Main",
+              "type": "OB",
+              "path": "U1_KukaVisionStation_Main",
+              "programmingLanguage": "LAD",
+              "number": 1001,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1_KukaVisionStation_Startup",
+              "type": "OB",
+              "path": "U1_KukaVisionStation_Startup",
+              "programmingLanguage": "LAD",
+              "number": 1000,
+              "knowHowProtected": false
+            },
+            {
+              "name": "PumpCtrl",
+              "type": "FB",
+              "path": "PumpCtrl",
+              "programmingLanguage": "SCL",
+              "number": 1,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1Em1_Station1_CallEquipment",
+              "type": "FB",
+              "path": "U1Em1_Station1_CallEquipment",
+              "programmingLanguage": "LAD",
+              "number": 1010,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1_KukaVisionStation_CallUnit",
+              "type": "FB",
+              "path": "U1_KukaVisionStation_CallUnit",
+              "programmingLanguage": "LAD",
+              "number": 1001,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1Em1_Station1_CallEquipment_DB",
+              "type": "DB",
+              "path": "U1Em1_Station1_CallEquipment_DB",
+              "programmingLanguage": "DB",
+              "number": 1015,
+              "knowHowProtected": false
+            },
+            {
+              "name": "U1_KukaVisionStation_CallUnit_DB",
+              "type": "DB",
+              "path": "U1_KukaVisionStation_CallUnit_DB",
+              "programmingLanguage": "DB",
+              "number": 1011,
+              "knowHowProtected": false
+            }
+          ],
+          "raw_all": {
+            "ok": true,
+            "project": {
+              "ok": true,
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+              "projectName": "CanvasE2E",
+              "plcName": "PLC_1",
+              "deviceName": "PLC_1",
+              "message": "Project opened via TIA Openness."
+            },
+            "blocks": {
+              "ok": true,
+              "plcName": "PLC_1",
+              "count": 12,
+              "blocks": [
+                {
+                  "name": "Main",
+                  "type": "OB",
+                  "path": "Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em0_General_Main",
+                  "type": "OB",
+                  "path": "U1Em0_General_Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1006,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em0_General_Startup",
+                  "type": "OB",
+                  "path": "U1Em0_General_Startup",
+                  "programmingLanguage": "LAD",
+                  "number": 1005,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_Main",
+                  "type": "OB",
+                  "path": "U1Em1_Station1_Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1011,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_Startup",
+                  "type": "OB",
+                  "path": "U1Em1_Station1_Startup",
+                  "programmingLanguage": "LAD",
+                  "number": 1010,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_Main",
+                  "type": "OB",
+                  "path": "U1_KukaVisionStation_Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1001,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_Startup",
+                  "type": "OB",
+                  "path": "U1_KukaVisionStation_Startup",
+                  "programmingLanguage": "LAD",
+                  "number": 1000,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "PumpCtrl",
+                  "type": "FB",
+                  "path": "PumpCtrl",
+                  "programmingLanguage": "SCL",
+                  "number": 1,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_CallEquipment",
+                  "type": "FB",
+                  "path": "U1Em1_Station1_CallEquipment",
+                  "programmingLanguage": "LAD",
+                  "number": 1010,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_CallUnit",
+                  "type": "FB",
+                  "path": "U1_KukaVisionStation_CallUnit",
+                  "programmingLanguage": "LAD",
+                  "number": 1001,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_CallEquipment_DB",
+                  "type": "DB",
+                  "path": "U1Em1_Station1_CallEquipment_DB",
+                  "programmingLanguage": "DB",
+                  "number": 1015,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_CallUnit_DB",
+                  "type": "DB",
+                  "path": "U1_KukaVisionStation_CallUnit_DB",
+                  "programmingLanguage": "DB",
+                  "number": 1011,
+                  "knowHowProtected": false
+                }
+              ],
+              "byType": {
+                "OB": 7,
+                "FB": 3,
+                "DB": 2
+              }
+            }
+          },
+          "raw_OB": {
+            "ok": true,
+            "project": {
+              "ok": true,
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+              "projectName": "CanvasE2E",
+              "plcName": "PLC_1",
+              "deviceName": "PLC_1",
+              "message": "Project opened via TIA Openness."
+            },
+            "blocks": {
+              "ok": true,
+              "plcName": "PLC_1",
+              "count": 7,
+              "blocks": [
+                {
+                  "name": "Main",
+                  "type": "OB",
+                  "path": "Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em0_General_Main",
+                  "type": "OB",
+                  "path": "U1Em0_General_Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1006,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em0_General_Startup",
+                  "type": "OB",
+                  "path": "U1Em0_General_Startup",
+                  "programmingLanguage": "LAD",
+                  "number": 1005,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_Main",
+                  "type": "OB",
+                  "path": "U1Em1_Station1_Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1011,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_Startup",
+                  "type": "OB",
+                  "path": "U1Em1_Station1_Startup",
+                  "programmingLanguage": "LAD",
+                  "number": 1010,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_Main",
+                  "type": "OB",
+                  "path": "U1_KukaVisionStation_Main",
+                  "programmingLanguage": "LAD",
+                  "number": 1001,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_Startup",
+                  "type": "OB",
+                  "path": "U1_KukaVisionStation_Startup",
+                  "programmingLanguage": "LAD",
+                  "number": 1000,
+                  "knowHowProtected": false
+                }
+              ],
+              "byType": {
+                "OB": 7
+              }
+            }
+          },
+          "raw_FB": {
+            "ok": true,
+            "project": {
+              "ok": true,
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+              "projectName": "CanvasE2E",
+              "plcName": "PLC_1",
+              "deviceName": "PLC_1",
+              "message": "Project opened via TIA Openness."
+            },
+            "blocks": {
+              "ok": true,
+              "plcName": "PLC_1",
+              "count": 3,
+              "blocks": [
+                {
+                  "name": "PumpCtrl",
+                  "type": "FB",
+                  "path": "PumpCtrl",
+                  "programmingLanguage": "SCL",
+                  "number": 1,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1Em1_Station1_CallEquipment",
+                  "type": "FB",
+                  "path": "U1Em1_Station1_CallEquipment",
+                  "programmingLanguage": "LAD",
+                  "number": 1010,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_CallUnit",
+                  "type": "FB",
+                  "path": "U1_KukaVisionStation_CallUnit",
+                  "programmingLanguage": "LAD",
+                  "number": 1001,
+                  "knowHowProtected": false
+                }
+              ],
+              "byType": {
+                "FB": 3
+              }
+            }
+          },
+          "raw_DB": {
+            "ok": true,
+            "project": {
+              "ok": true,
+              "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+              "projectName": "CanvasE2E",
+              "plcName": "PLC_1",
+              "deviceName": "PLC_1",
+              "message": "Project opened via TIA Openness."
+            },
+            "blocks": {
+              "ok": true,
+              "plcName": "PLC_1",
+              "count": 2,
+              "blocks": [
+                {
+                  "name": "U1Em1_Station1_CallEquipment_DB",
+                  "type": "DB",
+                  "path": "U1Em1_Station1_CallEquipment_DB",
+                  "programmingLanguage": "DB",
+                  "number": 1015,
+                  "knowHowProtected": false
+                },
+                {
+                  "name": "U1_KukaVisionStation_CallUnit_DB",
+                  "type": "DB",
+                  "path": "U1_KukaVisionStation_CallUnit_DB",
+                  "programmingLanguage": "DB",
+                  "number": 1011,
+                  "knowHowProtected": false
+                }
+              ],
+              "byType": {
+                "DB": 2
+              }
+            }
+          }
+        },
+        "compile_raw_original": {
+          "ok": true,
+          "project": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_y4_20261107\\case_Y-2\\proj\\CanvasE2E.ap19",
+            "projectName": "CanvasE2E",
+            "plcName": "PLC_1",
+            "deviceName": "PLC_1",
+            "message": "Project opened via TIA Openness."
+          },
+          "compile": {
+            "ok": true,
+            "apiAvailable": true,
+            "state": "Success",
+            "errorCount": 0,
+            "warningCount": 0,
+            "inconsistentBlocks": [
+              "Compiling finished (errors: 0; warnings: 0)"
+            ],
+            "message": "Compile State=Success errors=0 warnings=0"
+          }
+        },
+        "compile_raw_stdout": "{\"ok\":true,\"project\":{\"ok\":true,\"projectPath\":\"C:\\\\Users\\\\vboxuser\\\\AppData\\\\Local\\\\Temp\\\\gf_real_y4_20261107\\\\case_Y-2\\\\proj\\\\CanvasE2E.ap19\",\"projectName\":\"CanvasE2E\",\"plcName\":\"PLC_1\",\"deviceName\":\"PLC_1\",\"message\":\"Project opened via TIA Openness.\"},\"compile\":{\"ok\":true,\"apiAvailable\":true,\"state\":\"Success\",\"errorCount\":0,\"warningCount\":0,\"inconsistentBlocks\":[\"Compiling finished (errors: 0; warnings: 0)\"],\"message\":\"Compile State=Success errors=0 warnings=0\"}}",
+        "compile_exit_code": 0,
+        "compile_summary": {
+          "ok": true,
+          "errorCount": 0,
+          "warningCount": 0,
+          "state": "Success",
+          "inconsistentBlocks": [
+            "Compiling finished (errors: 0; warnings: 0)"
+          ],
+          "message": "Compile State=Success errors=0 warnings=0",
+          "error": null
+        }
+      }
+    ],
+    "runs_count": 2,
+    "all_runs_imports_ok": true,
+    "all_runs_compile_errorCount_eq_0": true,
+    "warningCount_by_run": [
+      0,
+      0
+    ],
+    "warningCount_note": "warningCount 单列（两轮均 0），不并入成功口径（N9）。",
+    "intermediate_failures": [],
+    "intermediate_failures_note": "Y-1 首轮与 Y-2 独立干净副本复测均为单轮完成，无失败、无重试、无被掩盖的中间轮次；两轮全部原始返回完整保留于 raw_all.json。",
+    "number_conflict_check": {
+      "clean_copies_used": true,
+      "baseline_block_count_each_run": [
+        2,
+        2
+      ],
+      "finding": "两轮均为从只读源全新复制的干净副本，导入前基线各仅 2 块（Main OB1 / PumpCtrl FB1），不含 W 独立包（FB1000_StdSignal / DB1000_StdSignal / OB1000 等）遗留同号块；故未发生『同号块导致导入失败』，无需因冲突重测。",
+      "cross_type_same_number": "正式包内部存在跨类型同号（如 OB1001 与 FB1001、OB1010 与 FB1010、OB1011 与 DB1011、OB1000 与 W 独立包 OB1000），TIA 不同类型编号空间独立，真机全部共存、导入成功、编译 0/0。",
+      "retest_on_clean_copy": "是：除 Y-1 外另做 Y-2 一轮全新独立干净副本 + 新生成包复测（两轮 zip sha256 不同），同样 10/10 导入 + 编译 0/0。"
+    }
+  },
+  "repro_commands": [
+    "cd \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project\" && \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/.venv/Scripts/python.exe\" tools/run_product_package_real.py --case Y-1",
+    "timeout -k 5 180 \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe\" --cli status",
+    "timeout -k 5 180 \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe\" --cli list-blocks --project <Temp干净副本.ap19>  # 导入前基线",
+    "timeout -k 5 180 \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe\" --cli import-xml --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --xml <TEMP/xml_supplement/按 import_order> --kind auto  # 逐项 FB→DB→OB",
+    "timeout -k 5 180 \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe\" --cli create-block-group --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --plc PLC_1 --group <folders.json 各组>",
+    "timeout -k 5 180 \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe\" --cli list-blocks --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 [--type OB|FB|DB]",
+    "timeout -k 5 180 \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe\" --cli compile-plc --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_y4_20261107/case_Y-1/proj/CanvasE2E.ap19 --plc PLC_1"
+  ],
+  "distinction_vs_W_independent_package": {
+    "verdict": "W 的 evidence/uc04_full_package_real.json 结论**不可直接套用**到正式产品通道包；本次已由 Agent Y 独立逐项真机验证。",
+    "table": [
+      {
+        "dim": "生成方式",
+        "W_U_independent": "python tools/build_full_af_package.py --out <dir>（离线 CLI 脚本）",
+        "product_channel": "deliver_tia(session, mode='package')（正式产品通道，经四层静态门禁 + PCEC）"
+      },
+      {
+        "dim": "产物路径",
+        "W_U_independent": "blocks/*.xml + ob/*.xml + folders.json + manifest.json（输出目录根）",
+        "product_channel": "交付 ZIP 内 xml_supplement/{blocks,ob}/*.xml + folders.json + README.md + manifest.json + tia_delivery.json"
+      },
+      {
+        "dim": "FB / 实例 DB 命名",
+        "W_U_independent": "FB1000_StdSignal / DB1000_StdSignal（独立命名，刻意不以 _DB 结尾）",
+        "product_channel": "U1_KukaVisionStation_CallUnit / …_CallUnit_DB、U1Em1_Station1_CallEquipment / …_CallEquipment_DB（xxx_DB→xxx 约定）"
+      },
+      {
+        "dim": "编号来源",
+        "W_U_independent": "脚本常量 DEFAULT_FB_NUMBER=1000 / DEFAULT_DB_NUMBER=1000；OB 1000/1001/1012",
+        "product_channel": "取自真实 blocks_manifest：FB 1001/1010、实例 DB 1011/1015、OB 1000/1001/1005/1006/1010/1011"
+      },
+      {
+        "dim": "块数 / import_order",
+        "W_U_independent": "5 项 = 1 FB + 1 DB + 3 OB（5/5 导入）",
+        "product_channel": "10 项 = 2 FB + 2 实例 DB + 6 OB（10/10 导入），另有 3 个 ProDiag OB 按存量口径 skipped"
+      },
+      {
+        "dim": "folders.json",
+        "W_U_independent": "AF_Unit_01 / AF_Unit_01/AF_EM_01 / root，含 mechanism + schema 字段",
+        "product_channel": "00_Types_UDT / 30_Equipment_Modules / 90_Compat_Frozen_Boundary 三组，无 mechanism/schema 字段；本次 3/3 经 create-block-group 建立"
+      },
+      {
+        "dim": "静态门禁 / PCEC",
+        "W_U_independent": "不经过",
+        "product_channel": "经过四层静态门禁 + PCEC 账本"
+      },
+      {
+        "dim": "<Created> / 可复现性",
+        "W_U_independent": "固定 2000-01-01T00:00:00Z，字节级可复现，manifest sha256 固定 827cdac…",
+        "product_channel": "time.gmtime() 当前时间，非字节级可复现；两轮 zip/manifest sha256 不同"
+      },
+      {
+        "dim": "真机验证状态",
+        "W_U_independent": "已由 W 在独立包上验证（5/5 导入、编译 0/0）",
+        "product_channel": "本轮之前未单独真机验证（X 仅离线自洽 + 离线单测）；本次由 Agent Y 两轮独立真机验证"
+      }
+    ]
+  },
+  "xml_package_unverified_disposition": {
+    "recommendation": "按任务给定判据（正式包所有 FB/DB/OB 导入成功 + 编译 errorCount=0 已满足），建议主 agent 收口时『可考虑消除 xml_package_unverified』，但必须严格限定范围；本 Agent 不擅自改 False。",
+    "code_flag_changed_by_this_agent": false,
+    "trigger_met": {
+      "all_FB_DB_OB_import_ok": true,
+      "compile_errorCount_eq_0": true,
+      "runs": 2
+    },
+    "basis": [
+      "① 正式产品通道 deliver_tia(mode='package') 产出的 ZIP 内 xml_supplement/ 共 10 项块（2 FB + 2 实例 DB + 6 OB），按 manifest.json 的 import_order（FB→DB→OB）逐项 --cli import-xml --kind auto 真实 ok=true / exit_code=0 / importedNames 逐项核对，两轮各 10/10，无 skipped_blocks、references_self_consistent=True（Y1 结构核对 + XML 解析逐字一致亦通过）。",
+      "② 两轮独立干净副本 compile-plc 真实返回 state=Success / errorCount=0 / warningCount=0 / exit_code=0；list-blocks 导入后 12 块（基线 2 + 新增 10），FB/DB/OB 名称与编号与 blocks_manifest / generated_blocks 逐项吻合。",
+      "③ folders.json 的 3 个分组经 create-block-group Openness API 建立（3/3 ok=true/saved=true/exit=0），与产品链『文件夹走 API、非 SW.PlcBlockGroup XML import』口径一致。",
+      "④ 两轮使用不同生成实例（zip sha256 不同）与不同全新干净副本（导入前基线各仅 2 块），排除与 W 独立包同号块冲突及时间戳偶然性，结论可复现。"
+    ],
+    "limits": [
+      "SW.PlcBlockGroup XML 仍不可经 import-xml 导入（批次 3 uc04_package_probe.json 已确证 exit=4/openness_error）；本次按 folders.json 经 create-block-group API 建 3 组，未试图改变该边界，也未把块逐一移入分组（API 仅建组）。",
+      "本次是临时副本上的【包级按序导入 + 编译】，非 deliver_tia(mode='auto') 端到端全链（自然语言 → 冻结 → 生成 → 导入 → 编译，UC-15 / M4），后者由主 agent 收口。",
+      "FB / 实例 DB 相对真实 V19 先例有精简（空 Section 无 Member、省略 UDA、culture 收敛 zh-CN，U §3.2/§3.3 / X §6）；真机证明可导入可编译，非逐字段等同先例。",
+      "culture 收敛 zh-CN 的适用边界（K §7）：对含 zh-CN 的 CanvasE2E 已验证；纯英文 / 其它语言项目未测。",
+      "正式包 XML 的 <Created> 用 time.gmtime()，非字节级可复现；两轮不同生成实例均通过，但不构成『任意时刻产物字节相同』。",
+      "3 个 ProDiag 类 OB（U1Em0_General_ProDiag / U1Em1_Station1_ProDiag / U1_KukaVisionStation_ProDiag）按 K1 存量口径 skipped_obs 跳过、未生成 XML、未真机验证。"
+    ],
+    "note": "本 Agent 未改产品代码任何标志位赋值；是否消除 xml_package_unverified 由主 agent 按证据决定（契约 14-batch4-contract.md §1.7）。N9：fidelity_ok ≠ compile_ok；warning 单列不并入成功；不宣称 L2/L4 通过、不宣称 M4 可签署、不代签 M4。"
+  },
+  "honest_boundary": [
+    "所有导入 / 编译 / 列块数字均来自真实 TiaOpenness.Server.exe --cli 原始 JSON（见 source_raw + 各 raw_original / compile_raw_original），非 mock / 非离线推断 / 非编造。",
+    "不宣称 L2 / L4 通过、不宣称『Greenfield 全链编译零错误』、不宣称 UC-04 已由本 Agent 完全闭环、不宣称 M4 可签署。",
+    "不把 warning 并入成功（warningCount=0 单列）；N9 fidelity_ok ≠ compile_ok。",
+    "不据此认为『自产 XML 包整体已验证』而无视上述 limits：SW.PlcBlockGroup 走 API、非端到端全链、精简差异、语言边界、ProDiag 跳过、非字节级可复现。",
+    "xml_package_unverified / pending_real_machine 在代码与 manifest 中保持 True，本 Agent 未改；M4 签署栏始终『待用户签署』。"
+  ],
+  "known_remaining": [
+    "deliver_tia(mode='auto') 端到端全链（UC-15 / M4）未跑，归主 agent 收口。",
+    "xml_package_unverified / pending_real_machine 的消除、evidence/rtm.json / pending_real_machine.json / acceptance_template.json / uc15_evidence_bundle.json 的更新归主 agent 收口，本 Agent 一律未改。",
+    "SW.PlcBlockGroup XML 仍不可 import-xml；块与文件夹分组的归属关系未通过 API 逐一验证（create-block-group 仅建组）。",
+    "culture 收敛 zh-CN 的纯英文 / 其它语言项目边界未测；FB/DB 精简差异相对真实 V19 先例未逐字段等同。",
+    "3 个 ProDiag OB 按存量口径 skipped，未生成 XML、未真机验证。",
+    "全量 pytest 未跑（按任务要求仅跑指定 2 个单测文件；主 agent 收口统一跑全量）。"
+  ]
+}

@@ -35,6 +35,9 @@ REAL_MACHINE_REPORT_REFS = (
     "uc16_incremental_real.json",          # 批次 3 · Agent R UC-16 六条增量
     "uc18_compile_feedback_real.json",     # 批次 3 · Agent R UC-18 编译回喂
     "uc15_restart_recovery.json",          # 批次 3 · 主 agent 真实服务重启恢复
+    "uc04_full_package_real.json",         # 批次 4 · Agent W 独立自洽包 V19 真机
+    "uc04_product_package_real.json",      # 批次 4 · Agent Y 正式产品通道包 V19 真机（两轮）
+    "uc16_incremental_closed_real.json",   # 批次 4 · Agent W 真机 Action C 增量闭环
 )
 
 
@@ -144,8 +147,13 @@ def test_rtm_f_real_machine_facts_are_recorded_honestly(rtm):
     assert facts["uc04_k1_probe"]["status"] == "fail"
     assert "openness_error" in facts["uc04_k1_probe"]["detail"]
     uc04 = next(c for c in rtm["cases"] if c["uc"] == "UC-04")
-    assert uc04["status"] == "pending_real_machine"
+    # 批次 2 的 fail 事实必须留在 sub_checks 里可追溯；批次 4 真机闭环后主状态可转 pass，
+    # 但必须指向批次 4 的结构化真机证据，且 caveat 声明标志仍 True / M4 不可签署。
     assert any(s["status"] == "fail" for s in uc04["sub_checks"])
+    assert uc04["status"] in ("pass", "pending_real_machine")
+    if uc04["status"] == "pass":
+        assert "uc04_product_package_real.json" in uc04["real_machine_evidence"]
+        assert "xml_package_unverified" in uc04["caveat"] and "M4" in uc04["caveat"]
     assert facts["gate0_verdict"]["status"] == "conditional-go"
     assert facts["p0d_recommendation"]["status"] == "pending_user_decision"
 
@@ -164,11 +172,13 @@ def test_pending_ledger_matches_rtm(rtm, ledger):
     pending = ga.collect_pending_ucs(rtm)
     assert len(pending) == rtm["summary"]["by_status"]["pending_real_machine"]
     assert pending == rtm["summary"]["pending_uc_ids"]
-    assert pending, "M4 门禁要求 pending 台账在清零前必须非空"
-    # 台账按 M4 门禁保留历史项（已通过的 UC 不删、cleared 仍 false），
-    # 因此要求覆盖当前所有 pending UC，而非严格相等。
+    # 台账按 M4 门禁保留历史项（已通过的 UC 不删、cleared 仍 false）。
+    # 批次 4 后 pending 可归零，但 **归零不等于 M4 可签署**：cleared=false 且 items 非空
+    # 仍必须拦住 M4（真值表由 test_m4_fails_when_ledger_not_cleared_even_if_no_pending_ids 覆盖）。
     assert set(pending) <= {i["id"] for i in ledger["items"]}, "台账漏记 pending UC"
     assert ledger["cleared"] is False
+    assert ledger["items"], "M4 门禁：历史 items 未逐条核验清零前不得删空"
+    assert ga.check_pending_cleared(ledger, pending)["cleared"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -221,13 +231,27 @@ def test_n9_independence_declared(tpl):
 # 3. pending 未清零时 M4 判定为未通过
 # ---------------------------------------------------------------------------
 def test_m4_fails_when_pending_not_cleared(rtm, ledger):
-    m4 = ga.evaluate_m4(
+    # 分支 A（显式负例）：人为给出未清零的 pending UC → fail-closed 且给出 pending 原因。
+    # 不依赖当前 RTM 计数：批次 4 后 RTM 已 19/19 pass、pending 归零，故显式构造。
+    m4_pending = ga.evaluate_m4(
+        _all_green_layers(), ["UC-04"], ledger, evidence_complete=True
+    )
+    assert m4_pending["m4_pass"] is False
+    assert m4_pending["m4_signable"] is False
+    assert m4_pending["verdict"] == "M4 未通过"
+    assert any("pending" in r for r in m4_pending["reasons"])
+    assert m4_pending["pending_count"] == 1
+
+    # 分支 B（真实台账）：即便 RTM pending 归零，台账 cleared=false / items 非空
+    # 仍必须拦住 M4 —— 归零不等于可签署（契约 14 §1.6 / §5）。
+    m4_real = ga.evaluate_m4(
         _all_green_layers(), ga.collect_pending_ucs(rtm), ledger, evidence_complete=True
     )
-    assert m4["m4_pass"] is False
-    assert m4["m4_signable"] is False
-    assert m4["verdict"] == "M4 未通过"
-    assert any("pending" in r for r in m4["reasons"])
+    assert m4_real["m4_pass"] is False
+    assert m4_real["m4_signable"] is False
+    assert m4_real["verdict"] == "M4 未通过"
+    assert m4_real["pending_cleared"] is False
+    assert any("台账" in r for r in m4_real["reasons"])
 
 
 def test_m4_fails_when_ledger_not_cleared_even_if_no_pending_ids(ledger):

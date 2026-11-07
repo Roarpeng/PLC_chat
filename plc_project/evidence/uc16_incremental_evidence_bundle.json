@@ -1,0 +1,161 @@
+{
+  "schema": "gf-uc16-incremental-evidence-bundle-v1",
+  "bundle_id": "UC-16 / 批次 4 阶段 A / 离线增量 EvidenceBundle 实例化",
+  "generated_at": "2026-11-07T10:34:05.069855+00:00",
+  "generated_by": "tools/run_incremental_spec_chain.py",
+  "source": "本链真实增量 FidelityReport.to_dict() + 真实 SpecDiff + 磁盘 specs/vN.json",
+  "uc": "UC-16",
+  "mode": "incremental",
+  "offline_side": true,
+  "pending_real_machine": true,
+  "compile_ok": null,
+  "project_id": "GF-V-UC16",
+  "work_dir": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_inc_chain_71q7e1k_",
+  "session_id": "95f0fcd1ba8e",
+  "v1_spec": {
+    "spec_hash": "sha256:9bc022427c5bdb0e1b69f1fa89cdc459de4a121f157395b8ddbd7eebbc994e60",
+    "spec_version": 1,
+    "project_id": "GF-V-UC16",
+    "disk_path": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_inc_chain_71q7e1k_\\greenfield\\95f0fcd1ba8e\\specs\\v1.json",
+    "prev_spec_hash": ""
+  },
+  "v2_spec": {
+    "spec_hash": "sha256:52190cc0b1e0769d79f400d6b72ed8d59472f09dc20d7e0c69222a030a7b8605",
+    "spec_version": 2,
+    "project_id": "GF-V-UC16",
+    "disk_path": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_inc_chain_71q7e1k_\\greenfield\\95f0fcd1ba8e\\specs\\v2.json",
+    "prev_spec_hash": "sha256:9bc022427c5bdb0e1b69f1fa89cdc459de4a121f157395b8ddbd7eebbc994e60"
+  },
+  "spec_diff": {
+    "source": "POST /diff（服务端 diff_placeholder → compute_spec_diff），并与直调 compute_spec_diff(v1, v2) 核对一致",
+    "base_spec_version": 1,
+    "target_spec_version": 2,
+    "changed": {
+      "count": 0,
+      "source_ids": []
+    },
+    "added": {
+      "count": 1,
+      "source_ids": [
+        "U1EM1_CM3"
+      ]
+    },
+    "removed": {
+      "count": 0,
+      "source_ids": []
+    },
+    "changed_source_ids": [
+      "U1EM1_CM3"
+    ],
+    "http_vs_direct_ids_match": true
+  },
+  "fidelity_report": {
+    "fidelity_ok": true,
+    "coverage": 1.0,
+    "orphan": 0,
+    "drift": 0,
+    "tia_side_drift": 0,
+    "mode": "incremental",
+    "base_spec_version": 1,
+    "changed_source_ids": [
+      "U1EM1_CM3"
+    ],
+    "reverse_protection": {
+      "status": "pending_real_machine",
+      "allowed": null,
+      "drift_count": 0,
+      "tia_side_drift": 0,
+      "blocked_source_ids": [],
+      "reason": "未提供 TIA 侧块快照,本批次为离线校验;涉真机结论标 pending_real_machine,禁止宣称 L2/L4 通过或编译零错误(N9)"
+    },
+    "coverage_matrix": {
+      "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment_DB.scl",
+      "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ControlNodes.scl",
+      "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit_DB.scl",
+      "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_EmNodes.scl",
+      "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment.scl",
+      "FB::U1Em1_Station1_Sequence::Sequence::1011": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Sequence.scl",
+      "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit.scl",
+      "FC::U1Em1_Station1_StepToString::StepToString::1012": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_StepToString.scl",
+      "OB::U1Em0_General_Main::OB::1006": "derived/blocks/30_Equipment_Modules/U1Em0_General_Main.scl",
+      "OB::U1Em0_General_ProDiag::OB::1007": "derived/blocks/30_Equipment_Modules/U1Em0_General_ProDiag.scl",
+      "OB::U1Em0_General_Startup::OB::1005": "derived/blocks/30_Equipment_Modules/U1Em0_General_Startup.scl",
+      "OB::U1Em1_Station1_Main::OB::1011": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Main.scl",
+      "OB::U1Em1_Station1_ProDiag::OB::1012": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ProDiag.scl",
+      "OB::U1Em1_Station1_Startup::OB::1010": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Startup.scl",
+      "OB::U1_AssemblyCell_Main::OB::1001": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Main.scl",
+      "OB::U1_AssemblyCell_ProDiag::OB::1002": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_ProDiag.scl",
+      "OB::U1_AssemblyCell_Startup::OB::1000": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Startup.scl"
+    },
+    "orphan_blocks": [],
+    "drift_items": [],
+    "unmapped_spec_objects": [],
+    "ob_number_deviations": [],
+    "spec_hash": "sha256:52190cc0b1e0769d79f400d6b72ed8d59472f09dc20d7e0c69222a030a7b8605",
+    "spec_version": 2,
+    "framework_baseline_version": "af-basic-folder-1.0",
+    "product_hash": "sha256:298f37ac9cb22c2bc440863d8a344b09e74ac0632a2fa375a9421e15752563fc",
+    "sampled_source_ids": [
+      "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015",
+      "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013",
+      "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011",
+      "DB::U1_AssemblyCell_EmNodes::EmNodes::1010",
+      "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010",
+      "FB::U1Em1_Station1_Sequence::Sequence::1011",
+      "FB::U1_AssemblyCell_CallUnit::CallUnit::1001",
+      "FC::U1Em1_Station1_StepToString::StepToString::1012",
+      "OB::U1Em0_General_Main::OB::1006",
+      "OB::U1Em0_General_ProDiag::OB::1007",
+      "OB::U1Em0_General_Startup::OB::1005",
+      "OB::U1Em1_Station1_Main::OB::1011",
+      "OB::U1Em1_Station1_ProDiag::OB::1012",
+      "OB::U1Em1_Station1_Startup::OB::1010",
+      "OB::U1_AssemblyCell_Main::OB::1001",
+      "OB::U1_AssemblyCell_ProDiag::OB::1002",
+      "OB::U1_AssemblyCell_Startup::OB::1000"
+    ],
+    "pending_real_machine": true,
+    "notes": [
+      "离线校验:未提供 tia_side_snapshot,tia_side_drift 记 0 并标 pending_real_machine,禁止据此宣称真机通过",
+      "增量模式:变更块 100% 校验通过",
+      "增量模式:非变更块纳入全量抽检(本实现按全量四指标复核,安全侧更严)",
+      "ob_number_deviations 为空(仍显式留痕,不静默)"
+    ]
+  },
+  "incremental_evidence_bundle_six_fields": {
+    "mode": "incremental",
+    "base_spec_version": 1,
+    "changed_source_ids": [
+      "U1EM1_CM3"
+    ],
+    "reverse_protection": {
+      "status": "pending_real_machine",
+      "allowed": null,
+      "drift_count": 0,
+      "tia_side_drift": 0,
+      "blocked_source_ids": [],
+      "reason": "未提供 TIA 侧块快照,本批次为离线校验;涉真机结论标 pending_real_machine,禁止宣称 L2/L4 通过或编译零错误(N9)"
+    },
+    "tia_side_drift": 0,
+    "ob_number_deviations": []
+  },
+  "ob_number_deviations_note": "ob_number_deviations 显式留痕（即使为空也说明，禁止静默）：本离线增量块为 AF 派生 SCL 外部源，不涉及 OB 编号物理偏差；属不纳入 1:1 的域，不参与 fidelity_ok 判定。见 fidelity_report.notes / ob_number_deviations 字段。",
+  "tia_side_snapshot_note": "无真实 TIA 块哈希快照，按 FidelityChecker 现有约定传 None：tia_side_drift=0 且 pending_real_machine=true、reverse_protection.status=pending_real_machine（allowed=null）；不得虚构 TIA 侧数据，真机 D10 反向保护由 Agent W 验证。",
+  "honest_boundary": [
+    "离线增量 fidelity ≠ 真机 L4 通过：本链为 TestClient 进程内 ASGI 离线驱动，不连真机、不启动 SessionServer、不跑 TIA CLI、不占用 8791/8000 端口；真机 Action C 增量覆盖（会话复用 / 编译 0/0 / PCEC / tia_side_drift=0）由阶段 B 的 Agent W 独占完成。",
+    "fidelity_ok ≠ compile_ok（N9）：本链 fidelity_ok=true 仅为 L1 离线 1:1 逻辑等价判定，compile_ok 恒 null；不产出、不宣称编译零错误，不标 L2/L4 pass。",
+    "tia_side_snapshot 无真实 TIA 块数据时不得虚构：按 FidelityChecker 现有约定传 None，tia_side_drift 记 0 并标 pending_real_machine，reverse_protection.status=pending_real_machine（allowed=null）；真机 D10 反向保护 allowed=true 由 W 验证。",
+    "ob_number_deviations 显式留痕（禁止静默）：本链为空列表，并在 FidelityReport.notes / bundle 的 ob_number_deviations_note 中说明属不纳入 1:1 的域，不参与 fidelity_ok 判定。",
+    "base_spec_version=1 来自真实 Greenfield 冻结规格链 specs/v1.json -> specs/v2.json，补齐批次 3 base_spec_version=null 的离线侧缺口；真机增量仍需 W 用同一 PLC_WORK_DIR 复核。",
+    "命名空间诚实说明：SpecDiff.changed_source_ids 来自 compute_spec_diff 对 ir_snapshot 的 IR 层 source block 提取（本链新增执行件 id 形如 U1EM1_CM3），而 FidelityChecker 的 artifacts / expected_source_ids 来自 v2 派生产物层（形如 DB::/FB::/OB::...）；两者命名空间不同。产品 FidelityChecker 增量模式按『全量四指标复核（安全侧更严）』实现，故 coverage=1.0 指v2 派生产物 1:1 全覆盖，不等价于『逐个 IR 层变更块单独校验』；如实记录，不掩盖。",
+    "不宣称 UC-16 整体通过、不宣称 L1∧L2∧L3∧L4 全绿、不宣称 M4 通过或代签；M4 签署栏始终「待用户签署」。"
+  ],
+  "repro_commands": {
+    "offline_chain": "cd <R> && ./.venv/Scripts/python.exe tools/run_incremental_spec_chain.py --out evidence/uc16_incremental_spec_chain.json --bundle evidence/uc16_incremental_evidence_bundle.json",
+    "with_work_dir": "cd <R> && ./.venv/Scripts/python.exe tools/run_incremental_spec_chain.py --out evidence/uc16_incremental_spec_chain.json --bundle evidence/uc16_incremental_evidence_bundle.json --work-dir <work_dir>",
+    "agent_w_real_machine_action_c": "阶段 B 的 Agent W：设 PLC_WORK_DIR=<work_dir>（本产物 work_dir 字段）、复用同一 session_id 与同一份 specs/v1.json / specs/v2.json，以 spec_diff.changed_source_ids 为差异清单经 POST /api/v1/plc/canvas/greenfield/confirm-diff 显式确认（D11），再 POST /action-c（传入真实 tia_side_snapshot / last_generated）做增量覆盖 → 编译 0/0 → 增量 fidelity 复核；本离线链不代替真机 Action C。"
+  },
+  "bundle_sha256": "sha256:f25e0013a5d71ea8d7648661ae267ab89e01feb60f4e3ec9c8a86996436197e1",
+  "bundle_sha256_recomputed": "sha256:f25e0013a5d71ea8d7648661ae267ab89e01feb60f4e3ec9c8a86996436197e1",
+  "bundle_sha256_match": true
+}

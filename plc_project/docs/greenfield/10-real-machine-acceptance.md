@@ -431,3 +431,32 @@ F/K 的既有真机结论复现命令见 `research/Gate0_环境与档位实测_2
 - L2 因 UC-04 未通过、L4 因 UC-16 未通过 → **`L1∧L2∧L3∧L4` 仍未全绿**；
 - pending 台账 `cleared=false`、历史 items 未删；**M4 未通过 / 不可签署，签署栏仍待用户本人签署**；
 - `xml_package_unverified` 保持 `True`，消除须以 UC-04 包级全链真实通过为唯一依据。
+
+---
+
+## 附录 · 批次 4 收口（2026-11-07，主 agent）
+
+> 追加记录，不修改上文批次 2/3 结论。依据契约 `14-batch4-contract.md`。
+
+### A. 新增真机证据（V19 临时副本，原始返回均附复现命令）
+
+| 证据文件 | 内容 | 真实结果 |
+|---|---|---|
+| `evidence/uc04_full_package_real.json` | U 独立自洽包（FB+实例 DB+Call OB） | 5/5 `import-xml ok` + 编译 `0/0 Success` |
+| `evidence/uc04_product_package_real.json` | **正式产品通道** `deliver_tia(mode=package)` 的 `xml_supplement/` | **两轮独立干净副本各 10/10 导入**、3/3 `create-block-group`、两轮编译 `errorCount=0/warningCount=0/state=Success`；10 个 XML sha256 逐文件 10/10 match |
+| `evidence/uc16_incremental_spec_chain.json` / `uc16_incremental_evidence_bundle.json` | V 真实 `specs/v1→v2` 规格链 + 离线增量 fidelity | `base_spec_version=1`、`changed_source_ids=["U1EM1_CM3"]`、`fidelity_ok=true`、六字段齐 |
+| `evidence/uc16_incremental_closed_real.json` | W 真机 Action C 增量闭环 | `/open`=1、PCEC 3 条、4× 编译 `0/0`、第 8 步真实增量 `FidelityChecker fidelity_ok=true`、`reverse_protection.allowed=true` |
+
+### B. 根因与修复
+UC-04：包不自洽（缺 FB/实例 DB）+ `call_db` 反推 FB 名的模板假设错误 → U 新增 `render_fb_xml` / `render_instance_db_xml` 与 `call_fb` 独立参数 → **X 接入正式产品通道 `build_xml_supplement`**（两处 manifest 同步、`import_order`、编号取自真实 `blocks_manifest` 不虚构）→ W / Y 真机双路径验证。
+UC-16：批次 3 走纯 CLI 覆盖、无真实规格链 → V 用 TestClient 真实冻结 v1/v2 → W 复用同一份磁盘规格跑真机 Action C。
+
+### C. 判定
+- `UC-04` / `UC-16` 由 `pending_real_machine` 转 **pass**（均附真机证据三件套与复现命令）；
+- RTM 最终 `pass=19 / fail=0 / pending=0 / not_run=0`；
+- **`xml_package_unverified` 保持 `True`**（ProDiag / auto 全链 / 分组归属 / 复现性 / culture 边界未闭环，消除由用户拍板）；
+- **`L1∧L2∧L3∧L4` 仍未全绿**；pending 台账 `cleared=false`、10 条历史 items 不删；
+- **M4 未通过 / 不可签署，签署栏待用户本人签署**。
+
+详见 `14-uc04-package-fix.md` / `15-uc16-spec-chain.md` / `16-batch4-real-machine.md` /
+`17-product-channel-wiring.md` / `18-product-package-real.md` / `09-m4-review.md` 附录 2。

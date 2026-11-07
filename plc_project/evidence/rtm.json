@@ -173,8 +173,8 @@
         "PCEC",
         "K1 复测真实返回"
       ],
-      "status": "pending_real_machine",
-      "real_machine_facts": "批次 3 包级复测（Agent R，evidence/uc04_package_probe.json）：① SW.PlcBlockGroup XML 经 import-xml --kind auto / --kind block 均失败（exit=4 / openness_error，\"Class of the Siemens.Engineering.SW.PlcBlockGroup type is not supported\"），确证不可作为 SimaticML 块对象导入；create-block-group API 路径 2× ok=true/saved=true 且随后编译 0/0 Success。② 完整 AF 包 5 个 OB 中 4 个空网络 OB 导入成功，但 Call 网络 OB GF_U1EM1_CallOB 导入即失败（exit=4，\"The name GF_U1EM1_InstDB cannot be used for Call at the object with UID 21\"）；联合编译 errorCount=0 是在 Call OB 未进入项目前提下的结果，绝不宣称含 Call OB 的完整包编译零错误。结论：xml_package_unverified 仍须保持 True。",
+      "status": "pass",
+      "real_machine_facts": "根因修复：批次 3 完整 AF 包只含 OB、缺被引用的 FB/全局实例 DB，且 _render_call_network 用 re.sub(r\"_DB$\") 从实例 DB 名反推 FB 名（真实 V19 先例 FB1000_StdSignal / DB1000_StdSignal 是独立命名），导致 Call 网络 OB 导入即失败（\"The name 'GF_U1EM1_InstDB' cannot be used for Call at UID 21\"）。批次 4：U 新增 render_fb_xml / render_instance_db_xml 并给 _render_ob_xml 加 call_fb 独立参数；X 把这两个函数接入正式产品通道 build_xml_supplement（两处 manifest 同步、import_order=2 FB→2 DB→6 OB、references_self_consistent=true、编号取自真实 blocks_manifest 不虚构）。W 独立包：5/5 导入 + 编译 0/0 Success。Y 正式产品包：两轮独立干净副本，10/10 import-xml ok=true/exit=0、3/3 create-block-group、list-blocks 12 块（OB7/FB3/DB2）、两轮 compile-plc 均 errorCount=0/warningCount=0/state=Success/exit=0；10 个 XML 逐文件 sha256 10/10 match、CallInfo.Name / Component.Name / DB InstanceOfName 与包内 FB/DB <Name> 逐字一致。",
       "sub_checks": [
         {
           "id": "UC-04-K1",
@@ -202,16 +202,39 @@
           "status": "fail",
           "failure_code": "openness_error / exit=4（call_db 命名约束）",
           "evidence": "evidence/uc04_package_probe.json#probe_b_full_af_package"
+        },
+        {
+          "id": "UC-04-B4-INDEPENDENT",
+          "name": "U 独立自洽包 V19 逐项导入 + 编译",
+          "status": "pass",
+          "evidence": "evidence/uc04_full_package_real.json（W：5/5 ok，compile 0/0 Success）"
+        },
+        {
+          "id": "UC-04-B4-PRODUCT",
+          "name": "正式产品通道 xml_supplement 包 V19 逐项导入 + 编译（两轮）",
+          "status": "pass",
+          "evidence": "evidence/uc04_product_package_real.json（Y：两轮各 10/10 ok，compile 0/0 Success）"
         }
       ],
-      "repro_command": "见 06-gate0-report.md §3 / 归档 §2.4 + §6；修复 _render_ob_xml 模板（culture 适配 + FlgNet/v5）属 Agent G；批次 3 包级复测见 evidence/uc04_package_probe.json#repro_commands / tools/run_batch3_real_machine.py --only R1",
+      "repro_command": "见 06-gate0-report.md §3 / 归档 §2.4 + §6；修复 _render_ob_xml 模板（culture 适配 + FlgNet/v5）属 Agent G；批次 3 包级复测见 evidence/uc04_package_probe.json#repro_commands / tools/run_batch3_real_machine.py --only R1；批次 4 复现：python tools/build_full_af_package.py --out <Temp/gf_real_*>；python tools/run_batch4_real_machine.py --only W1；python tools/run_product_package_real.py；正式包由 tia_delivery.deliver_tia(session, mode=\"package\") 产出后按 manifest.import_order 逐项 import-xml",
       "notes": "K1 探针实测未通过（失败事实如实留痕）；folders.json 非 SimaticML 导入对象，SW.PlcBlockGroup XML 可导入性仍未确证。 批次 3 保持 pending_real_machine：两处真实失败未修复，xml_package_unverified 不消除。",
       "evidence_refs": [
         "evidence/uc04_package_probe.json",
         "docs/greenfield/12-batch3-real-machine.md",
         "docs/greenfield/08-k1-probe-fix.md"
       ],
-      "batch3_closeout": "未通过：SW.PlcBlockGroup 不可导入 + Call 网络 OB 导入失败；标志位保持 True。"
+      "batch3_closeout": "未通过：SW.PlcBlockGroup 不可导入 + Call 网络 OB 导入失败；标志位保持 True。",
+      "evidence_kind": "real_machine",
+      "real_machine_evidence": "evidence/uc04_product_package_real.json（批次 4 · Agent Y 正式产品通道 deliver_tia(mode=package) 产出的 xml_supplement/ 真机验证：两轮独立干净副本各 10/10 import-xml ok + 3/3 create-block-group + compile errorCount=0/warningCount=0/state=Success）；evidence/uc04_full_package_real.json（批次 4 · Agent W 独立自洽包 5/5 导入 + 编译 0/0）；evidence/uc04_package_probe.json（批次 3 失败事实，保留）；docs/greenfield/18-product-package-real.md / 16-batch4-real-machine.md / 14-uc04-package-fix.md / 17-product-channel-wiring.md",
+      "verified_by": "Agent U（模板修复）+ Agent X（产品通道接线）+ Agent W（独立包真机）+ Agent Y（正式包真机，两轮）+ 主 agent 收口",
+      "caveat": "UC-04 按契约 14 §3 判据闭环（自洽完整包 + 按序导入 + 文件夹 API + 编译 0/0 + 结构化证据）。仍保留的边界：SW.PlcBlockGroup XML 仍不可 import-xml（设计上走 create-block-group API）；3 个 ProDiag OB 按存量口径跳过未验证；deliver_tia auto 端到端全链未跑；FB/DB 模板相对 V19 先例有精简、culture 仅 zh-CN；正式包 <Created> 用 time.gmtime() 非字节级可复现；块与分组归属关系未逐一验证。因此 xml_package_unverified 主 agent 决定保持 True（消除条件见 summary）。本 UC pass 不宣称 L2 通过、不宣称全链编译零错误、不使 M4 可签署。",
+      "batch4_closeout": {
+        "root_cause": "包不自洽（缺 FB/实例 DB）+ call_db 反推 FB 名的模板假设错误",
+        "fix": "U 模板修复 + X 正式产品通道接线",
+        "real_machine": "W 独立包 5/5+0/0；Y 正式包两轮各 10/10+0/0，3/3 文件夹 API",
+        "product_channel_wired": true,
+        "xml_package_unverified": "保持 True（消除条件：ProDiag / auto 全链 / 分组归属 / 复现性 / culture 边界闭环后由用户拍板）"
+      }
     },
     {
       "uc": "UC-05",
@@ -572,16 +595,31 @@
         "PCEC 账本",
         "增量 EvidenceBundle（含 6 个增量字段）"
       ],
-      "status": "pending_real_machine",
-      "real_machine_facts": "批次 3（Agent R，evidence/uc16_incremental_real.json）：/open=1 + 句柄复用 + 3 次差异确认覆盖 + 3× 编译 errorCount=0/warningCount=0/Success + PCEC 3 条（磁盘 3/3）+ 项目未关闭/未重载/未新建。增量六字段：mode=incremental / base_spec_version=null（诚实：未跑 Greenfield 冻结规格链，无真实 specs/vN.json）/ changed_source_ids=[R_FC_Inc1,R_FC_Inc2,R_FC_Inc3] / reverse_protection={allowed:true,drift_count:0}/ tia_side_drift=0 / ob_number_deviations=[]（显式留痕）。D10 负例与 UC-13 回滚引用 Agent M 既有真机证据（注明不重做）。未闭环：增量 FidelityChecker(mode=incremental) 未跑通、base_spec_version 为 null、fidelity_ok 引用 Q 的离线 L1 全量真值（非增量真机）；R 明确不宣称 L4 正式通过。",
-      "repro_command": "./.venv/Scripts/python.exe tools/greenfield_acceptance.py --real-machine --workdir <Temp/gf_real_*/副本>（见六条增量用例编排）；批次 3 见 evidence/uc16_incremental_real.json / tools/run_batch3_real_machine.py --only R3",
+      "status": "pass",
+      "real_machine_facts": "批次 3 缺口为 base_spec_version=null、增量 FidelityChecker(mode=incremental) 未闭环（纯 CLI 块级覆盖，无真实 Greenfield 冻结规格链）。批次 4：V 用 TestClient 真实产出 specs/v1.json→v2.json（project_id=GF-V-UC16 一致，spec_hash 9bc0224…→52190cc…，prev_spec_hash 串联），compute_spec_diff 得 base_spec_version=1 / changed_source_ids=[\"U1EM1_CM3\"]，FidelityChecker(mode=\"incremental\") 得 fidelity_ok=true / coverage=1.0 / orphan=0 / drift=0 / tia_side_drift=0。W 复用 V 磁盘同一份 v1/v2（未重建会话），真机 Action C：/open=1、句柄复用、close/create/archive=0/0/0，D11 显式确认、UC-19 负例四计数器恒 0；4× /compile-plc 全 errorCount=0/warningCount=0/Success；PCEC 3 条（磁盘 3/3）；第 8 步真实增量 FidelityChecker fidelity_ok=true/coverage=1.0/orphan=0/drift=0/tia_side_drift=0；check_reverse_guard 对真实块哈希快照得 allowed=true / drift_count=0 / blocked_source_ids=[]（补齐 V 的 allowed=null）。六字段最终真值：mode=incremental / base_spec_version=1 / changed_source_ids=[\"U1EM1_CM3\"] / reverse_protection={status:evaluated,allowed:true,tia_side_drift:0} / tia_side_drift=0 / ob_number_deviations=[]（显式留痕）。Action C 首跑因 IR 层 diff 无 scl_path 被 C# invalid_argument 拒绝并 GF_ACTION_C_ROLLBACK（零副作用），原始返回保留；重跑以运行时 SclBridgingPort 做 IR id→派生产物层等价映射后八步全通。",
+      "repro_command": "./.venv/Scripts/python.exe tools/greenfield_acceptance.py --real-machine --workdir <Temp/gf_real_*/副本>（见六条增量用例编排）；批次 3 见 evidence/uc16_incremental_real.json / tools/run_batch3_real_machine.py --only R3；批次 4：python tools/run_incremental_spec_chain.py --out <chain.json> --bundle <bundle.json>；python tools/run_batch4_real_machine.py --only W2",
       "notes": "L4 完整通过需 §13.9 六条全绿；本轮未达成。 批次 3 保持 pending_real_machine：六字段与三次增量已真机取证，但增量 fidelity / base_spec_version 未闭环。",
       "evidence_refs": [
+        "evidence/uc16_incremental_closed_real.json",
+        "evidence/uc16_incremental_spec_chain.json",
+        "evidence/uc16_incremental_evidence_bundle.json",
         "evidence/uc16_incremental_real.json",
         "evidence/uc05_real_machine_report.json",
-        "docs/greenfield/12-batch3-real-machine.md"
+        "docs/greenfield/15-uc16-spec-chain.md",
+        "docs/greenfield/16-batch4-real-machine.md"
       ],
-      "batch3_closeout": "部分达成（真机六字段 + PCEC 3 条）；L4 仍未正式通过。"
+      "batch3_closeout": "部分达成（真机六字段 + PCEC 3 条）；L4 仍未正式通过。",
+      "evidence_kind": "real_machine",
+      "real_machine_evidence": "evidence/uc16_incremental_closed_real.json（批次 4 · Agent W 真机 Action C 八步 + 第 8 步真实增量 FidelityChecker + 4× compile errorCount=0 + PCEC 3 条 + reverse_protection 真机 allowed=true）；evidence/uc16_incremental_spec_chain.json / uc16_incremental_evidence_bundle.json（批次 4 · Agent V 真实 specs/v1.json→v2.json 规格链与离线增量 fidelity）；evidence/uc16_incremental_real.json（批次 3 六字段基础，保留）；evidence/uc05_real_machine_report.json（批次 2 D10/UC-13 真机证据）",
+      "verified_by": "Agent V（真实 v1→v2 规格链 + 离线增量 fidelity）+ Agent W（真机 Action C 闭环）+ 主 agent 收口",
+      "caveat": "诚实边界：IR 层 changed_source_ids（U1EM1_CM3）与派生产物层（DB::/FB::/OB::、W2_FC_Inc*）命名空间不同，真机覆盖的是经 SclBridgingPort 等价映射后的 SCL 外部源块，不宣称逐块一一对应；tia_side_snapshot 为内容哈希而非 TIA 对象读回哈希；/fast-writeback writtenBlockCount=0 如实留痕；Action C 首跑 ROLLBACK 失败如实留痕、不冒充首跑即通过；产品 compile_diagnostics 仍 pending_real_machine=true / l2_status=pending_real_machine。本 UC pass 不宣称 L4 层正式通过、不宣称 L1∧L2∧L3∧L4 全绿、不使 M4 可签署。",
+      "batch4_closeout": {
+        "base_spec_version": 1,
+        "spec_chain": "V 真实 specs/v1.json→v2.json（GF-V-UC16）",
+        "incremental_fidelity": "fidelity_ok=true / coverage=1.0 / orphan=0 / drift=0 / tia_side_drift=0（V 离线 + W 真机第 8 步）",
+        "six_fields": "全部真机真值，reverse_protection.allowed=true（补齐批次 3 的 null / V 的 offline null）",
+        "real_machine": "/open=1 + PCEC 3 条 + 4× compile 0/0 + 首跑 ROLLBACK 留痕"
+      }
     },
     {
       "uc": "UC-17",
@@ -705,9 +743,9 @@
   "summary": {
     "case_count": 19,
     "by_status": {
-      "pass": 17,
+      "pass": 19,
       "fail": 0,
-      "pending_real_machine": 2,
+      "pending_real_machine": 0,
       "not_run": 0
     },
     "agent_n_offline_review": {
@@ -730,14 +768,11 @@
       "honest_boundary": "UC 主状态 pass 不等于 L1/L2/L3/L4 任一 L 层通过，也不等于 M4 可签署"
     },
     "preexisting_baseline_failure_exclusions": 1,
-    "pending_uc_ids": [
-      "UC-04",
-      "UC-16"
-    ],
-    "l1_l4_recheck": "批次 3 后：L1 与 L3 的绑定 UC 已全部 pass（含 UC-15 九步离线链与可复现证据），具备离线层证据；L2 因 UC-04 保持 pending_real_machine（SW.PlcBlockGroup 不可导入、Call OB 导入失败）未通过；L4 因 UC-16 保持 pending_real_machine（增量 fidelity / base_spec_version 未闭环）未通过。L1∧L2∧L3∧L4 仍未全绿，且 --offline 口径下 L2/L4 恒 pending_real_machine。",
+    "pending_uc_ids": [],
+    "l1_l4_recheck": "批次 4 后 RTM 19/19 UC 全部有证据（pass=19、pending=0）。但 **UC pass 不等于 L 层通过**：L2 仍需 deliver_tia auto 端到端全链、四层静态门禁全绿与 ProDiag / 分组归属闭环；L4 仍需增量规格链在 auto 全链下复核；验收编排器在 --offline 口径下 L2/L4 恒 pending_real_machine；产品 compile_diagnostics 仍保留 pending_real_machine=true / l2_status=pending_real_machine。因此 L1∧L2∧L3∧L4 仍判定为未全绿，不因 RTM 计数变化而放水。",
     "m4": "未通过",
-    "m4_reason": "pending_real_machine 台账未清零（cleared=false，UC-04 / UC-16 仍 pending）；L1∧L2∧L3∧L4 未全绿；xml_package_unverified 仍为 True；uc15_evidence_bundle.json 的 6 个增量字段为 UC-15 full 模式离线值、不构成 UC-16 增量真机证据；且 M4 签署权归用户本人，任何 agent 不得代签。",
-    "honest_note": "本次 5 个 UC 由收口实测 Agent M 逐条勾选为 pass，证据全部来自 TIA V19 真机 HTTP / CLI 原始返回（非 mock / 非离线单测），并如实记录 /fast-writeback writtenBlockCount=0、UC-02 无原生含 warning 真机样本、UC-12 判定为纯函数、UC-13 备份为文件系统级等边界。UC pass ≠ L 层通过 ≠ M4 可签署：pending 台账未清零前 M4 保持未通过。注意：tests/unit/test_greenfield_acceptance.py 中锁定『收口实测前 pass=0 / pending=10』的护栏断言（test_rtm_status_counts_and_no_fake_pass / test_offline_full_report_m4_not_pass）在本次状态更新后会失败，已由主 agent 同步为动态自洽断言（计数与 summary 一致 + pass 必须带真机证据三件套），不再锁死 pass=0 / pending=10，且未改任何产品代码 / 冻结清单 / C# 源码。Agent N 补充：本次又把 9 个确有离线单测证据的 UC 如实登记为 offline_unit_test pass（非真机、附 caveat），并对 test_rtm_status_counts_and_no_fake_pass 做最小同步——证据校验由『仅真机三件套』扩展为『真机三件套 OR 离线单测四要素（offline_evidence / offline_verified_by / evidence_kind / caveat）且严格区分口径、离线 pass 不得挂真机证据』，完整保留『pass 必须带证据』『M4 未通过』『涉 L2/L4 无真机证据不得 pass』等不变量，未回退主 agent 的动态自洽断言。 【批次 3 收口补充】UC-01/15/18 转 pass 均附真机证据三件套与复现命令，测试白名单同步扩展为「批次 2 uc05 总报告 + 批次 3 逐 UC 真机证据文件」，仍强制真机证据、离线单测证据恒走独立分支。UC-04/UC-16 如实保持 pending，绝不为凑数标 pass。所有真机数字来自 V19 临时副本的真实 CLI/HTTP 返回。",
+    "m4_reason": "pending_real_machine 台账未清零（cleared=false，10 条历史 items 按 M4 门禁保留不删）；L1∧L2∧L3∧L4 未全绿（L2/L4 需 auto 端到端全链复核，见 l1_l4_recheck）；EvidenceBundle 的真实全链实例化与归档未完成；xml_package_unverified 仍为 True；且 M4 签署权归用户本人，任何 agent 不得代签。",
+    "honest_note": "本次 5 个 UC 由收口实测 Agent M 逐条勾选为 pass，证据全部来自 TIA V19 真机 HTTP / CLI 原始返回（非 mock / 非离线单测），并如实记录 /fast-writeback writtenBlockCount=0、UC-02 无原生含 warning 真机样本、UC-12 判定为纯函数、UC-13 备份为文件系统级等边界。UC pass ≠ L 层通过 ≠ M4 可签署：pending 台账未清零前 M4 保持未通过。注意：tests/unit/test_greenfield_acceptance.py 中锁定『收口实测前 pass=0 / pending=10』的护栏断言（test_rtm_status_counts_and_no_fake_pass / test_offline_full_report_m4_not_pass）在本次状态更新后会失败，已由主 agent 同步为动态自洽断言（计数与 summary 一致 + pass 必须带真机证据三件套），不再锁死 pass=0 / pending=10，且未改任何产品代码 / 冻结清单 / C# 源码。Agent N 补充：本次又把 9 个确有离线单测证据的 UC 如实登记为 offline_unit_test pass（非真机、附 caveat），并对 test_rtm_status_counts_and_no_fake_pass 做最小同步——证据校验由『仅真机三件套』扩展为『真机三件套 OR 离线单测四要素（offline_evidence / offline_verified_by / evidence_kind / caveat）且严格区分口径、离线 pass 不得挂真机证据』，完整保留『pass 必须带证据』『M4 未通过』『涉 L2/L4 无真机证据不得 pass』等不变量，未回退主 agent 的动态自洽断言。 【批次 3 收口补充】UC-01/15/18 转 pass 均附真机证据三件套与复现命令，测试白名单同步扩展为「批次 2 uc05 总报告 + 批次 3 逐 UC 真机证据文件」，仍强制真机证据、离线单测证据恒走独立分支。UC-04/UC-16 如实保持 pending，绝不为凑数标 pass。所有真机数字来自 V19 临时副本的真实 CLI/HTTP 返回。 【批次 4 收口补充】UC-04/UC-16 转 pass 均附真机证据三件套与复现命令，白名单同步扩展为「批次 2/3 报告 + 批次 4 逐 UC 真机证据」。gate0_facts 的批次 2 历史快照（uc04_k1_probe=fail、gate0_verdict=conditional-go、p0d_recommendation=pending_user_decision）**原样保留不动**，只更新 cases 里的当前状态，保证失败事实可追溯。UC-16 的首跑 ROLLBACK、运行时桥接、命名空间差异与 UC-04 的 ProDiag/分组/复现性边界均如实写入 caveat。RTM 全 pass 明确不等于 L 层通过或 M4 可签署。",
     "p0d": "P0-D 已由用户 2026-11-06 以编号 1 拍板：AF Basic 文件夹版（docs/greenfield/11-p0d-decision.md）；Gate-0 升 go。",
     "batch3_closeout": {
       "date": "2026-11-07",
@@ -755,6 +790,27 @@
         "evidence/uc15_evidence_bundle.json"
       ],
       "xml_package_unverified": "仍为 True（UC-04 包级两处真实失败），未擅自消除",
+      "m4": "未通过 / 不可签署；签署权归用户本人"
+    },
+    "batch4_closeout": {
+      "date": "2026-11-07",
+      "agent": "主 agent 收口（U 模板 / V 规格链 / W 真机 / X 产品通道接线 / Y 正式包真机）",
+      "status_change": "UC-04 / UC-16 由 pending_real_machine 转 pass；RTM 19/19 UC 全部有证据",
+      "new_real_machine_evidence": [
+        "evidence/uc04_full_package_real.json",
+        "evidence/uc04_product_package_real.json",
+        "evidence/uc16_incremental_closed_real.json"
+      ],
+      "new_offline_evidence": [
+        "evidence/uc16_incremental_spec_chain.json",
+        "evidence/uc16_incremental_evidence_bundle.json"
+      ],
+      "xml_package_unverified": {
+        "value": true,
+        "decision": "主 agent 按契约 14 §1.7 决定：保持 True，不擅自消除",
+        "reason": "包级真机已闭环，但 3 个 ProDiag OB 未验证、deliver_tia auto 端到端全链未跑、块与分组归属未逐一验证、FB/DB 模板精简差异、culture 仅 zh-CN、正式包非字节级可复现",
+        "elimination_conditions": "上述边界逐条闭环后，由用户拍板是否消除"
+      },
       "m4": "未通过 / 不可签署；签署权归用户本人"
     }
   }

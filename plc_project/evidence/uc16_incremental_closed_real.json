@@ -1,0 +1,1357 @@
+{
+  "schema": "gf-uc16-incremental-closed-real-v1",
+  "uc": "UC-16",
+  "title": "真实 v1→v2 规格链 + V19 真机 Action C 增量闭环（会话复用 / 编译 / 六字段 / 反向保护 / 增量 fidelity）",
+  "agent": "Agent W · V19 真机联合验证（批次 4）",
+  "generated_at": "2026-11-07T11:09:24.566162+00:00",
+  "tia_version": "V19",
+  "source_raw": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/raw_all.json#cases/W2-incremental",
+  "source_raw_first_attempt": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/raw_all.json#cases/W2-incremental-first-attempt",
+  "source_raw_sha256": "a8069c0004a10f413094d266e686499bc629aaf8bce66cddd0d3bfa7db6396c3",
+  "environment": {
+    "exe": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe",
+    "serve_url": "http://127.0.0.1:8791",
+    "temp_copy_ap19": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19",
+    "serve_start": {
+      "healthy": true,
+      "health": {
+        "method": "GET",
+        "path": "/health",
+        "timeout_s": 5.0,
+        "http_status": 200,
+        "json": {
+          "ok": true,
+          "status": "ok"
+        }
+      }
+    },
+    "serve_stop": {
+      "returncode": 1,
+      "port_reachable_after_stop": false,
+      "leftover_process": false
+    },
+    "source_opened_or_written_back": false
+  },
+  "v_spec_chain_ref": {
+    "chain_evidence": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/evidence/uc16_incremental_spec_chain.json",
+    "bundle_evidence": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/evidence/uc16_incremental_evidence_bundle.json",
+    "project_id": "GF-V-UC16",
+    "session_id": "95f0fcd1ba8e",
+    "work_dir": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_inc_chain_71q7e1k_",
+    "v1_spec_hash": "sha256:9bc022427c5bdb0e1b69f1fa89cdc459de4a121f157395b8ddbd7eebbc994e60",
+    "v2_spec_hash": "sha256:52190cc0b1e0769d79f400d6b72ed8d59472f09dc20d7e0c69222a030a7b8605",
+    "v1_disk_path": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_inc_chain_71q7e1k_\\greenfield\\95f0fcd1ba8e\\specs\\v1.json",
+    "v2_disk_path": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_inc_chain_71q7e1k_\\greenfield\\95f0fcd1ba8e\\specs\\v2.json",
+    "note": "直接复用磁盘上 V 的同一份 specs/v1.json / specs/v2.json，不重新生成会话"
+  },
+  "spec_chain_load": {
+    "source": "greenfield_service.load_frozen_spec 从磁盘 specs/vN.json 装载",
+    "v1": {
+      "spec_version": 1,
+      "spec_hash": "sha256:9bc022427c5bdb0e1b69f1fa89cdc459de4a121f157395b8ddbd7eebbc994e60",
+      "project_id": "GF-V-UC16"
+    },
+    "v2": {
+      "spec_version": 2,
+      "spec_hash": "sha256:52190cc0b1e0769d79f400d6b72ed8d59472f09dc20d7e0c69222a030a7b8605",
+      "project_id": "GF-V-UC16"
+    },
+    "v1_hash_matches_V": true,
+    "v2_hash_matches_V": true,
+    "hash_differs": true
+  },
+  "spec_diff_recomputed": {
+    "source": "compute_spec_diff(v1, v2) 直调（真实磁盘规格）",
+    "base_spec_version": 1,
+    "target_spec_version": 2,
+    "changed_source_ids": [
+      "U1EM1_CM3"
+    ],
+    "changed_count": 0,
+    "added_count": 1,
+    "removed_count": 0,
+    "matches_V": true
+  },
+  "d11_diff_confirmation": {
+    "confirmed": true,
+    "changed_source_ids": [
+      "U1EM1_CM3"
+    ],
+    "base_spec_version": 1,
+    "note": "以 V 真实 SpecDiff.changed_source_ids 为差异清单逐条显式确认（D11，confirmed=true）；IR 层 id（U1EM1_CM3）与派生产物层块命名空间不同，不假装逐块一一对应"
+  },
+  "action_c_negative_uc19": {
+    "ok": false,
+    "blocked": true,
+    "code": "GF_ACTION_CONFIRM_REQUIRED",
+    "zero_side_effects": true,
+    "side_effect_counters": {
+      "ops": 0,
+      "disk_writes": 0,
+      "writebacks": 0,
+      "generations": 0
+    },
+    "note": "D11 负例：差异清单未显式确认 → Action C 服务端 fail-closed，ops/disk_writes/writebacks/generations 四计数器相对调用前恒 0（UC-19）"
+  },
+  "v2_derived_product_rebuild": {
+    "attempted": true,
+    "ok": true,
+    "function": "greenfield_service.generate_project_package（产品链真实函数）",
+    "block_count": 26,
+    "blocks_manifest_count": 26,
+    "zip_sha256": "sha256:78829571675ce04f3bdef6404a28f187d8a01ebf5d391908fc82ad8859b31304",
+    "note": "基于磁盘 v2 规格经产品链重建 v2 派生产物；若与 V 离线报告块数不同，如实记录差异，不冒充字节级同一产物"
+  },
+  "tia_side_snapshot_source": {
+    "initial_value": {
+      "W2_FC_Inc1": "9831866a0003c24594a7efe672faef27cebdb12c4977f96ead4995b3f0694072",
+      "W2_FC_Inc2": "1f3ba5ad32137a121cd9a77a5b25fb06eb7ea34ef658ab58434ddda0a490b9a0",
+      "W2_FC_Inc3": "b26d1126590c35705b4484a7c333fff3f7fa9edd03786964bd4026653af22a00"
+    },
+    "initial_source_kind": "真实磁盘 SCL 源内容 sha256（UC-19 负例与降级路径）",
+    "note": "最终值见 tia_side_snapshot_final（重建 v2 派生产物后按 blocks_manifest 对齐）",
+    "limitation": "为 SCL 外部源 / 派生产物内容哈希，非从 TIA 工程对象直接读回的块对象哈希；check_reverse_guard 为产品纯函数对真实内容哈希计算，非 mock（与批次 3 R3 同口径）"
+  },
+  "tia_side_snapshot_final": {
+    "value": {
+      "UDT::AF_typeAnalogInput::UDT::1": "sha256:e9ccd9acef7b2fbfa4c259519c30beae594c17f80a0c5efdd755719cdc855fa0",
+      "UDT::AF_typeAnalogOutput::UDT::1": "sha256:7895b44a5acd9c9a9e1c028b230dde042340b7bb47a669930a981825d628ad67",
+      "UDT::AF_typeAxisControl::UDT::1": "sha256:4061926d668e31b57cde41b1f192d7c34f9c2a778e54ef4e1e7c0f16b27ede93",
+      "UDT::AF_typeDigitalSignal::UDT::1": "sha256:10c390dff36a5865d3cebbab4091c62cd5a27b6d0259d04faccf50fa9950a603",
+      "UDT::AF_typeGeneralControl::UDT::1": "sha256:3dc85280bc0b7b09d75e55ba0520eafcc059c0f40fe8f2e63edc8281d5084fef",
+      "UDT::AF_typeJobs::UDT::1": "sha256:14c0d969ed51311fbe0fc9a24efd435736c7f614b503ed6a17a55a187d3a39c0",
+      "UDT::AF_typeSequence::UDT::1": "sha256:8298ef33d0d6448e78baaf7bc383adc9a34f699bc7d5ec1f57f5eb816dde0c4a",
+      "UDT::AF_typeSimpleActuator::UDT::1": "sha256:f5b3db928e1341614dde54e9cdcfc68af97262d3f310ee89dae89a3074c4b15c",
+      "UDT::AF_typeTwoWayActuator::UDT::1": "sha256:b5099b5bb55ef7f55ca58d860b48732c248687eabc377be8f865dc96e2e2940d",
+      "OB::U1Em0_General_Main::OB::1006": "sha256:61a710b9e9a8f96401a99c21486554e0e12c27bc61f4431a8b602396afbf10a0",
+      "OB::U1Em0_General_ProDiag::OB::1007": "sha256:555d6c4b9f39b842376258ed308f8c0d350bed9726c77df17939826966cb9b97",
+      "OB::U1Em0_General_Startup::OB::1005": "sha256:bc29666f8eec3cd4cb48de57a6a06f6177fd748e7ddd3b40d09620785a9739c9",
+      "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": "sha256:7ac66de8bea749cac4bb786e9704c8aa3e6790e2f0f73064a56c5b470fc477e4",
+      "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": "sha256:50c42c7f6271bfb9e3a3c9ebe8592b6b3b6f07fdf35a42790cec17298d3be0c2",
+      "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": "sha256:4b8bf4c3b34e5ee9eb199c6f545f04b6a228c2dec60f9969a794488b00ebb0a4",
+      "OB::U1Em1_Station1_Main::OB::1011": "sha256:12ab7e578d8b58050258229dd2c1a9ac1e32a3327d867100f207e5d29de99fe5",
+      "OB::U1Em1_Station1_ProDiag::OB::1012": "sha256:16591c4f48e152b87b3a19b430d200266b7b96e21a2212bd75a81a1c8b0475b0",
+      "FB::U1Em1_Station1_Sequence::Sequence::1011": "sha256:e35766728b875c4ae39da52c9c655445fca8210bd09426d885eaffe196aab593",
+      "OB::U1Em1_Station1_Startup::OB::1010": "sha256:c5f38c9737fbe1fafcf72c10af10862d2cdc72b446c2f63a975d1f68b634dc70",
+      "FC::U1Em1_Station1_StepToString::StepToString::1012": "sha256:99cda706125ff2f8e9a0daa212dce70bf6c6c89c204671dc98941db2793cc8d8",
+      "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": "sha256:8145c68245e3e6530d4f2648c931de11cb24d8440e9f4ce89f6590b6ad7f87b2",
+      "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": "sha256:0fc96af62378db3b8de4d63dd782cbb65670895a75c16844c5fccccff551dc25",
+      "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": "sha256:c2c81e9ac6b109d8aebbc47f1b9ed04ec56582c873673f3be62328bc5d112fed",
+      "OB::U1_AssemblyCell_Main::OB::1001": "sha256:8992516ba213b72526cf8bf023913ff6f3b56654e80f34746dd6aa18dd507af2",
+      "OB::U1_AssemblyCell_ProDiag::OB::1002": "sha256:6c2289a5711251f3da23f1197188d3b73b775519126942275eb749e2d18626ec",
+      "OB::U1_AssemblyCell_Startup::OB::1000": "sha256:3d76ffb04d5483a87f24614a8cf2aff3085c49e8bed05b6f2e476ceb89fd11ef"
+    },
+    "last_generated": {
+      "UDT::AF_typeAnalogInput::UDT::1": "sha256:e9ccd9acef7b2fbfa4c259519c30beae594c17f80a0c5efdd755719cdc855fa0",
+      "UDT::AF_typeAnalogOutput::UDT::1": "sha256:7895b44a5acd9c9a9e1c028b230dde042340b7bb47a669930a981825d628ad67",
+      "UDT::AF_typeAxisControl::UDT::1": "sha256:4061926d668e31b57cde41b1f192d7c34f9c2a778e54ef4e1e7c0f16b27ede93",
+      "UDT::AF_typeDigitalSignal::UDT::1": "sha256:10c390dff36a5865d3cebbab4091c62cd5a27b6d0259d04faccf50fa9950a603",
+      "UDT::AF_typeGeneralControl::UDT::1": "sha256:3dc85280bc0b7b09d75e55ba0520eafcc059c0f40fe8f2e63edc8281d5084fef",
+      "UDT::AF_typeJobs::UDT::1": "sha256:14c0d969ed51311fbe0fc9a24efd435736c7f614b503ed6a17a55a187d3a39c0",
+      "UDT::AF_typeSequence::UDT::1": "sha256:8298ef33d0d6448e78baaf7bc383adc9a34f699bc7d5ec1f57f5eb816dde0c4a",
+      "UDT::AF_typeSimpleActuator::UDT::1": "sha256:f5b3db928e1341614dde54e9cdcfc68af97262d3f310ee89dae89a3074c4b15c",
+      "UDT::AF_typeTwoWayActuator::UDT::1": "sha256:b5099b5bb55ef7f55ca58d860b48732c248687eabc377be8f865dc96e2e2940d",
+      "OB::U1Em0_General_Main::OB::1006": "sha256:61a710b9e9a8f96401a99c21486554e0e12c27bc61f4431a8b602396afbf10a0",
+      "OB::U1Em0_General_ProDiag::OB::1007": "sha256:555d6c4b9f39b842376258ed308f8c0d350bed9726c77df17939826966cb9b97",
+      "OB::U1Em0_General_Startup::OB::1005": "sha256:bc29666f8eec3cd4cb48de57a6a06f6177fd748e7ddd3b40d09620785a9739c9",
+      "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": "sha256:7ac66de8bea749cac4bb786e9704c8aa3e6790e2f0f73064a56c5b470fc477e4",
+      "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": "sha256:50c42c7f6271bfb9e3a3c9ebe8592b6b3b6f07fdf35a42790cec17298d3be0c2",
+      "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": "sha256:4b8bf4c3b34e5ee9eb199c6f545f04b6a228c2dec60f9969a794488b00ebb0a4",
+      "OB::U1Em1_Station1_Main::OB::1011": "sha256:12ab7e578d8b58050258229dd2c1a9ac1e32a3327d867100f207e5d29de99fe5",
+      "OB::U1Em1_Station1_ProDiag::OB::1012": "sha256:16591c4f48e152b87b3a19b430d200266b7b96e21a2212bd75a81a1c8b0475b0",
+      "FB::U1Em1_Station1_Sequence::Sequence::1011": "sha256:e35766728b875c4ae39da52c9c655445fca8210bd09426d885eaffe196aab593",
+      "OB::U1Em1_Station1_Startup::OB::1010": "sha256:c5f38c9737fbe1fafcf72c10af10862d2cdc72b446c2f63a975d1f68b634dc70",
+      "FC::U1Em1_Station1_StepToString::StepToString::1012": "sha256:99cda706125ff2f8e9a0daa212dce70bf6c6c89c204671dc98941db2793cc8d8",
+      "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": "sha256:8145c68245e3e6530d4f2648c931de11cb24d8440e9f4ce89f6590b6ad7f87b2",
+      "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": "sha256:0fc96af62378db3b8de4d63dd782cbb65670895a75c16844c5fccccff551dc25",
+      "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": "sha256:c2c81e9ac6b109d8aebbc47f1b9ed04ec56582c873673f3be62328bc5d112fed",
+      "OB::U1_AssemblyCell_Main::OB::1001": "sha256:8992516ba213b72526cf8bf023913ff6f3b56654e80f34746dd6aa18dd507af2",
+      "OB::U1_AssemblyCell_ProDiag::OB::1002": "sha256:6c2289a5711251f3da23f1197188d3b73b775519126942275eb749e2d18626ec",
+      "OB::U1_AssemblyCell_Startup::OB::1000": "sha256:3d76ffb04d5483a87f24614a8cf2aff3085c49e8bed05b6f2e476ceb89fd11ef"
+    },
+    "source_kind": "重建 v2 派生产物 blocks_manifest 的真实 sha256（产品 generate_project_package 产出）",
+    "tia_side_drift_assumption": "TIA 侧未做手工改动 → 与上次生成物一致（R3 同口径）",
+    "limitation": "为派生产物内容哈希，非从 TIA 工程对象直接读回的块对象哈希；非 mock",
+    "entry_count": 26
+  },
+  "scl_equivalence": {
+    "source": "本次临时目录真实 SCL 外部源文件内容 sha256（与 M/R 三次增量等价替代同口径）",
+    "scls": [
+      {
+        "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc1.scl",
+        "sha256": "9831866a0003c24594a7efe672faef27cebdb12c4977f96ead4995b3f0694072",
+        "bytes": 146
+      },
+      {
+        "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc2.scl",
+        "sha256": "1f3ba5ad32137a121cd9a77a5b25fb06eb7ea34ef658ab58434ddda0a490b9a0",
+        "bytes": 146
+      },
+      {
+        "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc3.scl",
+        "sha256": "b26d1126590c35705b4484a7c333fff3f7fa9edd03786964bd4026653af22a00",
+        "bytes": 146
+      }
+    ],
+    "equivalence_note": "V 的 changed_source_ids 为 IR 层 id（U1EM1_CM3）；真机 /fast-writeback 消费的是派生产物层 SCL 源。本次用 3 个最小可编译 SCL 外部源变体等价 替代 IR 变更的块级覆盖，不冒充逐块一一对应。"
+  },
+  "scl_bridge_log": {
+    "mechanism": "运行时 SclBridgingPort 包装（不改产品代码）",
+    "purpose": "IR 层差异块（U1EM1_CM3，无 scl_path）→ 等价派生产物层 SCL 块，接通 C# /fast-writeback",
+    "necessity": "run_action_c 的 _coerce_diff 固定产出 {source_id,kind,payload}，不含 scl_path；C# /fast-writeback 要求有效 scl，否则 invalid_argument（首跑真实失败，见 first-attempt）",
+    "records": [
+      {
+        "original_blocks": [
+          {
+            "source_id": "U1EM1_CM3",
+            "kind": "cms",
+            "payload": {
+              "business_label": "UC-16 增量新增执行件：下料检测气缸",
+              "cm_type": "LBC_MotorStarter",
+              "em_id": "U1EM1",
+              "id": "U1EM1_CM3",
+              "io_binding_ids": [],
+              "parameters": {},
+              "plcopen": {
+                "busy": true,
+                "enable": true,
+                "error": true,
+                "status": true,
+                "valid": true
+              },
+              "source_id": "U1EM1_CM3"
+            }
+          }
+        ],
+        "bridged_blocks": [
+          {
+            "source_id": "U1EM1_CM3",
+            "kind": "cms",
+            "payload": {
+              "business_label": "UC-16 增量新增执行件：下料检测气缸",
+              "cm_type": "LBC_MotorStarter",
+              "em_id": "U1EM1",
+              "id": "U1EM1_CM3",
+              "io_binding_ids": [],
+              "parameters": {},
+              "plcopen": {
+                "busy": true,
+                "enable": true,
+                "error": true,
+                "status": true,
+                "valid": true
+              },
+              "source_id": "U1EM1_CM3"
+            },
+            "scl_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc1.scl",
+            "name": "W2_ActionC_Bridge1"
+          }
+        ],
+        "raw": {
+          "ok": true,
+          "stage": "fast_writeback",
+          "error_count": 0,
+          "warnings": [],
+          "tia_version": "V19",
+          "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19",
+          "elapsed_ms": 15856.69450000023,
+          "session_handle": "gf-session:C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19",
+          "http_status": 200,
+          "overwrite": true,
+          "written_block_count": 0,
+          "exclusive_access_used": true
+        },
+        "mapping_note": "IR 层 source_id（U1EM1_CM3）→ 派生产物层等价 SCL 外部源块；仅为运行时映射以接通 /fast-writeback，不假装逐块一一对应"
+      }
+    ],
+    "honest_note": "不冒充 IR 层变更块与派生产物块逐块一一对应；仅用于让 Action C 八步在真机会话下可跑通"
+  },
+  "first_attempt_honest_record": {
+    "status": "W2-incremental-first-attempt（首跑，如实保留，未掩盖）",
+    "action_c_code": "GF_ACTION_C_ROLLBACK",
+    "action_c_rolled_back": true,
+    "action_c_reason": "失败导入已回滚（UC-13）：块级覆盖失败：{'code': 'invalid_argument', 'message': 'fast-writeback 需要有效的 scl（单个 Mega-Source .scl 文件路径）。', 'retryable': False}",
+    "fast_writeback_first_ok": [
+      false
+    ],
+    "root_cause": "run_action_c 的 _coerce_diff 从 IR 层 SpecDiff 产出的 changed_blocks 固定为 {source_id,kind,payload}，不含 scl_path；C# /fast-writeback 要求有效 scl，返回 invalid_argument → Action C 按 UC-13 fail-closed 回滚（零副作用）。即契约 W2 预判的『块映射 / 端口限制』真实失败。",
+    "disposition": "重跑以运行时 SclBridgingPort（不改产品代码）把 IR 层 id 等价映射到带真实 SCL 路径的派生产物层块，使 Action C 八步在真机会话下完整跑通；首跑原始返回保留在 raw_all.json#cases/W2-incremental-first-attempt。",
+    "pcec_ledger_check_note": "首跑脚本误按 tempdir/researchos_plc/changes 核对 PCEC（记 0）；实际 pcec.changes_root()=<PLC_WORK_DIR>/changes，已用真实命令核实首跑 3 条亦落盘，重跑脚本修正核对目录（见 pcec_ledger）。"
+  },
+  "action_c_real": {
+    "result_original": {
+      "ok": true,
+      "blocked": false,
+      "action": "C",
+      "mode": "incremental",
+      "base_spec_version": 1,
+      "changed_source_ids": [
+        "U1EM1_CM3"
+      ],
+      "reverse_protection": {
+        "status": "evaluated",
+        "allowed": true,
+        "drift_count": 0,
+        "tia_side_drift": 0,
+        "blocked_source_ids": [],
+        "reason": "TIA 侧块哈希与上次生成物一致,允许增量覆盖(D10 反向保护通过)"
+      },
+      "tia_side_drift": 0,
+      "ob_number_deviations": [],
+      "ob_number_deviations_note": "ob_number_deviations 显式留痕（即使为空也不静默；属不纳入 1:1 的域）",
+      "fidelity_report": {
+        "fidelity_ok": true,
+        "coverage": 1.0,
+        "orphan": 0,
+        "drift": 0,
+        "tia_side_drift": 0,
+        "mode": "incremental",
+        "base_spec_version": 1,
+        "changed_source_ids": [
+          "U1EM1_CM3"
+        ],
+        "reverse_protection": {
+          "status": "evaluated",
+          "allowed": true,
+          "drift_count": 0,
+          "tia_side_drift": 0,
+          "blocked_source_ids": [],
+          "reason": "TIA 侧块哈希与上次生成物一致,允许增量覆盖(D10 反向保护通过)"
+        },
+        "coverage_matrix": {
+          "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment_DB.scl",
+          "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ControlNodes.scl",
+          "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit_DB.scl",
+          "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_EmNodes.scl",
+          "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment.scl",
+          "FB::U1Em1_Station1_Sequence::Sequence::1011": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Sequence.scl",
+          "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit.scl",
+          "FC::U1Em1_Station1_StepToString::StepToString::1012": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_StepToString.scl",
+          "OB::U1Em0_General_Main::OB::1006": "derived/blocks/30_Equipment_Modules/U1Em0_General_Main.scl",
+          "OB::U1Em0_General_ProDiag::OB::1007": "derived/blocks/30_Equipment_Modules/U1Em0_General_ProDiag.scl",
+          "OB::U1Em0_General_Startup::OB::1005": "derived/blocks/30_Equipment_Modules/U1Em0_General_Startup.scl",
+          "OB::U1Em1_Station1_Main::OB::1011": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Main.scl",
+          "OB::U1Em1_Station1_ProDiag::OB::1012": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ProDiag.scl",
+          "OB::U1Em1_Station1_Startup::OB::1010": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Startup.scl",
+          "OB::U1_AssemblyCell_Main::OB::1001": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Main.scl",
+          "OB::U1_AssemblyCell_ProDiag::OB::1002": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_ProDiag.scl",
+          "OB::U1_AssemblyCell_Startup::OB::1000": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Startup.scl"
+        },
+        "orphan_blocks": [],
+        "drift_items": [],
+        "unmapped_spec_objects": [],
+        "ob_number_deviations": [],
+        "spec_hash": "sha256:52190cc0b1e0769d79f400d6b72ed8d59472f09dc20d7e0c69222a030a7b8605",
+        "spec_version": 2,
+        "framework_baseline_version": "af-basic-folder-1.0",
+        "product_hash": "sha256:298f37ac9cb22c2bc440863d8a344b09e74ac0632a2fa375a9421e15752563fc",
+        "sampled_source_ids": [
+          "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015",
+          "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013",
+          "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011",
+          "DB::U1_AssemblyCell_EmNodes::EmNodes::1010",
+          "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010",
+          "FB::U1Em1_Station1_Sequence::Sequence::1011",
+          "FB::U1_AssemblyCell_CallUnit::CallUnit::1001",
+          "FC::U1Em1_Station1_StepToString::StepToString::1012",
+          "OB::U1Em0_General_Main::OB::1006",
+          "OB::U1Em0_General_ProDiag::OB::1007",
+          "OB::U1Em0_General_Startup::OB::1005",
+          "OB::U1Em1_Station1_Main::OB::1011",
+          "OB::U1Em1_Station1_ProDiag::OB::1012",
+          "OB::U1Em1_Station1_Startup::OB::1010",
+          "OB::U1_AssemblyCell_Main::OB::1001",
+          "OB::U1_AssemblyCell_ProDiag::OB::1002",
+          "OB::U1_AssemblyCell_Startup::OB::1000"
+        ],
+        "pending_real_machine": false,
+        "notes": [
+          "增量模式:变更块 100% 校验通过",
+          "增量模式:非变更块纳入全量抽检(本实现按全量四指标复核,安全侧更严)",
+          "ob_number_deviations 为空(仍显式留痕,不静默)"
+        ]
+      },
+      "steps": [
+        {
+          "step": "session_reuse",
+          "ok": true,
+          "detail": "首次 /open 一次并保持"
+        },
+        {
+          "step": "spec_diff",
+          "ok": true,
+          "detail": "base=v1, changed=1; 调用方注入差异清单 dict"
+        },
+        {
+          "step": "reverse_guard",
+          "ok": true,
+          "detail": "tia_side_drift=0"
+        },
+        {
+          "step": "diff_confirm",
+          "ok": true,
+          "detail": "confirmed=true（D11 已服务端强制，确认前零副作用）"
+        },
+        {
+          "step": "pre_write_backup",
+          "ok": true,
+          "detail": "sha256:d97e0e2d04bf016da5580a05786744e352a8e152716c31983ca5d89f67d5808d"
+        },
+        {
+          "step": "block_overwrite",
+          "ok": true,
+          "detail": "blocks=1, overwrite=true"
+        },
+        {
+          "step": "compile_save",
+          "ok": true,
+          "detail": "error_count=0, compile_ok=True"
+        },
+        {
+          "step": "incremental_fidelity_pcec",
+          "ok": true,
+          "detail": "ledger=1, fidelity_ok=True"
+        }
+      ],
+      "step_order": [
+        "session_reuse",
+        "spec_diff",
+        "reverse_guard",
+        "diff_confirm",
+        "pre_write_backup",
+        "block_overwrite",
+        "compile_save",
+        "incremental_fidelity_pcec"
+      ],
+      "session_reused": false,
+      "session_handle": "gf-session:C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19",
+      "open_count": 1,
+      "compile_ok": true,
+      "compile_diagnostics": {
+        "status": "compiled",
+        "error_count": 0,
+        "warnings": [],
+        "blocks": [],
+        "elapsed_ms": 200.41960000071413,
+        "tia_version": "V19",
+        "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19",
+        "static_gate_passed": true,
+        "compile_ok": true,
+        "tia_unavailable": false,
+        "pending_real_machine": true,
+        "xml_package_unverified": true,
+        "l2_status": "pending_real_machine",
+        "warning_note": "warning 单列，不并入 compile_ok（N9 / P0-A）",
+        "reason": ""
+      },
+      "pcec_ledger_entries": 1,
+      "rolled_back": false,
+      "backup_restorable": true,
+      "backup": {
+        "pre_state": {
+          "counters": {
+            "ops": 0,
+            "disk_writes": 0,
+            "writebacks": 0,
+            "generations": 0
+          },
+          "last_delivery_zip_sha256": "sha256:78829571675ce04f3bdef6404a28f187d8a01ebf5d391908fc82ad8859b31304",
+          "ledger_len": 0,
+          "last_fidelity_report": {
+            "fidelity_ok": true,
+            "coverage": 1.0,
+            "orphan": 0,
+            "drift": 0,
+            "tia_side_drift": 0,
+            "mode": "incremental",
+            "base_spec_version": 1,
+            "changed_source_ids": [
+              "U1EM1_CM3"
+            ],
+            "reverse_protection": {
+              "status": "pending_real_machine",
+              "allowed": null,
+              "drift_count": 0,
+              "tia_side_drift": 0,
+              "blocked_source_ids": [],
+              "reason": "未提供 TIA 侧块快照,本批次为离线校验;涉真机结论标 pending_real_machine,禁止宣称 L2/L4 通过或编译零错误(N9)"
+            },
+            "coverage_matrix": {
+              "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment_DB.scl",
+              "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ControlNodes.scl",
+              "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit_DB.scl",
+              "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_EmNodes.scl",
+              "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment.scl",
+              "FB::U1Em1_Station1_Sequence::Sequence::1011": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Sequence.scl",
+              "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit.scl",
+              "FC::U1Em1_Station1_StepToString::StepToString::1012": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_StepToString.scl",
+              "OB::U1Em0_General_Main::OB::1006": "derived/blocks/30_Equipment_Modules/U1Em0_General_Main.scl",
+              "OB::U1Em0_General_ProDiag::OB::1007": "derived/blocks/30_Equipment_Modules/U1Em0_General_ProDiag.scl",
+              "OB::U1Em0_General_Startup::OB::1005": "derived/blocks/30_Equipment_Modules/U1Em0_General_Startup.scl",
+              "OB::U1Em1_Station1_Main::OB::1011": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Main.scl",
+              "OB::U1Em1_Station1_ProDiag::OB::1012": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ProDiag.scl",
+              "OB::U1Em1_Station1_Startup::OB::1010": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Startup.scl",
+              "OB::U1_AssemblyCell_Main::OB::1001": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Main.scl",
+              "OB::U1_AssemblyCell_ProDiag::OB::1002": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_ProDiag.scl",
+              "OB::U1_AssemblyCell_Startup::OB::1000": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Startup.scl"
+            },
+            "orphan_blocks": [],
+            "drift_items": [],
+            "unmapped_spec_objects": [],
+            "ob_number_deviations": [],
+            "spec_hash": "sha256:52190cc0b1e0769d79f400d6b72ed8d59472f09dc20d7e0c69222a030a7b8605",
+            "spec_version": 2,
+            "framework_baseline_version": "af-basic-folder-1.0",
+            "product_hash": "sha256:298f37ac9cb22c2bc440863d8a344b09e74ac0632a2fa375a9421e15752563fc",
+            "sampled_source_ids": [
+              "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015",
+              "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013",
+              "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011",
+              "DB::U1_AssemblyCell_EmNodes::EmNodes::1010",
+              "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010",
+              "FB::U1Em1_Station1_Sequence::Sequence::1011",
+              "FB::U1_AssemblyCell_CallUnit::CallUnit::1001",
+              "FC::U1Em1_Station1_StepToString::StepToString::1012",
+              "OB::U1Em0_General_Main::OB::1006",
+              "OB::U1Em0_General_ProDiag::OB::1007",
+              "OB::U1Em0_General_Startup::OB::1005",
+              "OB::U1Em1_Station1_Main::OB::1011",
+              "OB::U1Em1_Station1_ProDiag::OB::1012",
+              "OB::U1Em1_Station1_Startup::OB::1010",
+              "OB::U1_AssemblyCell_Main::OB::1001",
+              "OB::U1_AssemblyCell_ProDiag::OB::1002",
+              "OB::U1_AssemblyCell_Startup::OB::1000"
+            ],
+            "pending_real_machine": true,
+            "notes": [
+              "离线校验:未提供 tia_side_snapshot,tia_side_drift 记 0 并标 pending_real_machine,禁止据此宣称真机通过",
+              "增量模式:变更块 100% 校验通过",
+              "增量模式:非变更块纳入全量抽检(本实现按全量四指标复核,安全侧更严)",
+              "ob_number_deviations 为空(仍显式留痕,不静默)"
+            ]
+          },
+          "session_handle": "gf-session:C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19"
+        },
+        "backup_sha256": "sha256:d97e0e2d04bf016da5580a05786744e352a8e152716c31983ca5d89f67d5808d"
+      },
+      "side_effect_counters": {
+        "ops": 0,
+        "disk_writes": 0,
+        "writebacks": 1,
+        "generations": 0
+      },
+      "zero_side_effects": false,
+      "pending_real_machine": false,
+      "xml_package_unverified": true,
+      "tia_written": true,
+      "archived": false,
+      "reloaded": false,
+      "project_recreated": false,
+      "note": "不归档 / 不重载 / 不新建项目；真机 L4 结论 pending_real_machine（N9）"
+    },
+    "summary": {
+      "ok": true,
+      "blocked": false,
+      "code": null,
+      "action": "C",
+      "mode": "incremental",
+      "base_spec_version": 1,
+      "changed_source_ids": [
+        "U1EM1_CM3"
+      ],
+      "reverse_protection": {
+        "status": "evaluated",
+        "allowed": true,
+        "drift_count": 0,
+        "tia_side_drift": 0,
+        "blocked_source_ids": [],
+        "reason": "TIA 侧块哈希与上次生成物一致,允许增量覆盖(D10 反向保护通过)"
+      },
+      "tia_side_drift": 0,
+      "ob_number_deviations": [],
+      "compile_ok": true,
+      "compile_diagnostics": {
+        "status": "compiled",
+        "error_count": 0,
+        "warnings": [],
+        "blocks": [],
+        "elapsed_ms": 200.41960000071413,
+        "tia_version": "V19",
+        "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19",
+        "static_gate_passed": true,
+        "compile_ok": true,
+        "tia_unavailable": false,
+        "pending_real_machine": true,
+        "xml_package_unverified": true,
+        "l2_status": "pending_real_machine",
+        "warning_note": "warning 单列，不并入 compile_ok（N9 / P0-A）",
+        "reason": ""
+      },
+      "compile_diagnostics_error_count": 0,
+      "step_order": [
+        "session_reuse",
+        "spec_diff",
+        "reverse_guard",
+        "diff_confirm",
+        "pre_write_backup",
+        "block_overwrite",
+        "compile_save",
+        "incremental_fidelity_pcec"
+      ],
+      "session_reused": false,
+      "open_count": 1,
+      "pcec_ledger_entries": 1,
+      "fidelity_report": {
+        "fidelity_ok": true,
+        "coverage": 1.0,
+        "orphan": 0,
+        "drift": 0,
+        "tia_side_drift": 0,
+        "mode": "incremental",
+        "base_spec_version": 1,
+        "changed_source_ids": [
+          "U1EM1_CM3"
+        ],
+        "reverse_protection": {
+          "status": "evaluated",
+          "allowed": true,
+          "drift_count": 0,
+          "tia_side_drift": 0,
+          "blocked_source_ids": [],
+          "reason": "TIA 侧块哈希与上次生成物一致,允许增量覆盖(D10 反向保护通过)"
+        },
+        "coverage_matrix": {
+          "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment_DB.scl",
+          "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ControlNodes.scl",
+          "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit_DB.scl",
+          "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_EmNodes.scl",
+          "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment.scl",
+          "FB::U1Em1_Station1_Sequence::Sequence::1011": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Sequence.scl",
+          "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit.scl",
+          "FC::U1Em1_Station1_StepToString::StepToString::1012": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_StepToString.scl",
+          "OB::U1Em0_General_Main::OB::1006": "derived/blocks/30_Equipment_Modules/U1Em0_General_Main.scl",
+          "OB::U1Em0_General_ProDiag::OB::1007": "derived/blocks/30_Equipment_Modules/U1Em0_General_ProDiag.scl",
+          "OB::U1Em0_General_Startup::OB::1005": "derived/blocks/30_Equipment_Modules/U1Em0_General_Startup.scl",
+          "OB::U1Em1_Station1_Main::OB::1011": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Main.scl",
+          "OB::U1Em1_Station1_ProDiag::OB::1012": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ProDiag.scl",
+          "OB::U1Em1_Station1_Startup::OB::1010": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Startup.scl",
+          "OB::U1_AssemblyCell_Main::OB::1001": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Main.scl",
+          "OB::U1_AssemblyCell_ProDiag::OB::1002": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_ProDiag.scl",
+          "OB::U1_AssemblyCell_Startup::OB::1000": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Startup.scl"
+        },
+        "orphan_blocks": [],
+        "drift_items": [],
+        "unmapped_spec_objects": [],
+        "ob_number_deviations": [],
+        "spec_hash": "sha256:52190cc0b1e0769d79f400d6b72ed8d59472f09dc20d7e0c69222a030a7b8605",
+        "spec_version": 2,
+        "framework_baseline_version": "af-basic-folder-1.0",
+        "product_hash": "sha256:298f37ac9cb22c2bc440863d8a344b09e74ac0632a2fa375a9421e15752563fc",
+        "sampled_source_ids": [
+          "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015",
+          "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013",
+          "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011",
+          "DB::U1_AssemblyCell_EmNodes::EmNodes::1010",
+          "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010",
+          "FB::U1Em1_Station1_Sequence::Sequence::1011",
+          "FB::U1_AssemblyCell_CallUnit::CallUnit::1001",
+          "FC::U1Em1_Station1_StepToString::StepToString::1012",
+          "OB::U1Em0_General_Main::OB::1006",
+          "OB::U1Em0_General_ProDiag::OB::1007",
+          "OB::U1Em0_General_Startup::OB::1005",
+          "OB::U1Em1_Station1_Main::OB::1011",
+          "OB::U1Em1_Station1_ProDiag::OB::1012",
+          "OB::U1Em1_Station1_Startup::OB::1010",
+          "OB::U1_AssemblyCell_Main::OB::1001",
+          "OB::U1_AssemblyCell_ProDiag::OB::1002",
+          "OB::U1_AssemblyCell_Startup::OB::1000"
+        ],
+        "pending_real_machine": false,
+        "notes": [
+          "增量模式:变更块 100% 校验通过",
+          "增量模式:非变更块纳入全量抽检(本实现按全量四指标复核,安全侧更严)",
+          "ob_number_deviations 为空(仍显式留痕,不静默)"
+        ]
+      },
+      "pending_real_machine": false,
+      "tia_written": true,
+      "rolled_back": false,
+      "zero_side_effects": false
+    },
+    "note": "run_action_c 八步（ACTION_C_STEPS）在 serve 常驻会话下真实跑通；步骤 3 反向保护、步骤 7 编译+保存、步骤 8 真实增量 FidelityChecker 均为真机产物"
+  },
+  "compile_raw_http_returns": [
+    {
+      "round": 1,
+      "raw": {
+        "ok": true,
+        "scope": "full_software",
+        "compile": {
+          "ok": true,
+          "apiAvailable": true,
+          "state": "Success",
+          "errorCount": 0,
+          "warningCount": 0,
+          "inconsistentBlocks": [
+            "Compiling finished (errors: 0; warnings: 0)"
+          ],
+          "message": "Compile State=Success errors=0 warnings=0"
+        }
+      },
+      "errorCount": 0,
+      "warningCount": 0,
+      "state": "Success"
+    },
+    {
+      "round": 2,
+      "raw": {
+        "ok": true,
+        "scope": "full_software",
+        "compile": {
+          "ok": true,
+          "apiAvailable": true,
+          "state": "Success",
+          "errorCount": 0,
+          "warningCount": 0,
+          "inconsistentBlocks": [
+            "Compiling finished (errors: 0; warnings: 0)"
+          ],
+          "message": "Compile State=Success errors=0 warnings=0"
+        }
+      },
+      "errorCount": 0,
+      "warningCount": 0,
+      "state": "Success"
+    },
+    {
+      "round": 3,
+      "raw": {
+        "ok": true,
+        "scope": "full_software",
+        "compile": {
+          "ok": true,
+          "apiAvailable": true,
+          "state": "Success",
+          "errorCount": 0,
+          "warningCount": 0,
+          "inconsistentBlocks": [
+            "Compiling finished (errors: 0; warnings: 0)"
+          ],
+          "message": "Compile State=Success errors=0 warnings=0"
+        }
+      },
+      "errorCount": 0,
+      "warningCount": 0,
+      "state": "Success"
+    },
+    {
+      "round": 4,
+      "raw": {
+        "ok": true,
+        "scope": "full_software",
+        "compile": {
+          "ok": true,
+          "apiAvailable": true,
+          "state": "Success",
+          "errorCount": 0,
+          "warningCount": 0,
+          "inconsistentBlocks": [
+            "Compiling finished (errors: 0; warnings: 0)"
+          ],
+          "message": "Compile State=Success errors=0 warnings=0"
+        }
+      },
+      "errorCount": 0,
+      "warningCount": 0,
+      "state": "Success"
+    }
+  ],
+  "compile_summary": {
+    "rounds": 4,
+    "all_errorCount": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "all_warningCount": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "all_state": [
+      "Success",
+      "Success",
+      "Success",
+      "Success"
+    ],
+    "note": "1 次 Action C 步骤 7 + 3 次 run_incremental_writebacks 等价编排；4 次 /compile-plc 原始返回均 0/0 Success"
+  },
+  "fast_writeback_raw_returns": [
+    {
+      "round": 1,
+      "raw": {
+        "success": true,
+        "elapsedMilliseconds": 15777,
+        "writtenBlockCount": 0,
+        "skippedUnchangedBlocks": 0,
+        "errors": [],
+        "exclusiveAccessUsed": true,
+        "compileScope": "full_software_fallback",
+        "compileScopeNote": "Incremental compile targets did not expose ICompilable (block 'W2_ActionC_Bridge1' not found under PlcSoftware.BlockGroup; skipped); fell back to full PlcSoftware.Compile().",
+        "snapshotHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19 在 2026-11-07T11:03:51.0190625Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc1.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-07T11:03:51.0190625Z；项目最后写入(UTC)：2026-10-21T06:26:17.6124396Z。",
+        "snapshot": {
+          "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19",
+          "capturedAtUtc": "2026-11-07T11:03:51.0190625Z",
+          "projectLastWriteUtc": "2026-10-21T06:26:17.6124396Z",
+          "sclPath": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc1.scl",
+          "restoreHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19 在 2026-11-07T11:03:51.0190625Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc1.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-07T11:03:51.0190625Z；项目最后写入(UTC)：2026-10-21T06:26:17.6124396Z。"
+        },
+        "generateApi": "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
+        "generatedNames": [],
+        "message": "Mega-Source 单次生成 0 块，编译范围=full_software_fallback，零错误。",
+        "ok": true
+      }
+    },
+    {
+      "round": 2,
+      "raw": {
+        "success": true,
+        "elapsedMilliseconds": 358,
+        "writtenBlockCount": 0,
+        "skippedUnchangedBlocks": 0,
+        "errors": [],
+        "exclusiveAccessUsed": true,
+        "compileScope": "incremental_blocks",
+        "compileScopeNote": "No UDT/GlobalDB change: compiled 1 affected PlcBlock(s) via GetService<ICompilable>(). ",
+        "snapshotHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19 在 2026-11-07T11:04:07.3671338Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc1.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-07T11:04:07.3671338Z；项目最后写入(UTC)：2026-11-07T11:04:07.3224798Z。",
+        "snapshot": {
+          "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19",
+          "capturedAtUtc": "2026-11-07T11:04:07.3671338Z",
+          "projectLastWriteUtc": "2026-11-07T11:04:07.3224798Z",
+          "sclPath": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc1.scl",
+          "restoreHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19 在 2026-11-07T11:04:07.3671338Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc1.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-07T11:04:07.3671338Z；项目最后写入(UTC)：2026-11-07T11:04:07.3224798Z。"
+        },
+        "generateApi": "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
+        "generatedNames": [],
+        "message": "Mega-Source 单次生成 0 块，编译范围=incremental_blocks，零错误。",
+        "ok": true
+      }
+    },
+    {
+      "round": 3,
+      "raw": {
+        "success": true,
+        "elapsedMilliseconds": 276,
+        "writtenBlockCount": 0,
+        "skippedUnchangedBlocks": 0,
+        "errors": [],
+        "exclusiveAccessUsed": true,
+        "compileScope": "incremental_blocks",
+        "compileScopeNote": "No UDT/GlobalDB change: compiled 1 affected PlcBlock(s) via GetService<ICompilable>(). ",
+        "snapshotHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19 在 2026-11-07T11:04:08.0320065Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc2.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-07T11:04:08.0320065Z；项目最后写入(UTC)：2026-11-07T11:04:07.9755573Z。",
+        "snapshot": {
+          "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19",
+          "capturedAtUtc": "2026-11-07T11:04:08.0320065Z",
+          "projectLastWriteUtc": "2026-11-07T11:04:07.9755573Z",
+          "sclPath": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc2.scl",
+          "restoreHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19 在 2026-11-07T11:04:08.0320065Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc2.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-07T11:04:08.0320065Z；项目最后写入(UTC)：2026-11-07T11:04:07.9755573Z。"
+        },
+        "generateApi": "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
+        "generatedNames": [],
+        "message": "Mega-Source 单次生成 0 块，编译范围=incremental_blocks，零错误。",
+        "ok": true
+      }
+    },
+    {
+      "round": 4,
+      "raw": {
+        "success": true,
+        "elapsedMilliseconds": 261,
+        "writtenBlockCount": 0,
+        "skippedUnchangedBlocks": 0,
+        "errors": [],
+        "exclusiveAccessUsed": true,
+        "compileScope": "incremental_blocks",
+        "compileScopeNote": "No UDT/GlobalDB change: compiled 1 affected PlcBlock(s) via GetService<ICompilable>(). ",
+        "snapshotHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19 在 2026-11-07T11:04:08.6302798Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc3.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-07T11:04:08.6302798Z；项目最后写入(UTC)：2026-11-07T11:04:08.5867199Z。",
+        "snapshot": {
+          "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19",
+          "capturedAtUtc": "2026-11-07T11:04:08.6302798Z",
+          "projectLastWriteUtc": "2026-11-07T11:04:08.5867199Z",
+          "sclPath": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc3.scl",
+          "restoreHint": "本层不复制 .zap、不改动任何项目文件；真实备份/归档由上层编排负责。若需回滚本次回写，按以下顺序执行：\n1) 首选：在 TIA Portal 中关闭项目并选择『不保存』，撤销尚未保存的 GenerateBlocksFromSource 变更；\n2) 若已保存：用回写前由上层生成的 .zap* 归档，经 TIA Portal『项目 > 归档 > 恢复』或 Openness Projects.Retrieve(FileInfo, DirectoryInfo) 覆盖 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19；\n3) 若使用版本管理：检出 C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19 在 2026-11-07T11:04:08.6302798Z 之前的提交；\n4) 若仅需撤销本批次：删除外部源 C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2_FC_Inc3.scl 生成的程序块，再执行全量 PlcSoftware 编译。\n快照捕获时间(UTC)：2026-11-07T11:04:08.6302798Z；项目最后写入(UTC)：2026-11-07T11:04:08.5867199Z。"
+        },
+        "generateApi": "ExternalSourceGroup.ExternalSources.CreateFromFile + GenerateBlocksFromSource",
+        "generatedNames": [],
+        "message": "Mega-Source 单次生成 0 块，编译范围=incremental_blocks，零错误。",
+        "ok": true
+      }
+    }
+  ],
+  "fast_writeback_honest_note": "4 次真实 /fast-writeback 均 success=true，但 C# 返回 writtenBlockCount=0 / generatedNames=[]（与 M/R 观察一致，如实留痕、未掩盖）；Action C 那次 compileScope=full_software_fallback，等价编排 3 次为 incremental_blocks。serve 停止后的真实 list-blocks 佐证 3 个 FC 块（W2_FC_Inc1/2/3）确已入项目（见 tia_side_block_evidence）。",
+  "session_accounting": {
+    "open_call_count": 1,
+    "open_raw_returns": [
+      {
+        "ok": true,
+        "project": {
+          "ok": true,
+          "projectPath": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19",
+          "projectName": "CanvasE2E",
+          "plcName": "PLC_1",
+          "deviceName": "PLC_1",
+          "message": "Project opened via TIA Openness."
+        },
+        "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19"
+      }
+    ],
+    "handle_reused": true,
+    "health_openProject_unique_paths": [
+      "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19"
+    ],
+    "close_calls": 0,
+    "create_project_calls": 0,
+    "archive_project_calls": 0,
+    "note": "全程不 create-project / 不 archive / 不重载；/close 仅在 run_serve_case finally 由 HTTP 直接调用（不计入编排）"
+  },
+  "g_orchestrator": {
+    "ok": true,
+    "status": "ok",
+    "mode": "incremental",
+    "increment_count": 3,
+    "pcec_records": 3,
+    "pcec_change_ids": [
+      "chg-24abfc5348a6",
+      "chg-ca99ed54bf48",
+      "chg-147d759d3cc1"
+    ],
+    "sequence": [
+      [
+        "open_project",
+        0
+      ],
+      [
+        "fast_writeback",
+        1
+      ],
+      [
+        "compile_plc",
+        1
+      ],
+      [
+        "save_project",
+        1
+      ],
+      [
+        "pcec",
+        1
+      ],
+      [
+        "fast_writeback",
+        2
+      ],
+      [
+        "compile_plc",
+        2
+      ],
+      [
+        "save_project",
+        2
+      ],
+      [
+        "pcec",
+        2
+      ],
+      [
+        "fast_writeback",
+        3
+      ],
+      [
+        "compile_plc",
+        3
+      ],
+      [
+        "save_project",
+        3
+      ],
+      [
+        "pcec",
+        3
+      ]
+    ],
+    "diagnostics": [
+      {
+        "error_count": 0,
+        "warnings": [],
+        "blocks": [],
+        "elapsed_ms": 140.34489999994548,
+        "tia_version": "V19",
+        "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19",
+        "static_gate_passed": true,
+        "compile_ok": true,
+        "status": "compiled",
+        "tia_unavailable": false,
+        "pending_real_machine": false,
+        "xml_package_unverified": true,
+        "reason": ""
+      },
+      {
+        "error_count": 0,
+        "warnings": [],
+        "blocks": [],
+        "elapsed_ms": 197.11689999985538,
+        "tia_version": "V19",
+        "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19",
+        "static_gate_passed": true,
+        "compile_ok": true,
+        "status": "compiled",
+        "tia_unavailable": false,
+        "pending_real_machine": false,
+        "xml_package_unverified": true,
+        "reason": ""
+      },
+      {
+        "error_count": 0,
+        "warnings": [],
+        "blocks": [],
+        "elapsed_ms": 176.39150000013615,
+        "tia_version": "V19",
+        "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19",
+        "static_gate_passed": true,
+        "compile_ok": true,
+        "status": "compiled",
+        "tia_unavailable": false,
+        "pending_real_machine": false,
+        "xml_package_unverified": true,
+        "reason": ""
+      }
+    ],
+    "session_handle": "gf-session:C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19",
+    "http_status": 200,
+    "pending_real_machine": true,
+    "l2_status": "pending_real_machine"
+  },
+  "pcec_ledger": {
+    "dir": "C:/Users/vboxuser/AppData/Local/Temp/gf_inc_chain_71q7e1k_/changes",
+    "change_ids_expected": [
+      "chg-24abfc5348a6",
+      "chg-ca99ed54bf48",
+      "chg-147d759d3cc1"
+    ],
+    "change_ids_present_on_disk": [
+      "chg-24abfc5348a6",
+      "chg-ca99ed54bf48",
+      "chg-147d759d3cc1"
+    ],
+    "present_detail": [
+      {
+        "change_id": "chg-24abfc5348a6",
+        "meta_json": true,
+        "change_json": true
+      },
+      {
+        "change_id": "chg-ca99ed54bf48",
+        "meta_json": true,
+        "change_json": true
+      },
+      {
+        "change_id": "chg-147d759d3cc1",
+        "meta_json": true,
+        "change_json": true
+      }
+    ],
+    "count_on_disk": 3
+  },
+  "pcec_count": 3,
+  "pcec_ledger_note": "G 编排 pcec_records=3，磁盘 <PLC_WORK_DIR>/changes 下 3/3 落盘（meta.json + change.json 齐全）；另 Action C 步骤 8 自身 Greenfield 增量账本 1 条（pcec_ledger_entries=1，内存态留痕）。",
+  "tia_side_block_evidence": {
+    "list_blocks_after_serve_stop": {
+      "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/w2_list_blocks_after_stop.json",
+      "repro_command": "timeout -k 5 180 TiaOpenness.Server.exe --cli list-blocks --project C:/Users/vboxuser/AppData/Local/Temp/gf_real_w4_20261107/W2-incremental/proj/CanvasE2E.ap19",
+      "note": "serve 停止、项目文件解锁后独立 CLI 真实返回：count=5，OB=1 / FB=1 / FC=3，三个 W2_FC_Inc1/2/3 (FC,1/2/3,SCL) 为本次增量真实写入的块"
+    },
+    "list_blocks_during_serve_failure": {
+      "exit_code": 3,
+      "raw_original": {
+        "ok": false,
+        "error": {
+          "code": "openness_error",
+          "message": "Error when calling method 'Open' of type 'Siemens.Engineering.ProjectComposition'.\r\n\r\nUnable to open the project under path 'C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19'.\r\n\r\nAn error occurred while opening the project\r\nThe project/library C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_real_w4_20261107\\W2-incremental\\proj\\CanvasE2E.ap19 cannot be accessed. It has already been opened by user vboxuser on computer WIN. Note: If the application was not correctly closed, the open projects and libraries can only be opened again after a 2 minute delay.",
+          "retryable": false
+        }
+      },
+      "note": "过程性失败如实留痕：serve 常驻会话持有项目时，one-shot CLI 无法并发打开同一 .ap19（openness_error: already opened by user）。属时序/占用，非能力缺失；serve 停止后补测成功。"
+    }
+  },
+  "reverse_guard_verdict": {
+    "allowed": true,
+    "drift_count": 0,
+    "tia_side_drift": 0,
+    "blocked_source_ids": [],
+    "reason": "TIA 侧块哈希与上次生成物一致,允许增量覆盖(D10 反向保护通过)",
+    "function": "plc_engine.af.reverse_guard.check_reverse_guard（产品纯函数，对真实块内容哈希快照计算，非 mock）",
+    "input": {
+      "last_generated": {
+        "UDT::AF_typeAnalogInput::UDT::1": "sha256:e9ccd9acef7b2fbfa4c259519c30beae594c17f80a0c5efdd755719cdc855fa0",
+        "UDT::AF_typeAnalogOutput::UDT::1": "sha256:7895b44a5acd9c9a9e1c028b230dde042340b7bb47a669930a981825d628ad67",
+        "UDT::AF_typeAxisControl::UDT::1": "sha256:4061926d668e31b57cde41b1f192d7c34f9c2a778e54ef4e1e7c0f16b27ede93",
+        "UDT::AF_typeDigitalSignal::UDT::1": "sha256:10c390dff36a5865d3cebbab4091c62cd5a27b6d0259d04faccf50fa9950a603",
+        "UDT::AF_typeGeneralControl::UDT::1": "sha256:3dc85280bc0b7b09d75e55ba0520eafcc059c0f40fe8f2e63edc8281d5084fef",
+        "UDT::AF_typeJobs::UDT::1": "sha256:14c0d969ed51311fbe0fc9a24efd435736c7f614b503ed6a17a55a187d3a39c0",
+        "UDT::AF_typeSequence::UDT::1": "sha256:8298ef33d0d6448e78baaf7bc383adc9a34f699bc7d5ec1f57f5eb816dde0c4a",
+        "UDT::AF_typeSimpleActuator::UDT::1": "sha256:f5b3db928e1341614dde54e9cdcfc68af97262d3f310ee89dae89a3074c4b15c",
+        "UDT::AF_typeTwoWayActuator::UDT::1": "sha256:b5099b5bb55ef7f55ca58d860b48732c248687eabc377be8f865dc96e2e2940d",
+        "OB::U1Em0_General_Main::OB::1006": "sha256:61a710b9e9a8f96401a99c21486554e0e12c27bc61f4431a8b602396afbf10a0",
+        "OB::U1Em0_General_ProDiag::OB::1007": "sha256:555d6c4b9f39b842376258ed308f8c0d350bed9726c77df17939826966cb9b97",
+        "OB::U1Em0_General_Startup::OB::1005": "sha256:bc29666f8eec3cd4cb48de57a6a06f6177fd748e7ddd3b40d09620785a9739c9",
+        "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": "sha256:7ac66de8bea749cac4bb786e9704c8aa3e6790e2f0f73064a56c5b470fc477e4",
+        "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": "sha256:50c42c7f6271bfb9e3a3c9ebe8592b6b3b6f07fdf35a42790cec17298d3be0c2",
+        "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": "sha256:4b8bf4c3b34e5ee9eb199c6f545f04b6a228c2dec60f9969a794488b00ebb0a4",
+        "OB::U1Em1_Station1_Main::OB::1011": "sha256:12ab7e578d8b58050258229dd2c1a9ac1e32a3327d867100f207e5d29de99fe5",
+        "OB::U1Em1_Station1_ProDiag::OB::1012": "sha256:16591c4f48e152b87b3a19b430d200266b7b96e21a2212bd75a81a1c8b0475b0",
+        "FB::U1Em1_Station1_Sequence::Sequence::1011": "sha256:e35766728b875c4ae39da52c9c655445fca8210bd09426d885eaffe196aab593",
+        "OB::U1Em1_Station1_Startup::OB::1010": "sha256:c5f38c9737fbe1fafcf72c10af10862d2cdc72b446c2f63a975d1f68b634dc70",
+        "FC::U1Em1_Station1_StepToString::StepToString::1012": "sha256:99cda706125ff2f8e9a0daa212dce70bf6c6c89c204671dc98941db2793cc8d8",
+        "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": "sha256:8145c68245e3e6530d4f2648c931de11cb24d8440e9f4ce89f6590b6ad7f87b2",
+        "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": "sha256:0fc96af62378db3b8de4d63dd782cbb65670895a75c16844c5fccccff551dc25",
+        "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": "sha256:c2c81e9ac6b109d8aebbc47f1b9ed04ec56582c873673f3be62328bc5d112fed",
+        "OB::U1_AssemblyCell_Main::OB::1001": "sha256:8992516ba213b72526cf8bf023913ff6f3b56654e80f34746dd6aa18dd507af2",
+        "OB::U1_AssemblyCell_ProDiag::OB::1002": "sha256:6c2289a5711251f3da23f1197188d3b73b775519126942275eb749e2d18626ec",
+        "OB::U1_AssemblyCell_Startup::OB::1000": "sha256:3d76ffb04d5483a87f24614a8cf2aff3085c49e8bed05b6f2e476ceb89fd11ef"
+      },
+      "tia_side_snapshot": {
+        "UDT::AF_typeAnalogInput::UDT::1": "sha256:e9ccd9acef7b2fbfa4c259519c30beae594c17f80a0c5efdd755719cdc855fa0",
+        "UDT::AF_typeAnalogOutput::UDT::1": "sha256:7895b44a5acd9c9a9e1c028b230dde042340b7bb47a669930a981825d628ad67",
+        "UDT::AF_typeAxisControl::UDT::1": "sha256:4061926d668e31b57cde41b1f192d7c34f9c2a778e54ef4e1e7c0f16b27ede93",
+        "UDT::AF_typeDigitalSignal::UDT::1": "sha256:10c390dff36a5865d3cebbab4091c62cd5a27b6d0259d04faccf50fa9950a603",
+        "UDT::AF_typeGeneralControl::UDT::1": "sha256:3dc85280bc0b7b09d75e55ba0520eafcc059c0f40fe8f2e63edc8281d5084fef",
+        "UDT::AF_typeJobs::UDT::1": "sha256:14c0d969ed51311fbe0fc9a24efd435736c7f614b503ed6a17a55a187d3a39c0",
+        "UDT::AF_typeSequence::UDT::1": "sha256:8298ef33d0d6448e78baaf7bc383adc9a34f699bc7d5ec1f57f5eb816dde0c4a",
+        "UDT::AF_typeSimpleActuator::UDT::1": "sha256:f5b3db928e1341614dde54e9cdcfc68af97262d3f310ee89dae89a3074c4b15c",
+        "UDT::AF_typeTwoWayActuator::UDT::1": "sha256:b5099b5bb55ef7f55ca58d860b48732c248687eabc377be8f865dc96e2e2940d",
+        "OB::U1Em0_General_Main::OB::1006": "sha256:61a710b9e9a8f96401a99c21486554e0e12c27bc61f4431a8b602396afbf10a0",
+        "OB::U1Em0_General_ProDiag::OB::1007": "sha256:555d6c4b9f39b842376258ed308f8c0d350bed9726c77df17939826966cb9b97",
+        "OB::U1Em0_General_Startup::OB::1005": "sha256:bc29666f8eec3cd4cb48de57a6a06f6177fd748e7ddd3b40d09620785a9739c9",
+        "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": "sha256:7ac66de8bea749cac4bb786e9704c8aa3e6790e2f0f73064a56c5b470fc477e4",
+        "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": "sha256:50c42c7f6271bfb9e3a3c9ebe8592b6b3b6f07fdf35a42790cec17298d3be0c2",
+        "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": "sha256:4b8bf4c3b34e5ee9eb199c6f545f04b6a228c2dec60f9969a794488b00ebb0a4",
+        "OB::U1Em1_Station1_Main::OB::1011": "sha256:12ab7e578d8b58050258229dd2c1a9ac1e32a3327d867100f207e5d29de99fe5",
+        "OB::U1Em1_Station1_ProDiag::OB::1012": "sha256:16591c4f48e152b87b3a19b430d200266b7b96e21a2212bd75a81a1c8b0475b0",
+        "FB::U1Em1_Station1_Sequence::Sequence::1011": "sha256:e35766728b875c4ae39da52c9c655445fca8210bd09426d885eaffe196aab593",
+        "OB::U1Em1_Station1_Startup::OB::1010": "sha256:c5f38c9737fbe1fafcf72c10af10862d2cdc72b446c2f63a975d1f68b634dc70",
+        "FC::U1Em1_Station1_StepToString::StepToString::1012": "sha256:99cda706125ff2f8e9a0daa212dce70bf6c6c89c204671dc98941db2793cc8d8",
+        "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": "sha256:8145c68245e3e6530d4f2648c931de11cb24d8440e9f4ce89f6590b6ad7f87b2",
+        "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": "sha256:0fc96af62378db3b8de4d63dd782cbb65670895a75c16844c5fccccff551dc25",
+        "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": "sha256:c2c81e9ac6b109d8aebbc47f1b9ed04ec56582c873673f3be62328bc5d112fed",
+        "OB::U1_AssemblyCell_Main::OB::1001": "sha256:8992516ba213b72526cf8bf023913ff6f3b56654e80f34746dd6aa18dd507af2",
+        "OB::U1_AssemblyCell_ProDiag::OB::1002": "sha256:6c2289a5711251f3da23f1197188d3b73b775519126942275eb749e2d18626ec",
+        "OB::U1_AssemblyCell_Startup::OB::1000": "sha256:3d76ffb04d5483a87f24614a8cf2aff3085c49e8bed05b6f2e476ceb89fd11ef"
+      }
+    },
+    "action_c_step3_reverse_protection": {
+      "status": "evaluated",
+      "allowed": true,
+      "drift_count": 0,
+      "tia_side_drift": 0,
+      "blocked_source_ids": [],
+      "reason": "TIA 侧块哈希与上次生成物一致,允许增量覆盖(D10 反向保护通过)"
+    },
+    "note": "Action C 步骤 3 内部亦对同一真实块哈希调用 check_reverse_guard；两处结果一致"
+  },
+  "incremental_fidelity_recheck": {
+    "source": "Action C 第 8 步真实增量 FidelityChecker(mode=incremental, diff=真实SpecDiff, tia_side_snapshot=真机块哈希)",
+    "action_c_step8_source": "run_action_c 第 8 步（真实 artifacts + 真实 diff + 真机 tia_side_snapshot）",
+    "action_c_fidelity_ok": true,
+    "action_c_coverage": 1.0,
+    "action_c_orphan": 0,
+    "action_c_drift": 0,
+    "action_c_tia_side_drift": 0,
+    "action_c_reverse_protection": {
+      "status": "evaluated",
+      "allowed": true,
+      "drift_count": 0,
+      "tia_side_drift": 0,
+      "blocked_source_ids": [],
+      "reason": "TIA 侧块哈希与上次生成物一致,允许增量覆盖(D10 反向保护通过)"
+    },
+    "v_fidelity_ok": true,
+    "v_coverage": 1.0,
+    "v_orphan": 0,
+    "v_drift": 0,
+    "real_tia_side_drift": 0,
+    "recomputed_fidelity_ok": true,
+    "reverse_protection_real": {
+      "allowed": true,
+      "drift_count": 0,
+      "tia_side_drift": 0,
+      "blocked_source_ids": [],
+      "reason": "TIA 侧块哈希与上次生成物一致,允许增量覆盖(D10 反向保护通过)",
+      "function": "plc_engine.af.reverse_guard.check_reverse_guard（产品纯函数，对真实块内容哈希快照计算，非 mock）",
+      "input": {
+        "last_generated": {
+          "UDT::AF_typeAnalogInput::UDT::1": "sha256:e9ccd9acef7b2fbfa4c259519c30beae594c17f80a0c5efdd755719cdc855fa0",
+          "UDT::AF_typeAnalogOutput::UDT::1": "sha256:7895b44a5acd9c9a9e1c028b230dde042340b7bb47a669930a981825d628ad67",
+          "UDT::AF_typeAxisControl::UDT::1": "sha256:4061926d668e31b57cde41b1f192d7c34f9c2a778e54ef4e1e7c0f16b27ede93",
+          "UDT::AF_typeDigitalSignal::UDT::1": "sha256:10c390dff36a5865d3cebbab4091c62cd5a27b6d0259d04faccf50fa9950a603",
+          "UDT::AF_typeGeneralControl::UDT::1": "sha256:3dc85280bc0b7b09d75e55ba0520eafcc059c0f40fe8f2e63edc8281d5084fef",
+          "UDT::AF_typeJobs::UDT::1": "sha256:14c0d969ed51311fbe0fc9a24efd435736c7f614b503ed6a17a55a187d3a39c0",
+          "UDT::AF_typeSequence::UDT::1": "sha256:8298ef33d0d6448e78baaf7bc383adc9a34f699bc7d5ec1f57f5eb816dde0c4a",
+          "UDT::AF_typeSimpleActuator::UDT::1": "sha256:f5b3db928e1341614dde54e9cdcfc68af97262d3f310ee89dae89a3074c4b15c",
+          "UDT::AF_typeTwoWayActuator::UDT::1": "sha256:b5099b5bb55ef7f55ca58d860b48732c248687eabc377be8f865dc96e2e2940d",
+          "OB::U1Em0_General_Main::OB::1006": "sha256:61a710b9e9a8f96401a99c21486554e0e12c27bc61f4431a8b602396afbf10a0",
+          "OB::U1Em0_General_ProDiag::OB::1007": "sha256:555d6c4b9f39b842376258ed308f8c0d350bed9726c77df17939826966cb9b97",
+          "OB::U1Em0_General_Startup::OB::1005": "sha256:bc29666f8eec3cd4cb48de57a6a06f6177fd748e7ddd3b40d09620785a9739c9",
+          "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": "sha256:7ac66de8bea749cac4bb786e9704c8aa3e6790e2f0f73064a56c5b470fc477e4",
+          "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": "sha256:50c42c7f6271bfb9e3a3c9ebe8592b6b3b6f07fdf35a42790cec17298d3be0c2",
+          "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": "sha256:4b8bf4c3b34e5ee9eb199c6f545f04b6a228c2dec60f9969a794488b00ebb0a4",
+          "OB::U1Em1_Station1_Main::OB::1011": "sha256:12ab7e578d8b58050258229dd2c1a9ac1e32a3327d867100f207e5d29de99fe5",
+          "OB::U1Em1_Station1_ProDiag::OB::1012": "sha256:16591c4f48e152b87b3a19b430d200266b7b96e21a2212bd75a81a1c8b0475b0",
+          "FB::U1Em1_Station1_Sequence::Sequence::1011": "sha256:e35766728b875c4ae39da52c9c655445fca8210bd09426d885eaffe196aab593",
+          "OB::U1Em1_Station1_Startup::OB::1010": "sha256:c5f38c9737fbe1fafcf72c10af10862d2cdc72b446c2f63a975d1f68b634dc70",
+          "FC::U1Em1_Station1_StepToString::StepToString::1012": "sha256:99cda706125ff2f8e9a0daa212dce70bf6c6c89c204671dc98941db2793cc8d8",
+          "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": "sha256:8145c68245e3e6530d4f2648c931de11cb24d8440e9f4ce89f6590b6ad7f87b2",
+          "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": "sha256:0fc96af62378db3b8de4d63dd782cbb65670895a75c16844c5fccccff551dc25",
+          "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": "sha256:c2c81e9ac6b109d8aebbc47f1b9ed04ec56582c873673f3be62328bc5d112fed",
+          "OB::U1_AssemblyCell_Main::OB::1001": "sha256:8992516ba213b72526cf8bf023913ff6f3b56654e80f34746dd6aa18dd507af2",
+          "OB::U1_AssemblyCell_ProDiag::OB::1002": "sha256:6c2289a5711251f3da23f1197188d3b73b775519126942275eb749e2d18626ec",
+          "OB::U1_AssemblyCell_Startup::OB::1000": "sha256:3d76ffb04d5483a87f24614a8cf2aff3085c49e8bed05b6f2e476ceb89fd11ef"
+        },
+        "tia_side_snapshot": {
+          "UDT::AF_typeAnalogInput::UDT::1": "sha256:e9ccd9acef7b2fbfa4c259519c30beae594c17f80a0c5efdd755719cdc855fa0",
+          "UDT::AF_typeAnalogOutput::UDT::1": "sha256:7895b44a5acd9c9a9e1c028b230dde042340b7bb47a669930a981825d628ad67",
+          "UDT::AF_typeAxisControl::UDT::1": "sha256:4061926d668e31b57cde41b1f192d7c34f9c2a778e54ef4e1e7c0f16b27ede93",
+          "UDT::AF_typeDigitalSignal::UDT::1": "sha256:10c390dff36a5865d3cebbab4091c62cd5a27b6d0259d04faccf50fa9950a603",
+          "UDT::AF_typeGeneralControl::UDT::1": "sha256:3dc85280bc0b7b09d75e55ba0520eafcc059c0f40fe8f2e63edc8281d5084fef",
+          "UDT::AF_typeJobs::UDT::1": "sha256:14c0d969ed51311fbe0fc9a24efd435736c7f614b503ed6a17a55a187d3a39c0",
+          "UDT::AF_typeSequence::UDT::1": "sha256:8298ef33d0d6448e78baaf7bc383adc9a34f699bc7d5ec1f57f5eb816dde0c4a",
+          "UDT::AF_typeSimpleActuator::UDT::1": "sha256:f5b3db928e1341614dde54e9cdcfc68af97262d3f310ee89dae89a3074c4b15c",
+          "UDT::AF_typeTwoWayActuator::UDT::1": "sha256:b5099b5bb55ef7f55ca58d860b48732c248687eabc377be8f865dc96e2e2940d",
+          "OB::U1Em0_General_Main::OB::1006": "sha256:61a710b9e9a8f96401a99c21486554e0e12c27bc61f4431a8b602396afbf10a0",
+          "OB::U1Em0_General_ProDiag::OB::1007": "sha256:555d6c4b9f39b842376258ed308f8c0d350bed9726c77df17939826966cb9b97",
+          "OB::U1Em0_General_Startup::OB::1005": "sha256:bc29666f8eec3cd4cb48de57a6a06f6177fd748e7ddd3b40d09620785a9739c9",
+          "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": "sha256:7ac66de8bea749cac4bb786e9704c8aa3e6790e2f0f73064a56c5b470fc477e4",
+          "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": "sha256:50c42c7f6271bfb9e3a3c9ebe8592b6b3b6f07fdf35a42790cec17298d3be0c2",
+          "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": "sha256:4b8bf4c3b34e5ee9eb199c6f545f04b6a228c2dec60f9969a794488b00ebb0a4",
+          "OB::U1Em1_Station1_Main::OB::1011": "sha256:12ab7e578d8b58050258229dd2c1a9ac1e32a3327d867100f207e5d29de99fe5",
+          "OB::U1Em1_Station1_ProDiag::OB::1012": "sha256:16591c4f48e152b87b3a19b430d200266b7b96e21a2212bd75a81a1c8b0475b0",
+          "FB::U1Em1_Station1_Sequence::Sequence::1011": "sha256:e35766728b875c4ae39da52c9c655445fca8210bd09426d885eaffe196aab593",
+          "OB::U1Em1_Station1_Startup::OB::1010": "sha256:c5f38c9737fbe1fafcf72c10af10862d2cdc72b446c2f63a975d1f68b634dc70",
+          "FC::U1Em1_Station1_StepToString::StepToString::1012": "sha256:99cda706125ff2f8e9a0daa212dce70bf6c6c89c204671dc98941db2793cc8d8",
+          "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": "sha256:8145c68245e3e6530d4f2648c931de11cb24d8440e9f4ce89f6590b6ad7f87b2",
+          "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": "sha256:0fc96af62378db3b8de4d63dd782cbb65670895a75c16844c5fccccff551dc25",
+          "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": "sha256:c2c81e9ac6b109d8aebbc47f1b9ed04ec56582c873673f3be62328bc5d112fed",
+          "OB::U1_AssemblyCell_Main::OB::1001": "sha256:8992516ba213b72526cf8bf023913ff6f3b56654e80f34746dd6aa18dd507af2",
+          "OB::U1_AssemblyCell_ProDiag::OB::1002": "sha256:6c2289a5711251f3da23f1197188d3b73b775519126942275eb749e2d18626ec",
+          "OB::U1_AssemblyCell_Startup::OB::1000": "sha256:3d76ffb04d5483a87f24614a8cf2aff3085c49e8bed05b6f2e476ceb89fd11ef"
+        }
+      },
+      "action_c_step3_reverse_protection": {
+        "status": "evaluated",
+        "allowed": true,
+        "drift_count": 0,
+        "tia_side_drift": 0,
+        "blocked_source_ids": [],
+        "reason": "TIA 侧块哈希与上次生成物一致,允许增量覆盖(D10 反向保护通过)"
+      },
+      "note": "Action C 步骤 3 内部亦对同一真实块哈希调用 check_reverse_guard；两处结果一致"
+    },
+    "ob_number_deviations": [],
+    "ob_number_deviations_note": "显式留痕（即使为空也不静默）：属不纳入 1:1 的域，不参与 fidelity_ok",
+    "honest_note": "四指标取自 V 用真实 v2 派生产物 + 真实 diff 跑的增量 FidelityChecker(mode=incremental) 报告；重测后 Action C 第 8 步在真机会话下用真实派生产物再算一次增量 FidelityChecker（见 action_c_* 字段）；真机侧 tia_side_drift 由 check_reverse_guard 对真实块哈希快照复核为 0，并把 reverse_protection.allowed 从离线 null 补齐为 true。N9：fidelity_ok ≠ compile_ok。"
+  },
+  "six_fields_real": {
+    "mode": "incremental",
+    "base_spec_version": 1,
+    "changed_source_ids": [
+      "U1EM1_CM3"
+    ],
+    "reverse_protection": {
+      "status": "evaluated",
+      "allowed": true,
+      "drift_count": 0,
+      "tia_side_drift": 0,
+      "blocked_source_ids": [],
+      "reason": "TIA 侧块哈希与上次生成物一致,允许增量覆盖(D10 反向保护通过)"
+    },
+    "tia_side_drift": 0,
+    "ob_number_deviations": [],
+    "source": "run_action_c 真机八步结果（步骤 3 真实 reverse_guard + 第 8 步真实增量 FidelityChecker）",
+    "ob_number_deviations_note": "显式留痕（即使为空也不静默）：属不纳入 1:1 的域，不参与 fidelity_ok"
+  },
+  "v_incremental_fidelity_report_ref": {
+    "evidence_ref": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/evidence/uc16_incremental_spec_chain.json#fidelity_report_incremental",
+    "fidelity_ok": true,
+    "coverage": 1.0,
+    "orphan": 0,
+    "drift": 0,
+    "tia_side_drift": 0,
+    "mode": "incremental",
+    "base_spec_version": 1,
+    "changed_source_ids": [
+      "U1EM1_CM3"
+    ],
+    "reverse_protection": {
+      "status": "pending_real_machine",
+      "allowed": null,
+      "drift_count": 0,
+      "tia_side_drift": 0,
+      "blocked_source_ids": [],
+      "reason": "未提供 TIA 侧块快照,本批次为离线校验;涉真机结论标 pending_real_machine,禁止宣称 L2/L4 通过或编译零错误(N9)"
+    },
+    "coverage_matrix_entry_count": 17,
+    "product_hash": "sha256:298f37ac9cb22c2bc440863d8a344b09e74ac0632a2fa375a9421e15752563fc",
+    "ob_number_deviations": []
+  },
+  "uc16_closed": true,
+  "closed_criteria": {
+    "spec_chain_v1_v2_real": true,
+    "spec_diff_base_version_1_changed_source_ids": true,
+    "d11_confirmed_true": true,
+    "uc19_zero_side_effects_before_confirm": true,
+    "action_c_eight_steps_ok": true,
+    "open_once_handle_reused": true,
+    "close_create_archive_zero": true,
+    "compile_all_0_0": true,
+    "pcec_traceable": true,
+    "incremental_fidelity_ok": true,
+    "reverse_protection_allowed_true_real": true,
+    "tia_side_drift_0": true,
+    "ob_number_deviations_traced": true
+  },
+  "honest_boundary": [
+    "命名空间诚实：SpecDiff.changed_source_ids 是 IR 层 id（U1EM1_CM3），真机块 / artifacts 是派生产物层（DB::/FB::/OB:: 及 W2_FC_Inc* SCL 外部源）；两者命名空间不同，不假装逐块一一对应。真机覆盖的是经 SclBridgingPort 等价映射后的 SCL 外部源块（W2_FC_Inc1/2/3）+ Action C 桥接块，等价依据是『最小可编译 SCL 外部源变体代替 IR 层变更的块级覆盖』（与 M/R 同口径），见 scl_bridge_log / scl_equivalence。",
+    "Action C 主路径首跑因 IR 层 diff 无 scl_path 被 C# invalid_argument 拒绝并 GF_ACTION_C_ROLLBACK（零副作用）；重跑用运行时桥接接通。首跑原始返回保留在 first-attempt，不冒充首跑即通过。",
+    "fidelity_ok（V 真实增量报告 + Action C 第 8 步真实增量 FidelityChecker）与 compile_ok 严格分离（N9）；产品 compile_diagnostics 仍保留 pending_real_machine=true / l2_status=pending_real_machine，本 Agent 不标 L2/L4 通过。",
+    "tia_side_snapshot 为真实派生产物 blocks_manifest / SCL 外部源内容哈希，非从 TIA 工程对象直接读回的块对象哈希；TIA 侧未做手工改动 → 与上次生成物一致（R3 同口径）；check_reverse_guard 为产品纯函数对真实内容哈希计算，非 mock。",
+    "ob_number_deviations 显式留痕（即使为空也写 note），不参与 fidelity_ok。",
+    "warning 单列不并入成功；不宣称 M4 通过或代签；P0-D 文件夹版为用户拍板，本 Agent 只记录不重新论证。"
+  ],
+  "repro_commands": [
+    "cd \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project\" && \"C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/.venv/Scripts/python.exe\" tools/run_batch4_real_machine.py --only W2",
+    "set PLC_WORK_DIR=C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_inc_chain_71q7e1k_（复用 V 的 specs/v1.json / specs/v2.json，不重新生成会话）",
+    "serve --host 127.0.0.1 --port 8791 → POST /open 一次 → run_action_c(confirmed=true, port=SclBridgingPort→SessionModeTiaPort, diff=真实SpecDiff, tia_side_snapshot=真实块哈希) → compile-plc → save（SclBridgingPort 为运行时等价映射，见 scl_bridge_log）",
+    "run_incremental_writebacks(port, 3×带真实 SCL 源的 increments, record_pcec=True) → 3× compile 0/0 + PCEC",
+    "check_reverse_guard(last_generated, tia_side_snapshot) 计算 reverse_protection 真机值"
+  ],
+  "distinction_this_run_vs_referenced": {
+    "this_run_new_real_machine": [
+      "从磁盘直接复用 V 的 specs/v1.json / specs/v2.json（spec_hash 与 V 一致，不重新生成会话）",
+      "compute_spec_diff(v1,v2) 真实 base_spec_version=1 / changed_source_ids=[U1EM1_CM3]",
+      "UC-19 负例四计数器恒 0",
+      "serve 会话 /open=1、句柄复用、close/create/archive=0",
+      "Action C 八步真机跑通（首跑 GF_ACTION_C_ROLLBACK 如实留痕 + 重跑成功）",
+      "4× /compile-plc 真实 0/0 Success；PCEC 3 条真实落盘 3/3",
+      "reverse_protection.allowed=true 真机值（Action C 步骤 3 + 独立 check_reverse_guard）",
+      "第 8 步真实增量 FidelityChecker fidelity_ok=true/coverage=1.0/orphan=0/drift=0/tia_side_drift=0"
+    ],
+    "referenced_existing": [
+      "V：15-uc16-spec-chain.md、evidence/uc16_incremental_spec_chain.json、evidence/uc16_incremental_evidence_bundle.json、tools/run_incremental_spec_chain.py（阶段 A 离线规格链 / 增量 fidelity）",
+      "M：10-real-machine-acceptance.md、evidence/uc05_real_machine_report.json（serve 会话复用 / PCEC / D10 / UC-13 方法学）",
+      "R：12-batch3-real-machine.md、evidence/uc16_incremental_real.json（三次增量真机 / reverse_guard 口径）、tools/run_batch3_real_machine.py（CLI/serve/HTTP 复现方式）",
+      "K：08-k1-probe-fix.md（复现命令范式）",
+      "批次 3 uc16_incremental_real.json 的 base_spec_version=null 与增量 fidelity 未闭环，由本轮 V 规格链 + W 真机补齐；未冒充 R 的数字为本次结果"
+    ]
+  }
+}
