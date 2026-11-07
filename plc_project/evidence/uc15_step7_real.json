@@ -1,0 +1,150 @@
+{
+  "schema": "gf-uc15-step7-real-v1",
+  "uc": "UC-15",
+  "step": 7,
+  "title": "步骤 7 真机：Action B 写入博途 V19 → 编译零错误 → 归档 .zap19 + 结构化编译报告",
+  "agent": "Agent R · V19 真机全链收官（批次 3）",
+  "generated_at": "2026-11-07T08:40:04.844891+00:00",
+  "tia_version": "V19",
+  "source_raw": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/raw_all.json#cases/R2-action-b",
+  "temp_copy_root": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/R2-action-b/proj/CanvasE2E.ap19",
+  "source_opened_or_written_back": false,
+  "uc17_prerequisite": {
+    "fidelity_ok": true,
+    "evidence_ref": "evidence/uc15_evidence_bundle.json#fidelity_ok（Agent Q 离线实例化真实响应）",
+    "note": "UC-17：Action B 以 Action A 的 fidelity_ok==true 为前提；该值来自 Q 的 uc15_evidence_bundle.json 离线 L1 实例化真实响应，显式传入，不伪造"
+  },
+  "d11_explicit_confirmation": {
+    "confirmed": true,
+    "negative_example": {
+      "ok": false,
+      "blocked": true,
+      "code": "GF_ACTION_CONFIRM_REQUIRED",
+      "zero_side_effects": true,
+      "note": "D11 fail-closed 负例：差异清单未显式确认时 Action B 被阻止、不写 TIA"
+    }
+  },
+  "action_b_result": {
+    "ok": true,
+    "blocked": false,
+    "action": "B",
+    "mode": "full",
+    "fidelity_ok": true,
+    "compile_ok": true,
+    "tia_written": true,
+    "step_order": [
+      "open_project",
+      "fast_writeback",
+      "compile_plc",
+      "save_project"
+    ],
+    "session_handle": "gf-session:C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/R2-action-b/proj/CanvasE2E.ap19",
+    "steps": [
+      {
+        "step": "open_project",
+        "ok": true
+      },
+      {
+        "step": "fast_writeback",
+        "ok": true,
+        "detail": "blocks=1"
+      },
+      {
+        "step": "compile_plc",
+        "ok": true,
+        "detail": "error_count=0, compile_ok=True"
+      },
+      {
+        "step": "save_project",
+        "ok": true
+      }
+    ]
+  },
+  "structured_compile_report": {
+    "status": "compiled",
+    "error_count": 0,
+    "warnings": [],
+    "blocks": [],
+    "elapsed_ms": 1034.0106000003289,
+    "tia_version": "V19",
+    "project_path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/R2-action-b/proj/CanvasE2E.ap19",
+    "static_gate_passed": true,
+    "compile_ok": true,
+    "tia_unavailable": false,
+    "pending_real_machine": true,
+    "xml_package_unverified": true,
+    "l2_status": "pending_real_machine",
+    "warning_note": "warning 单列，不并入 compile_ok（N9 / P0-A）",
+    "reason": ""
+  },
+  "zap19_archive": {
+    "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/r2_archive/CanvasE2E_step7.zap19",
+    "exists": true,
+    "sha256": "033e7dc00a85c7813475b57e81d0070410a574bac89db2aac8a3e69eb38b9114",
+    "bytes": 326869,
+    "archive_cli_ok": true,
+    "archive_cli_raw_ref": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/raw_all.json#cases/R2-action-b.archive_cli",
+    "note": "真实 Openness archive-project 归档产物（临时副本，非原始 PLC_Openness_data 路径）；sha256 为归档文件真实字节哈希"
+  },
+  "pcec_ledger": {
+    "action_b_incremental_entries": 0,
+    "honest_note": "UC-15 步骤 7 为首次写入（Action B，mode=full），本身不产生 incremental PCEC 账本（真实 count_on_disk=0）。EvidenceBundle 的 pcec_ledger 工件对应的是增量账本 3 条，由 UC-16 的 run_incremental_writebacks 产出，真实值见 evidence/uc16_incremental_real.json#pcec_ledger（change_ids 三条 + 磁盘 3/3）。",
+    "incremental_pcec_evidence_ref": "evidence/uc16_incremental_real.json#pcec_ledger"
+  },
+  "missing_artifacts_now_filled": {
+    "structured_compile_report": {
+      "present": true,
+      "evidence_ref": "evidence/uc15_step7_real.json#structured_compile_report",
+      "source": "real_machine（步骤 7 / Agent R）",
+      "real_values": {
+        "error_count": 0,
+        "warnings": [],
+        "compile_ok": true,
+        "state": "compiled"
+      }
+    },
+    "zap19_archive": {
+      "present": true,
+      "evidence_ref": "evidence/uc15_step7_real.json#zap19_archive",
+      "source": "real_machine（步骤 7 / Agent R）",
+      "real_values": {
+        "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/r2_archive/CanvasE2E_step7.zap19",
+        "sha256": "033e7dc00a85c7813475b57e81d0070410a574bac89db2aac8a3e69eb38b9114",
+        "bytes": 326869
+      }
+    },
+    "pcec_ledger": {
+      "present": true,
+      "evidence_ref": "evidence/uc16_incremental_real.json#pcec_ledger（增量 3 条）；本步骤 7 首次写入增量账本 0 条如实留痕",
+      "source": "real_machine（UC-16 增量 / Agent R）",
+      "real_values": {
+        "incremental_entries": 3,
+        "note": "见 uc16_incremental_real.json#pcec_ledger"
+      }
+    },
+    "note": "3 项工件均由 Agent R 真机补齐；主 agent 可据此把 uc15_evidence_bundle.json 对应 present 置 true 并填 evidence_ref，绝不补假数据"
+  },
+  "serve_lifecycle": {
+    "serve_stop": {
+      "returncode": 1,
+      "port_reachable_after_stop": false,
+      "leftover_process": false
+    },
+    "leftover_process": false
+  },
+  "repro_commands": [
+    "cd <R> && ./.venv/Scripts/python.exe tools/run_batch3_real_machine.py --only R2-action-b",
+    "Action B Python 直调：run_action_b(session, confirmed=True, fidelity_report={'fidelity_ok': True}, port=SessionModeTiaPort(tia_version='V19', plc_name='PLC_1'), ap_path=<Temp副本.ap19>, static_gate_passed=True, blocks=[{'name':'R_FC_Step7','scl_path':<真实SCL>}])",
+    "timeout -k 5 180 TiaOpenness.Server.exe --cli archive-project --project <Temp副本.ap19> --out-dir <Temp/r2_archive> --name CanvasE2E_step7.zap19（serve 停止后执行）"
+  ],
+  "raw_evidence_index": {
+    "action_b_result": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/raw_all.json#cases/R2-action-b.action_b_result",
+    "raw_http_returns": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/raw_all.json#cases/R2-action-b.raw_http_returns",
+    "archive_cli": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/raw_all.json#cases/R2-action-b.archive_cli"
+  },
+  "honest_boundary": [
+    "compile_ok=true 是本次 Action B 编排真实判定（error_count=0 ∧ static_gate_passed），非『L2 层通过』；产品返回的 l2_status=pending_real_machine / pending_real_machine=true 如实保留（N9 口径）。",
+    "warning 单列（warnings=[]），不并入 compile_ok；无原生含 warning 的真机编译样本。",
+    "不宣称 L2/L4 通过、不宣称 M4 可签署；xml_package_unverified 保持 True（见 uc04_package_probe.json 处置建议）。"
+  ]
+}

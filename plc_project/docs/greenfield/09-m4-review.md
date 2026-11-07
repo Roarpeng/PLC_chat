@@ -146,8 +146,11 @@ cd <R>/frontend && npm run test && npm run build
 - [x] `pending_real_machine.json` 补 `agent_n_offline_review` 证据索引；`cleared=false`、items 10 条未删
 - [x] `07-acceptance-matrix.md` 追加「离线证据复核」一节（逐 UC 单测路径 / 通过数 / 边界）
 - [x] 护栏单测 `test_greenfield_acceptance.py` 最小同步（区分真机 / 离线证据口径），`22 passed`
-- [ ] **P0-D 档位结论：待用户拍板**（Agent 不代拍；推荐结论引用 `06-gate0-report.md` §6）——仍不勾选
+- [x] **P0-D 档位结论已由用户于 2026-11-06 以编号「1」拍板**：坚持「AF Basic 文件夹版」、暂不切「软件单元版」（正式决策记录见 `11-p0d-decision.md`，依据 `06-gate0-report.md` §6 推荐结论）。本项由 Agent P 归档用户结论、**不代拍**；§6 摘要与 §7 说明中「待用户拍板」为批次 2 历史状态文字，按保留可追溯性要求原样保留、不改写
 - [ ] `L1∧L2∧L3∧L4` 全绿 / pending 台账清零 / EvidenceBundle 完整归档 / UC-15 端到端 / 真机全链——仍不勾选
+
+> **批次 3（Agent P 追加，2026-11-07）**：**批次 3 结论最多推进到「证据齐备 / 待用户签署」，不得由 agent 宣布 M4 通过**。
+> 本节其余待办保持未勾；签署栏（§7）仍为「待用户签署」，「签署前必须确认的勾选项」由用户签署时确认，Agent 不代勾、不代签、不改动签署栏任何文字。
 
 ---
 
@@ -187,3 +190,30 @@ cd <R>/frontend && npm run test && npm run build
 - 未执行任何 git 操作；未改产品代码 / 冻结清单 / C# 源码；D12 hard refuse 全程约束；
   N9 `fidelity_ok` 与 `compile_ok` 严格独立。
 - **P0-D 档位结论待用户拍板，本 Agent 未代拍**；审批人签署栏**待用户签署，未代签**。
+
+---
+
+## 附录 · 批次 3 复核结论（2026-11-07，主 agent 收口，不代签）
+
+> 本节为追加记录，签署栏状态不变：**待用户本人签署**。
+
+| 复核项 | 批次 3 结论 |
+|---|---|
+| P0-D 档位 | 用户 2026-11-06 编号「1」已拍板 AF Basic 文件夹版（`11-p0d-decision.md`）；Gate-0 升 `go`（准入放行） |
+| RTM | `pass=17 / fail=0 / pending_real_machine=2 / not_run=0`；pending 为 **UC-04 / UC-16** |
+| L1 | `pass`（九步离线链 + 真实服务重启恢复、产物哈希可复现） |
+| L2 | **未通过**：UC-04 包级两处真实失败（`SW.PlcBlockGroup` 不可导入、Call 网络 OB 导入失败） |
+| L3 | `pass`（同一 v1 spec 重跑 Action A，三项哈希一致） |
+| L4 | **未通过**：UC-16 增量 `fidelity` / `base_spec_version=null` 未闭环 |
+| `L1∧L2∧L3∧L4` | **未全绿** |
+| `xml_package_unverified` | 仍为 `True`，未擅自消除 |
+| pending 台账 | `cleared=false`，历史 items 未删 |
+| **M4** | **未通过 / 不可签署**，最多推进到「证据齐备 / 待用户签署」 |
+
+新增证据：`evidence/uc04_package_probe.json`、`uc15_step7_real.json`、`uc16_incremental_real.json`、
+`uc18_compile_feedback_real.json`、`uc15_restart_recovery.json`、`nine_steps_offline_run.json`、
+`uc15_evidence_bundle.json`；汇总见 `10-real-machine-acceptance.md` 附录与 `12-batch3-real-machine.md`。
+
+**签署前仍需完成**：① UC-04 完整 AF 包（含 Call 网络 OB）导入编译闭环；② UC-16 增量
+`FidelityChecker(mode=incremental)` 与真实 `specs/vN.json` 规格链闭环；③ pending 台账逐条核验清零；
+④ 用户本人签署。以上四项任一未完成，M4 保持未通过。

@@ -24,6 +24,19 @@ EVIDENCE = ROOT / "evidence"
 sys.path.insert(0, str(ROOT / "tools"))
 import greenfield_acceptance as ga  # noqa: E402  (需先注入 tools 路径)
 
+#: 结构化真机报告白名单。批次 2 为 uc05 总报告；批次 3 按 UC 拆分为独立真机证据
+#: 文件。扩展名单只为容纳新增的真机证据，**不放水**：任何标 pass 且非离线口径的
+#: UC 仍必须提供 evidence / facts / verified_by / repro_command 四件套，且证据必须
+#: 指向下列真实报告之一；离线单测证据仍恒走独立的 offline_unit_test 分支。
+REAL_MACHINE_REPORT_REFS = (
+    "uc05_real_machine_report.json",       # 批次 2 · Agent M 真机总报告
+    "uc04_package_probe.json",             # 批次 3 · Agent R UC-04 包级探针（含真实失败）
+    "uc15_step7_real.json",                # 批次 3 · Agent R UC-15 步骤 7 真机
+    "uc16_incremental_real.json",          # 批次 3 · Agent R UC-16 六条增量
+    "uc18_compile_feedback_real.json",     # 批次 3 · Agent R UC-18 编译回喂
+    "uc15_restart_recovery.json",          # 批次 3 · 主 agent 真实服务重启恢复
+)
+
 
 @pytest.fixture(scope="module")
 def rtm() -> dict:
@@ -106,8 +119,8 @@ def test_rtm_status_counts_and_no_fake_pass(rtm):
             assert c.get("real_machine_evidence"), f"{c['uc']} 标 pass 但无真机证据"
             assert c.get("real_machine_facts"), f"{c['uc']} 标 pass 但无真机事实"
             assert c.get("verified_by"), f"{c['uc']} 标 pass 但无验证主体"
-            assert "uc05_real_machine_report.json" in c["real_machine_evidence"], (
-                f"{c['uc']} 的真机证据未指向结构化报告"
+            assert any(ref in c["real_machine_evidence"] for ref in REAL_MACHINE_REPORT_REFS), (
+                f"{c['uc']} 的真机证据未指向任何结构化真机报告"
             )
     # 涉 L2/L4 但无真机证据的用例绝不允许标 pass（离线单测不得用于真机层）
     for c in rtm["cases"]:
@@ -352,3 +365,178 @@ def test_sync_ledger_is_idempotent_and_never_clears(tmp_path):
     assert second["added"] == []
     assert second["written"] is False
     assert len(json.loads(ledger_path.read_text(encoding="utf-8"))["items"]) == 2
+
+
+# ---------------------------------------------------------------------------
+# 7. Q3 新增：--evidence-bundle / --step-run / 签署权收口（保留以上全部不变量）
+# ---------------------------------------------------------------------------
+def _full_mock_bundle() -> dict:
+    """全项齐备的证据包（单测 mock，仅用于验证 validate_evidence_bundle 真值表）。"""
+    return {
+        "artifacts": {
+            a: {"present": True, "evidence_ref": f"mock://full/{a}"}
+            for a in ga.EXPECTED_FULL_ARTIFACTS
+        },
+        "incremental_fields": {
+            f: {"present": True, "evidence_ref": f"mock://inc/{f}", "value": "mock"}
+            for f in ga.EXPECTED_INCREMENTAL_FIELDS
+        },
+    }
+
+
+def _write(tmp_path: Path, name: str, payload: dict) -> str:
+    p = tmp_path / name
+    p.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    return str(p)
+
+
+def _fake_run_doc_all_pass() -> dict:
+    """伪造的 step-run：所有九步与六增量一律标 pass（用于验证真机项强制 pending）。"""
+    steps = [
+        {"step_id": f"NINE-{i:02d}", "status": "pass", "response": {"fake": True},
+         "evidence_refs": [], "note": "fake"}
+        for i in range(1, 10)
+    ] + [
+        {"step_id": f"INC-{i:02d}", "status": "pass", "response": {"fake": True},
+         "evidence_refs": [], "note": "fake"}
+        for i in range(1, 7)
+    ]
+    return {"steps": steps}
+
+
+def test_validate_evidence_bundle_all_present_is_complete_true():
+    check = ga.validate_evidence_bundle(_full_mock_bundle())
+    assert check["complete"] is True
+    assert check["missing_full"] == []
+    assert check["missing_incremental"] == []
+    assert check["full_present"] == 12
+    assert check["incremental_present"] == 6
+
+
+def test_validate_evidence_bundle_missing_artifact_is_false():
+    bundle = _full_mock_bundle()
+    del bundle["artifacts"]["zap19_archive"]
+    check = ga.validate_evidence_bundle(bundle)
+    assert check["complete"] is False
+    assert "zap19_archive" in check["missing_full"]
+
+
+def test_validate_evidence_bundle_missing_incremental_is_false():
+    bundle = _full_mock_bundle()
+    del bundle["incremental_fields"]["tia_side_drift"]
+    check = ga.validate_evidence_bundle(bundle)
+    assert check["complete"] is False
+    assert "tia_side_drift" in check["missing_incremental"]
+
+
+def test_validate_evidence_bundle_rejects_fake_data_without_ref():
+    # 只挂 present=True 不挂真实证据引用 = 假数据，必须判缺（不放水）
+    bundle = _full_mock_bundle()
+    bundle["artifacts"]["zap19_archive"] = {"present": True}
+    check = ga.validate_evidence_bundle(bundle)
+    assert check["complete"] is False
+    assert "zap19_archive" in check["missing_full"]
+
+
+def test_validate_evidence_bundle_none_is_fail_closed():
+    check = ga.validate_evidence_bundle(None)
+    assert check["complete"] is False
+    assert len(check["missing_full"]) == 12
+    assert len(check["missing_incremental"]) == 6
+
+
+def test_evidence_bundle_missing_drives_evidence_complete_false(tmp_path):
+    bundle = _full_mock_bundle()
+    del bundle["artifacts"]["structured_compile_report"]
+    path = _write(tmp_path, "bundle_missing.json", bundle)
+    report = ga.build_report("offline", None, 1.0, evidence_bundle_path=path)
+    assert report["m4"]["evidence_complete"] is False
+    assert report["m4"]["m4_pass"] is False
+    assert report["m4"]["verdict"] == "M4 未通过"
+    assert report["evidence_bundle"]["complete"] is False
+    assert "structured_compile_report" in report["evidence_bundle"]["validation"]["missing_full"]
+
+
+def test_evidence_bundle_missing_file_is_fail_closed(tmp_path):
+    report = ga.build_report(
+        "offline", None, 1.0,
+        evidence_bundle_path=str(tmp_path / "does_not_exist.json"),
+    )
+    assert report["m4"]["evidence_complete"] is False
+    assert report["evidence_bundle"]["validation"]["complete"] is False
+    assert report["m4"]["verdict"] == "M4 未通过"
+
+
+def test_evidence_bundle_all_present_evidence_complete_true_but_m4_still_not_pass(tmp_path):
+    """全项齐备时 evidence_complete 才可能为 True；但 M4 仍不放行、不得代签。"""
+    path = _write(tmp_path, "bundle_full.json", _full_mock_bundle())
+    report = ga.build_report("offline", None, 1.0, evidence_bundle_path=path)
+    assert report["m4"]["evidence_complete"] is True
+    assert report["evidence_bundle"]["complete"] is True
+    # pending 未清零 + L2/L4 离线强制 pending → M4 仍不得通过
+    assert report["m4"]["m4_pass"] is False
+    assert report["m4"]["verdict"] == "M4 未通过"
+    assert report["m4"]["m4_signable"] is False
+    assert report["requires_user_signoff"] is True
+    assert report["l1_l4_recheck"]["L2"] is False
+    assert report["l1_l4_recheck"]["L4"] is False
+
+
+def test_step_run_never_marks_real_machine_steps_pass(tmp_path):
+    path = _write(tmp_path, "run_all_pass.json", _fake_run_doc_all_pass())
+    report = ga.build_report("offline", None, 1.0, step_run_path=path)
+    recs = {r["id"]: r for r in report["step_records"]}
+    # 步骤 7 与六条增量真机项恒 pending，即便 step-run 伪造 pass
+    assert recs["NINE-07"]["status"] == "pending_real_machine"
+    for i in range(1, 7):
+        assert recs[f"INC-{i:02d}"]["status"] == "pending_real_machine"
+    # 离线步骤的真实结果确实被合入（替换 not_run 占位）
+    assert recs["NINE-01"]["status"] == "pass"
+    assert recs["NINE-01"]["response"] == {"fake": True}
+    assert report["step_summary"]["step_run_merged"]["nine_steps_merged"] == 8
+    # 合入后 L2/L4 仍强制 pending、M4 仍不得通过
+    assert report["l1_l4_recheck"]["L2"] is False
+    assert report["l1_l4_recheck"]["L4"] is False
+    assert report["m4"]["verdict"] == "M4 未通过"
+
+
+def test_requires_user_signoff_always_true():
+    r_off = ga.build_report("offline", None, 1.0)
+    assert r_off["requires_user_signoff"] is True
+    assert r_off["m4"]["m4_signable"] is False
+    # real_machine 无 workdir 的 fail-closed early return 也必须带该字段
+    r_rm = ga.build_report("real_machine", None, 1.0)
+    assert r_rm["requires_user_signoff"] is True
+    assert r_rm["m4"]["m4_signable"] is False
+    assert r_rm.get("error")
+
+
+def test_finalize_m4_never_signable_even_if_all_green():
+    clean_ledger = {"cleared": True, "items": []}
+    raw = ga.evaluate_m4(_all_green_layers(), [], clean_ledger, evidence_complete=True)
+    assert raw["m4_pass"] is True  # 纯函数真值表保持不变
+    out = ga.finalize_m4(raw)
+    assert out["m4_signable"] is False
+    assert out["requires_user_signoff"] is True
+    assert out["signoff_owner"] == "用户本人"
+    assert "可签署" not in out["verdict"]
+    assert "待用户签署" in out["verdict"]
+
+
+def test_offline_default_m4_not_pass():
+    report = ga.build_report("offline", None, 1.0)
+    assert report["m4"]["verdict"] == "M4 未通过"
+    assert report["m4"]["m4_pass"] is False
+    assert report["m4"]["evidence_complete"] is False
+    assert report["m4"]["m4_signable"] is False
+    assert report["requires_user_signoff"] is True
+    assert report["evidence_bundle"]["complete"] is False
+    # 默认不带 --step-run：步骤仍为 not_run / pending_real_machine（向后兼容）
+    assert {s["status"] for s in report["step_records"]} <= {"not_run", "pending_real_machine"}
+
+
+def test_print_summary_states_signoff_belongs_to_user(capsys):
+    ga.print_summary(ga.build_report("offline", None, 1.0))
+    err = capsys.readouterr().err
+    assert "M4 签署权归用户，工具不得代签" in err
+    assert "M4 未通过" in err

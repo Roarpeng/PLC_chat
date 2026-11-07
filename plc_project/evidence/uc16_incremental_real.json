@@ -1,0 +1,224 @@
+{
+  "schema": "gf-uc16-incremental-real-v1",
+  "uc": "UC-16",
+  "title": "§13.9 六条增量（L4 证据）· 本次真机增量 EvidenceBundle 六字段",
+  "agent": "Agent R · V19 真机全链收官（批次 3）",
+  "generated_at": "2026-11-07T08:40:04.844891+00:00",
+  "tia_version": "V19",
+  "source_raw": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/raw_all.json#cases/R3-incremental",
+  "temp_copy_root": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/R3-incremental/proj/CanvasE2E.ap19",
+  "source_opened_or_written_back": false,
+  "status": "pass",
+  "this_run_new_real_machine": {
+    "open_call_count": 1,
+    "handle_reused": true,
+    "compile_rounds": [
+      {
+        "round": 1,
+        "errorCount": 0,
+        "warningCount": 0,
+        "state": "Success"
+      },
+      {
+        "round": 2,
+        "errorCount": 0,
+        "warningCount": 0,
+        "state": "Success"
+      },
+      {
+        "round": 3,
+        "errorCount": 0,
+        "warningCount": 0,
+        "state": "Success"
+      }
+    ],
+    "project_not_closed_reloaded_created": {
+      "close_calls_in_sequence": 0,
+      "create_project_calls_in_sequence": 0,
+      "archive_project_calls_in_sequence": 0,
+      "open_call_count": 1,
+      "health_openProject_unique_paths": [
+        "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/R3-incremental/proj/CanvasE2E.ap19"
+      ],
+      "g_orchestrator_guarantee": "run_incremental_writebacks 全程不调用 create/archive/close；save_project 返回 archived=false/reloaded=false/created=false"
+    },
+    "pcec_count": 3,
+    "pcec_change_ids": [
+      "chg-b8821cd188c9",
+      "chg-b92d7051fa6c",
+      "chg-e77be136b2a0"
+    ],
+    "pcec_count_on_disk": 3,
+    "pcec_dir": "C:/Users/vboxuser/AppData/Local/Temp/researchos_plc/changes",
+    "diff_lists_d11": [
+      {
+        "index": 1,
+        "equivalent_change": "改 1 个 EM 步序",
+        "confirmed": true,
+        "block": "R_FC_Inc1"
+      },
+      {
+        "index": 2,
+        "equivalent_change": "新增 1 个 CM",
+        "confirmed": true,
+        "block": "R_FC_Inc2"
+      },
+      {
+        "index": 3,
+        "equivalent_change": "改 1 条交互连线",
+        "confirmed": true,
+        "block": "R_FC_Inc3"
+      }
+    ],
+    "equivalence_note": "三次增量覆盖内容以最小可编译 SCL 外部源变体等价代替（与 M 报告 §2.1 同口径），真实 /fast-writeback 走 GenerateBlocksFromSource(overwrite=true)。D11：三次差异清单在调用前逐条显式确认（confirmed=True）。",
+    "g_orchestrator_result": {
+      "ok": true,
+      "status": "ok",
+      "mode": "incremental",
+      "increment_count": 3,
+      "pcec_records": 3,
+      "l2_status": "pending_real_machine",
+      "pending_real_machine": true
+    },
+    "serve_stop": {
+      "returncode": 1,
+      "port_reachable_after_stop": false,
+      "leftover_process": false
+    }
+  },
+  "incremental_evidence_bundle_six_fields": {
+    "mode": "incremental",
+    "base_spec_version": null,
+    "changed_source_ids": [
+      "R_FC_Inc1",
+      "R_FC_Inc2",
+      "R_FC_Inc3"
+    ],
+    "reverse_protection": {
+      "allowed": true,
+      "drift_count": 0,
+      "tia_side_drift": 0,
+      "blocked_source_ids": [],
+      "reason": "TIA 侧块哈希与上次生成物一致,允许增量覆盖(D10 反向保护通过)",
+      "function": "plc_engine.af.reverse_guard.check_reverse_guard（产品纯函数，对真实块内容哈希快照计算，非 mock）"
+    },
+    "tia_side_drift": 0,
+    "ob_number_deviations": []
+  },
+  "six_field_notes": {
+    "base_spec_version": "本次为 P0-G 真机地基实测，未跑 Greenfield 冻结规格链，无真实 specs/vN spec_version 产物可比，诚实标 None（不冒充）",
+    "ob_number_deviations": "显式留痕为空列表（禁止静默）：本次增量块为 FC 外部源，不涉及 OB 编号物理偏差；属不纳入 1:1 的域",
+    "fidelity_ok": "增量 fidelity 由产品 FidelityChecker(mode=incremental) 计算；本次无真实 Greenfield 冻结规格产物，见 honest_note"
+  },
+  "reverse_guard_verdict": {
+    "allowed": true,
+    "drift_count": 0,
+    "tia_side_drift": 0,
+    "blocked_source_ids": [],
+    "reason": "TIA 侧块哈希与上次生成物一致,允许增量覆盖(D10 反向保护通过)",
+    "function": "plc_engine.af.reverse_guard.check_reverse_guard（产品纯函数，对真实块内容哈希快照计算，非 mock）"
+  },
+  "reverse_guard_input": {
+    "last_generated": {
+      "R_FC_Inc1": "1d06d13028cdee612f47021e636583158610869e6941573b3209e678687d4d85",
+      "R_FC_Inc2": "e9e05c80f2536d15c2e736f1ce005ee48b52bb2f705602469e3d896463245c00",
+      "R_FC_Inc3": "bf5609fdce0858520368302141d95aba513ed8c4f5c7e4538d41cc71be6cc48c"
+    },
+    "tia_side_snapshot": {
+      "R_FC_Inc1": "1d06d13028cdee612f47021e636583158610869e6941573b3209e678687d4d85",
+      "R_FC_Inc2": "e9e05c80f2536d15c2e736f1ce005ee48b52bb2f705602469e3d896463245c00",
+      "R_FC_Inc3": "bf5609fdce0858520368302141d95aba513ed8c4f5c7e4538d41cc71be6cc48c"
+    }
+  },
+  "fidelity_ok": {
+    "value": true,
+    "evidence_ref": "evidence/uc15_evidence_bundle.json#fidelity_ok（Agent Q 离线 L1 全量逻辑等价真实值）",
+    "note": "L1 离线逻辑等价判定真值；本次真机 L4 的『每次 error_count==0』由三次真实 /compile-plc 承担。N9：fidelity_ok 与 compile_ok 严格分离",
+    "honest_note": "本次真机 L4 的『每次 error_count==0』由三次真实 /compile-plc 承担；fidelity_ok 为 Q 离线 L1 全量逻辑等价真值（本次无真实 Greenfield 冻结规格链产物，增量 FidelityChecker(mode=incremental) 未闭环），不冒充、不宣称 L4 正式通过。"
+  },
+  "tia_side_drift": 0,
+  "ob_number_deviations_note": "显式留痕为空列表（禁止静默）：本次增量块为 FC 外部源，不涉及 OB 编号物理偏差；属不纳入 1:1 的域",
+  "pcec_ledger": {
+    "dir": "C:/Users/vboxuser/AppData/Local/Temp/researchos_plc/changes",
+    "change_ids_expected": [
+      "chg-b8821cd188c9",
+      "chg-b92d7051fa6c",
+      "chg-e77be136b2a0"
+    ],
+    "change_ids_present_on_disk": [
+      "chg-b8821cd188c9",
+      "chg-b92d7051fa6c",
+      "chg-e77be136b2a0"
+    ],
+    "count_on_disk": 3
+  },
+  "referenced_M_existing_evidence": {
+    "D10_negative_case": {
+      "not_redone": true,
+      "evidence_ref": "evidence/uc05_real_machine_report.json#cases/UC-12",
+      "status": "pass（Agent M 真机）",
+      "facts": {
+        "allowed": false,
+        "tia_side_drift": 1,
+        "blocked_source_ids": [
+          "OB502_Unrelated"
+        ],
+        "fourth_increment": {
+          "attempted": false,
+          "blocked": true,
+          "routes_called": []
+        }
+      },
+      "note": "人为改 TIA 侧无关块 → 第 4 次增量被阻止、未覆盖（D10 fail-closed），M 报告 §3 / UC-12 case"
+    },
+    "UC13_rollback": {
+      "not_redone": true,
+      "evidence_ref": "evidence/uc05_real_machine_report.json#cases/UC-13",
+      "status": "pass（Agent M 真机）",
+      "facts": {
+        "ap19_unchanged_after_failed_import": true,
+        "matches_pre_write_sha256": true,
+        "restored_sha256": "a1a57c591d808247a727afd536ac8cb7ae4bff32a349513f851c6bcc6b1201d9"
+      },
+      "note": "失败导入（culture en-US）后项目回到调用前状态、备份可恢复，M 报告 §4 / UC-13 case"
+    },
+    "M_UC05_baseline": {
+      "evidence_ref": "evidence/uc05_real_machine_report.json#cases/UC-05",
+      "facts": {
+        "open": 1,
+        "pcec": 3,
+        "handle_reused": true
+      },
+      "note": "本次 R3 在其方法基础上【新实测】补齐六字段，非直接复用 M 数字"
+    }
+  },
+  "distinction_this_run_vs_referenced": {
+    "this_run_new_real_machine": [
+      "三次差异清单显式确认（D11）→ 覆盖 → 编译 → 增量口径",
+      "/open 一次、句柄复用、项目未关闭/未重载/未新建、3× 真实 compile 0/0",
+      "PCEC 3 条（本次 change_ids 落盘 3/3）",
+      "六字段真实值（本次 reverse_guard 对真实块哈希快照计算 tia_side_drift=0）"
+    ],
+    "referenced_from_M": [
+      "D10 反向保护负例（UC-12）",
+      "UC-13 回滚演练",
+      "UC-05 三次增量方法学（P0-G 地基）"
+    ]
+  },
+  "repro_commands": [
+    "cd <R> && ./.venv/Scripts/python.exe tools/run_batch3_real_machine.py --only R3-incremental",
+    "Python 直调：SessionModeTiaPort(tia_version='V19', plc_name='PLC_1') + run_incremental_writebacks(port, 3×increments, ap_path=<Temp副本.ap19>, record_pcec=True)",
+    "plc_engine.af.reverse_guard.check_reverse_guard(gen_hashes, tia_side_snapshot) 计算 tia_side_drift"
+  ],
+  "raw_evidence_index": {
+    "g_orchestrator_result": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/raw_all.json#cases/R3-incremental.g_orchestrator_result",
+    "raw_http_returns": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/raw_all.json#cases/R3-incremental.raw_http_returns",
+    "compile_rounds": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/raw_all.json#cases/R3-incremental.compile_rounds"
+  },
+  "honest_boundary": [
+    "base_spec_version 诚实标 None（本次未跑 Greenfield 冻结规格链，无真实 specs/vN.json 产物，不冒充）。",
+    "mode=incremental / changed_source_ids / reverse_protection / tia_side_drift=0 / ob_number_deviations 为本次真实值；G 编排返回 l2_status=pending_real_machine 如实保留。",
+    "增量 fidelity_ok 引用 Q 离线 L1 真值并明确边界，不宣称 §13.9 增量 FidelityChecker 已闭环、不宣称 L4 正式通过。",
+    "不宣称 M4 可签署；D10/UC-13 引用 M 既有真机证据，已注明不重做。"
+  ]
+}

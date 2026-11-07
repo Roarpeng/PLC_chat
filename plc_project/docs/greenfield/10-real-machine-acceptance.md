@@ -393,3 +393,41 @@ F/K 的既有真机结论复现命令见 `research/Gate0_环境与档位实测_2
 - **未执行任何 git 操作**；未改任何产品代码（`gateway/`、`plc_engine/`、`agents/`、`frontend/`、`industrial/`）、`legacy_baseline.json`、`test_greenfield_legacy_guard.py`、sha256 冻结清单 41 个文件、C# 源码、`tests/unit/test_greenfield_acceptance.py`。
 - **P0-D 档位结论待用户拍板，本 Agent 未代拍**；`xml_package_unverified` 保持 `True`，未代消除。
 - 无绝对日期 / 人力排期、无编造数据；外部依据均为项目内 F/K 归档与本次真实运行返回。
+
+---
+
+## 附录 · 批次 3 收口补充（2026-11-07，主 agent）
+
+> 本节为追加记录，不修改上文任何批次 2 既有结论。依据契约 `13-batch3-contract.md`。
+
+### A. 用户拍板与 Gate-0
+
+用户 2026-11-06 以编号「1」拍板 **P0-D = 坚持 AF Basic 文件夹版**（`docs/greenfield/11-p0d-decision.md`）。
+加上 Agent K 已真机修复 K1 探针（`08-k1-probe-fix.md`），Gate-0 两项前置逐项解除，
+由 `conditional-go` 升为 **`go`（准入放行）**，详见 `06-gate0-report.md` §7。
+`go` 不等于 L1∧L2∧L3∧L4 全绿、不等于 M4 可签署。
+
+### B. 批次 3 新增真机证据
+
+| 证据文件 | 内容 | 结论 |
+|---|---|---|
+| `evidence/uc04_package_probe.json` | 包级 K1 复测 | **未通过**：`SW.PlcBlockGroup` 不可导入；Call 网络 OB 导入失败（`call_db` 命名约束）。`xml_package_unverified` 保持 `True` |
+| `evidence/uc15_step7_real.json` | Action B 真机（步骤 7） | `error_count=0` / `warnings=[]` / `compile_ok=true`，`.zap19` sha256 `033e7dc0…`（326869 bytes） |
+| `evidence/uc16_incremental_real.json` | 六条增量 | `/open`=1、句柄复用、3× 编译 0/0、PCEC 3 条、六字段真实值；`base_spec_version=null`、增量 fidelity 未闭环 |
+| `evidence/uc18_compile_feedback_real.json` | 编译错误回喂 | 真机三段 `errorCount` **0 → 2 → 0**，`heal_ok=true`，账本可追溯；首次过程性失败如实留痕 |
+| `evidence/uc15_restart_recovery.json` | 真实服务重启恢复 | gateway 启停两轮，`data.spec` 完全一致，`spec_hash` 与九步步骤 4 吻合 |
+
+### C. 离线链与 EvidenceBundle
+
+`evidence/nine_steps_offline_run.json`：Agent Q 用进程内 ASGI TestClient 真实驱动 §9.2 九步，
+**pass=8 / pending_real_machine=1（步骤 7）/ fail=0**；步骤 7 由 R 真机补齐，步骤 9 由主 agent 升级为真实服务重启验证。
+`evidence/uc15_evidence_bundle.json`：批次 2 缺的 3 项真机工件已依据 R 的真实结构化证据补齐，12 项全量工件齐备。
+
+### D. RTM 与 M4 判定（诚实口径）
+
+- `UC-01` / `UC-15` / `UC-18` 由 `pending_real_machine` 转 **pass**（均附真机证据三件套与复现命令）；
+- **`UC-04` / `UC-16` 如实保持 `pending_real_machine`**，未为凑数标 pass；
+- 最终 `by_status`: `pass=17 / fail=0 / pending_real_machine=2 / not_run=0`；
+- L2 因 UC-04 未通过、L4 因 UC-16 未通过 → **`L1∧L2∧L3∧L4` 仍未全绿**；
+- pending 台账 `cleared=false`、历史 items 未删；**M4 未通过 / 不可签署，签署栏仍待用户本人签署**；
+- `xml_package_unverified` 保持 `True`，消除须以 UC-04 包级全链真实通过为唯一依据。

@@ -1,0 +1,2909 @@
+{
+  "schema": "gf-uc15-evidence-instance-v1",
+  "bundle_id": "UC-15 / §9.2 九步离线链 / EvidenceBundle 离线实例化",
+  "generated_at": "2026-11-07T08:05:15.665039+00:00",
+  "generated_by": "tools/run_nine_steps.py",
+  "source": "步骤5 POST /action-a 返回的 evidence_bundle（原始响应，真实落盘，未裁剪/未补假数据）",
+  "driver": "fastapi.testclient.TestClient（进程内 ASGI，挂载 gateway.app.main:app，不启动任何监听端口）；步骤6 负例用 plc_engine.af.fidelity.FidelityChecker 只读校验器直调；步骤8/9 与 Q2 哈希用 plc_engine.af.spec_diff.canonical_hash / sha256_prefixed 复算。运行期把 greenfield_chat.llm_settings 覆盖为返回 None，使 /chat 首轮走零 LLM 依赖的确定性 planner 兜底（draft_from_prompt fallback），不发任何外部 LLM 网络请求。",
+  "uc": "UC-15",
+  "project_id": "GF-Q-UC15",
+  "spec_version": 1,
+  "spec_hash": "sha256:5b92b82e9155cc518311d154cba822817f9b9379f461f0cd5fd6044129a826a5",
+  "fidelity_ok": true,
+  "compile_ok": null,
+  "tia_written": false,
+  "pending_real_machine": true,
+  "xml_package_unverified": true,
+  "bundle_sha256": "sha256:62e497eff71294bdf91428bfc39af1472e8d0bc41090cea16b8a6162110e076e",
+  "bundle_sha256_recomputed": "sha256:62e497eff71294bdf91428bfc39af1472e8d0bc41090cea16b8a6162110e076e",
+  "bundle_sha256_match": true,
+  "full_artifacts_expected": 12,
+  "full_artifacts_present": 12,
+  "artifacts": {
+    "specs_vN_json": {
+      "present": true,
+      "evidence_ref": "evidence_bundle_raw.spec + specs/v1.json（步骤4 落盘）",
+      "source": "offline",
+      "note": "由 A 的真实响应提供，离线可复算"
+    },
+    "ir_snapshot": {
+      "present": true,
+      "evidence_ref": "evidence_bundle_raw.ir_snapshot",
+      "source": "offline",
+      "note": "由 A 的真实响应提供，离线可复算"
+    },
+    "four_views_export": {
+      "present": true,
+      "evidence_ref": "evidence_bundle_raw.views（flow/seq/state/step_flow）",
+      "source": "offline",
+      "note": "由 A 的真实响应提供，离线可复算"
+    },
+    "edge_list": {
+      "present": true,
+      "evidence_ref": "evidence_bundle_raw.edge_list",
+      "source": "offline",
+      "note": "由 A 的真实响应提供，离线可复算"
+    },
+    "open_questions_clearance": {
+      "present": true,
+      "evidence_ref": "nine_steps_offline_run.json#step-4 confirm_prerequisites.open_questions=[]",
+      "source": "offline",
+      "note": "由 A 的真实响应提供，离线可复算"
+    },
+    "static_gate_results": {
+      "present": true,
+      "evidence_ref": "evidence_bundle_raw.static_gate",
+      "source": "offline",
+      "note": "由 A 的真实响应提供，离线可复算"
+    },
+    "fidelity_report_json": {
+      "present": true,
+      "evidence_ref": "evidence_bundle_raw.fidelity_report",
+      "source": "offline",
+      "note": "由 A 的真实响应提供，离线可复算"
+    },
+    "structured_compile_report": {
+      "present": true,
+      "evidence_ref": "evidence/uc15_step7_real.json#structured_compile_report",
+      "source": "real_machine（批次 3 / Agent R）",
+      "note": "真实 error_count=0 / warnings=[] / compile_ok=true / static_gate_passed=true / tia_version=V19 / elapsed_ms≈1034.01",
+      "real_values": {
+        "error_count": 0,
+        "warnings": [],
+        "compile_ok": true,
+        "state": "compiled"
+      },
+      "filled_by": "主 agent 收口（依据 Agent R 真机结构化证据）"
+    },
+    "pcec_ledger": {
+      "present": true,
+      "evidence_ref": "evidence/uc16_incremental_real.json#pcec_ledger（增量 3 条）；本步骤 7 首次写入增量账本 0 条如实留痕",
+      "source": "real_machine（批次 3 / Agent R）",
+      "note": "Action B（full 首次写入）增量账本 0 条；UC-16 三次增量为 3 条，见 evidence/uc16_incremental_real.json",
+      "real_values": {
+        "incremental_entries": 3,
+        "note": "见 uc16_incremental_real.json#pcec_ledger"
+      },
+      "filled_by": "主 agent 收口（依据 Agent R 真机结构化证据）"
+    },
+    "baseline_manifest_json": {
+      "present": true,
+      "evidence_ref": "evidence_bundle_raw.baseline_manifest",
+      "source": "offline",
+      "note": "由 A 的真实响应提供，离线可复算"
+    },
+    "artifact_hashes": {
+      "present": true,
+      "evidence_ref": "evidence_bundle_raw.artifact_hashes + zip_entry_hashes",
+      "source": "offline",
+      "note": "由 A 的真实响应提供，离线可复算"
+    },
+    "zap19_archive": {
+      "present": true,
+      "evidence_ref": "evidence/uc15_step7_real.json#zap19_archive",
+      "source": "real_machine（批次 3 / Agent R）",
+      "note": "Temp/gf_real_r_20261107/r2_archive/CanvasE2E_step7.zap19，sha256=033e7dc00a85c7813475b57e81d0070410a574bac89db2aac8a3e69eb38b9114，326869 bytes",
+      "real_values": {
+        "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/r2_archive/CanvasE2E_step7.zap19",
+        "sha256": "033e7dc00a85c7813475b57e81d0070410a574bac89db2aac8a3e69eb38b9114",
+        "bytes": 326869
+      },
+      "filled_by": "主 agent 收口（依据 Agent R 真机结构化证据）"
+    }
+  },
+  "incremental_fields": {
+    "mode": {
+      "present": true,
+      "value": "full",
+      "evidence_ref": "evidence_bundle_raw.mode",
+      "note": "UC-15 full 模式离线真实值；非 incremental 模式真机证据，UC-16 增量真机证据由 Agent R 产出后补齐；本值不构成增量验收结论"
+    },
+    "base_spec_version": {
+      "present": true,
+      "value": null,
+      "evidence_ref": "evidence_bundle_raw.fidelity_report.base_spec_version",
+      "note": "UC-15 full 模式离线真实值；非 incremental 模式真机证据，UC-16 增量真机证据由 Agent R 产出后补齐；本值不构成增量验收结论"
+    },
+    "changed_source_ids": {
+      "present": true,
+      "value": [],
+      "evidence_ref": "evidence_bundle_raw.fidelity_report.changed_source_ids",
+      "note": "UC-15 full 模式离线真实值；非 incremental 模式真机证据，UC-16 增量真机证据由 Agent R 产出后补齐；本值不构成增量验收结论"
+    },
+    "reverse_protection": {
+      "present": true,
+      "value": {
+        "status": "pending_real_machine",
+        "allowed": null,
+        "drift_count": 0,
+        "tia_side_drift": 0,
+        "blocked_source_ids": [],
+        "reason": "未提供 TIA 侧块快照,本批次为离线校验;涉真机结论标 pending_real_machine,禁止宣称 L2/L4 通过或编译零错误(N9)"
+      },
+      "evidence_ref": "evidence_bundle_raw.fidelity_report.reverse_protection",
+      "note": "UC-15 full 模式离线真实值；非 incremental 模式真机证据，UC-16 增量真机证据由 Agent R 产出后补齐；本值不构成增量验收结论"
+    },
+    "tia_side_drift": {
+      "present": true,
+      "value": 0,
+      "evidence_ref": "evidence_bundle_raw.fidelity_report.tia_side_drift",
+      "note": "UC-15 full 模式离线真实值；非 incremental 模式真机证据，UC-16 增量真机证据由 Agent R 产出后补齐；本值不构成增量验收结论"
+    },
+    "ob_number_deviations": {
+      "present": true,
+      "value": [],
+      "evidence_ref": "evidence_bundle_raw.fidelity_report.ob_number_deviations",
+      "note": "UC-15 full 模式离线真实值；非 incremental 模式真机证据，UC-16 增量真机证据由 Agent R 产出后补齐；本值不构成增量验收结论"
+    }
+  },
+  "missing_artifacts": [],
+  "missing_incremental_fields": [],
+  "evidence_bundle_raw": {
+    "schema": "gf-evidence-bundle-v1",
+    "mode": "full",
+    "spec": {
+      "spec_version": 1,
+      "spec_hash": "sha256:5b92b82e9155cc518311d154cba822817f9b9379f461f0cd5fd6044129a826a5",
+      "prev_spec_hash": "",
+      "ir_sha256": "sha256:a7ddba5fc7c34190c8c6a8745b35a42301f1b5fc2d26a28857166abaf825d950",
+      "view_hashes": {
+        "flow": "dd3abdfeddc4efa11fa06d28abf611586c118ee65f75fec061586ec672f81361",
+        "seq": "8227c53255781244a9ef5aae60c4d9d47dcf17946d5efb6c744321aa2b0061a0",
+        "state": "363936ae0da5f720e340843add33681d6d40457cec74a4846cdca67a73fa0303"
+      },
+      "contract_sha": "",
+      "ir_version": "gf-ir-1.0",
+      "af_profile": "SIEMENS_AF_BASIC_FOLDER_V19",
+      "frozen_at": "2026-11-07T08:05:15Z",
+      "frozen_by": "user",
+      "session_id": "3546b9b8ed4a",
+      "ir_snapshot": {
+        "project": {
+          "name": "AssemblyCell",
+          "business_label": "输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位",
+          "af_profile": "SIEMENS_AF_BASIC_FOLDER_V19",
+          "namespace_prefix": "GF",
+          "tia_version": "V19"
+        },
+        "ir_version": "gf-ir-1.0",
+        "units": [
+          {
+            "id": "U1",
+            "unit_idx": 1,
+            "name": "AssemblyCell",
+            "business_label": "输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位",
+            "namespace_prefix": "U1_",
+            "parent_id": null,
+            "ob_numbers": {
+              "startup": 1000,
+              "main": 1001,
+              "prodiag": 1002
+            }
+          }
+        ],
+        "ems": [
+          {
+            "id": "U1EM1",
+            "em_idx": 1,
+            "unit_id": "U1",
+            "name": "Station1",
+            "business_label": "输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位",
+            "namespace_prefix": "U1EM1_",
+            "control_node_id": "U1EM1_CN",
+            "job_ids": [
+              "U1EM1_J1"
+            ],
+            "initial_step_id": 10,
+            "ob_numbers": {
+              "startup": 1010,
+              "main": 1011,
+              "prodiag": 1012
+            },
+            "sc_policy": "SC_ON_COMPLETE"
+          }
+        ],
+        "cms": [
+          {
+            "id": "U1EM1_CM1",
+            "em_id": "U1EM1",
+            "cm_type": "LBC_MotorStarter",
+            "business_label": "输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位",
+            "plcopen": {
+              "enable": true,
+              "valid": true,
+              "busy": true,
+              "error": true,
+              "status": true
+            },
+            "io_binding_ids": [],
+            "parameters": {}
+          },
+          {
+            "id": "U1EM1_CM2",
+            "em_id": "U1EM1",
+            "cm_type": "LBC_TwoWayActuator",
+            "business_label": "输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位",
+            "plcopen": {
+              "enable": true,
+              "valid": true,
+              "busy": true,
+              "error": true,
+              "status": true
+            },
+            "io_binding_ids": [],
+            "parameters": {}
+          },
+          {
+            "id": "U1EM1_CM3",
+            "em_id": "U1EM1",
+            "cm_type": "LBC_MotorStarter",
+            "business_label": "手动新增执行件：下料检测气缸",
+            "plcopen": {
+              "enable": true,
+              "valid": true,
+              "busy": true,
+              "error": true,
+              "status": true
+            },
+            "io_binding_ids": [],
+            "parameters": {}
+          }
+        ],
+        "control_nodes": [
+          {
+            "id": "U1EM1_CN",
+            "em_id": "U1EM1",
+            "namespace_prefix": "U1EM1_",
+            "sequence_ref": "U1EM1_SEQ",
+            "commands": [
+              "start",
+              "stop",
+              "reset"
+            ],
+            "status": [
+              "stepCurrent",
+              "busy",
+              "error",
+              "stateComplete"
+            ]
+          }
+        ],
+        "jobs": [
+          {
+            "id": "U1EM1_J1",
+            "em_id": "U1EM1",
+            "job_id": 1,
+            "name": "AutoProduction",
+            "initial_step_id": 10,
+            "start_condition": "TRUE AND #ready",
+            "interlock_id": null,
+            "single_cycle_job": true
+          }
+        ],
+        "steps": [
+          {
+            "id": "U1EM1_S10",
+            "em_id": "U1EM1",
+            "job_id": "U1EM1_J1",
+            "step_id": 10,
+            "name": "CYL1_EXTEND",
+            "actions": [
+              "#controlNodes.cyl1.commands.workPosition := TRUE;"
+            ],
+            "transition_condition": "TRUE",
+            "next_step_id": 20,
+            "error_step_id": 999,
+            "timeout_ms": 5000,
+            "branch": {}
+          },
+          {
+            "id": "U1EM1_S20",
+            "em_id": "U1EM1",
+            "job_id": "U1EM1_J1",
+            "step_id": 20,
+            "name": "CYL1_RETRACT",
+            "actions": [
+              "#controlNodes.cyl1.commands.homePosition := TRUE;"
+            ],
+            "transition_condition": "#controlNodes.cyl1.status.inHomePosition",
+            "next_step_id": 30,
+            "error_step_id": 999,
+            "timeout_ms": 5000,
+            "branch": {}
+          },
+          {
+            "id": "U1EM1_S30",
+            "em_id": "U1EM1",
+            "job_id": "U1EM1_J1",
+            "step_id": 30,
+            "name": "MOTOR1_RUN",
+            "actions": [
+              "#controlNodes.motor1.commands.forward := TRUE;"
+            ],
+            "transition_condition": "#controlNodes.motor1.status.running",
+            "next_step_id": 1,
+            "error_step_id": 999,
+            "timeout_ms": 5000,
+            "branch": {}
+          }
+        ],
+        "modes": [
+          {
+            "id": "MODE_AUTO",
+            "name": "Auto",
+            "business_label": "自动模式",
+            "packml_mode": "Production",
+            "enabled_states": [
+              "Clearing",
+              "Stopped",
+              "Resetting",
+              "Idle",
+              "Starting",
+              "Execute",
+              "Stopping",
+              "Holding",
+              "Held",
+              "Unholding",
+              "Suspending",
+              "Suspended",
+              "Unsuspending",
+              "Completing",
+              "Completed",
+              "Aborting",
+              "Aborted"
+            ],
+            "enabled_transitions": [
+              "PACKML_TRANSITIONS"
+            ],
+            "enable_hold": true,
+            "enable_complete": true
+          },
+          {
+            "id": "MODE_MANUAL",
+            "name": "Manual",
+            "business_label": "手动模式",
+            "packml_mode": "Manual",
+            "enabled_states": [
+              "Stopped",
+              "Idle",
+              "Execute"
+            ],
+            "enabled_transitions": [],
+            "enable_hold": false,
+            "enable_complete": false
+          }
+        ],
+        "interlocks": [],
+        "io_bindings": [],
+        "compat_refs": [],
+        "edges": [
+          {
+            "id": "E_HIER_UNIT_EM_U1__U1EM1",
+            "kind": "E_HIER_UNIT_EM",
+            "src_id": "U1",
+            "dst_id": "U1EM1",
+            "view_mask": [
+              "flow"
+            ],
+            "origin": "system",
+            "label": "层级",
+            "immutable": true,
+            "created_at": ""
+          },
+          {
+            "id": "E_CMD_UNIT_EM_DB_UNITS__U1EM1",
+            "kind": "E_CMD_UNIT_EM",
+            "src_id": "DB_UNITS",
+            "dst_id": "U1EM1",
+            "view_mask": [
+              "flow",
+              "seq"
+            ],
+            "origin": "suggested",
+            "label": "下发命令",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_SC_UP_U1EM1__DB_UNITS",
+            "kind": "E_SC_UP",
+            "src_id": "U1EM1",
+            "dst_id": "DB_UNITS",
+            "view_mask": [
+              "flow",
+              "seq"
+            ],
+            "origin": "suggested",
+            "label": "完成汇总上行",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_SEQ_TO_CN_U1EM1__U1EM1_CN",
+            "kind": "E_SEQ_TO_CN",
+            "src_id": "U1EM1",
+            "dst_id": "U1EM1_CN",
+            "view_mask": [
+              "flow",
+              "seq"
+            ],
+            "origin": "suggested",
+            "label": "步序经控制节点",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_CN_TO_CM_U1EM1_CN__U1EM1_CM1",
+            "kind": "E_CN_TO_CM",
+            "src_id": "U1EM1_CN",
+            "dst_id": "U1EM1_CM1",
+            "view_mask": [
+              "flow",
+              "seq"
+            ],
+            "origin": "suggested",
+            "label": "命令下发",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_CM_TO_CN_U1EM1_CM1__U1EM1_CN",
+            "kind": "E_CM_TO_CN",
+            "src_id": "U1EM1_CM1",
+            "dst_id": "U1EM1_CN",
+            "view_mask": [
+              "flow",
+              "seq"
+            ],
+            "origin": "suggested",
+            "label": "状态回读",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_IO_READ_U1EM1_CM1__IOMAP",
+            "kind": "E_IO_READ",
+            "src_id": "U1EM1_CM1",
+            "dst_id": "IOMAP",
+            "view_mask": [
+              "flow"
+            ],
+            "origin": "suggested",
+            "label": "只读信号",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_CN_TO_CM_U1EM1_CN__U1EM1_CM2",
+            "kind": "E_CN_TO_CM",
+            "src_id": "U1EM1_CN",
+            "dst_id": "U1EM1_CM2",
+            "view_mask": [
+              "flow",
+              "seq"
+            ],
+            "origin": "suggested",
+            "label": "命令下发",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_CM_TO_CN_U1EM1_CM2__U1EM1_CN",
+            "kind": "E_CM_TO_CN",
+            "src_id": "U1EM1_CM2",
+            "dst_id": "U1EM1_CN",
+            "view_mask": [
+              "flow",
+              "seq"
+            ],
+            "origin": "suggested",
+            "label": "状态回读",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_IO_READ_U1EM1_CM2__IOMAP",
+            "kind": "E_IO_READ",
+            "src_id": "U1EM1_CM2",
+            "dst_id": "IOMAP",
+            "view_mask": [
+              "flow"
+            ],
+            "origin": "suggested",
+            "label": "只读信号",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_MSG_STEP_OP__U1",
+            "kind": "E_MSG_STEP",
+            "src_id": "OP",
+            "dst_id": "U1",
+            "view_mask": [
+              "seq"
+            ],
+            "origin": "suggested",
+            "label": "选择模式并启动",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_MSG_STEP_U1__U1EM1",
+            "kind": "E_MSG_STEP",
+            "src_id": "U1",
+            "dst_id": "U1EM1",
+            "view_mask": [
+              "seq"
+            ],
+            "origin": "suggested",
+            "label": "作业启动",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_MSG_STEP_U1EM1__U1EM1_CN",
+            "kind": "E_MSG_STEP",
+            "src_id": "U1EM1",
+            "dst_id": "U1EM1_CN",
+            "view_mask": [
+              "seq"
+            ],
+            "origin": "suggested",
+            "label": "作业初始化",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_BRANCH_ALT_OPT_U1EM1_CN__Aborting",
+            "kind": "E_BRANCH_ALT_OPT",
+            "src_id": "U1EM1_CN",
+            "dst_id": "Aborting",
+            "view_mask": [
+              "seq"
+            ],
+            "origin": "suggested",
+            "label": "异常分支收敛到中止态",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_BRANCH_ALT_OPT_U1EM1_CN__Held",
+            "kind": "E_BRANCH_ALT_OPT",
+            "src_id": "U1EM1_CN",
+            "dst_id": "Held",
+            "view_mask": [
+              "seq"
+            ],
+            "origin": "suggested",
+            "label": "手动模式可选段",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Aborted__Clearing",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Aborted",
+            "dst_id": "Clearing",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Aborting__Aborted",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Aborting",
+            "dst_id": "Aborted",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Clearing__Stopped",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Clearing",
+            "dst_id": "Stopped",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Completed__Resetting",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Completed",
+            "dst_id": "Resetting",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Completing__Aborting",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Completing",
+            "dst_id": "Aborting",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Completing__Completed",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Completing",
+            "dst_id": "Completed",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Execute__Aborting",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Execute",
+            "dst_id": "Aborting",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Execute__Completing",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Execute",
+            "dst_id": "Completing",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Execute__Holding",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Execute",
+            "dst_id": "Holding",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Execute__Stopping",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Execute",
+            "dst_id": "Stopping",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Execute__Suspending",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Execute",
+            "dst_id": "Suspending",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Held__Unholding",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Held",
+            "dst_id": "Unholding",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Holding__Held",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Holding",
+            "dst_id": "Held",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Idle__Starting",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Idle",
+            "dst_id": "Starting",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Resetting__Idle",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Resetting",
+            "dst_id": "Idle",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Starting__Execute",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Starting",
+            "dst_id": "Execute",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Stopped__Resetting",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Stopped",
+            "dst_id": "Resetting",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Stopping__Stopped",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Stopping",
+            "dst_id": "Stopped",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Suspended__Unsuspending",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Suspended",
+            "dst_id": "Unsuspending",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Suspending__Suspended",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Suspending",
+            "dst_id": "Suspended",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Unholding__Execute",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Unholding",
+            "dst_id": "Execute",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_PACKML_TRANSITION_Unsuspending__Execute",
+            "kind": "E_PACKML_TRANSITION",
+            "src_id": "Unsuspending",
+            "dst_id": "Execute",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "状态迁移",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_MODE_SWITCH_MODE_AUTO__MODE_MANUAL",
+            "kind": "E_MODE_SWITCH",
+            "src_id": "MODE_AUTO",
+            "dst_id": "MODE_MANUAL",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "切换模式",
+            "immutable": false,
+            "created_at": ""
+          },
+          {
+            "id": "E_MODE_SWITCH_MODE_MANUAL__MODE_AUTO",
+            "kind": "E_MODE_SWITCH",
+            "src_id": "MODE_MANUAL",
+            "dst_id": "MODE_AUTO",
+            "view_mask": [
+              "state"
+            ],
+            "origin": "suggested",
+            "label": "切换模式",
+            "immutable": false,
+            "created_at": ""
+          }
+        ],
+        "views": {
+          "flow": {
+            "mermaid": "",
+            "node_ids": [],
+            "edge_ids": []
+          },
+          "seq": {
+            "mermaid": "",
+            "node_ids": [],
+            "edge_ids": []
+          },
+          "state": {
+            "mermaid": "",
+            "node_ids": [],
+            "edge_ids": []
+          },
+          "shared_id_namespace": true,
+          "projection_version": "gf-view-1.0",
+          "layout": {}
+        },
+        "spec_meta": {
+          "spec_version": "v0",
+          "spec_hash": "",
+          "prev_spec_hash": null,
+          "stage": "DRAFT",
+          "frozen_at": null,
+          "frozen_by": null,
+          "contract_hashes": [],
+          "receipt_id": "",
+          "open_questions": []
+        },
+        "project_id": "GF-Q-UC15",
+        "baseline_version": "GF-BASELINE-1.0",
+        "hw_nodes": [],
+        "hw_links": [],
+        "cm_mounts": {},
+        "var_bindings": []
+      },
+      "views_snapshot": {
+        "flow": "flowchart TB\n    U1[\"U1 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位<br/>AssemblyCell\"]\n    U1EM1[\"U1EM1 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位<br/>Station1\"]\n    U1EM1_CN[[\"U1EM1_CN 控制节点<br/>ControlNodes\"]]\n    U1EM1_CM1[\"U1EM1_CM1 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位<br/>LBC_MotorStarter\"]\n    U1EM1_CM2[\"U1EM1_CM2 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位<br/>LBC_TwoWayActuator\"]\n    U1EM1_CM3[\"U1EM1_CM3 手动新增执行件：下料检测气缸<br/>LBC_MotorStarter\"]\n    DB_UNITS[(\"DB_UNITS 接口数据区<br/>只读契约引用\")]\n    IOMAP[\"IOMAP 信号适配层<br/>只读冻结契约边界\"]\n    U1 -->|E_HIER_UNIT_EM 骨架| U1EM1\n    DB_UNITS -->|E_CMD_UNIT_EM 建议| U1EM1\n    U1EM1 -->|E_SC_UP 建议| DB_UNITS\n    U1EM1 -->|E_SEQ_TO_CN 建议| U1EM1_CN\n    U1EM1_CN -->|E_CN_TO_CM 建议| U1EM1_CM1\n    U1EM1_CM1 -->|E_CM_TO_CN 建议| U1EM1_CN\n    U1EM1_CM1 -.->|E_IO_READ 建议| IOMAP\n    U1EM1_CN -->|E_CN_TO_CM 建议| U1EM1_CM2\n    U1EM1_CM2 -->|E_CM_TO_CN 建议| U1EM1_CN\n    U1EM1_CM2 -.->|E_IO_READ 建议| IOMAP\n\n    %% ===== 留给用户手动连线的位置（首版不预置，见 §4）=====\n    %% [留白 A] 跨工序联锁放行 · [留白 B] 手动点动 · [留白 C] 工序交接\n    %% edge_ids: E_CMD_UNIT_EM_DB_UNITS__U1EM1,E_CM_TO_CN_U1EM1_CM1__U1EM1_CN,E_CM_TO_CN_U1EM1_CM2__U1EM1_CN,E_CN_TO_CM_U1EM1_CN__U1EM1_CM1,E_CN_TO_CM_U1EM1_CN__U1EM1_CM2,E_HIER_UNIT_EM_U1__U1EM1,E_IO_READ_U1EM1_CM1__IOMAP,E_IO_READ_U1EM1_CM2__IOMAP,E_SC_UP_U1EM1__DB_UNITS,E_SEQ_TO_CN_U1EM1__U1EM1_CN",
+        "seq": "sequenceDiagram\n    autonumber\n    actor OP as 操作员\n    participant U1 as 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位\n    participant U1EM1 as 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位\n    participant U1EM1_CN as 控制节点\n    participant U1EM1_CM1 as 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位\n    participant U1EM1_CM2 as 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位\n    participant U1EM1_CM3 as 手动新增执行件：下料检测气缸\n    participant DB_UNITS as 接口数据区\n\n    Note over OP: 以下消息均为建议边，可增删改向；异常分支需收敛到已定义异常态\n    DB_UNITS->>U1EM1: 下发命令（建议）\n    U1EM1-->>DB_UNITS: 完成汇总上行（建议）\n    U1EM1->>U1EM1_CN: 步序经控制节点（建议）\n    U1EM1_CN->>U1EM1_CM1: 命令下发（建议）\n    U1EM1_CM1-->>U1EM1_CN: 状态回读（建议）\n    U1EM1_CN->>U1EM1_CM2: 命令下发（建议）\n    U1EM1_CM2-->>U1EM1_CN: 状态回读（建议）\n    OP->>U1: 选择模式并启动（建议）\n    U1->>U1EM1: 作业启动（建议）\n    U1EM1->>U1EM1_CN: 作业初始化（建议）\n    Note over U1EM1_CN: 异常分支收敛到 Aborting（建议）\n    Note over U1EM1_CN: 异常分支收敛到 Held（建议）\n    alt 正常路径（建议）\n        U1EM1->>U1EM1_CN: CYL1_EXTEND 步序 10（建议）\n        U1EM1->>U1EM1_CN: CYL1_RETRACT 步序 20（建议）\n        U1EM1->>U1EM1_CN: MOTOR1_RUN 步序 30（建议）\n    else 压装超时或急停（建议·异常分支）\n        OP-->>U1: 报警并请求复位（建议）\n    end\n    opt 手动模式（建议）\n        OP->>U1: 切换到手动模式（建议）\n        U1->>U1EM1_CN: 开放点动 仅经控制节点（建议）\n    end\n    Note over U1EM1_CN: 超时与联锁表达式为不上图字段，右侧校验面板可编辑\n    %% edge_ids: E_BRANCH_ALT_OPT_U1EM1_CN__Aborting,E_BRANCH_ALT_OPT_U1EM1_CN__Held,E_CMD_UNIT_EM_DB_UNITS__U1EM1,E_CM_TO_CN_U1EM1_CM1__U1EM1_CN,E_CM_TO_CN_U1EM1_CM2__U1EM1_CN,E_CN_TO_CM_U1EM1_CN__U1EM1_CM1,E_CN_TO_CM_U1EM1_CN__U1EM1_CM2,E_MSG_STEP_OP__U1,E_MSG_STEP_U1EM1__U1EM1_CN,E_MSG_STEP_U1__U1EM1,E_SC_UP_U1EM1__DB_UNITS,E_SEQ_TO_CN_U1EM1__U1EM1_CN",
+        "state": "stateDiagram-v2\n    direction TB\n\n    state \"停机 Stopped\" as Stopped\n    state \"复位中 Resetting\" as Resetting\n    state \"待机 Idle\" as Idle\n    state \"启动中 Starting\" as Starting\n    state \"执行 Execute\" as Execute\n    state \"保持中 Holding\" as Holding\n    state \"已保持 Held\" as Held\n    state \"解除保持 Unholding\" as Unholding\n    state \"完成中 Completing\" as Completing\n    state \"已完成 Completed\" as Completed\n    state \"停止中 Stopping\" as Stopping\n    state \"中止中 Aborting\" as Aborting\n    state \"已中止 Aborted\" as Aborted\n    state \"清理中 Clearing\" as Clearing\n    state \"挂起中 Suspending\" as Suspending\n    state \"已挂起 Suspended\" as Suspended\n    state \"解除挂起 Unsuspending\" as Unsuspending\n    state \"自动模式 Production\" as MODE_AUTO\n    state \"手动模式 Manual\" as MODE_MANUAL\n\n    [*] --> Stopped\n\n    Aborted --> Clearing : 状态迁移 建议\n    Aborting --> Aborted : 状态迁移 建议\n    Clearing --> Stopped : 状态迁移 建议\n    Completed --> Resetting : 状态迁移 建议\n    Completing --> Aborting : 状态迁移 建议\n    Completing --> Completed : 状态迁移 建议\n    Execute --> Aborting : 状态迁移 建议\n    Execute --> Completing : 状态迁移 建议\n    Execute --> Holding : 状态迁移 建议\n    Execute --> Stopping : 状态迁移 建议\n    Execute --> Suspending : 状态迁移 建议\n    Held --> Unholding : 状态迁移 建议\n    Holding --> Held : 状态迁移 建议\n    Idle --> Starting : 状态迁移 建议\n    Resetting --> Idle : 状态迁移 建议\n    Starting --> Execute : 状态迁移 建议\n    Stopped --> Resetting : 状态迁移 建议\n    Stopping --> Stopped : 状态迁移 建议\n    Suspended --> Unsuspending : 状态迁移 建议\n    Suspending --> Suspended : 状态迁移 建议\n    Unholding --> Execute : 状态迁移 建议\n    Unsuspending --> Execute : 状态迁移 建议\n    MODE_AUTO --> MODE_MANUAL : 切换模式 建议\n    MODE_MANUAL --> MODE_AUTO : 切换模式 建议\n\n    note right of Execute\n        自动模式下由状态机统一裁决命令；\n        手动模式仅开放点动。\n        完整迁移许可表、每模式使能位集、\n        超时与命名空间均属不上图字段，在右侧校验面板可见可编辑。\n    end note\n    %% edge_ids: E_MODE_SWITCH_MODE_AUTO__MODE_MANUAL,E_MODE_SWITCH_MODE_MANUAL__MODE_AUTO,E_PACKML_TRANSITION_Aborted__Clearing,E_PACKML_TRANSITION_Aborting__Aborted,E_PACKML_TRANSITION_Clearing__Stopped,E_PACKML_TRANSITION_Completed__Resetting,E_PACKML_TRANSITION_Completing__Aborting,E_PACKML_TRANSITION_Completing__Completed,E_PACKML_TRANSITION_Execute__Aborting,E_PACKML_TRANSITION_Execute__Completing,E_PACKML_TRANSITION_Execute__Holding,E_PACKML_TRANSITION_Execute__Stopping,E_PACKML_TRANSITION_Execute__Suspending,E_PACKML_TRANSITION_Held__Unholding,E_PACKML_TRANSITION_Holding__Held,E_PACKML_TRANSITION_Idle__Starting,E_PACKML_TRANSITION_Resetting__Idle,E_PACKML_TRANSITION_Starting__Execute,E_PACKML_TRANSITION_Stopped__Resetting,E_PACKML_TRANSITION_Stopping__Stopped,E_PACKML_TRANSITION_Suspended__Unsuspending,E_PACKML_TRANSITION_Suspending__Suspended,E_PACKML_TRANSITION_Unholding__Execute,E_PACKML_TRANSITION_Unsuspending__Execute"
+      },
+      "contract_refs": {},
+      "open_questions": [],
+      "project_id": "GF-Q-UC15",
+      "framework_baseline_version": "GF-BASELINE-1.0",
+      "created_at": "2026-11-07T08:05:15Z"
+    },
+    "ir_snapshot": {
+      "project": {
+        "name": "AssemblyCell",
+        "business_label": "输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位",
+        "af_profile": "SIEMENS_AF_BASIC_FOLDER_V19",
+        "namespace_prefix": "GF",
+        "tia_version": "V19"
+      },
+      "ir_version": "gf-ir-1.0",
+      "units": [
+        {
+          "id": "U1",
+          "unit_idx": 1,
+          "name": "AssemblyCell",
+          "business_label": "输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位",
+          "namespace_prefix": "U1_",
+          "parent_id": null,
+          "ob_numbers": {
+            "startup": 1000,
+            "main": 1001,
+            "prodiag": 1002
+          }
+        }
+      ],
+      "ems": [
+        {
+          "id": "U1EM1",
+          "em_idx": 1,
+          "unit_id": "U1",
+          "name": "Station1",
+          "business_label": "输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位",
+          "namespace_prefix": "U1EM1_",
+          "control_node_id": "U1EM1_CN",
+          "job_ids": [
+            "U1EM1_J1"
+          ],
+          "initial_step_id": 10,
+          "ob_numbers": {
+            "startup": 1010,
+            "main": 1011,
+            "prodiag": 1012
+          },
+          "sc_policy": "SC_ON_COMPLETE"
+        }
+      ],
+      "cms": [
+        {
+          "id": "U1EM1_CM1",
+          "em_id": "U1EM1",
+          "cm_type": "LBC_MotorStarter",
+          "business_label": "输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位",
+          "plcopen": {
+            "enable": true,
+            "valid": true,
+            "busy": true,
+            "error": true,
+            "status": true
+          },
+          "io_binding_ids": [],
+          "parameters": {}
+        },
+        {
+          "id": "U1EM1_CM2",
+          "em_id": "U1EM1",
+          "cm_type": "LBC_TwoWayActuator",
+          "business_label": "输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位",
+          "plcopen": {
+            "enable": true,
+            "valid": true,
+            "busy": true,
+            "error": true,
+            "status": true
+          },
+          "io_binding_ids": [],
+          "parameters": {}
+        },
+        {
+          "id": "U1EM1_CM3",
+          "em_id": "U1EM1",
+          "cm_type": "LBC_MotorStarter",
+          "business_label": "手动新增执行件：下料检测气缸",
+          "plcopen": {
+            "enable": true,
+            "valid": true,
+            "busy": true,
+            "error": true,
+            "status": true
+          },
+          "io_binding_ids": [],
+          "parameters": {}
+        }
+      ],
+      "control_nodes": [
+        {
+          "id": "U1EM1_CN",
+          "em_id": "U1EM1",
+          "namespace_prefix": "U1EM1_",
+          "sequence_ref": "U1EM1_SEQ",
+          "commands": [
+            "start",
+            "stop",
+            "reset"
+          ],
+          "status": [
+            "stepCurrent",
+            "busy",
+            "error",
+            "stateComplete"
+          ]
+        }
+      ],
+      "jobs": [
+        {
+          "id": "U1EM1_J1",
+          "em_id": "U1EM1",
+          "job_id": 1,
+          "name": "AutoProduction",
+          "initial_step_id": 10,
+          "start_condition": "TRUE AND #ready",
+          "interlock_id": null,
+          "single_cycle_job": true
+        }
+      ],
+      "steps": [
+        {
+          "id": "U1EM1_S10",
+          "em_id": "U1EM1",
+          "job_id": "U1EM1_J1",
+          "step_id": 10,
+          "name": "CYL1_EXTEND",
+          "actions": [
+            "#controlNodes.cyl1.commands.workPosition := TRUE;"
+          ],
+          "transition_condition": "TRUE",
+          "next_step_id": 20,
+          "error_step_id": 999,
+          "timeout_ms": 5000,
+          "branch": {}
+        },
+        {
+          "id": "U1EM1_S20",
+          "em_id": "U1EM1",
+          "job_id": "U1EM1_J1",
+          "step_id": 20,
+          "name": "CYL1_RETRACT",
+          "actions": [
+            "#controlNodes.cyl1.commands.homePosition := TRUE;"
+          ],
+          "transition_condition": "#controlNodes.cyl1.status.inHomePosition",
+          "next_step_id": 30,
+          "error_step_id": 999,
+          "timeout_ms": 5000,
+          "branch": {}
+        },
+        {
+          "id": "U1EM1_S30",
+          "em_id": "U1EM1",
+          "job_id": "U1EM1_J1",
+          "step_id": 30,
+          "name": "MOTOR1_RUN",
+          "actions": [
+            "#controlNodes.motor1.commands.forward := TRUE;"
+          ],
+          "transition_condition": "#controlNodes.motor1.status.running",
+          "next_step_id": 1,
+          "error_step_id": 999,
+          "timeout_ms": 5000,
+          "branch": {}
+        }
+      ],
+      "modes": [
+        {
+          "id": "MODE_AUTO",
+          "name": "Auto",
+          "business_label": "自动模式",
+          "packml_mode": "Production",
+          "enabled_states": [
+            "Clearing",
+            "Stopped",
+            "Resetting",
+            "Idle",
+            "Starting",
+            "Execute",
+            "Stopping",
+            "Holding",
+            "Held",
+            "Unholding",
+            "Suspending",
+            "Suspended",
+            "Unsuspending",
+            "Completing",
+            "Completed",
+            "Aborting",
+            "Aborted"
+          ],
+          "enabled_transitions": [
+            "PACKML_TRANSITIONS"
+          ],
+          "enable_hold": true,
+          "enable_complete": true
+        },
+        {
+          "id": "MODE_MANUAL",
+          "name": "Manual",
+          "business_label": "手动模式",
+          "packml_mode": "Manual",
+          "enabled_states": [
+            "Stopped",
+            "Idle",
+            "Execute"
+          ],
+          "enabled_transitions": [],
+          "enable_hold": false,
+          "enable_complete": false
+        }
+      ],
+      "interlocks": [],
+      "io_bindings": [],
+      "compat_refs": [],
+      "edges": [
+        {
+          "id": "E_HIER_UNIT_EM_U1__U1EM1",
+          "kind": "E_HIER_UNIT_EM",
+          "src_id": "U1",
+          "dst_id": "U1EM1",
+          "view_mask": [
+            "flow"
+          ],
+          "origin": "system",
+          "label": "层级",
+          "immutable": true,
+          "created_at": ""
+        },
+        {
+          "id": "E_CMD_UNIT_EM_DB_UNITS__U1EM1",
+          "kind": "E_CMD_UNIT_EM",
+          "src_id": "DB_UNITS",
+          "dst_id": "U1EM1",
+          "view_mask": [
+            "flow",
+            "seq"
+          ],
+          "origin": "suggested",
+          "label": "下发命令",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_SC_UP_U1EM1__DB_UNITS",
+          "kind": "E_SC_UP",
+          "src_id": "U1EM1",
+          "dst_id": "DB_UNITS",
+          "view_mask": [
+            "flow",
+            "seq"
+          ],
+          "origin": "suggested",
+          "label": "完成汇总上行",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_SEQ_TO_CN_U1EM1__U1EM1_CN",
+          "kind": "E_SEQ_TO_CN",
+          "src_id": "U1EM1",
+          "dst_id": "U1EM1_CN",
+          "view_mask": [
+            "flow",
+            "seq"
+          ],
+          "origin": "suggested",
+          "label": "步序经控制节点",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_CN_TO_CM_U1EM1_CN__U1EM1_CM1",
+          "kind": "E_CN_TO_CM",
+          "src_id": "U1EM1_CN",
+          "dst_id": "U1EM1_CM1",
+          "view_mask": [
+            "flow",
+            "seq"
+          ],
+          "origin": "suggested",
+          "label": "命令下发",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_CM_TO_CN_U1EM1_CM1__U1EM1_CN",
+          "kind": "E_CM_TO_CN",
+          "src_id": "U1EM1_CM1",
+          "dst_id": "U1EM1_CN",
+          "view_mask": [
+            "flow",
+            "seq"
+          ],
+          "origin": "suggested",
+          "label": "状态回读",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_IO_READ_U1EM1_CM1__IOMAP",
+          "kind": "E_IO_READ",
+          "src_id": "U1EM1_CM1",
+          "dst_id": "IOMAP",
+          "view_mask": [
+            "flow"
+          ],
+          "origin": "suggested",
+          "label": "只读信号",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_CN_TO_CM_U1EM1_CN__U1EM1_CM2",
+          "kind": "E_CN_TO_CM",
+          "src_id": "U1EM1_CN",
+          "dst_id": "U1EM1_CM2",
+          "view_mask": [
+            "flow",
+            "seq"
+          ],
+          "origin": "suggested",
+          "label": "命令下发",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_CM_TO_CN_U1EM1_CM2__U1EM1_CN",
+          "kind": "E_CM_TO_CN",
+          "src_id": "U1EM1_CM2",
+          "dst_id": "U1EM1_CN",
+          "view_mask": [
+            "flow",
+            "seq"
+          ],
+          "origin": "suggested",
+          "label": "状态回读",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_IO_READ_U1EM1_CM2__IOMAP",
+          "kind": "E_IO_READ",
+          "src_id": "U1EM1_CM2",
+          "dst_id": "IOMAP",
+          "view_mask": [
+            "flow"
+          ],
+          "origin": "suggested",
+          "label": "只读信号",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_MSG_STEP_OP__U1",
+          "kind": "E_MSG_STEP",
+          "src_id": "OP",
+          "dst_id": "U1",
+          "view_mask": [
+            "seq"
+          ],
+          "origin": "suggested",
+          "label": "选择模式并启动",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_MSG_STEP_U1__U1EM1",
+          "kind": "E_MSG_STEP",
+          "src_id": "U1",
+          "dst_id": "U1EM1",
+          "view_mask": [
+            "seq"
+          ],
+          "origin": "suggested",
+          "label": "作业启动",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_MSG_STEP_U1EM1__U1EM1_CN",
+          "kind": "E_MSG_STEP",
+          "src_id": "U1EM1",
+          "dst_id": "U1EM1_CN",
+          "view_mask": [
+            "seq"
+          ],
+          "origin": "suggested",
+          "label": "作业初始化",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_BRANCH_ALT_OPT_U1EM1_CN__Aborting",
+          "kind": "E_BRANCH_ALT_OPT",
+          "src_id": "U1EM1_CN",
+          "dst_id": "Aborting",
+          "view_mask": [
+            "seq"
+          ],
+          "origin": "suggested",
+          "label": "异常分支收敛到中止态",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_BRANCH_ALT_OPT_U1EM1_CN__Held",
+          "kind": "E_BRANCH_ALT_OPT",
+          "src_id": "U1EM1_CN",
+          "dst_id": "Held",
+          "view_mask": [
+            "seq"
+          ],
+          "origin": "suggested",
+          "label": "手动模式可选段",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Aborted__Clearing",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Aborted",
+          "dst_id": "Clearing",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Aborting__Aborted",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Aborting",
+          "dst_id": "Aborted",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Clearing__Stopped",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Clearing",
+          "dst_id": "Stopped",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Completed__Resetting",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Completed",
+          "dst_id": "Resetting",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Completing__Aborting",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Completing",
+          "dst_id": "Aborting",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Completing__Completed",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Completing",
+          "dst_id": "Completed",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Execute__Aborting",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Execute",
+          "dst_id": "Aborting",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Execute__Completing",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Execute",
+          "dst_id": "Completing",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Execute__Holding",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Execute",
+          "dst_id": "Holding",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Execute__Stopping",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Execute",
+          "dst_id": "Stopping",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Execute__Suspending",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Execute",
+          "dst_id": "Suspending",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Held__Unholding",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Held",
+          "dst_id": "Unholding",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Holding__Held",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Holding",
+          "dst_id": "Held",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Idle__Starting",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Idle",
+          "dst_id": "Starting",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Resetting__Idle",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Resetting",
+          "dst_id": "Idle",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Starting__Execute",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Starting",
+          "dst_id": "Execute",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Stopped__Resetting",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Stopped",
+          "dst_id": "Resetting",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Stopping__Stopped",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Stopping",
+          "dst_id": "Stopped",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Suspended__Unsuspending",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Suspended",
+          "dst_id": "Unsuspending",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Suspending__Suspended",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Suspending",
+          "dst_id": "Suspended",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Unholding__Execute",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Unholding",
+          "dst_id": "Execute",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_PACKML_TRANSITION_Unsuspending__Execute",
+          "kind": "E_PACKML_TRANSITION",
+          "src_id": "Unsuspending",
+          "dst_id": "Execute",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "状态迁移",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_MODE_SWITCH_MODE_AUTO__MODE_MANUAL",
+          "kind": "E_MODE_SWITCH",
+          "src_id": "MODE_AUTO",
+          "dst_id": "MODE_MANUAL",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "切换模式",
+          "immutable": false,
+          "created_at": ""
+        },
+        {
+          "id": "E_MODE_SWITCH_MODE_MANUAL__MODE_AUTO",
+          "kind": "E_MODE_SWITCH",
+          "src_id": "MODE_MANUAL",
+          "dst_id": "MODE_AUTO",
+          "view_mask": [
+            "state"
+          ],
+          "origin": "suggested",
+          "label": "切换模式",
+          "immutable": false,
+          "created_at": ""
+        }
+      ],
+      "views": {
+        "flow": {
+          "mermaid": "",
+          "node_ids": [],
+          "edge_ids": []
+        },
+        "seq": {
+          "mermaid": "",
+          "node_ids": [],
+          "edge_ids": []
+        },
+        "state": {
+          "mermaid": "",
+          "node_ids": [],
+          "edge_ids": []
+        },
+        "shared_id_namespace": true,
+        "projection_version": "gf-view-1.0",
+        "layout": {}
+      },
+      "spec_meta": {
+        "spec_version": "v0",
+        "spec_hash": "",
+        "prev_spec_hash": null,
+        "stage": "DRAFT",
+        "frozen_at": null,
+        "frozen_by": null,
+        "contract_hashes": [],
+        "receipt_id": "",
+        "open_questions": []
+      },
+      "project_id": "GF-Q-UC15",
+      "baseline_version": "GF-BASELINE-1.0",
+      "hw_nodes": [],
+      "hw_links": [],
+      "cm_mounts": {},
+      "var_bindings": []
+    },
+    "views": {
+      "flow": "flowchart TB\n    U1[\"U1 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位<br/>AssemblyCell\"]\n    U1EM1[\"U1EM1 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位<br/>Station1\"]\n    U1EM1_CN[[\"U1EM1_CN 控制节点<br/>ControlNodes\"]]\n    U1EM1_CM1[\"U1EM1_CM1 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位<br/>LBC_MotorStarter\"]\n    U1EM1_CM2[\"U1EM1_CM2 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位<br/>LBC_TwoWayActuator\"]\n    U1EM1_CM3[\"U1EM1_CM3 手动新增执行件：下料检测气缸<br/>LBC_MotorStarter\"]\n    DB_UNITS[(\"DB_UNITS 接口数据区<br/>只读契约引用\")]\n    IOMAP[\"IOMAP 信号适配层<br/>只读冻结契约边界\"]\n    U1 -->|E_HIER_UNIT_EM 骨架| U1EM1\n    DB_UNITS -->|E_CMD_UNIT_EM 建议| U1EM1\n    U1EM1 -->|E_SC_UP 建议| DB_UNITS\n    U1EM1 -->|E_SEQ_TO_CN 建议| U1EM1_CN\n    U1EM1_CN -->|E_CN_TO_CM 建议| U1EM1_CM1\n    U1EM1_CM1 -->|E_CM_TO_CN 建议| U1EM1_CN\n    U1EM1_CM1 -.->|E_IO_READ 建议| IOMAP\n    U1EM1_CN -->|E_CN_TO_CM 建议| U1EM1_CM2\n    U1EM1_CM2 -->|E_CM_TO_CN 建议| U1EM1_CN\n    U1EM1_CM2 -.->|E_IO_READ 建议| IOMAP\n\n    %% ===== 留给用户手动连线的位置（首版不预置，见 §4）=====\n    %% [留白 A] 跨工序联锁放行 · [留白 B] 手动点动 · [留白 C] 工序交接\n    %% edge_ids: E_CMD_UNIT_EM_DB_UNITS__U1EM1,E_CM_TO_CN_U1EM1_CM1__U1EM1_CN,E_CM_TO_CN_U1EM1_CM2__U1EM1_CN,E_CN_TO_CM_U1EM1_CN__U1EM1_CM1,E_CN_TO_CM_U1EM1_CN__U1EM1_CM2,E_HIER_UNIT_EM_U1__U1EM1,E_IO_READ_U1EM1_CM1__IOMAP,E_IO_READ_U1EM1_CM2__IOMAP,E_SC_UP_U1EM1__DB_UNITS,E_SEQ_TO_CN_U1EM1__U1EM1_CN",
+      "seq": "sequenceDiagram\n    autonumber\n    actor OP as 操作员\n    participant U1 as 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位\n    participant U1EM1 as 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位\n    participant U1EM1_CN as 控制节点\n    participant U1EM1_CM1 as 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位\n    participant U1EM1_CM2 as 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位\n    participant U1EM1_CM3 as 手动新增执行件：下料检测气缸\n    participant DB_UNITS as 接口数据区\n\n    Note over OP: 以下消息均为建议边，可增删改向；异常分支需收敛到已定义异常态\n    DB_UNITS->>U1EM1: 下发命令（建议）\n    U1EM1-->>DB_UNITS: 完成汇总上行（建议）\n    U1EM1->>U1EM1_CN: 步序经控制节点（建议）\n    U1EM1_CN->>U1EM1_CM1: 命令下发（建议）\n    U1EM1_CM1-->>U1EM1_CN: 状态回读（建议）\n    U1EM1_CN->>U1EM1_CM2: 命令下发（建议）\n    U1EM1_CM2-->>U1EM1_CN: 状态回读（建议）\n    OP->>U1: 选择模式并启动（建议）\n    U1->>U1EM1: 作业启动（建议）\n    U1EM1->>U1EM1_CN: 作业初始化（建议）\n    Note over U1EM1_CN: 异常分支收敛到 Aborting（建议）\n    Note over U1EM1_CN: 异常分支收敛到 Held（建议）\n    alt 正常路径（建议）\n        U1EM1->>U1EM1_CN: CYL1_EXTEND 步序 10（建议）\n        U1EM1->>U1EM1_CN: CYL1_RETRACT 步序 20（建议）\n        U1EM1->>U1EM1_CN: MOTOR1_RUN 步序 30（建议）\n    else 压装超时或急停（建议·异常分支）\n        OP-->>U1: 报警并请求复位（建议）\n    end\n    opt 手动模式（建议）\n        OP->>U1: 切换到手动模式（建议）\n        U1->>U1EM1_CN: 开放点动 仅经控制节点（建议）\n    end\n    Note over U1EM1_CN: 超时与联锁表达式为不上图字段，右侧校验面板可编辑\n    %% edge_ids: E_BRANCH_ALT_OPT_U1EM1_CN__Aborting,E_BRANCH_ALT_OPT_U1EM1_CN__Held,E_CMD_UNIT_EM_DB_UNITS__U1EM1,E_CM_TO_CN_U1EM1_CM1__U1EM1_CN,E_CM_TO_CN_U1EM1_CM2__U1EM1_CN,E_CN_TO_CM_U1EM1_CN__U1EM1_CM1,E_CN_TO_CM_U1EM1_CN__U1EM1_CM2,E_MSG_STEP_OP__U1,E_MSG_STEP_U1EM1__U1EM1_CN,E_MSG_STEP_U1__U1EM1,E_SC_UP_U1EM1__DB_UNITS,E_SEQ_TO_CN_U1EM1__U1EM1_CN",
+      "state": "stateDiagram-v2\n    direction TB\n\n    state \"停机 Stopped\" as Stopped\n    state \"复位中 Resetting\" as Resetting\n    state \"待机 Idle\" as Idle\n    state \"启动中 Starting\" as Starting\n    state \"执行 Execute\" as Execute\n    state \"保持中 Holding\" as Holding\n    state \"已保持 Held\" as Held\n    state \"解除保持 Unholding\" as Unholding\n    state \"完成中 Completing\" as Completing\n    state \"已完成 Completed\" as Completed\n    state \"停止中 Stopping\" as Stopping\n    state \"中止中 Aborting\" as Aborting\n    state \"已中止 Aborted\" as Aborted\n    state \"清理中 Clearing\" as Clearing\n    state \"挂起中 Suspending\" as Suspending\n    state \"已挂起 Suspended\" as Suspended\n    state \"解除挂起 Unsuspending\" as Unsuspending\n    state \"自动模式 Production\" as MODE_AUTO\n    state \"手动模式 Manual\" as MODE_MANUAL\n\n    [*] --> Stopped\n\n    Aborted --> Clearing : 状态迁移 建议\n    Aborting --> Aborted : 状态迁移 建议\n    Clearing --> Stopped : 状态迁移 建议\n    Completed --> Resetting : 状态迁移 建议\n    Completing --> Aborting : 状态迁移 建议\n    Completing --> Completed : 状态迁移 建议\n    Execute --> Aborting : 状态迁移 建议\n    Execute --> Completing : 状态迁移 建议\n    Execute --> Holding : 状态迁移 建议\n    Execute --> Stopping : 状态迁移 建议\n    Execute --> Suspending : 状态迁移 建议\n    Held --> Unholding : 状态迁移 建议\n    Holding --> Held : 状态迁移 建议\n    Idle --> Starting : 状态迁移 建议\n    Resetting --> Idle : 状态迁移 建议\n    Starting --> Execute : 状态迁移 建议\n    Stopped --> Resetting : 状态迁移 建议\n    Stopping --> Stopped : 状态迁移 建议\n    Suspended --> Unsuspending : 状态迁移 建议\n    Suspending --> Suspended : 状态迁移 建议\n    Unholding --> Execute : 状态迁移 建议\n    Unsuspending --> Execute : 状态迁移 建议\n    MODE_AUTO --> MODE_MANUAL : 切换模式 建议\n    MODE_MANUAL --> MODE_AUTO : 切换模式 建议\n\n    note right of Execute\n        自动模式下由状态机统一裁决命令；\n        手动模式仅开放点动。\n        完整迁移许可表、每模式使能位集、\n        超时与命名空间均属不上图字段，在右侧校验面板可见可编辑。\n    end note\n    %% edge_ids: E_MODE_SWITCH_MODE_AUTO__MODE_MANUAL,E_MODE_SWITCH_MODE_MANUAL__MODE_AUTO,E_PACKML_TRANSITION_Aborted__Clearing,E_PACKML_TRANSITION_Aborting__Aborted,E_PACKML_TRANSITION_Clearing__Stopped,E_PACKML_TRANSITION_Completed__Resetting,E_PACKML_TRANSITION_Completing__Aborting,E_PACKML_TRANSITION_Completing__Completed,E_PACKML_TRANSITION_Execute__Aborting,E_PACKML_TRANSITION_Execute__Completing,E_PACKML_TRANSITION_Execute__Holding,E_PACKML_TRANSITION_Execute__Stopping,E_PACKML_TRANSITION_Execute__Suspending,E_PACKML_TRANSITION_Held__Unholding,E_PACKML_TRANSITION_Holding__Held,E_PACKML_TRANSITION_Idle__Starting,E_PACKML_TRANSITION_Resetting__Idle,E_PACKML_TRANSITION_Starting__Execute,E_PACKML_TRANSITION_Stopped__Resetting,E_PACKML_TRANSITION_Stopping__Stopped,E_PACKML_TRANSITION_Suspended__Unsuspending,E_PACKML_TRANSITION_Suspending__Suspended,E_PACKML_TRANSITION_Unholding__Execute,E_PACKML_TRANSITION_Unsuspending__Execute",
+      "step_flow": {
+        "mermaid": "flowchart TB\n    subgraph U1EM1_SG [\"U1EM1 · 输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位\"]\n        U1EM1_S10[\"S10 · CYL1_EXTEND<br/>动作: #controlNodes.cyl1.commands.workPosition := TRUE;<br/>条件: TRUE | 超时: 5000ms\"]\n        U1EM1_S20[\"S20 · CYL1_RETRACT<br/>动作: #controlNodes.cyl1.commands.homePosition := TRUE;<br/>条件: #controlNodes.cyl1.status.inHomePosition | 超时: 5000ms\"]\n        U1EM1_S30[\"S30 · MOTOR1_RUN<br/>动作: #controlNodes.motor1.commands.forward := TRUE;<br/>条件: #controlNodes.motor1.status.running | 超时: 5000ms\"]\n        U1EM1_S10 -->|TRUE| U1EM1_S20\n        U1EM1_ERR_999([\"S999 · 故障安全步 (SafeHold)\"])\n        U1EM1_S10 -.->|超时 5000ms| U1EM1_ERR_999\n        U1EM1_S20 -->|#controlNodes.cyl1.status.inHomePosition| U1EM1_S30\n        U1EM1_ERR_999([\"S999 · 故障安全步 (SafeHold)\"])\n        U1EM1_S20 -.->|超时 5000ms| U1EM1_ERR_999\n        U1EM1_ERR_999([\"S999 · 故障安全步 (SafeHold)\"])\n        U1EM1_S30 -.->|超时 5000ms| U1EM1_ERR_999\n    end",
+        "nodes": [
+          {
+            "id": "U1EM1_S10",
+            "em_id": "U1EM1",
+            "step_id": 10,
+            "name": "CYL1_EXTEND",
+            "actions": [
+              "#controlNodes.cyl1.commands.workPosition := TRUE;"
+            ],
+            "transition_condition": "TRUE",
+            "next_step_id": 20,
+            "error_step_id": 999,
+            "timeout_ms": 5000,
+            "is_initial": true,
+            "is_error": false
+          },
+          {
+            "id": "U1EM1_S20",
+            "em_id": "U1EM1",
+            "step_id": 20,
+            "name": "CYL1_RETRACT",
+            "actions": [
+              "#controlNodes.cyl1.commands.homePosition := TRUE;"
+            ],
+            "transition_condition": "#controlNodes.cyl1.status.inHomePosition",
+            "next_step_id": 30,
+            "error_step_id": 999,
+            "timeout_ms": 5000,
+            "is_initial": false,
+            "is_error": false
+          },
+          {
+            "id": "U1EM1_S30",
+            "em_id": "U1EM1",
+            "step_id": 30,
+            "name": "MOTOR1_RUN",
+            "actions": [
+              "#controlNodes.motor1.commands.forward := TRUE;"
+            ],
+            "transition_condition": "#controlNodes.motor1.status.running",
+            "next_step_id": 1,
+            "error_step_id": 999,
+            "timeout_ms": 5000,
+            "is_initial": false,
+            "is_error": false
+          }
+        ],
+        "edges": [
+          {
+            "id": "STEP_NEXT_U1EM1_S10__U1EM1_S20",
+            "src_id": "U1EM1_S10",
+            "dst_id": "U1EM1_S20",
+            "src_step_id": 10,
+            "dst_step_id": 20,
+            "label": "TRUE",
+            "kind": "NORMAL"
+          },
+          {
+            "id": "STEP_NEXT_U1EM1_S20__U1EM1_S30",
+            "src_id": "U1EM1_S20",
+            "dst_id": "U1EM1_S30",
+            "src_step_id": 20,
+            "dst_step_id": 30,
+            "label": "#controlNodes.cyl1.status.inHomePosition",
+            "kind": "NORMAL"
+          }
+        ],
+        "em_tabs": [
+          {
+            "id": "U1EM1",
+            "name": "Station1",
+            "business_label": "输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位",
+            "unit_id": "U1",
+            "em_idx": 1
+          }
+        ]
+      },
+      "node_ids": {
+        "flow": [
+          "U1",
+          "U1EM1",
+          "U1EM1_CN",
+          "U1EM1_CM1",
+          "U1EM1_CM2",
+          "U1EM1_CM3",
+          "DB_UNITS",
+          "IOMAP"
+        ],
+        "seq": [
+          "OP",
+          "U1",
+          "U1EM1",
+          "U1EM1_CN",
+          "U1EM1_CM1",
+          "U1EM1_CM2",
+          "U1EM1_CM3",
+          "DB_UNITS"
+        ],
+        "state": [
+          "Stopped",
+          "Resetting",
+          "Idle",
+          "Starting",
+          "Execute",
+          "Holding",
+          "Held",
+          "Unholding",
+          "Completing",
+          "Completed",
+          "Stopping",
+          "Aborting",
+          "Aborted",
+          "Clearing",
+          "Suspending",
+          "Suspended",
+          "Unsuspending",
+          "MODE_AUTO",
+          "MODE_MANUAL"
+        ]
+      },
+      "edge_ids": {
+        "flow": [
+          "E_HIER_UNIT_EM_U1__U1EM1",
+          "E_CMD_UNIT_EM_DB_UNITS__U1EM1",
+          "E_SC_UP_U1EM1__DB_UNITS",
+          "E_SEQ_TO_CN_U1EM1__U1EM1_CN",
+          "E_CN_TO_CM_U1EM1_CN__U1EM1_CM1",
+          "E_CM_TO_CN_U1EM1_CM1__U1EM1_CN",
+          "E_IO_READ_U1EM1_CM1__IOMAP",
+          "E_CN_TO_CM_U1EM1_CN__U1EM1_CM2",
+          "E_CM_TO_CN_U1EM1_CM2__U1EM1_CN",
+          "E_IO_READ_U1EM1_CM2__IOMAP"
+        ],
+        "seq": [
+          "E_CMD_UNIT_EM_DB_UNITS__U1EM1",
+          "E_SC_UP_U1EM1__DB_UNITS",
+          "E_SEQ_TO_CN_U1EM1__U1EM1_CN",
+          "E_CN_TO_CM_U1EM1_CN__U1EM1_CM1",
+          "E_CM_TO_CN_U1EM1_CM1__U1EM1_CN",
+          "E_CN_TO_CM_U1EM1_CN__U1EM1_CM2",
+          "E_CM_TO_CN_U1EM1_CM2__U1EM1_CN",
+          "E_MSG_STEP_OP__U1",
+          "E_MSG_STEP_U1__U1EM1",
+          "E_MSG_STEP_U1EM1__U1EM1_CN",
+          "E_BRANCH_ALT_OPT_U1EM1_CN__Aborting",
+          "E_BRANCH_ALT_OPT_U1EM1_CN__Held"
+        ],
+        "state": [
+          "E_PACKML_TRANSITION_Aborted__Clearing",
+          "E_PACKML_TRANSITION_Aborting__Aborted",
+          "E_PACKML_TRANSITION_Clearing__Stopped",
+          "E_PACKML_TRANSITION_Completed__Resetting",
+          "E_PACKML_TRANSITION_Completing__Aborting",
+          "E_PACKML_TRANSITION_Completing__Completed",
+          "E_PACKML_TRANSITION_Execute__Aborting",
+          "E_PACKML_TRANSITION_Execute__Completing",
+          "E_PACKML_TRANSITION_Execute__Holding",
+          "E_PACKML_TRANSITION_Execute__Stopping",
+          "E_PACKML_TRANSITION_Execute__Suspending",
+          "E_PACKML_TRANSITION_Held__Unholding",
+          "E_PACKML_TRANSITION_Holding__Held",
+          "E_PACKML_TRANSITION_Idle__Starting",
+          "E_PACKML_TRANSITION_Resetting__Idle",
+          "E_PACKML_TRANSITION_Starting__Execute",
+          "E_PACKML_TRANSITION_Stopped__Resetting",
+          "E_PACKML_TRANSITION_Stopping__Stopped",
+          "E_PACKML_TRANSITION_Suspended__Unsuspending",
+          "E_PACKML_TRANSITION_Suspending__Suspended",
+          "E_PACKML_TRANSITION_Unholding__Execute",
+          "E_PACKML_TRANSITION_Unsuspending__Execute",
+          "E_MODE_SWITCH_MODE_AUTO__MODE_MANUAL",
+          "E_MODE_SWITCH_MODE_MANUAL__MODE_AUTO"
+        ]
+      }
+    },
+    "edge_list": [
+      {
+        "id": "E_HIER_UNIT_EM_U1__U1EM1",
+        "kind": "E_HIER_UNIT_EM",
+        "src_id": "U1",
+        "dst_id": "U1EM1",
+        "view_mask": [
+          "flow"
+        ],
+        "origin": "system",
+        "label": "层级",
+        "immutable": true,
+        "created_at": ""
+      },
+      {
+        "id": "E_CMD_UNIT_EM_DB_UNITS__U1EM1",
+        "kind": "E_CMD_UNIT_EM",
+        "src_id": "DB_UNITS",
+        "dst_id": "U1EM1",
+        "view_mask": [
+          "flow",
+          "seq"
+        ],
+        "origin": "suggested",
+        "label": "下发命令",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_SC_UP_U1EM1__DB_UNITS",
+        "kind": "E_SC_UP",
+        "src_id": "U1EM1",
+        "dst_id": "DB_UNITS",
+        "view_mask": [
+          "flow",
+          "seq"
+        ],
+        "origin": "suggested",
+        "label": "完成汇总上行",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_SEQ_TO_CN_U1EM1__U1EM1_CN",
+        "kind": "E_SEQ_TO_CN",
+        "src_id": "U1EM1",
+        "dst_id": "U1EM1_CN",
+        "view_mask": [
+          "flow",
+          "seq"
+        ],
+        "origin": "suggested",
+        "label": "步序经控制节点",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_CN_TO_CM_U1EM1_CN__U1EM1_CM1",
+        "kind": "E_CN_TO_CM",
+        "src_id": "U1EM1_CN",
+        "dst_id": "U1EM1_CM1",
+        "view_mask": [
+          "flow",
+          "seq"
+        ],
+        "origin": "suggested",
+        "label": "命令下发",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_CM_TO_CN_U1EM1_CM1__U1EM1_CN",
+        "kind": "E_CM_TO_CN",
+        "src_id": "U1EM1_CM1",
+        "dst_id": "U1EM1_CN",
+        "view_mask": [
+          "flow",
+          "seq"
+        ],
+        "origin": "suggested",
+        "label": "状态回读",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_IO_READ_U1EM1_CM1__IOMAP",
+        "kind": "E_IO_READ",
+        "src_id": "U1EM1_CM1",
+        "dst_id": "IOMAP",
+        "view_mask": [
+          "flow"
+        ],
+        "origin": "suggested",
+        "label": "只读信号",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_CN_TO_CM_U1EM1_CN__U1EM1_CM2",
+        "kind": "E_CN_TO_CM",
+        "src_id": "U1EM1_CN",
+        "dst_id": "U1EM1_CM2",
+        "view_mask": [
+          "flow",
+          "seq"
+        ],
+        "origin": "suggested",
+        "label": "命令下发",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_CM_TO_CN_U1EM1_CM2__U1EM1_CN",
+        "kind": "E_CM_TO_CN",
+        "src_id": "U1EM1_CM2",
+        "dst_id": "U1EM1_CN",
+        "view_mask": [
+          "flow",
+          "seq"
+        ],
+        "origin": "suggested",
+        "label": "状态回读",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_IO_READ_U1EM1_CM2__IOMAP",
+        "kind": "E_IO_READ",
+        "src_id": "U1EM1_CM2",
+        "dst_id": "IOMAP",
+        "view_mask": [
+          "flow"
+        ],
+        "origin": "suggested",
+        "label": "只读信号",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_MSG_STEP_OP__U1",
+        "kind": "E_MSG_STEP",
+        "src_id": "OP",
+        "dst_id": "U1",
+        "view_mask": [
+          "seq"
+        ],
+        "origin": "suggested",
+        "label": "选择模式并启动",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_MSG_STEP_U1__U1EM1",
+        "kind": "E_MSG_STEP",
+        "src_id": "U1",
+        "dst_id": "U1EM1",
+        "view_mask": [
+          "seq"
+        ],
+        "origin": "suggested",
+        "label": "作业启动",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_MSG_STEP_U1EM1__U1EM1_CN",
+        "kind": "E_MSG_STEP",
+        "src_id": "U1EM1",
+        "dst_id": "U1EM1_CN",
+        "view_mask": [
+          "seq"
+        ],
+        "origin": "suggested",
+        "label": "作业初始化",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_BRANCH_ALT_OPT_U1EM1_CN__Aborting",
+        "kind": "E_BRANCH_ALT_OPT",
+        "src_id": "U1EM1_CN",
+        "dst_id": "Aborting",
+        "view_mask": [
+          "seq"
+        ],
+        "origin": "suggested",
+        "label": "异常分支收敛到中止态",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_BRANCH_ALT_OPT_U1EM1_CN__Held",
+        "kind": "E_BRANCH_ALT_OPT",
+        "src_id": "U1EM1_CN",
+        "dst_id": "Held",
+        "view_mask": [
+          "seq"
+        ],
+        "origin": "suggested",
+        "label": "手动模式可选段",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Aborted__Clearing",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Aborted",
+        "dst_id": "Clearing",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Aborting__Aborted",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Aborting",
+        "dst_id": "Aborted",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Clearing__Stopped",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Clearing",
+        "dst_id": "Stopped",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Completed__Resetting",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Completed",
+        "dst_id": "Resetting",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Completing__Aborting",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Completing",
+        "dst_id": "Aborting",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Completing__Completed",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Completing",
+        "dst_id": "Completed",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Execute__Aborting",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Execute",
+        "dst_id": "Aborting",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Execute__Completing",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Execute",
+        "dst_id": "Completing",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Execute__Holding",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Execute",
+        "dst_id": "Holding",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Execute__Stopping",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Execute",
+        "dst_id": "Stopping",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Execute__Suspending",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Execute",
+        "dst_id": "Suspending",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Held__Unholding",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Held",
+        "dst_id": "Unholding",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Holding__Held",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Holding",
+        "dst_id": "Held",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Idle__Starting",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Idle",
+        "dst_id": "Starting",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Resetting__Idle",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Resetting",
+        "dst_id": "Idle",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Starting__Execute",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Starting",
+        "dst_id": "Execute",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Stopped__Resetting",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Stopped",
+        "dst_id": "Resetting",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Stopping__Stopped",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Stopping",
+        "dst_id": "Stopped",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Suspended__Unsuspending",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Suspended",
+        "dst_id": "Unsuspending",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Suspending__Suspended",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Suspending",
+        "dst_id": "Suspended",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Unholding__Execute",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Unholding",
+        "dst_id": "Execute",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_PACKML_TRANSITION_Unsuspending__Execute",
+        "kind": "E_PACKML_TRANSITION",
+        "src_id": "Unsuspending",
+        "dst_id": "Execute",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "状态迁移",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_MODE_SWITCH_MODE_AUTO__MODE_MANUAL",
+        "kind": "E_MODE_SWITCH",
+        "src_id": "MODE_AUTO",
+        "dst_id": "MODE_MANUAL",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "切换模式",
+        "immutable": false,
+        "created_at": ""
+      },
+      {
+        "id": "E_MODE_SWITCH_MODE_MANUAL__MODE_AUTO",
+        "kind": "E_MODE_SWITCH",
+        "src_id": "MODE_MANUAL",
+        "dst_id": "MODE_AUTO",
+        "view_mask": [
+          "state"
+        ],
+        "origin": "suggested",
+        "label": "切换模式",
+        "immutable": false,
+        "created_at": ""
+      }
+    ],
+    "static_gate": {
+      "ok": true,
+      "project_name": "AssemblyCell",
+      "af_profile": "SIEMENS_AF_BASIC_FOLDER_V19",
+      "tia_version": "V19",
+      "spec_version": "v1",
+      "spec_hash": "sha256:5b92b82e9155cc518311d154cba822817f9b9379f461f0cd5fd6044129a826a5",
+      "contract_hashes": [],
+      "linter_error_count": 0,
+      "linter_warning_count": 0,
+      "linter_findings": [],
+      "single_writer_audit": {
+        "ok": true,
+        "total_q_tags": 0,
+        "mapped_q_tags": 0,
+        "duplicate_writers": {},
+        "direct_seq_q_writes": []
+      },
+      "compat_integrity": {
+        "ok": true,
+        "db_count": 0,
+        "io_count": 0,
+        "digests": {}
+      }
+    },
+    "fidelity_report": {
+      "fidelity_ok": true,
+      "coverage": 1.0,
+      "orphan": 0,
+      "drift": 0,
+      "tia_side_drift": 0,
+      "mode": "full",
+      "base_spec_version": null,
+      "changed_source_ids": [],
+      "reverse_protection": {
+        "status": "pending_real_machine",
+        "allowed": null,
+        "drift_count": 0,
+        "tia_side_drift": 0,
+        "blocked_source_ids": [],
+        "reason": "未提供 TIA 侧块快照,本批次为离线校验;涉真机结论标 pending_real_machine,禁止宣称 L2/L4 通过或编译零错误(N9)"
+      },
+      "coverage_matrix": {
+        "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment_DB.scl",
+        "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ControlNodes.scl",
+        "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit_DB.scl",
+        "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_EmNodes.scl",
+        "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment.scl",
+        "FB::U1Em1_Station1_Sequence::Sequence::1011": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Sequence.scl",
+        "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit.scl",
+        "FC::U1Em1_Station1_StepToString::StepToString::1012": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_StepToString.scl",
+        "OB::U1Em0_General_Main::OB::1006": "derived/blocks/30_Equipment_Modules/U1Em0_General_Main.scl",
+        "OB::U1Em0_General_ProDiag::OB::1007": "derived/blocks/30_Equipment_Modules/U1Em0_General_ProDiag.scl",
+        "OB::U1Em0_General_Startup::OB::1005": "derived/blocks/30_Equipment_Modules/U1Em0_General_Startup.scl",
+        "OB::U1Em1_Station1_Main::OB::1011": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Main.scl",
+        "OB::U1Em1_Station1_ProDiag::OB::1012": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ProDiag.scl",
+        "OB::U1Em1_Station1_Startup::OB::1010": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Startup.scl",
+        "OB::U1_AssemblyCell_Main::OB::1001": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Main.scl",
+        "OB::U1_AssemblyCell_ProDiag::OB::1002": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_ProDiag.scl",
+        "OB::U1_AssemblyCell_Startup::OB::1000": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Startup.scl"
+      },
+      "orphan_blocks": [],
+      "drift_items": [],
+      "unmapped_spec_objects": [],
+      "ob_number_deviations": [],
+      "spec_hash": "sha256:5b92b82e9155cc518311d154cba822817f9b9379f461f0cd5fd6044129a826a5",
+      "spec_version": 1,
+      "framework_baseline_version": "af-basic-folder-1.0",
+      "product_hash": "sha256:be103e5b0b66f7285a1a8afc74a58792b8789f56e88610672278353234bb9fe2",
+      "sampled_source_ids": [],
+      "pending_real_machine": true,
+      "notes": [
+        "离线校验:未提供 tia_side_snapshot,tia_side_drift 记 0 并标 pending_real_machine,禁止据此宣称真机通过",
+        "ob_number_deviations 为空(仍显式留痕,不静默)"
+      ]
+    },
+    "artifact_hashes": {
+      "framework_baseline/blocks/00_Types_UDT/AF_typeAnalogInput.scl": "sha256:e9ccd9acef7b2fbfa4c259519c30beae594c17f80a0c5efdd755719cdc855fa0",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeAnalogOutput.scl": "sha256:7895b44a5acd9c9a9e1c028b230dde042340b7bb47a669930a981825d628ad67",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeAxisControl.scl": "sha256:4061926d668e31b57cde41b1f192d7c34f9c2a778e54ef4e1e7c0f16b27ede93",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeDigitalSignal.scl": "sha256:10c390dff36a5865d3cebbab4091c62cd5a27b6d0259d04faccf50fa9950a603",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeGeneralControl.scl": "sha256:3dc85280bc0b7b09d75e55ba0520eafcc059c0f40fe8f2e63edc8281d5084fef",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeJobs.scl": "sha256:14c0d969ed51311fbe0fc9a24efd435736c7f614b503ed6a17a55a187d3a39c0",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeSequence.scl": "sha256:8298ef33d0d6448e78baaf7bc383adc9a34f699bc7d5ec1f57f5eb816dde0c4a",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeSimpleActuator.scl": "sha256:f5b3db928e1341614dde54e9cdcfc68af97262d3f310ee89dae89a3074c4b15c",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeTwoWayActuator.scl": "sha256:b5099b5bb55ef7f55ca58d860b48732c248687eabc377be8f865dc96e2e2940d",
+      "derived/blocks/30_Equipment_Modules/U1Em0_General_Main.scl": "sha256:61a710b9e9a8f96401a99c21486554e0e12c27bc61f4431a8b602396afbf10a0",
+      "derived/blocks/30_Equipment_Modules/U1Em0_General_ProDiag.scl": "sha256:555d6c4b9f39b842376258ed308f8c0d350bed9726c77df17939826966cb9b97",
+      "derived/blocks/30_Equipment_Modules/U1Em0_General_Startup.scl": "sha256:bc29666f8eec3cd4cb48de57a6a06f6177fd748e7ddd3b40d09620785a9739c9",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment.scl": "sha256:7ac66de8bea749cac4bb786e9704c8aa3e6790e2f0f73064a56c5b470fc477e4",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment_DB.scl": "sha256:50c42c7f6271bfb9e3a3c9ebe8592b6b3b6f07fdf35a42790cec17298d3be0c2",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ControlNodes.scl": "sha256:4b8bf4c3b34e5ee9eb199c6f545f04b6a228c2dec60f9969a794488b00ebb0a4",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Main.scl": "sha256:12ab7e578d8b58050258229dd2c1a9ac1e32a3327d867100f207e5d29de99fe5",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ProDiag.scl": "sha256:16591c4f48e152b87b3a19b430d200266b7b96e21a2212bd75a81a1c8b0475b0",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Sequence.scl": "sha256:6f1fa69fb88bb0f86293cadf1960e3bff656c106727552582799f5f4a66d3b7c",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Startup.scl": "sha256:c5f38c9737fbe1fafcf72c10af10862d2cdc72b446c2f63a975d1f68b634dc70",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_StepToString.scl": "sha256:99cda706125ff2f8e9a0daa212dce70bf6c6c89c204671dc98941db2793cc8d8",
+      "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit.scl": "sha256:8145c68245e3e6530d4f2648c931de11cb24d8440e9f4ce89f6590b6ad7f87b2",
+      "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit_DB.scl": "sha256:0fc96af62378db3b8de4d63dd782cbb65670895a75c16844c5fccccff551dc25",
+      "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_EmNodes.scl": "sha256:c2c81e9ac6b109d8aebbc47f1b9ed04ec56582c873673f3be62328bc5d112fed",
+      "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Main.scl": "sha256:8992516ba213b72526cf8bf023913ff6f3b56654e80f34746dd6aa18dd507af2",
+      "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_ProDiag.scl": "sha256:6c2289a5711251f3da23f1197188d3b73b775519126942275eb749e2d18626ec",
+      "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Startup.scl": "sha256:3d76ffb04d5483a87f24614a8cf2aff3085c49e8bed05b6f2e476ceb89fd11ef"
+    },
+    "zip_entry_hashes": {
+      "blocks/00_Types_UDT/AF_typeAnalogInput.scl": "sha256:e9ccd9acef7b2fbfa4c259519c30beae594c17f80a0c5efdd755719cdc855fa0",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeAnalogInput.scl": "sha256:e9ccd9acef7b2fbfa4c259519c30beae594c17f80a0c5efdd755719cdc855fa0",
+      "blocks/00_Types_UDT/AF_typeAnalogOutput.scl": "sha256:7895b44a5acd9c9a9e1c028b230dde042340b7bb47a669930a981825d628ad67",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeAnalogOutput.scl": "sha256:7895b44a5acd9c9a9e1c028b230dde042340b7bb47a669930a981825d628ad67",
+      "blocks/00_Types_UDT/AF_typeAxisControl.scl": "sha256:4061926d668e31b57cde41b1f192d7c34f9c2a778e54ef4e1e7c0f16b27ede93",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeAxisControl.scl": "sha256:4061926d668e31b57cde41b1f192d7c34f9c2a778e54ef4e1e7c0f16b27ede93",
+      "blocks/00_Types_UDT/AF_typeDigitalSignal.scl": "sha256:10c390dff36a5865d3cebbab4091c62cd5a27b6d0259d04faccf50fa9950a603",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeDigitalSignal.scl": "sha256:10c390dff36a5865d3cebbab4091c62cd5a27b6d0259d04faccf50fa9950a603",
+      "blocks/00_Types_UDT/AF_typeGeneralControl.scl": "sha256:3dc85280bc0b7b09d75e55ba0520eafcc059c0f40fe8f2e63edc8281d5084fef",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeGeneralControl.scl": "sha256:3dc85280bc0b7b09d75e55ba0520eafcc059c0f40fe8f2e63edc8281d5084fef",
+      "blocks/00_Types_UDT/AF_typeJobs.scl": "sha256:14c0d969ed51311fbe0fc9a24efd435736c7f614b503ed6a17a55a187d3a39c0",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeJobs.scl": "sha256:14c0d969ed51311fbe0fc9a24efd435736c7f614b503ed6a17a55a187d3a39c0",
+      "blocks/00_Types_UDT/AF_typeSequence.scl": "sha256:8298ef33d0d6448e78baaf7bc383adc9a34f699bc7d5ec1f57f5eb816dde0c4a",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeSequence.scl": "sha256:8298ef33d0d6448e78baaf7bc383adc9a34f699bc7d5ec1f57f5eb816dde0c4a",
+      "blocks/00_Types_UDT/AF_typeSimpleActuator.scl": "sha256:f5b3db928e1341614dde54e9cdcfc68af97262d3f310ee89dae89a3074c4b15c",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeSimpleActuator.scl": "sha256:f5b3db928e1341614dde54e9cdcfc68af97262d3f310ee89dae89a3074c4b15c",
+      "blocks/00_Types_UDT/AF_typeTwoWayActuator.scl": "sha256:b5099b5bb55ef7f55ca58d860b48732c248687eabc377be8f865dc96e2e2940d",
+      "framework_baseline/blocks/00_Types_UDT/AF_typeTwoWayActuator.scl": "sha256:b5099b5bb55ef7f55ca58d860b48732c248687eabc377be8f865dc96e2e2940d",
+      "blocks/30_Equipment_Modules/U1Em0_General_Main.scl": "sha256:61a710b9e9a8f96401a99c21486554e0e12c27bc61f4431a8b602396afbf10a0",
+      "derived/blocks/30_Equipment_Modules/U1Em0_General_Main.scl": "sha256:61a710b9e9a8f96401a99c21486554e0e12c27bc61f4431a8b602396afbf10a0",
+      "blocks/30_Equipment_Modules/U1Em0_General_ProDiag.scl": "sha256:555d6c4b9f39b842376258ed308f8c0d350bed9726c77df17939826966cb9b97",
+      "derived/blocks/30_Equipment_Modules/U1Em0_General_ProDiag.scl": "sha256:555d6c4b9f39b842376258ed308f8c0d350bed9726c77df17939826966cb9b97",
+      "blocks/30_Equipment_Modules/U1Em0_General_Startup.scl": "sha256:bc29666f8eec3cd4cb48de57a6a06f6177fd748e7ddd3b40d09620785a9739c9",
+      "derived/blocks/30_Equipment_Modules/U1Em0_General_Startup.scl": "sha256:bc29666f8eec3cd4cb48de57a6a06f6177fd748e7ddd3b40d09620785a9739c9",
+      "blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment.scl": "sha256:7ac66de8bea749cac4bb786e9704c8aa3e6790e2f0f73064a56c5b470fc477e4",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment.scl": "sha256:7ac66de8bea749cac4bb786e9704c8aa3e6790e2f0f73064a56c5b470fc477e4",
+      "blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment_DB.scl": "sha256:50c42c7f6271bfb9e3a3c9ebe8592b6b3b6f07fdf35a42790cec17298d3be0c2",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment_DB.scl": "sha256:50c42c7f6271bfb9e3a3c9ebe8592b6b3b6f07fdf35a42790cec17298d3be0c2",
+      "blocks/30_Equipment_Modules/U1Em1_Station1_ControlNodes.scl": "sha256:4b8bf4c3b34e5ee9eb199c6f545f04b6a228c2dec60f9969a794488b00ebb0a4",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ControlNodes.scl": "sha256:4b8bf4c3b34e5ee9eb199c6f545f04b6a228c2dec60f9969a794488b00ebb0a4",
+      "blocks/30_Equipment_Modules/U1Em1_Station1_Main.scl": "sha256:12ab7e578d8b58050258229dd2c1a9ac1e32a3327d867100f207e5d29de99fe5",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Main.scl": "sha256:12ab7e578d8b58050258229dd2c1a9ac1e32a3327d867100f207e5d29de99fe5",
+      "blocks/30_Equipment_Modules/U1Em1_Station1_ProDiag.scl": "sha256:16591c4f48e152b87b3a19b430d200266b7b96e21a2212bd75a81a1c8b0475b0",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ProDiag.scl": "sha256:16591c4f48e152b87b3a19b430d200266b7b96e21a2212bd75a81a1c8b0475b0",
+      "blocks/30_Equipment_Modules/U1Em1_Station1_Sequence.scl": "sha256:6f1fa69fb88bb0f86293cadf1960e3bff656c106727552582799f5f4a66d3b7c",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Sequence.scl": "sha256:6f1fa69fb88bb0f86293cadf1960e3bff656c106727552582799f5f4a66d3b7c",
+      "blocks/30_Equipment_Modules/U1Em1_Station1_Startup.scl": "sha256:c5f38c9737fbe1fafcf72c10af10862d2cdc72b446c2f63a975d1f68b634dc70",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Startup.scl": "sha256:c5f38c9737fbe1fafcf72c10af10862d2cdc72b446c2f63a975d1f68b634dc70",
+      "blocks/30_Equipment_Modules/U1Em1_Station1_StepToString.scl": "sha256:99cda706125ff2f8e9a0daa212dce70bf6c6c89c204671dc98941db2793cc8d8",
+      "derived/blocks/30_Equipment_Modules/U1Em1_Station1_StepToString.scl": "sha256:99cda706125ff2f8e9a0daa212dce70bf6c6c89c204671dc98941db2793cc8d8",
+      "blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit.scl": "sha256:8145c68245e3e6530d4f2648c931de11cb24d8440e9f4ce89f6590b6ad7f87b2",
+      "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit.scl": "sha256:8145c68245e3e6530d4f2648c931de11cb24d8440e9f4ce89f6590b6ad7f87b2",
+      "blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit_DB.scl": "sha256:0fc96af62378db3b8de4d63dd782cbb65670895a75c16844c5fccccff551dc25",
+      "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit_DB.scl": "sha256:0fc96af62378db3b8de4d63dd782cbb65670895a75c16844c5fccccff551dc25",
+      "blocks/30_Equipment_Modules/U1_AssemblyCell_EmNodes.scl": "sha256:c2c81e9ac6b109d8aebbc47f1b9ed04ec56582c873673f3be62328bc5d112fed",
+      "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_EmNodes.scl": "sha256:c2c81e9ac6b109d8aebbc47f1b9ed04ec56582c873673f3be62328bc5d112fed",
+      "blocks/30_Equipment_Modules/U1_AssemblyCell_Main.scl": "sha256:8992516ba213b72526cf8bf023913ff6f3b56654e80f34746dd6aa18dd507af2",
+      "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Main.scl": "sha256:8992516ba213b72526cf8bf023913ff6f3b56654e80f34746dd6aa18dd507af2",
+      "blocks/30_Equipment_Modules/U1_AssemblyCell_ProDiag.scl": "sha256:6c2289a5711251f3da23f1197188d3b73b775519126942275eb749e2d18626ec",
+      "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_ProDiag.scl": "sha256:6c2289a5711251f3da23f1197188d3b73b775519126942275eb749e2d18626ec",
+      "blocks/30_Equipment_Modules/U1_AssemblyCell_Startup.scl": "sha256:3d76ffb04d5483a87f24614a8cf2aff3085c49e8bed05b6f2e476ceb89fd11ef",
+      "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Startup.scl": "sha256:3d76ffb04d5483a87f24614a8cf2aff3085c49e8bed05b6f2e476ceb89fd11ef",
+      "plc_tags/PLCTags_Frozen.csv": "sha256:da943861a5bf439a9637eb3e50baae3a6e2a2d6fb4d03c81d9f3df8ac10be301",
+      "plc_tags/PLCTags_Frozen.xml": "sha256:b157f7e479919c27293f014a968c32017dea77aa88d00a363a98f7b4be13ef79",
+      "audit/io_retention_matrix.csv": "sha256:eae8e8294aa76838051546b1e697373e2eb963b1afae92aebb05015937f63462",
+      "docs/architecture_spec.md": "sha256:b518bab34013f7a84bd5e812737f2ae1c33b62133a20dbf1a54dd12cbb288e5c",
+      "baseline_manifest.json": "sha256:7ba9bdc9e1f4e0109e8c3394e861c2c56ca1103869b78d0c544b908da95b0e97",
+      "coverage_matrix.json": "sha256:d0fe2ca14126bdacfc3bce5f33f11edb7c1d181ad2a56aaf0e39947eb09e3328",
+      "audit/af_verification_report.json": "sha256:26037e811ad6424c32e0db9a374fde015a21543c573f8ec11c7064aef560be46",
+      "manifest.json": "sha256:d666932785d759e41c57705eb5105ff4f72e854ede213cfa93a186ced9990893"
+    },
+    "coverage_matrix": {
+      "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": {
+        "source_id": "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015",
+        "source_kind": "DB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment_DB.scl",
+        "status": "mapped"
+      },
+      "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": {
+        "source_id": "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013",
+        "source_kind": "DB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ControlNodes.scl",
+        "status": "mapped"
+      },
+      "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": {
+        "source_id": "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011",
+        "source_kind": "DB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit_DB.scl",
+        "status": "mapped"
+      },
+      "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": {
+        "source_id": "DB::U1_AssemblyCell_EmNodes::EmNodes::1010",
+        "source_kind": "DB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_EmNodes.scl",
+        "status": "mapped"
+      },
+      "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": {
+        "source_id": "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010",
+        "source_kind": "FB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment.scl",
+        "status": "mapped"
+      },
+      "FB::U1Em1_Station1_Sequence::Sequence::1011": {
+        "source_id": "FB::U1Em1_Station1_Sequence::Sequence::1011",
+        "source_kind": "FB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Sequence.scl",
+        "status": "mapped"
+      },
+      "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": {
+        "source_id": "FB::U1_AssemblyCell_CallUnit::CallUnit::1001",
+        "source_kind": "FB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit.scl",
+        "status": "mapped"
+      },
+      "FC::U1Em1_Station1_StepToString::StepToString::1012": {
+        "source_id": "FC::U1Em1_Station1_StepToString::StepToString::1012",
+        "source_kind": "FC",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_StepToString.scl",
+        "status": "mapped"
+      },
+      "OB::U1Em0_General_Main::OB::1006": {
+        "source_id": "OB::U1Em0_General_Main::OB::1006",
+        "source_kind": "OB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1Em0_General_Main.scl",
+        "status": "mapped"
+      },
+      "OB::U1Em0_General_ProDiag::OB::1007": {
+        "source_id": "OB::U1Em0_General_ProDiag::OB::1007",
+        "source_kind": "OB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1Em0_General_ProDiag.scl",
+        "status": "mapped"
+      },
+      "OB::U1Em0_General_Startup::OB::1005": {
+        "source_id": "OB::U1Em0_General_Startup::OB::1005",
+        "source_kind": "OB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1Em0_General_Startup.scl",
+        "status": "mapped"
+      },
+      "OB::U1Em1_Station1_Main::OB::1011": {
+        "source_id": "OB::U1Em1_Station1_Main::OB::1011",
+        "source_kind": "OB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Main.scl",
+        "status": "mapped"
+      },
+      "OB::U1Em1_Station1_ProDiag::OB::1012": {
+        "source_id": "OB::U1Em1_Station1_ProDiag::OB::1012",
+        "source_kind": "OB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ProDiag.scl",
+        "status": "mapped"
+      },
+      "OB::U1Em1_Station1_Startup::OB::1010": {
+        "source_id": "OB::U1Em1_Station1_Startup::OB::1010",
+        "source_kind": "OB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Startup.scl",
+        "status": "mapped"
+      },
+      "OB::U1_AssemblyCell_Main::OB::1001": {
+        "source_id": "OB::U1_AssemblyCell_Main::OB::1001",
+        "source_kind": "OB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Main.scl",
+        "status": "mapped"
+      },
+      "OB::U1_AssemblyCell_ProDiag::OB::1002": {
+        "source_id": "OB::U1_AssemblyCell_ProDiag::OB::1002",
+        "source_kind": "OB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_ProDiag.scl",
+        "status": "mapped"
+      },
+      "OB::U1_AssemblyCell_Startup::OB::1000": {
+        "source_id": "OB::U1_AssemblyCell_Startup::OB::1000",
+        "source_kind": "OB",
+        "target_kind": "derived",
+        "target": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Startup.scl",
+        "status": "mapped"
+      },
+      "UDT::AF_typeAnalogInput::UDT::1": {
+        "source_id": "UDT::AF_typeAnalogInput::UDT::1",
+        "source_kind": "UDT",
+        "target_kind": "framework_baseline",
+        "target": "framework_baseline/blocks/00_Types_UDT/AF_typeAnalogInput.scl",
+        "status": "mapped"
+      },
+      "UDT::AF_typeAnalogOutput::UDT::1": {
+        "source_id": "UDT::AF_typeAnalogOutput::UDT::1",
+        "source_kind": "UDT",
+        "target_kind": "framework_baseline",
+        "target": "framework_baseline/blocks/00_Types_UDT/AF_typeAnalogOutput.scl",
+        "status": "mapped"
+      },
+      "UDT::AF_typeAxisControl::UDT::1": {
+        "source_id": "UDT::AF_typeAxisControl::UDT::1",
+        "source_kind": "UDT",
+        "target_kind": "framework_baseline",
+        "target": "framework_baseline/blocks/00_Types_UDT/AF_typeAxisControl.scl",
+        "status": "mapped"
+      },
+      "UDT::AF_typeDigitalSignal::UDT::1": {
+        "source_id": "UDT::AF_typeDigitalSignal::UDT::1",
+        "source_kind": "UDT",
+        "target_kind": "framework_baseline",
+        "target": "framework_baseline/blocks/00_Types_UDT/AF_typeDigitalSignal.scl",
+        "status": "mapped"
+      },
+      "UDT::AF_typeGeneralControl::UDT::1": {
+        "source_id": "UDT::AF_typeGeneralControl::UDT::1",
+        "source_kind": "UDT",
+        "target_kind": "framework_baseline",
+        "target": "framework_baseline/blocks/00_Types_UDT/AF_typeGeneralControl.scl",
+        "status": "mapped"
+      },
+      "UDT::AF_typeJobs::UDT::1": {
+        "source_id": "UDT::AF_typeJobs::UDT::1",
+        "source_kind": "UDT",
+        "target_kind": "framework_baseline",
+        "target": "framework_baseline/blocks/00_Types_UDT/AF_typeJobs.scl",
+        "status": "mapped"
+      },
+      "UDT::AF_typeSequence::UDT::1": {
+        "source_id": "UDT::AF_typeSequence::UDT::1",
+        "source_kind": "UDT",
+        "target_kind": "framework_baseline",
+        "target": "framework_baseline/blocks/00_Types_UDT/AF_typeSequence.scl",
+        "status": "mapped"
+      },
+      "UDT::AF_typeSimpleActuator::UDT::1": {
+        "source_id": "UDT::AF_typeSimpleActuator::UDT::1",
+        "source_kind": "UDT",
+        "target_kind": "framework_baseline",
+        "target": "framework_baseline/blocks/00_Types_UDT/AF_typeSimpleActuator.scl",
+        "status": "mapped"
+      },
+      "UDT::AF_typeTwoWayActuator::UDT::1": {
+        "source_id": "UDT::AF_typeTwoWayActuator::UDT::1",
+        "source_kind": "UDT",
+        "target_kind": "framework_baseline",
+        "target": "framework_baseline/blocks/00_Types_UDT/AF_typeTwoWayActuator.scl",
+        "status": "mapped"
+      }
+    },
+    "coverage_matrix_entry_count": 26,
+    "baseline_manifest": {
+      "framework_baseline_version": "GF-BASELINE-1.0",
+      "entry_count": 9,
+      "entries": [
+        {
+          "source_id": "UDT::AF_typeAnalogInput::UDT::1",
+          "name": "AF_typeAnalogInput",
+          "block_type": "UDT",
+          "path": "framework_baseline/blocks/00_Types_UDT/AF_typeAnalogInput.scl",
+          "sha256": "sha256:e9ccd9acef7b2fbfa4c259519c30beae594c17f80a0c5efdd755719cdc855fa0",
+          "content_sha256": "sha256:e9ccd9acef7b2fbfa4c259519c30beae594c17f80a0c5efdd755719cdc855fa0"
+        },
+        {
+          "source_id": "UDT::AF_typeAnalogOutput::UDT::1",
+          "name": "AF_typeAnalogOutput",
+          "block_type": "UDT",
+          "path": "framework_baseline/blocks/00_Types_UDT/AF_typeAnalogOutput.scl",
+          "sha256": "sha256:7895b44a5acd9c9a9e1c028b230dde042340b7bb47a669930a981825d628ad67",
+          "content_sha256": "sha256:7895b44a5acd9c9a9e1c028b230dde042340b7bb47a669930a981825d628ad67"
+        },
+        {
+          "source_id": "UDT::AF_typeAxisControl::UDT::1",
+          "name": "AF_typeAxisControl",
+          "block_type": "UDT",
+          "path": "framework_baseline/blocks/00_Types_UDT/AF_typeAxisControl.scl",
+          "sha256": "sha256:4061926d668e31b57cde41b1f192d7c34f9c2a778e54ef4e1e7c0f16b27ede93",
+          "content_sha256": "sha256:4061926d668e31b57cde41b1f192d7c34f9c2a778e54ef4e1e7c0f16b27ede93"
+        },
+        {
+          "source_id": "UDT::AF_typeDigitalSignal::UDT::1",
+          "name": "AF_typeDigitalSignal",
+          "block_type": "UDT",
+          "path": "framework_baseline/blocks/00_Types_UDT/AF_typeDigitalSignal.scl",
+          "sha256": "sha256:10c390dff36a5865d3cebbab4091c62cd5a27b6d0259d04faccf50fa9950a603",
+          "content_sha256": "sha256:10c390dff36a5865d3cebbab4091c62cd5a27b6d0259d04faccf50fa9950a603"
+        },
+        {
+          "source_id": "UDT::AF_typeGeneralControl::UDT::1",
+          "name": "AF_typeGeneralControl",
+          "block_type": "UDT",
+          "path": "framework_baseline/blocks/00_Types_UDT/AF_typeGeneralControl.scl",
+          "sha256": "sha256:3dc85280bc0b7b09d75e55ba0520eafcc059c0f40fe8f2e63edc8281d5084fef",
+          "content_sha256": "sha256:3dc85280bc0b7b09d75e55ba0520eafcc059c0f40fe8f2e63edc8281d5084fef"
+        },
+        {
+          "source_id": "UDT::AF_typeJobs::UDT::1",
+          "name": "AF_typeJobs",
+          "block_type": "UDT",
+          "path": "framework_baseline/blocks/00_Types_UDT/AF_typeJobs.scl",
+          "sha256": "sha256:14c0d969ed51311fbe0fc9a24efd435736c7f614b503ed6a17a55a187d3a39c0",
+          "content_sha256": "sha256:14c0d969ed51311fbe0fc9a24efd435736c7f614b503ed6a17a55a187d3a39c0"
+        },
+        {
+          "source_id": "UDT::AF_typeSequence::UDT::1",
+          "name": "AF_typeSequence",
+          "block_type": "UDT",
+          "path": "framework_baseline/blocks/00_Types_UDT/AF_typeSequence.scl",
+          "sha256": "sha256:8298ef33d0d6448e78baaf7bc383adc9a34f699bc7d5ec1f57f5eb816dde0c4a",
+          "content_sha256": "sha256:8298ef33d0d6448e78baaf7bc383adc9a34f699bc7d5ec1f57f5eb816dde0c4a"
+        },
+        {
+          "source_id": "UDT::AF_typeSimpleActuator::UDT::1",
+          "name": "AF_typeSimpleActuator",
+          "block_type": "UDT",
+          "path": "framework_baseline/blocks/00_Types_UDT/AF_typeSimpleActuator.scl",
+          "sha256": "sha256:f5b3db928e1341614dde54e9cdcfc68af97262d3f310ee89dae89a3074c4b15c",
+          "content_sha256": "sha256:f5b3db928e1341614dde54e9cdcfc68af97262d3f310ee89dae89a3074c4b15c"
+        },
+        {
+          "source_id": "UDT::AF_typeTwoWayActuator::UDT::1",
+          "name": "AF_typeTwoWayActuator",
+          "block_type": "UDT",
+          "path": "framework_baseline/blocks/00_Types_UDT/AF_typeTwoWayActuator.scl",
+          "sha256": "sha256:b5099b5bb55ef7f55ca58d860b48732c248687eabc377be8f865dc96e2e2940d",
+          "content_sha256": "sha256:b5099b5bb55ef7f55ca58d860b48732c248687eabc377be8f865dc96e2e2940d"
+        }
+      ],
+      "manifest_sha256": "sha256:35d60aa9360557ff9d54f6bc70eab1d336c1231e7e0b1d27df66752bad4603ac"
+    },
+    "source_id_map": {
+      "UDT::AF_typeAnalogInput::UDT::1": "framework_baseline/blocks/00_Types_UDT/AF_typeAnalogInput.scl",
+      "UDT::AF_typeAnalogOutput::UDT::1": "framework_baseline/blocks/00_Types_UDT/AF_typeAnalogOutput.scl",
+      "UDT::AF_typeAxisControl::UDT::1": "framework_baseline/blocks/00_Types_UDT/AF_typeAxisControl.scl",
+      "UDT::AF_typeDigitalSignal::UDT::1": "framework_baseline/blocks/00_Types_UDT/AF_typeDigitalSignal.scl",
+      "UDT::AF_typeGeneralControl::UDT::1": "framework_baseline/blocks/00_Types_UDT/AF_typeGeneralControl.scl",
+      "UDT::AF_typeJobs::UDT::1": "framework_baseline/blocks/00_Types_UDT/AF_typeJobs.scl",
+      "UDT::AF_typeSequence::UDT::1": "framework_baseline/blocks/00_Types_UDT/AF_typeSequence.scl",
+      "UDT::AF_typeSimpleActuator::UDT::1": "framework_baseline/blocks/00_Types_UDT/AF_typeSimpleActuator.scl",
+      "UDT::AF_typeTwoWayActuator::UDT::1": "framework_baseline/blocks/00_Types_UDT/AF_typeTwoWayActuator.scl",
+      "OB::U1Em0_General_Main::OB::1006": "derived/blocks/30_Equipment_Modules/U1Em0_General_Main.scl",
+      "OB::U1Em0_General_ProDiag::OB::1007": "derived/blocks/30_Equipment_Modules/U1Em0_General_ProDiag.scl",
+      "OB::U1Em0_General_Startup::OB::1005": "derived/blocks/30_Equipment_Modules/U1Em0_General_Startup.scl",
+      "FB::U1Em1_Station1_CallEquipment::CallEquipment::1010": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment.scl",
+      "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_CallEquipment_DB.scl",
+      "DB::U1Em1_Station1_ControlNodes::ControlNodes::1013": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ControlNodes.scl",
+      "OB::U1Em1_Station1_Main::OB::1011": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Main.scl",
+      "OB::U1Em1_Station1_ProDiag::OB::1012": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_ProDiag.scl",
+      "FB::U1Em1_Station1_Sequence::Sequence::1011": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Sequence.scl",
+      "OB::U1Em1_Station1_Startup::OB::1010": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_Startup.scl",
+      "FC::U1Em1_Station1_StepToString::StepToString::1012": "derived/blocks/30_Equipment_Modules/U1Em1_Station1_StepToString.scl",
+      "FB::U1_AssemblyCell_CallUnit::CallUnit::1001": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit.scl",
+      "DB::U1_AssemblyCell_CallUnit_DB::CallUnit_DB::1011": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_CallUnit_DB.scl",
+      "DB::U1_AssemblyCell_EmNodes::EmNodes::1010": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_EmNodes.scl",
+      "OB::U1_AssemblyCell_Main::OB::1001": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Main.scl",
+      "OB::U1_AssemblyCell_ProDiag::OB::1002": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_ProDiag.scl",
+      "OB::U1_AssemblyCell_Startup::OB::1000": "derived/blocks/30_Equipment_Modules/U1_AssemblyCell_Startup.scl"
+    },
+    "package": {
+      "zip_filename": "AssemblyCell_v1_AF_TIA_Package.zip",
+      "zip_sha256": "sha256:8f0934ca579ac0ec4207a20e7669a97da54a3ed475efab2a73465af96d858df8",
+      "zip_size_bytes": 28456,
+      "zip_entry_count": 60,
+      "offline_download_endpoint": "/api/v1/plc/canvas/greenfield/download-package"
+    },
+    "offline_verifiable": true,
+    "pending_real_machine": true,
+    "xml_package_unverified": true,
+    "compile_ok": null,
+    "compile_note": "Action A 不写 TIA、不产出编译结论；fidelity_ok 是 L1 逻辑等价，不等同编译通过（N9）",
+    "bundle_sha256": "sha256:62e497eff71294bdf91428bfc39af1472e8d0bc41090cea16b8a6162110e076e"
+  },
+  "gap_note": "批次 2 离线实例化的 3 项真机缺项已由 Agent R 的 evidence/uc15_step7_real.json 真实补齐（非补假数据）：结构化编译报告 / .zap19 归档 / PCEC 账本引用。注意：6 个 incremental_fields 仍为 UC-15 full 模式离线真实值，不构成 UC-16 增量真机证据；UC-16 增量证据另见 evidence/uc16_incremental_real.json，且 L4 仍 pending_real_machine。",
+  "honest_note": "fidelity_ok 与 compile_ok 严格分离（N9）：A 的 fidelity_ok=true 仅 L1 离线逻辑等价，compile_ok 恒 None；warning 单列不并入成功。本包为 UC-15 full 模式离线实例化，不构成 UC-16 增量证据，不宣称 L2/L4 通过、编译零错误、L1∧L2∧L3∧L4 全绿，不构成 M4 通过或代签；M4 签署权归用户本人。 批次 3 补充：12 项全量工件齐备不代表 L1∧L2∧L3∧L4 全绿、不代表编译零错误结论可外推到完整 AF 包（UC-04 的 Call 网络 OB 仍导入失败）、不使 M4 可签署。",
+  "batch3_filled_by": "主 agent 收口"
+}

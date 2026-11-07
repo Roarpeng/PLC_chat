@@ -221,3 +221,42 @@
 7. **Q7 为最小核验包，未重新联网核验**（PL-03 / §9.3）；Eigen 生成物具体档位/版本、ueet 公式官方确证均属**来源不足**。
 8. **编译 `errorCount=30` 为真实失败**（真实先例 XML 引用不存在块）；仅基线项目编译 `errorCount=0`，二者不可混为「样例端到端零错误」。
 9. 诊断过程性失败（如实记录，非主结论）：`export-block Main` 返回 `inconsistent_blocks`（one-shot 独立会话不保留编译态）；若干诊断变体触发 `rung must have at least two connections`、python 路径风格 `not_found` 等，详见归档 §6。
+
+---
+
+## 7. 用户拍板与 Gate-0 升级（批次 3 · Agent P 追加，2026-11-07）
+
+> **本节为批次 3 状态追加**（按 `13-batch3-contract.md` §2 授权置于文末），**不修改 §0–§6 及附录 A / B / C 任何既有结论文字**。
+> §0 判定摘要、§5.2 的 **`conditional-go`** 判定、§5.3 的前置条件、§6 的「待用户拍板 / Agent 不代拍」、附录 C 的「已知遗留」等历史文字**全文原样保留**，以保留历史判定的可追溯性；本节只说明两项前置如何逐项解除、Gate-0 为何可升 `go`，以及 `xml_package_unverified` 为何仍未消除。
+> 正式决策记录见 `docs/greenfield/11-p0d-decision.md`（**由 agent 归档用户结论，不代拍**）。
+
+### 7.1 用户拍板结论
+
+用户于 **2026-11-06** 以编号「**1**」正式拍板：**P0-D = 坚持「AF Basic 文件夹版」，暂不切「软件单元版」**（采纳本报告 §6 推荐结论）。据此映射层由「档位无关」**定型为文件夹版口径**。
+
+### 7.2 `conditional-go → go` 两项前置逐项解除
+
+| # | §5 判定时未满足的前置 | 解除依据 | 证据文件与真机数字出处 |
+|---|---|---|---|
+| 1 | **「P0-D 待拍板」**（§5.1「明确拍板结论 ❌ 待用户拍板」/ §5.3-1） | 用户 2026-11-06 编号「1」拍板，坚持文件夹版 | `11-p0d-decision.md` §1；本报告 §6 推荐结论；F 真机：文件夹版 1U+2EM `create-block-group` 3× `ok:true/saved:true` + `compile-plc` `errorCount=0 / warningCount=0 / state=Success`（本报告 §2.2 / §2.3、仓库根 `research/Gate0_环境与档位实测_2026-11-06.md` §5.3 / §7）。**限定**：该编译数字仅对应 CanvasE2E 副本建立分组结构后，非端到端全链 |
+| 2 | **「K1 探针失败」**（§5.1 附加风险项 / §5.3-2） | Agent K 在 V19 副本修复自产 OB XML 两缺陷（culture `en-US`、`StructuredText/v4` namespace）后真机复测通过 | `08-k1-probe-fix.md` §4 caseA：`import.ok=true` / `importedNames=["OB123_K1Fixed"]` / `save.ok=true`；`list-blocks` `count=2`、`number=123`；`compile-plc` `compile.ok=true / apiAvailable=true / state=Success / errorCount=0 / warningCount=0`（`exit=0`）；§5.1 判定「K1 探针（临时副本 / 探针级）：通过」；§9 收口状态「探针级已通过、待全链验证」。**限定**：探针级空网络 OB，非包级 / 端到端全链；caseB Call 网络 OB 编译 `errorCount=2` 为真实失败 |
+
+> 两项前置均非 agent 可代：前置 1 由**用户**拍板解除，前置 2 由 **Agent K 的真机复测**解除；本节只做归档与执行，不重新论证、不代拍。
+
+### 7.3 Gate-0 升级结论与严格限定
+
+- **Gate-0 由 `conditional-go` 升为 `go`（准入放行）**：准入准备完成，可进入档位相关映射层定型（文件夹版口径）。
+- **`go` = 准入放行，不等于 `L1∧L2∧L3∧L4` 全绿、不等于 M4 可签署**。四层复核仍 `pending`（`07-acceptance-matrix.md` §10.3 / §11.3、`10-real-machine-acceptance.md` §6）；`pending_real_machine` 台账 `cleared=false`、M4 仍「未通过 / 不可签署」，签署栏「待用户签署」。
+- 批次 3 结论最多推进到「**证据齐备 / 待用户签署**」，**不得由 agent 宣布 M4 通过**（`13-batch3-contract.md` §1.6 / §5）。
+
+### 7.4 `xml_package_unverified` 仍未消除（原样保留口径）
+
+> **`xml_package_unverified` 仍保持 `True`**：K 只验证了 **OB XML 探针级**（`08-k1-probe-fix.md` §5.2 / §7 / §9）；`folders.json` / `SW.PlcBlockGroup XML` 可导入性、完整 AF 包联合编译、端到端全链（UC-15）**未闭环**，故不得在代码里擅自改该标志、不得在文档里宣称已消除。
+
+- **与 §5.3-2 的差异（诚实留痕）**：§5.3-2 原文为「UC-04 K1 复测通过……并消除 `xml_package_unverified`」。其中「K1 探针失败」这一前置已由 K 的探针级真机复测通过解除；但「消除 `xml_package_unverified`」这一子项**未**随探针级通过而达成。Gate-0 升 `go` 依据 `13-batch3-contract.md` §0 定义的两项前置（P0-D 拍板、K1 探针失败）逐项解除，**不以该标志消除为前提**。
+- **原因逐条**：① `folders.json` 是文档化清单，非 `import-xml` 的 SimaticML 对象，`SW.PlcBlockGroup XML` 可导入性未确证（本报告 §3.3 / 附录 C-3、K §7-1）；② 完整 Greenfield 工程包 Main/Startup OB 走 Call 网络、引用 Unit/EM 实例 DB，整套自产 XML + SCL + 标签表联合导入编译未验证（K caseB `errorCount=2`）；③ 探针级复测 ≠ `deliver_tia` auto 通道端到端全链（UC-15 / M4 未跑）；④ `L1∧L2∧L3∧L4` 未全绿。
+- **处置归属**：是否消除由本批次 **Agent R 的 UC-04 包级复测真实结果**唯一决定（`13-batch3-contract.md` §0 / §3 / §5、`08-k1-probe-fix.md` §5.2）；台账与全局状态由主 agent 收口统一更新，任何 agent 不得擅自改 `False`、不得代拍。
+
+### 7.5 本节合规声明
+
+本节为文档追加，未连真机、未启动服务、未跑 pytest、未执行任何 git 操作；未改任何产品代码、冻结清单、`legacy_baseline.json`、`test_greenfield_legacy_guard.py`、证据台账与 `10-real-machine-acceptance.md`；不宣称 `L2` / `L4` 通过、不宣称「编译零错误」、不宣称 `L1∧L2∧L3∧L4` 全绿、不宣称 `xml_package_unverified` 已消除、不宣称 M4 通过或代用户签署；无绝对日期 / 人力排期、无编造来源或数据。

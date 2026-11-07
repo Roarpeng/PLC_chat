@@ -1,0 +1,410 @@
+{
+  "schema": "gf-nine-steps-offline-run-v1",
+  "uc": "UC-15",
+  "generated_at": "2026-11-07T08:05:15.660278+00:00",
+  "driver": "fastapi.testclient.TestClient（进程内 ASGI，挂载 gateway.app.main:app，不启动任何监听端口）；步骤6 负例用 plc_engine.af.fidelity.FidelityChecker 只读校验器直调；步骤8/9 与 Q2 哈希用 plc_engine.af.spec_diff.canonical_hash / sha256_prefixed 复算。运行期把 greenfield_chat.llm_settings 覆盖为返回 None，使 /chat 首轮走零 LLM 依赖的确定性 planner 兜底（draft_from_prompt fallback），不发任何外部 LLM 网络请求。",
+  "steps": [
+    {
+      "step_id": "NINE-01",
+      "name": "新建项目：PLC 逻辑占位 + 3 类外围设备占位（不上传 IO 表，验证 D7）",
+      "endpoint": "GET /api/v1/plc/canvas/greenfield/state?project_id=GF-Q-UC15",
+      "request_summary": {
+        "method": "GET",
+        "params": {
+          "project_id": "GF-Q-UC15"
+        },
+        "io_table_uploaded": false,
+        "note": "仅建立会话并绑定 project_id；不调用 /upload，不冻结 CompatContract"
+      },
+      "response": {
+        "status_code": 200,
+        "ok": true,
+        "session_id": "3546b9b8ed4a",
+        "project_id": "GF-Q-UC15",
+        "stage": "DRAFT",
+        "has_ir": false,
+        "has_contract": false,
+        "hardware_node_kinds": [
+          "PLC_CPU",
+          "DI_MODULE",
+          "DO_MODULE"
+        ],
+        "hardware_node_count": 3,
+        "hardware_link_count": 2,
+        "counters": {
+          "ops": 0,
+          "disk_writes": 0,
+          "writebacks": 0,
+          "generations": 0
+        },
+        "io_table_uploaded": false,
+        "confirm_prerequisites": {
+          "ok": false,
+          "checks": {
+            "ir_ready": false
+          },
+          "reasons": [
+            "首版规格（IR）尚未生成"
+          ],
+          "open_questions": [],
+          "codes": [
+            "GF_TOPOLOGY_NOT_FINALIZED"
+          ],
+          "code": "GF_TOPOLOGY_NOT_FINALIZED"
+        }
+      },
+      "status": "pass",
+      "evidence_refs": [
+        "evidence/nine_steps_offline_run.json"
+      ],
+      "repro_command": "GET /api/v1/plc/canvas/greenfield/state?project_id=GF-Q-UC15 （契约表记 POST /state；实际产品端点为 GET /state，绑定 project_id 后读 hardware 拓扑占位）",
+      "note": "真实 GET /state 建立会话并绑定 project_id；未调用 /upload（D7 不上传 IO 表），无 CompatContract，故不产生任何虚构的用户 IO 地址 / OB 条目。hardware 为反推展示层默认 3 类占位（PLC_CPU / DI_MODULE / DO_MODULE），非用户 IO 表虚构地址。契约 §9.2 表记为 POST /state；实际产品端点为 GET /state，repro_command 已留真实口径。"
+    },
+    {
+      "step_id": "NINE-02",
+      "name": "对话输入自然语言描述设备运行逻辑 → canvas 渲染",
+      "endpoint": "POST /api/v1/plc/canvas/greenfield/chat",
+      "request_summary": {
+        "method": "POST",
+        "session_id": "<步骤1返回的 session_id>",
+        "message": "输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位"
+      },
+      "response": {
+        "status_code": 200,
+        "ok": true,
+        "reply": "已按你的描述生成首版规格：1 工位 / 1 工序 / 2 设备 / 3 步序。\n请在画布上核对连线，或直接在对话里告诉我要调整什么。",
+        "summary": {
+          "units": 1,
+          "ems": 1,
+          "cms": 2,
+          "steps": 3,
+          "edges": 40
+        },
+        "views_keys": [
+          "edge_ids",
+          "flow",
+          "node_ids",
+          "seq",
+          "state",
+          "step_flow"
+        ],
+        "four_views_present": true,
+        "edge_count": 40,
+        "confirm_prerequisites": {
+          "ok": true,
+          "checks": {
+            "ir_ready": true,
+            "topology_finalized": true,
+            "open_questions_cleared": true,
+            "nodes_links_valid": true,
+            "equivalence_precheck": true,
+            "baseline_locked": true
+          },
+          "reasons": [],
+          "open_questions": [],
+          "codes": [],
+          "code": ""
+        }
+      },
+      "status": "pass",
+      "evidence_refs": [
+        "evidence/nine_steps_offline_run.json"
+      ],
+      "repro_command": "POST /api/v1/plc/canvas/greenfield/chat  body={session_id, message: '输送单元把工件送到装配工位，夹紧气缸定位，机器人完成涂胶作业后放行到下料工位'} → 四视图 + 连线清单",
+      "note": "真实 POST /chat 首轮（会话无 IR）生成首版规格与四视图 + 连线清单。运行期禁用外部 LLM，产品走零 LLM 依赖的确定性 planner 兜底（chat_turn → draft_from_prompt），不发任何外部网络请求；reply 与 summary 为真实原始响应。"
+    },
+    {
+      "step_id": "NINE-03",
+      "name": "手动增删改：新增执行件 / 删连线 / 改交互 / 改步序条件（D6 + 双向同步）",
+      "endpoint": "POST /api/v1/plc/canvas/greenfield/patch + POST /api/v1/plc/canvas/greenfield/validate",
+      "request_summary": {
+        "method": "POST",
+        "path": "/patch",
+        "ops": [
+          "add_cm(新增执行件)",
+          "remove_edge(删一条 suggested 连线)",
+          "set_ir_only_field(jobs.start_condition 改交互条件)",
+          "set_ir_only_field(steps.transition_condition 改步序条件)"
+        ],
+        "atomic": true,
+        "note": "op 目标 id 均取自步骤2 真实 IR；随后 /validate 重算 validate_ir"
+      },
+      "response": {
+        "patch_status_code": 200,
+        "patch_ok": true,
+        "applied_ops": 4,
+        "violations": [],
+        "change_events_count": 4,
+        "change_events_preview": [
+          {
+            "op": "add_cm",
+            "ok": null
+          },
+          {
+            "op": "remove_edge",
+            "ok": null
+          },
+          {
+            "op": "set_ir_only_field",
+            "ok": null
+          },
+          {
+            "op": "set_ir_only_field",
+            "ok": null
+          }
+        ],
+        "ir_sha256": "sha256:a7ddba5fc7c34190c",
+        "spec_hash_after_patch": "sha256:a7ddba5fc7c34190c",
+        "stage": "VALIDATING",
+        "validate_status_code": 200,
+        "validate_ir_ok": true,
+        "validate_open_questions": []
+      },
+      "status": "pass",
+      "evidence_refs": [
+        "evidence/nine_steps_offline_run.json"
+      ],
+      "repro_command": "POST /api/v1/plc/canvas/greenfield/patch  body={session_id, project_id, ops:[add_cm, remove_edge, set_ir_only_field×2]}；再 POST /api/v1/plc/canvas/greenfield/validate",
+      "note": "真实 POST /patch 一次原子提交 4 项手动编辑（add_cm 新增执行件 / remove_edge 删一条非 immutable 连线 / set_ir_only_field 改作业交互条件 / set_ir_only_field 改步序条件），所有 op 目标 id 取自步骤2 真实 IR；change_events 入账；随后 /validate 重算 validate_ir 通过。"
+    },
+    {
+      "step_id": "NINE-04",
+      "name": "确认设备逻辑 → 冻结 v1，检查 spec_hash 覆盖拓扑与全部编辑",
+      "endpoint": "POST /api/v1/plc/canvas/greenfield/engineering-summary + POST /api/v1/plc/canvas/greenfield/confirm",
+      "request_summary": {
+        "method": "POST",
+        "confirm": {
+          "explicit": true,
+          "frozen_by": "user"
+        },
+        "prerequisites": "拓扑定稿 / open_questions 清零 / 连线校验 / 等价性预检 / 基线版本锁定"
+      },
+      "response": {
+        "engineering_summary_status_code": 200,
+        "confirm_status_code": 200,
+        "confirm_ok": true,
+        "explicit": true,
+        "spec_version": 1,
+        "spec_hash": "sha256:5b92b82e9155cc518311d154cba822817f9b9379f461f0cd5fd6044129a826a5",
+        "specs_v1_path": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_nine_steps_busydzmo\\greenfield\\3546b9b8ed4a\\specs\\v1.json",
+        "specs_v1_exists": true,
+        "counters_before_confirm": {
+          "ops": 0,
+          "disk_writes": 0,
+          "writebacks": 0,
+          "generations": 0
+        },
+        "four_counters_all_zero_before_confirm": true,
+        "confirm_prerequisites": {
+          "ok": true,
+          "checks": {
+            "ir_ready": true,
+            "topology_finalized": true,
+            "open_questions_cleared": true,
+            "nodes_links_valid": true,
+            "equivalence_precheck": true,
+            "baseline_locked": true
+          },
+          "reasons": [],
+          "open_questions": [],
+          "codes": [],
+          "code": ""
+        }
+      },
+      "status": "pass",
+      "evidence_refs": [
+        "evidence/nine_steps_offline_run.json",
+        "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_nine_steps_busydzmo\\greenfield\\3546b9b8ed4a\\specs\\v1.json"
+      ],
+      "repro_command": "POST /api/v1/plc/canvas/greenfield/engineering-summary；POST /api/v1/plc/canvas/greenfield/confirm  body={session_id, explicit:true, frozen_by:'user'} → specs/v1.json",
+      "note": "真实 GET /state 读取确认前四计数器（ops/disk_writes/writebacks/generations 恒 0）与五项确认前置；POST /engineering-summary 展示工程摘要；POST /confirm(explicit=true) 冻结 v1 并落盘 specs/v1.json，spec_hash 覆盖拓扑与步骤3 全部编辑。"
+    },
+    {
+      "step_id": "NINE-05",
+      "name": "Action A 导出工程包 → fidelity_report.json 为 fidelity_ok=true、coverage 100%、orphan 0",
+      "endpoint": "POST /api/v1/plc/canvas/greenfield/action-a",
+      "request_summary": {
+        "method": "POST",
+        "session_id": "<同上>",
+        "include_zip_base64": false
+      },
+      "response": {
+        "status_code": 200,
+        "ok": true,
+        "action": "A",
+        "mode": "full",
+        "fidelity_ok": true,
+        "fidelity_report": {
+          "fidelity_ok": true,
+          "coverage": 1.0,
+          "orphan": 0,
+          "drift": 0,
+          "unmapped_spec_objects": [],
+          "ob_number_deviations": [],
+          "pending_real_machine": true
+        },
+        "evidence_bundle_sha256": "sha256:62e497eff71294bdf91428bfc39af1472e8d0bc41090cea16b8a6162110e076e",
+        "bundle_sha256": "sha256:62e497eff71294bdf91428bfc39af1472e8d0bc41090cea16b8a6162110e076e",
+        "bundle_sha256_recomputed": "sha256:62e497eff71294bdf91428bfc39af1472e8d0bc41090cea16b8a6162110e076e",
+        "bundle_sha256_match": true,
+        "spec_version": 1,
+        "block_count": 26,
+        "compile_ok": null,
+        "tia_written": false,
+        "pending_real_machine": true,
+        "evidence_bundle_keys": [
+          "artifact_hashes",
+          "baseline_manifest",
+          "bundle_sha256",
+          "compile_note",
+          "compile_ok",
+          "coverage_matrix",
+          "coverage_matrix_entry_count",
+          "edge_list",
+          "fidelity_report",
+          "ir_snapshot",
+          "mode",
+          "offline_verifiable",
+          "package",
+          "pending_real_machine",
+          "schema",
+          "source_id_map",
+          "spec",
+          "static_gate",
+          "views",
+          "xml_package_unverified",
+          "zip_entry_hashes"
+        ]
+      },
+      "status": "pass",
+      "evidence_refs": [
+        "evidence/nine_steps_offline_run.json",
+        "evidence/uc15_evidence_bundle.json"
+      ],
+      "repro_command": "POST /api/v1/plc/canvas/greenfield/action-a  body={session_id} → fidelity_ok / fidelity_report / evidence_bundle",
+      "note": "真实 POST /action-a 产出 fidelity_report.json（fidelity_ok=true、coverage=1.0、orphan=0）与 EvidenceBundle；bundle_sha256 经 canonical_hash 复算一致。fidelity_ok 是 L1 离线逻辑等价，compile_ok 恒 None（N9），Action A 不写 TIA。evidence_bundle 原始响应已实例化到evidence/uc15_evidence_bundle.json。"
+    },
+    {
+      "step_id": "NINE-06",
+      "name": "两个负例：删产物块 → fidelity_ok=false 且列 unmapped_spec_objects；塞无来源块 → orphan=1",
+      "endpoint": "FidelityChecker.check(...) 只读校验器直调（无 HTTP 端点）",
+      "request_summary": {
+        "negative_a": "从步骤5 真实 coverage_matrix 的 source_id 集合中删掉一个产物块",
+        "negative_b": "在 artifacts 中塞入一个无 source_id 的逻辑块",
+        "basis": "步骤5 真实 spec_hash 与真实 source_id 集合"
+      },
+      "response": {
+        "basis": "步骤5 真实 spec_hash + 真实 coverage_matrix 的 17 个 source_id",
+        "negative_a_deleted_source_id": "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015",
+        "negative_a": {
+          "fidelity_ok": false,
+          "coverage": 0.9411764705882353,
+          "unmapped_spec_objects": [
+            "DB::U1Em1_Station1_CallEquipment_DB::CallEquipment_DB::1015"
+          ],
+          "orphan": 0
+        },
+        "negative_b_injected_key": "blocks/__INJECTED_ORPHAN__.scl",
+        "negative_b": {
+          "fidelity_ok": false,
+          "orphan": 1,
+          "orphan_blocks": [
+            "blocks/__INJECTED_ORPHAN__.scl"
+          ]
+        }
+      },
+      "status": "pass",
+      "evidence_refs": [
+        "evidence/nine_steps_offline_run.json",
+        "tests/unit/test_greenfield_fidelity.py（同口径负例）"
+      ],
+      "repro_command": "python -c 'from plc_engine.af.fidelity import FidelityChecker; ...'（同 tests/unit/test_greenfield_fidelity.py 负例口径）",
+      "note": "FidelityChecker.check 只读校验器两个负例（无 HTTP 端点，同 test_greenfield_fidelity.py 口径）：负例A 从步骤5 真实产物集合中删掉一个产物块 → coverage<1、fidelity_ok=false、unmapped_spec_objects 列出被删 source_id；负例B 塞入无 source_id 的逻辑块 → orphan=1、fidelity_ok=false。均为纯离线只读判定，不涉及真机。"
+    },
+    {
+      "step_id": "NINE-07",
+      "name": "Action B 写入博途 V19 → 编译零错误 → 归档 .zap19 + 结构化编译报告",
+      "endpoint": "(真机项，未执行) POST /action-b / --cli compile-plc",
+      "request_summary": {
+        "requires": "real_machine",
+        "executed": false,
+        "note": "Agent Q 不连真机，绝不伪造编译结果"
+      },
+      "response": {
+        "executed": false,
+        "compile_ok": null,
+        "note": "真机项未执行；不产生任何编译结果、error_count、.zap19 或结构化编译报告，绝不伪造。"
+      },
+      "status": "pending_real_machine",
+      "evidence_refs": [],
+      "repro_command": "POST /api/v1/plc/canvas/greenfield/action-b（前置 A fidelity_ok==true）；或 --cli compile-plc --project <Temp/gf_real_*/副本.ap19> --plc PLC_1；归档 project.zap19（由 Agent R 真机完成）",
+      "note": "Action B 真机写入博途 V19 / 编译 / 归档 .zap19 由 Agent R 独占真机完成；Agent Q 不连真机、不启动 SessionServer/TIA，本步恒 pending_real_machine 并留复现命令。"
+    },
+    {
+      "step_id": "NINE-08",
+      "name": "重跑步骤 4-5（不改输入）→ 产物哈希一致（L3 可复现）",
+      "endpoint": "POST /api/v1/plc/canvas/greenfield/action-a（第二次，同一冻结 spec）",
+      "request_summary": {
+        "method": "POST",
+        "unchanged_input": true,
+        "note": "v1 冻结规格不改输入；对同一 spec 重复 Action A 导出，比对产物哈希"
+      },
+      "response": {
+        "second_action_a_status_code": 200,
+        "unchanged_input": true,
+        "hash_1": "sha256:62e497eff71294bdf91428bfc39af1472e8d0bc41090cea16b8a6162110e076e",
+        "hash_2": "sha256:62e497eff71294bdf91428bfc39af1472e8d0bc41090cea16b8a6162110e076e",
+        "evidence_bundle_sha256_equal": true,
+        "zip_sha256_equal": true,
+        "artifact_hashes_equal": true
+      },
+      "status": "pass",
+      "evidence_refs": [
+        "evidence/nine_steps_offline_run.json",
+        "evidence/uc15_evidence_bundle.json#artifact_hashes"
+      ],
+      "repro_command": "对同一 session_id 再次 POST /api/v1/plc/canvas/greenfield/action-a，比对 evidence_bundle_sha256 / package.zip_sha256 / artifact_hashes（integrity.sha256 口径）",
+      "note": "v1 冻结规格不改输入；对同一 spec 重复执行步骤5 的 Action A 导出，evidence_bundle_sha256 / package.zip_sha256 / artifact_hashes 三项真实比对一致 → L3 可复现。仅产物哈希比对，不宣称 L2/L4 真机通过、编译零错误或 M4 判定。"
+    },
+    {
+      "step_id": "NINE-09",
+      "name": "从 specs/v1.json 重建画布与确认时一致",
+      "endpoint": "GET /api/v1/plc/canvas/greenfield/specs/1?project_id=GF-Q-UC15",
+      "request_summary": {
+        "method": "GET",
+        "session_memory_cleared": true,
+        "note": "registry.reset() 清空进程内会话态后，仅凭磁盘 specs/v1.json 读取 FrozenSpec"
+      },
+      "response": {
+        "status_code": 200,
+        "ok": true,
+        "session_memory_cleared": true,
+        "rebuilt_from": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_nine_steps_busydzmo\\greenfield\\3546b9b8ed4a\\specs\\v1.json",
+        "spec_version": 1,
+        "spec_hash_equal": true,
+        "ir_snapshot_equal": true,
+        "project_id": "GF-Q-UC15"
+      },
+      "status": "pass",
+      "evidence_refs": [
+        "evidence/nine_steps_offline_run.json",
+        "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_nine_steps_busydzmo\\greenfield\\3546b9b8ed4a\\specs\\v1.json"
+      ],
+      "repro_command": "清空会话内存后 GET /api/v1/plc/canvas/greenfield/specs/1?project_id=GF-Q-UC15&session_id=<sid>，比对 spec_hash 与 ir_snapshot",
+      "note": "进程内 ASGI 无法真正重启进程；以 registry.reset() 清空内存会话态后，GET /specs/1 仅凭磁盘 specs/v1.json 读取 FrozenSpec，spec_hash 与 ir_snapshot 与确认时完全一致 → 验证可仅凭 v1.json 重建画布（含拓扑）。真实服务重启由主 agent 收口核验。"
+    }
+  ],
+  "summary": {
+    "total": 9,
+    "by_status": {
+      "pass": 8,
+      "pending_real_machine": 1,
+      "fail": 0,
+      "not_run": 0
+    }
+  },
+  "honest_note": "不连真机、不启动 SessionServer / TIA、不占用 8000/8791/8011 端口（TestClient 进程内 ASGI）。本产物为 UC-15 §9.2 九步的【离线进程内真实驱动】留痕：步骤 1-6、8、9 经 TestClient 真实调用产品端点/只读校验器并保留每步原始响应关键字段；步骤 7（Action B 真机写入博途 V19、编译零错误、归档 .zap19 与结构化编译报告）恒 pending_real_machine，由 Agent R 独占真机完成，本工具绝不伪造编译结果。§13.9 六条增量真机项不在本九步产物内、恒 pending_real_machine。fidelity_ok 与 compile_ok 严格分离（N9）：步骤5 fidelity_ok=true 仅 L1 离线逻辑等价，compile_ok 恒 None；warning 单列不并入成功。离线跑通不得宣称：编译零错误 / L2 或 L4 通过 / L1∧L2∧L3∧L4 全绿 / M4 通过或代签；M4 签署权归用户本人，工具不得代签。evidence/uc15_evidence_bundle.json 为 A 返回的 evidence_bundle 真实离线实例化，缺 3 项真机工件（structured_compile_report / pcec_ledger / zap19_archive）如实列出、不补假数据。",
+  "project_id": "GF-Q-UC15",
+  "work_dir": "C:\\Users\\vboxuser\\AppData\\Local\\Temp\\gf_nine_steps_busydzmo",
+  "step7_pending_real_machine": true
+}

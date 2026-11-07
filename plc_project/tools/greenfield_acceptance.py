@@ -19,7 +19,18 @@
 
     python tools/greenfield_acceptance.py --offline
     python tools/greenfield_acceptance.py --offline --out evidence/offline_run.json
+    python tools/greenfield_acceptance.py --offline --step-run evidence/nine_steps_offline_run.json \
+        --evidence-bundle evidence/uc15_evidence_bundle.json
     python tools/greenfield_acceptance.py --real-machine --workdir C:/.../Temp/gf_real_*/副本.ap19
+
+Q3 追加（默认关闭，不放水）：
+- ``--evidence-bundle PATH``：读取真实证据包，按 EXPECTED_FULL_ARTIFACTS /
+  EXPECTED_INCREMENTAL_FIELDS 逐项严格校验，校验结果作为 ``evidence_complete``；
+  校验不过即 False 并列出缺项；默认不提供时恒 False，``--offline`` 的 M4 必定未通过。
+- ``--step-run PATH``：合入 nine_steps_offline_run.json 的真实步骤结果替换 not_run 占位，
+  但步骤 7 与六条增量真机项恒 ``pending_real_machine``，绝不因离线跑通标 pass。
+- ``report["requires_user_signoff"]`` 恒 True；``m4_signable`` 恒 False：
+  M4 签署权归用户，工具不得代签（即便理论 m4_pass=True 也只输出「证据齐备 / 待用户签署」）。
 
 退出码: 默认 ``0`` = 报告成功生成（判定结果在输出的 ``m4`` 字段里）；
 ``--strict`` 且 M4 未通过时返回 ``1``；fail-closed 拒绝（workdir 非法）返回 ``2``。
@@ -371,6 +382,141 @@ def build_step_records(mode: str, workdir: str | None) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# 真实证据包 / 九步离线结果合入（Q3，默认关闭，绝不因离线跑通放水）
+# ---------------------------------------------------------------------------
+#: 真机步骤白名单：步骤 7 + §13.9 六条增量，一律恒 pending_real_machine。
+REAL_MACHINE_STEP_IDS = frozenset(
+    {"NINE-07"} | {s["id"] for s in SIX_INCREMENTAL_CASES}
+)
+
+
+def _read_json_optional(path: str | None) -> dict | None:
+    """读取可选 JSON；文件缺失/损坏返回 None（fail-closed，不抛错、不伪造）。"""
+    if not path:
+        return None
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+
+
+def _has_evidence(entry) -> bool:
+    """严格判定：显式 present=True 且带非空证据引用（防止只挂布尔不挂证据的假数据）。"""
+    return (
+        isinstance(entry, dict)
+        and entry.get("present") is True
+        and bool(str(entry.get("evidence_ref") or "").strip())
+    )
+
+
+def validate_evidence_bundle(bundle: dict | None) -> dict:
+    """按 EXPECTED_FULL_ARTIFACTS / EXPECTED_INCREMENTAL_FIELDS 严格校验真实证据包。
+
+    校验不通过即 complete=False 并列出缺项；默认（未提供证据包）恒 False。
+    只有 12 项全量工件 + 6 个增量字段逐项带真实证据引用时 complete 才可能为 True。
+    """
+    if not isinstance(bundle, dict):
+        return {
+            "complete": False,
+            "missing_full": list(EXPECTED_FULL_ARTIFACTS),
+            "missing_incremental": list(EXPECTED_INCREMENTAL_FIELDS),
+            "full_expected": len(EXPECTED_FULL_ARTIFACTS),
+            "full_present": 0,
+            "incremental_expected": len(EXPECTED_INCREMENTAL_FIELDS),
+            "incremental_present": 0,
+            "reasons": ["未提供可解析的 --evidence-bundle JSON 证据包（fail-closed）"],
+        }
+    artifacts = bundle.get("artifacts")
+    inc = bundle.get("incremental_fields")
+    missing_full = [
+        x for x in EXPECTED_FULL_ARTIFACTS
+        if not _has_evidence(artifacts.get(x) if isinstance(artifacts, dict) else None)
+    ]
+    missing_inc = [
+        x for x in EXPECTED_INCREMENTAL_FIELDS
+        if not _has_evidence(inc.get(x) if isinstance(inc, dict) else None)
+    ]
+    reasons: list[str] = []
+    if missing_full:
+        reasons.append("缺全量工件：" + ", ".join(missing_full))
+    if missing_inc:
+        reasons.append("缺增量字段：" + ", ".join(missing_inc))
+    if not reasons:
+        reasons.append("EXPECTED_FULL_ARTIFACTS / EXPECTED_INCREMENTAL_FIELDS 逐项核对通过")
+    return {
+        "complete": not missing_full and not missing_inc,
+        "missing_full": missing_full,
+        "missing_incremental": missing_inc,
+        "full_expected": len(EXPECTED_FULL_ARTIFACTS),
+        "full_present": len(EXPECTED_FULL_ARTIFACTS) - len(missing_full),
+        "incremental_expected": len(EXPECTED_INCREMENTAL_FIELDS),
+        "incremental_present": len(EXPECTED_INCREMENTAL_FIELDS) - len(missing_inc),
+        "reasons": reasons,
+    }
+
+
+def finalize_m4(m4: dict) -> dict:
+    """契约 13 §1.6：M4 签署权恒归用户，工具不得代签、不得宣称可签署。
+
+    即便理论判定 m4_pass=True，工具也只输出「证据齐备 / 待用户签署」，
+    m4_signable 恒 False。纯函数 ``evaluate_m4`` 的真值表保持不变。
+    """
+    out = dict(m4)
+    out["m4_signable"] = False
+    out["requires_user_signoff"] = True
+    out["signoff_owner"] = "用户本人"
+    if out.get("m4_pass"):
+        out["verdict"] = "证据齐备 / 待用户签署（工具不得代签）"
+        out["reasons"] = list(out.get("reasons") or []) + [
+            "M4 签署权归用户，工具不得代签；本工具最多推进到证据齐备 / 待用户签署"
+        ]
+    return out
+
+
+def merge_step_run(records: list[dict], run_doc: dict | None) -> tuple[list[dict], dict]:
+    """把 ``nine_steps_offline_run.json`` 的真实步骤结果合入 step_records（替换 not_run 占位）。
+
+    硬约束：步骤 7 与六条增量真机项恒 ``pending_real_machine``，
+    绝不因离线跑通标 pass（即使 step-run 文件里伪造了 pass 也强制覆盖）。
+    """
+    if not isinstance(run_doc, dict) or not isinstance(run_doc.get("steps"), list):
+        return list(records), {"merged": False, "reason": "step-run 产物不是含 steps 列表的 JSON 对象"}
+    by_id = {
+        s["step_id"]: s for s in run_doc["steps"]
+        if isinstance(s, dict) and isinstance(s.get("step_id"), str)
+    }
+    merged: list[dict] = []
+    merged_count = 0
+    for r in records:
+        rec = dict(r)
+        src = by_id.get(r["id"])
+        if (
+            r.get("group") == "nine_steps"
+            and src is not None
+            and r["id"] not in REAL_MACHINE_STEP_IDS
+        ):
+            st = src.get("status")
+            if st in VALID_STATUSES:
+                rec["status"] = st
+            rec["response"] = src.get("response") if isinstance(src.get("response"), dict) else {}
+            if isinstance(src.get("evidence_refs"), list):
+                rec["evidence_refs"] = list(src["evidence_refs"])
+            if src.get("note"):
+                rec["note"] = ((r.get("note", "") or "") + " [离线真实驱动] " + str(src["note"])).strip()
+            rec["step_run_source"] = "nine_steps_offline_run.json"
+            merged_count += 1
+        # 防伪造：真机项恒 pending，无论 step-run 文件里写了什么
+        if rec["id"] in REAL_MACHINE_STEP_IDS:
+            rec["status"] = "pending_real_machine"
+        merged.append(rec)
+    return merged, {
+        "merged": merged_count > 0,
+        "nine_steps_merged": merged_count,
+        "real_machine_steps_forced_pending": sorted(REAL_MACHINE_STEP_IDS),
+    }
+
+
+# ---------------------------------------------------------------------------
 # 真机模式护栏与探针
 # ---------------------------------------------------------------------------
 def validate_workdir(workdir: str | None) -> dict:
@@ -453,7 +599,21 @@ def sync_ledger(ledger: dict, pending_ids: list[str], path: Path) -> dict:
 # ---------------------------------------------------------------------------
 # 报告组装
 # ---------------------------------------------------------------------------
-def build_report(mode: str, workdir: str | None, timeout: float) -> dict:
+def build_report(
+    mode: str,
+    workdir: str | None,
+    timeout: float,
+    *,
+    evidence_bundle_path: str | None = None,
+    step_run_path: str | None = None,
+) -> dict:
+    """组装报告；新增两个可选参数（默认 None 时行为与基线逐字节一致）。
+
+    - ``evidence_bundle_path``：提供时按真实证据包严格校验并把结果作为 evidence_complete；
+      默认不提供时 evidence_complete 恒 False，--offline 的 M4 必定未通过。
+    - ``step_run_path``：提供时合入 nine_steps_offline_run.json 的真实步骤结果，
+      但真机步骤恒 pending_real_machine。
+    """
     rtm, tpl, ledger = load_evidence()
     report: dict = {
         "tool": "greenfield_acceptance",
@@ -465,6 +625,8 @@ def build_report(mode: str, workdir: str | None, timeout: float) -> dict:
         "fail_closed": True,
         "honest_rules": rtm.get("hard_rules", []),
         "l1_l4_expression": "L1 ∧ L2 ∧ L3 ∧ L4",
+        # 契约 13 §1.6：签署权恒归用户，工具不得代签
+        "requires_user_signoff": True,
     }
 
     # 1) 静态检查（纯离线可判定）
@@ -491,13 +653,24 @@ def build_report(mode: str, workdir: str | None, timeout: float) -> dict:
         "全绿" if all(layers[l]["passed"] for l in FOUR_LAYERS) else "未全绿"
     )
 
-    # 4) 步骤编排与证据留痕
-    report["step_records"] = build_step_records(mode, workdir)
-    report["step_summary"] = {
+    # 4) 步骤编排与证据留痕（可选合入 nine_steps_offline_run.json 的真实结果）
+    records = build_step_records(mode, workdir)
+    merge_info = None
+    if step_run_path:
+        records, merge_info = merge_step_run(records, _read_json_optional(step_run_path))
+    report["step_records"] = records
+    step_summary: dict = {
         "nine_steps": len(NINE_STEPS),
         "six_incremental_cases": len(SIX_INCREMENTAL_CASES),
         "note": "--offline 下所有步骤均为 not_run / pending_real_machine + 复现命令，绝不伪造执行结果。",
     }
+    if merge_info:
+        step_summary["step_run_merged"] = merge_info
+        step_summary["note"] = (
+            "已合入 nine_steps_offline_run.json 的真实步骤结果（替换 not_run 占位）；"
+            "步骤 7 与六条增量真机项恒 pending_real_machine，绝不因离线跑通标 pass。"
+        )
+    report["step_summary"] = step_summary
 
     # 5) 真机模式护栏 + 真实探针（不代跑产品链）
     if mode == "real_machine":
@@ -505,7 +678,14 @@ def build_report(mode: str, workdir: str | None, timeout: float) -> dict:
         report["workdir_check"] = wd
         if not wd["allowed"]:
             report["error"] = "fail-closed：真机模式被拒绝，未执行任何真机项"
-            report["m4"] = evaluate_m4(layers, pending_ids, ledger, evidence_complete=False)
+            report["evidence_bundle"] = {
+                "complete": False,
+                "note": "fail-closed 拒绝：未实例化/未校验任何真实证据包。",
+                "template_check": tpl_check["complete"],
+            }
+            report["m4"] = finalize_m4(
+                evaluate_m4(layers, pending_ids, ledger, evidence_complete=False)
+            )
             return report
         report["probe"] = run_probe(PROBE_EXE, timeout)
         report["real_machine_scope_note"] = (
@@ -513,15 +693,33 @@ def build_report(mode: str, workdir: str | None, timeout: float) -> dict:
             "九步/六条的产品链逐条实测由主 agent 收口执行，本工具不代跑、不伪造编译/导入结果。"
         )
 
-    # 6) EvidenceBundle 完整性（本工具不实例化真实证据包）
-    report["evidence_bundle"] = {
-        "complete": False,
+    # 6) EvidenceBundle 完整性：默认不实例化；提供时按真实证据包严格校验
+    evidence_check = None
+    evidence_complete = False
+    if evidence_bundle_path:
+        bundle = _read_json_optional(evidence_bundle_path)
+        evidence_check = validate_evidence_bundle(bundle)
+        evidence_complete = evidence_check["complete"]
+    evidence_bundle_report: dict = {
+        "complete": evidence_complete,
         "note": "真实 EvidenceBundle 由主 agent 收口实测时按 acceptance_template.json 实例化归档；当前为模板校验通过。",
         "template_check": tpl_check["complete"],
     }
+    if evidence_check is not None:
+        evidence_bundle_report.update({
+            "source": str(evidence_bundle_path),
+            "validation": evidence_check,
+            "note": (
+                "evidence_complete 由 --evidence-bundle 的真实证据包逐项校验驱动；"
+                "校验不通过即 False 并列出缺项（不放水）。"
+            ),
+        })
+    report["evidence_bundle"] = evidence_bundle_report
 
-    # 7) M4 判定（pending 清零前必定未通过）
-    report["m4"] = evaluate_m4(layers, pending_ids, ledger, evidence_complete=False)
+    # 7) M4 判定（pending 清零前必定未通过；签署权恒归用户，工具不得代签）
+    report["m4"] = finalize_m4(
+        evaluate_m4(layers, pending_ids, ledger, evidence_complete=evidence_complete)
+    )
     return report
 
 
@@ -551,6 +749,21 @@ def print_summary(report: dict) -> None:
     w(f"M4 判定: {m4['verdict']}（m4_pass={m4['m4_pass']}, m4_signable={m4['m4_signable']}）\n")
     for r in m4["reasons"]:
         w(f"  - {r}\n")
+    w("M4 签署权归用户，工具不得代签（requires_user_signoff=True，m4_signable 恒 False）；\n")
+    eb = report.get("evidence_bundle") or {}
+    v = eb.get("validation")
+    if isinstance(v, dict):
+        w(f"EvidenceBundle 校验: complete={v.get('complete')} | 全量工件 "
+          f"{v.get('full_present')}/{v.get('full_expected')} | 增量字段 "
+          f"{v.get('incremental_present')}/{v.get('incremental_expected')}\n")
+        if v.get("missing_full"):
+            w("  缺全量工件: " + ", ".join(v["missing_full"]) + "\n")
+        if v.get("missing_incremental"):
+            w("  缺增量字段: " + ", ".join(v["missing_incremental"]) + "\n")
+    sm = report.get("step_summary") or {}
+    if sm.get("step_run_merged"):
+        w(f"九步离线真实驱动已合入: {sm['step_run_merged'].get('nine_steps_merged')} 步"
+          "（步骤 7 与六条增量真机项恒 pending_real_machine）\n")
     w("-" * 68 + "\n")
     w("诚实口径: 未以离线单测宣称 L2/L4 通过或编译零错误；pending 清零前 M4 保持未通过；\n")
     w("          真机结论只引用 Agent F 归档或真实运行结果，绝不编造真机编译数字。\n")
@@ -572,10 +785,22 @@ def main() -> None:
     ap.add_argument("--sync-ledger", action="store_true", help="把 RTM pending 累计进 pending_real_machine.json（幂等）")
     ap.add_argument("--timeout", type=float, default=180.0, help="真机探针子进程超时秒数（默认 180）")
     ap.add_argument("--strict", action="store_true", help="M4 未通过时返回退出码 1（供 CI 用）")
+    ap.add_argument(
+        "--evidence-bundle", default=None, metavar="PATH",
+        help="真实 EvidenceBundle JSON：按全量 12 工件 + 增量 6 字段严格校验并驱动 evidence_complete（默认不提供恒 False）",
+    )
+    ap.add_argument(
+        "--step-run", default=None, metavar="PATH",
+        help="nine_steps_offline_run.json：合入真实步骤结果（真机步骤恒 pending_real_machine）",
+    )
     args = ap.parse_args()
 
     mode = "offline" if args.offline else "real_machine"
-    report = build_report(mode, args.workdir, args.timeout)
+    report = build_report(
+        mode, args.workdir, args.timeout,
+        evidence_bundle_path=args.evidence_bundle,
+        step_run_path=args.step_run,
+    )
 
     if args.sync_ledger:
         _, _, ledger = load_evidence()

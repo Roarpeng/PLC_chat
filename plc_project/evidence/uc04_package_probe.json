@@ -1,0 +1,223 @@
+{
+  "schema": "gf-uc04-package-probe-v1",
+  "uc": "UC-04",
+  "title": "包级 K1 复测（SW.PlcBlockGroup XML / 完整 AF 包联合导入编译）",
+  "agent": "Agent R · V19 真机全链收官（批次 3）",
+  "generated_at": "2026-11-07T08:40:04.844891+00:00",
+  "tia_version": "V19",
+  "environment": {
+    "status_probe": "research/Gate0_环境与档位实测_2026-11-06.md §4（opennessAvailable=true, tiaVersion=V19）",
+    "exe": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe",
+    "read_only_source": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/PLC_Openness_data/openness_e2e/CanvasE2E",
+    "temp_copy_roots": [
+      "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/R1a-blockgroup/proj/CanvasE2E.ap19",
+      "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/R1b-package/proj/CanvasE2E.ap19"
+    ],
+    "source_opened_or_written_back": false,
+    "note": "所有真机操作只在 AppData/Local/Temp/gf_real_r_20261107/ 独立临时副本上；源项目仅 cp/copytree 读取"
+  },
+  "repro_command_base": {
+    "python": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\.venv\\Scripts\\python.exe",
+    "tool": "tools/run_batch3_real_machine.py（case R1a-blockgroup / R1b-package；--only 可单独重跑）",
+    "raw_returns": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/raw_all.json"
+  },
+  "probe_a_sw_plcblockgroup": {
+    "question": "folders.json 对应的 SW.PlcBlockGroup XML 是否可被 V19 导入？用哪种路径？",
+    "paths_tested": [
+      "import-xml --kind auto（ClassifyXmlKind 归为 block → BlockGroup.Blocks.Import）",
+      "import-xml --kind block（显式块路径）",
+      "create-block-group（Openness BlockGroup.FindOrCreateBlockGroup API，非 XML 导入）"
+    ],
+    "blockgroup_xml": {
+      "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/r1_SW_PlcBlockGroup.xml",
+      "sha256": "d239fe06f7875f987f690898ec8131d839f80968a675eb551228906ccfdcecdd",
+      "bytes": 320,
+      "description": "手工构造的 SW.PlcBlockGroup SimaticML 文档（对应 folders.json 的文件夹清单对象）"
+    },
+    "import_kind_auto": {
+      "exit_code": 4,
+      "ok": false,
+      "error_code": "openness_error",
+      "error_message_original": "Error when calling method 'Import' of type 'Siemens.Engineering.SW.Blocks.PlcBlockComposition'.\r\n\r\nClass of the 'Siemens.Engineering.SW.PlcBlockGroup' type at line number 7 at line position 4 with Simatic ML ID '0' is not supported.",
+      "retryable": false
+    },
+    "import_kind_block": {
+      "exit_code": 4,
+      "ok": false,
+      "error_code": "openness_error",
+      "error_message_original": "Error when calling method 'Import' of type 'Siemens.Engineering.SW.Blocks.PlcBlockComposition'.\r\n\r\nClass of the 'Siemens.Engineering.SW.PlcBlockGroup' type at line number 7 at line position 4 with Simatic ML ID '0' is not supported.",
+      "retryable": false
+    },
+    "create_block_group_1": {
+      "exit_code": 0,
+      "ok": true,
+      "group": "AF_Unit_01/AF_EM_01",
+      "saved": true
+    },
+    "create_block_group_2": {
+      "exit_code": 0,
+      "ok": true,
+      "group": "AF_Unit_01/AF_EM_02",
+      "saved": true
+    },
+    "compile_after_probes_original": {
+      "errorCount": 0,
+      "warningCount": 0,
+      "state": "Success"
+    },
+    "verdict": "SW.PlcBlockGroup XML 不可作为 SimaticML 块对象经 import-xml 导入：两种 kind 均返回 openness_error（'Siemens.Engineering.SW.PlcBlockGroup' type ... is not supported），exit=4、ok=false。文件夹清单须经 create-block-group（Openness BlockGroup API）建立，本次两组嵌套路径 AF_Unit_01/AF_EM_01、AF_Unit_01/AF_EM_02 真实 ok=true/saved=true/exit=0；其后 compile-plc 仍 errorCount=0/warningCount=0/state=Success（项目未被破坏）。这确证 folders.json 是文档化清单、非可导入 SimaticML 对象（沿用 K §5.2 / F §3.3 口径）。"
+  },
+  "probe_b_full_af_package": {
+    "package_composition": {
+      "ob_files": [
+        {
+          "name": "GF_U1_Startup",
+          "number": 1000,
+          "secondary_type": "Startup",
+          "call_db": null,
+          "network": "empty <NetworkSource />",
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/r1_package_ob/GF_U1_Startup.xml",
+          "sha256": "b78ab0d34199f86158044663c9c7f22a41b45b07e5e72de9fddc19967dbbc907",
+          "bytes": 2336
+        },
+        {
+          "name": "GF_U1_Main",
+          "number": 1001,
+          "secondary_type": "ProgramCycle",
+          "call_db": null,
+          "network": "empty <NetworkSource />",
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/r1_package_ob/GF_U1_Main.xml",
+          "sha256": "05ea8972c567c3d2991a359764cdef76fdbdfde53d5f7c73e7715f27880aad25",
+          "bytes": 2335
+        },
+        {
+          "name": "GF_U1EM1_Startup",
+          "number": 1010,
+          "secondary_type": "Startup",
+          "call_db": null,
+          "network": "empty <NetworkSource />",
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/r1_package_ob/GF_U1EM1_Startup.xml",
+          "sha256": "63478f1561409ee53a34ff57a198094292a9550f0700167b0ece5a3ba01c15bf",
+          "bytes": 2342
+        },
+        {
+          "name": "GF_U1EM1_Main",
+          "number": 1011,
+          "secondary_type": "ProgramCycle",
+          "call_db": null,
+          "network": "empty <NetworkSource />",
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/r1_package_ob/GF_U1EM1_Main.xml",
+          "sha256": "09e118a853a0840defba3d25d8e4d871221bf3cd4dd537bcc7d8d8e01d8869fb",
+          "bytes": 2341
+        },
+        {
+          "name": "GF_U1EM1_CallOB",
+          "number": 1012,
+          "secondary_type": "ProgramCycle",
+          "call_db": "GF_U1EM1_InstDB",
+          "network": "FlgNet/v5 Call",
+          "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/r1_package_ob/GF_U1EM1_CallOB.xml",
+          "sha256": "f45e3615c477c9e3af146f17fbdda090eb97af4792ccda2326614c88d488a2a6",
+          "bytes": 2809
+        }
+      ],
+      "folders_json": {
+        "path": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/r1_package_folders.json",
+        "sha256": "180acbfa107f7fa59fd3298d9ed0d5880ba3535c62d0f0d0596f50bac4e78ad0",
+        "content": {
+          "folders": {
+            "root": [
+              "GF_U1_Startup",
+              "GF_U1_Main",
+              "GF_U1EM1_Startup",
+              "GF_U1EM1_Main",
+              "GF_U1EM1_CallOB"
+            ]
+          }
+        }
+      },
+      "generator": "K 修复后的 _render_ob_xml（culture 仅 zh-CN、空网络 <NetworkSource />、Call 网络 FlgNet/v5）"
+    },
+    "imports_itemized": [
+      {
+        "name": "GF_U1_Startup",
+        "import_ok": true,
+        "raw_ok": true,
+        "exit_code": 0
+      },
+      {
+        "name": "GF_U1_Main",
+        "import_ok": true,
+        "raw_ok": true,
+        "exit_code": 0
+      },
+      {
+        "name": "GF_U1EM1_Startup",
+        "import_ok": true,
+        "raw_ok": true,
+        "exit_code": 0
+      },
+      {
+        "name": "GF_U1EM1_Main",
+        "import_ok": true,
+        "raw_ok": true,
+        "exit_code": 0
+      },
+      {
+        "name": "GF_U1EM1_CallOB",
+        "import_ok": false,
+        "raw_ok": false,
+        "exit_code": 4
+      }
+    ],
+    "call_network_ob_failure": {
+      "name": "GF_U1EM1_CallOB",
+      "exit_code": 4,
+      "ok": false,
+      "error_code": "openness_error",
+      "error_message_original": "Error when calling method 'Import' of type 'Siemens.Engineering.SW.Blocks.PlcBlockComposition'.\r\n\r\nCannot create the 'SW.Blocks.CompileUnit' object with Simatic ML ID '5' at line number 39 at line position 8.\r\n\r\nError when calling method 'Create' of type 'Siemens.Engineering.SW.Blocks.CompileUnitComposition'.\r\n\r\nThe name 'GF_U1EM1_InstDB' cannot be used for \"Call\" at the object with UID '21'.",
+      "retryable": false,
+      "difference_from_K_caseB": "K 08-k1-probe-fix.md §4.4 caseB（call_db='K1_CallUnit_DB'）：import.ok=true，compile errorCount=2（占位实例 DB 不存在）。本次 call_db='GF_U1EM1_InstDB'（无 _DB 后缀）使 _render_call_network 无法剥离出合法 FB 名，V19 在导入阶段即拒绝：'The name ... cannot be used for \"Call\"'。这是一条新的包级真实失败事实，暴露自产 Call 网络 OB 模板对 call_db 命名的约束，不掩盖。"
+    },
+    "joint_compile_raw": {
+      "errorCount": 0,
+      "warningCount": 0,
+      "state": "Success",
+      "inconsistentBlocks": [
+        "Compiling finished (errors: 0; warnings: 0)"
+      ],
+      "message": "Compile State=Success errors=0 warnings=0"
+    },
+    "joint_compile_honest_note": "联合编译 compile-plc 返回 errorCount=0 / warningCount=0 / state=Success，但该结果是在【Call 网络 OB 导入失败、未进入项目】的前提下取得（仅 4 个空网络 OB 导入成功）。故『含至少一个 Call 网络 OB 的完整 AF 包联合导入 + 编译零错误』未达成，绝不把此 0/0 包装成完整包编译通过。",
+    "list_blocks_raw_ref": "raw_all.json#cases/R1b-package.list_blocks"
+  },
+  "xml_package_unverified_disposition": {
+    "recommendation": "仍须保持 True（不消除）",
+    "code_flag_changed_by_this_agent": false,
+    "basis": [
+      "① SW.PlcBlockGroup XML 已真机确证不可经 import-xml 导入（openness_error, exit=4）；整个 xml_supplement 包不能标为『已验证可导入』，只能降级为『OB XML 可导入 + 文件夹清单需 API 建立』。",
+      "② 完整 AF 包的 Call 网络 OB 导入阶段即失败（本次新发现的 call_db 命名约束），含 Call 网络 OB 的完整包联合编译零错误未达成。",
+      "③ 本轮是临时副本上的包级探针/联合导入，非 deliver_tia auto 通道端到端全链（UC-15/UC-16/UC-18 由本批次其它 case 承担），端到端全链仍待主 agent 收口。",
+      "④ 契约 §0/§5：xml_package_unverified 的消除须以 UC-04 包级真实结果为唯一依据，且由主 agent 收口决定，任何 agent 不得擅自改 False / 代签 M4。"
+    ],
+    "note": "本 Agent 未改产品代码任何标志位赋值；仅给出处置结论与依据，由主 agent 收口决定。"
+  },
+  "repro_commands": [
+    "R='c:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project'; EXE=\"$R/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe\"",
+    "timeout -k 5 180 \"$EXE\" --cli import-xml --project <Temp/gf_real_r_20261107/R1a-blockgroup/proj/CanvasE2E.ap19> --xml <r1_SW_PlcBlockGroup.xml> --kind auto",
+    "timeout -k 5 180 \"$EXE\" --cli import-xml --project <...> --xml <r1_SW_PlcBlockGroup.xml> --kind block",
+    "timeout -k 5 180 \"$EXE\" --cli create-block-group --project <...> --plc PLC_1 --group AF_Unit_01/AF_EM_01",
+    "cd \"$R\" && ./.venv/Scripts/python.exe -c \"from gateway.app.services.plc.tia_delivery import _render_ob_xml; ...（生成 5 个 OB，见 raw_all R1b-package.ob_files）\"",
+    "逐个 timeout -k 5 180 \"$EXE\" --cli import-xml --kind auto ; timeout -k 5 180 \"$EXE\" --cli compile-plc --project <...> --plc PLC_1",
+    "cd \"$R\" && ./.venv/Scripts/python.exe tools/run_batch3_real_machine.py --only R1a-blockgroup（或 R1b-package）"
+  ],
+  "raw_evidence_index": {
+    "R1a": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/raw_all.json#cases/R1a-blockgroup",
+    "R1b": "C:/Users/vboxuser/AppData/Local/Temp/gf_real_r_20261107/raw_all.json#cases/R1b-package"
+  },
+  "honest_boundary": [
+    "所有 errorCount / warningCount / state / exit_code / error_message 均来自真实 CLI JSON 原始返回，附复现命令。",
+    "不宣称 L2/L4 通过、不宣称『Greenfield 全链编译零错误』、不宣称 M4 可签署。",
+    "Call 网络 OB 导入失败如实记录，未以联合编译 0/0 掩盖其未进入项目的事实。"
+  ]
+}

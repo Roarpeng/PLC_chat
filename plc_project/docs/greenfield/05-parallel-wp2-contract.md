@@ -116,3 +116,21 @@ cd <R>/frontend && npm run test && npm run build
 - 真机跑通 → 附真实结构化报告，逐条勾 UC，M4 可签署。
 - 真机任一步失败 → 该项标 `pending_real_machine`，写明失败码/原因/复现命令，**禁止**宣称 L2/L4 通过或「编译零错误」。
 - P0-D 档位结论：产出对照表与推荐，但**最终拍板留给用户**（Plan §0 Q5 / §9.3）。
+
+---
+
+## 7. 批次 3 执行状态（Agent P 追加，2026-11-07）
+
+> 本节为**状态追加**，不修改 §0–§6 任何条款；§1 全局规则（含 `04-parallel-wp-contract.md` §0）继续生效，批次 3 以 `13-batch3-contract.md` 为唯一共享契约。本节「P0-D 已拍板」结论**不改写** §1.3 / §6 中「待用户拍板」的历史文字，保留可追溯性。
+
+| 项 | 状态 |
+|---|---|
+| 分支 / 基线 | `dev/greenfield-wp` / `6986699`；**禁止任何 git 操作**（主 agent 统一提交） |
+| **P0-D 已拍板** | 用户 2026-11-06 以编号「1」拍板：**坚持「AF Basic 文件夹版」，暂不切「软件单元版」**（采纳 `06-gate0-report.md` §6 推荐）；正式决策记录 `11-p0d-decision.md`（**由 agent 归档用户结论、不代拍**）。映射层由「档位无关」**定型为文件夹版口径**；Gate-0 由 `conditional-go` 升 `go`（准入放行），见 `06-gate0-report.md` §7 |
+| **P / Q / R 三线分工**（`13-batch3-contract.md` §2） | **P**：决策固化与文档（`06` §7 / `05` 本节 / `07` / `09` / 新增 `11` / 仓库根 `research/Gate0_...md`，均为末尾追加或勾选状态更新；不连真机、不改产品代码、不改证据台账）。**Q**：验收编排器真实化 + 九步离线链（`tools/greenfield_acceptance.py`、`run_nine_steps.py` 等；不连真机、不启动 SessionServer、不改产品代码、不改 `evidence/rtm.json` / `pending_real_machine.json` / `acceptance_template.json`）。**R**：V19 真机全链（独占 TIA；新增 `evidence/uc04_package_probe.json` / `uc16_incremental_real.json` / `uc18_compile_feedback_real.json` / `uc15_step7_real.json`、`docs/greenfield/12-batch3-real-machine.md`） |
+| **TIA 实例独占** | 本批次**只有 Agent R 可连真机 / TIA / SessionServer**；**P、Q 一律不连真机**、不占用真机资源（`13-batch3-contract.md` §1.4）。真机只在 `Temp/gf_real_*` 临时副本操作，原始 `.ap19/.zap19` 仅 `cp` 读取 |
+| 台账收口 | `evidence/rtm.json` / `pending_real_machine.json` / `acceptance_template.json` / `uc05_real_machine_report.json` 与 `10-real-machine-acceptance.md` 由**主 agent 收口**按 P/Q/R 真实结果统一更新；三线均不擅自改 |
+| `xml_package_unverified` | **仍保持 `True`**：K 只验证 OB XML 探针级；`folders.json` / `SW.PlcBlockGroup XML` 可导入性、完整 AF 包联合编译、端到端全链未闭环。是否消除由 **Agent R 的 UC-04 包级复测真实结果**唯一决定，**任何 agent 不得擅自改 False、不得在文档宣称已消除** |
+| **M4 不代签** | 签署栏始终为「**待用户签署**」。批次 3 结论最多推进到「**证据齐备 / 待用户签署**」，**任何 agent 不得把 `m4_signable` 置 true 并宣称 M4 通过**（`13-batch3-contract.md` §1.6 / §5） |
+| 冻结清单 / 禁止项 | sha256 冻结清单 41 文件、`legacy_baseline.json`、`test_greenfield_legacy_guard.py` 零触碰；不改任何产品代码；不做在线下载 / online / run-stop / compare-to-PLC、不碰 F-block / Safety、不做 UI 自动化；P 不跑 pytest、不连真机 |
+| `go` 的限定 | `go` = 准入放行，**不等于** `L1∧L2∧L3∧L4` 全绿、**不等于** M4 可签署；不宣称 `L2` / `L4` 通过或「编译零错误」 |

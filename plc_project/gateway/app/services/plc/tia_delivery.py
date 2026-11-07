@@ -1831,3 +1831,149 @@ def _run_session_mode_import_compile(
         "project_path": ap_path, "tia_version": tia_version,
         "elapsed_ms": float(comp.get("elapsed_ms") or 0.0),
     }
+
+
+# ---------------------------------------------------------------------------
+# UC-18 编译诊断回喂编排（批次 3 · Agent R · 新通道派生层）
+#
+# 纯编排函数：不改冻结的 writeback_heal.py / compile_jobs.py / scl_precheck.py，
+# 不新增任何 import（只复用模块既有 import 与结构化诊断函数），保持
+# test_sanctioned_phase2_module_whitelist PASS。职责：
+#   结构化 CompileDiagnostics → 定位错误块/行 → 生成可复现修正建议 →
+#   触发复编译（由调用方注入回调；真机时接 SessionServer /compile-plc）→
+#   返回「注入前 / 失败 / 修正后」三段真实诊断与账本引用。
+# 本函数自身不连真机、不写文件、不改任何源码；复编译由 recompile 回调完成，
+# 回调缺省时显式标 pending_real_machine，禁止用 mock 冒充真机结论。
+# ---------------------------------------------------------------------------
+
+
+def _as_diagnostics_dict(diag: Any) -> dict[str, Any]:
+    """把 CompileDiagnostics / dict 归一为纯 dict，不臆造字段。"""
+    if isinstance(diag, CompileDiagnostics):
+        return diag.to_dict()
+    if isinstance(diag, dict):
+        return dict(diag)
+    return {}
+
+
+def _locate_compile_errors(failed: dict[str, Any]) -> dict[str, Any]:
+    """从失败诊断里定位错误块 / 行号（只读解析，不臆造、不静默）。"""
+    blocks = [str(b) for b in (failed.get("blocks") or []) if b]
+    reason = str(failed.get("reason") or "")
+    warnings = [str(w) for w in (failed.get("warnings") or [])]
+    text = " ".join([reason] + warnings)
+    # 行号：兼容「行 14」「line 14」「line number 14」等 TIA/CLI 诊断形态。
+    line_numbers = sorted(
+        {int(m) for m in re.findall(r"(?:行|line(?:\s+number)?)\s*0*(\d+)", text, re.IGNORECASE)}
+    )
+    # 块名：从文本里抽取 OB/FB/FC/DB 前缀名，与 blocks 清单合并去重。
+    named = re.findall(r"\b(?:OB|FB|FC|DB)[A-Za-z0-9_]*\b", text)
+    error_blocks = sorted(set(blocks + named))
+    return {
+        "error_count": _as_int(failed.get("error_count"), 0),
+        "blocks": error_blocks,
+        "line_numbers": line_numbers,
+        "reason": reason,
+        "warnings": warnings,
+        "locatable": bool(error_blocks or line_numbers or reason),
+    }
+
+
+def _build_fix_proposal(located: dict[str, Any], fix_hint: Any) -> dict[str, Any]:
+    """生成可复现的修正建议（纯字符串 / 纯 JSON，不改源码、不注入魔法修复）。"""
+    steps = [
+        "复现失败编译：--cli compile-plc --project <Temp/gf_real_*/副本.ap19> --plc PLC_1",
+    ]
+    if located["line_numbers"]:
+        steps.append(f"定位到行 {located['line_numbers']}，检查外部源 .scl 对应语句")
+    if located["blocks"]:
+        steps.append(f"定位到块 {located['blocks']}，核对被调用块 / 实例 DB 是否齐备")
+    steps.append("按 fix_hint 修正源（移除非法语句 / 补齐引用块），重新 generate-from-source 或 import-xml")
+    steps.append("复跑 compile-plc，确认 errorCount==0（warning 单列，不并入 compile_ok）")
+    return {
+        "reproducible_command": (
+            "timeout -k 5 180 TiaOpenness.Server.exe --cli compile-plc "
+            "--project <Temp/gf_real_*/副本.ap19> --plc PLC_1"
+        ),
+        "steps": steps,
+        "target_blocks": located["blocks"],
+        "target_lines": located["line_numbers"],
+        "fix_hint": fix_hint,
+        "note": "修正动作由上层真机编排执行；本函数只产出建议，不改冻结模块、不代跑编译",
+    }
+
+
+def compile_feedback_heal(
+    *,
+    before: Any = None,
+    failed: Any,
+    recompile: Any = None,
+    fix_hint: Any = None,
+    ledger_ref: str = "",
+    static_gate_passed: bool = True,
+    tia_version: str = "",
+    project_path: str = "",
+    blocks: list[str] | None = None,
+) -> dict[str, Any]:
+    """UC-18 编译错误回喂编排（纯编排，不改冻结模块、不新增 import）。
+
+    ``before``  = 注入前基线诊断（dict / CompileDiagnostics / None）；
+    ``failed``  = 注入 1 个编译错误后的失败诊断（必填，error_count>0）；
+    ``recompile`` = 复编译回调 ``() -> 原始 /compile-plc 响应 dict``；真机时
+        由 Agent R 接 SessionServer HTTP 返回，离线单测可传确定性 dict 验证结构，
+        但离线验证不构成真机证据。为 None 时 ``after_fix`` 标 pending_real_machine。
+
+    返回「注入前 / 失败 / 修正后」三段真实诊断 + 错误定位 + 可复现修正建议 +
+    账本引用；``heal_ok`` 仅在修正后诊断 ``status=compiled`` 且
+    ``error_count==0`` 且 ``compile_ok=True`` 时为 True（warning 单列不并入）。
+    """
+    before_d = _as_diagnostics_dict(before) if before is not None else None
+    failed_d = _as_diagnostics_dict(failed)
+    located = _locate_compile_errors(failed_d)
+    proposal = _build_fix_proposal(located, fix_hint)
+
+    recompile_raw: Any = None
+    if recompile is not None:
+        recompile_raw = recompile()
+        after_d = build_compile_diagnostics(
+            recompile_raw,
+            static_gate_passed=static_gate_passed,
+            tia_version=tia_version or str(failed_d.get("tia_version") or ""),
+            project_path=project_path or str(failed_d.get("project_path") or ""),
+            blocks=blocks,
+        ).to_dict()
+    else:
+        after_d = {
+            "status": COMPILE_STATUS_PENDING_REAL_MACHINE,
+            "compile_ok": False,
+            "error_count": 0,
+            "warnings": [],
+            "pending_real_machine": True,
+            "note": (
+                "未提供 recompile 回调：真机复编译未执行，标 pending_real_machine，"
+                "禁止以 mock / 离线单测冒充真机编译零错误"
+            ),
+        }
+
+    heal_ok = bool(
+        after_d.get("status") == COMPILE_STATUS_COMPILED
+        and _as_int(after_d.get("error_count"), 0) == 0
+        and after_d.get("compile_ok") is True
+    )
+    return {
+        "schema": "gf-uc18-compile-feedback-v1",
+        "before_injection": before_d,
+        "failed": failed_d,
+        "located_errors": located,
+        "fix_proposal": proposal,
+        "after_fix": after_d,
+        "recompile_raw_return": recompile_raw,
+        "ledger_ref": ledger_ref,
+        "heal_ok": heal_ok,
+        "warning_separation": "warning 单列，不并入 compile_ok（N9 / P0-A）",
+        "honest_note": (
+            "三段诊断数值一律来自真实 /compile-plc 原始返回（before/failed 由调用方"
+            "传入的真实结构化诊断、after 由 recompile 回调原始返回经 "
+            "build_compile_diagnostics 解析）；编排函数本身不产生、不美化任何数字。"
+        ),
+    }

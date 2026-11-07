@@ -14,7 +14,13 @@
     "docs/greenfield/06-gate0-report.md（Agent F 真机归档）",
     "research/Gate0_环境与档位实测_2026-11-06.md（Agent F 原始记录）"
   ],
-  "status_vocabulary": ["pass", "fail", "pending_real_machine", "not_run", "preexisting_baseline_failure"],
+  "status_vocabulary": [
+    "pass",
+    "fail",
+    "pending_real_machine",
+    "not_run",
+    "preexisting_baseline_failure"
+  ],
   "status_semantics": {
     "pass": "用例完整通过且附真实证据；离线单测不得把 L2/L4 标为本状态",
     "fail": "用例明确失败，附失败码与复现命令",
@@ -81,11 +87,28 @@
       "gate": "G0",
       "layer": "前置 (G0)",
       "layers": [],
-      "evidence_artifacts": ["档位实测报告", "四件套预检 JSON", "V19 最小样例导入编译真实返回"],
-      "status": "pending_real_machine",
-      "real_machine_facts": "F 真机归档已产出：四件套 4/4 pass、文件夹版 1U+2EM 分组编译 errorCount=0（真实）。但 P0-D 拍板结论待用户、端到端全链未跑、Gate-0=conditional-go，不计入 M4 通过。",
-      "repro_command": "见 research/Gate0_环境与档位实测_2026-11-06.md §2.2-2.3（只读副本 + --cli create-block-group / compile-plc）",
-      "notes": "真机子结论如实录入 gate0_facts；UC-01 用例整体（含拍板结论 + 端到端）未闭环，按 F 口径不宣称 L2/L4 通过。"
+      "evidence_artifacts": [
+        "档位实测报告",
+        "四件套预检 JSON",
+        "V19 最小样例导入编译真实返回"
+      ],
+      "status": "pass",
+      "real_machine_facts": "Agent F 在 V19 临时副本真实构造 AF Basic 文件夹版 1 Unit + 2 EM 分组：create-block-group 3× ok=true/saved=true，compile-plc errorCount=0 / warningCount=0 / state=Success。用户 2026-11-06 以编号「1」正式拍板 P0-D = 坚持 AF Basic 文件夹版、暂不切软件单元版；Gate-0 两项前置（拍板 + K1 修复）逐项解除，由 conditional-go 升为 go（准入放行）。",
+      "repro_command": "见 research/Gate0_环境与档位实测_2026-11-06.md §2.2-2.3（只读副本 + --cli create-block-group / compile-plc）；决策记录 docs/greenfield/11-p0d-decision.md；Gate-0 升级依据 06-gate0-report.md §7",
+      "notes": "真机子结论如实录入 gate0_facts；UC-01 用例整体（含拍板结论 + 端到端）未闭环，按 F 口径不宣称 L2/L4 通过。",
+      "evidence_kind": "user_decision + real_machine_archive",
+      "real_machine_evidence": "research/Gate0_环境与档位实测_2026-11-06.md §5.3/§7（Agent F 真机原始返回）；docs/greenfield/06-gate0-report.md §2.2/§6/§7；evidence/uc05_real_machine_report.json（批次 2 真机方法学复核）；docs/greenfield/11-p0d-decision.md（用户拍板正式记录）",
+      "verified_by": "用户拍板（2026-11-06 编号 1）+ Agent F 真机实测 + 主 agent 收口归档",
+      "caveat": "本 UC 判定范围为档位兼容性真机实测 + 用户拍板闭环；端到端全链由 UC-15 承担。本 UC pass 不等同 L1/L2/L3/L4 任一 L 层通过，也不使 M4 可签署（M4 仍待用户本人签署）。",
+      "p0d_decision": {
+        "decided_by": "用户",
+        "date": "2026-11-06",
+        "vote": "1",
+        "conclusion": "AF Basic 文件夹版（暂不切软件单元版）",
+        "record": "docs/greenfield/11-p0d-decision.md",
+        "agent_role": "仅归档与执行，不代拍"
+      },
+      "batch3_closeout": "P0-D 拍板解除；Gate-0 升 go；映射层定型为文件夹版口径。"
     },
     {
       "uc": "UC-02",
@@ -96,8 +119,13 @@
       "owner": "WP-01 → 收口全量 pytest 核验",
       "gate": "G1",
       "layer": "L2",
-      "layers": ["L2"],
-      "evidence_artifacts": ["结构化编译报告", "compile_diagnostics 单测报告"],
+      "layers": [
+        "L2"
+      ],
+      "evidence_artifacts": [
+        "结构化编译报告",
+        "compile_diagnostics 单测报告"
+      ],
       "status": "pass",
       "real_machine_facts": "Agent M 真机实测（2026-11-06）：serve 常驻会话三次真实 /compile-plc 原始返回均 errorCount=0 / warningCount=0 / state=Success；结构化诊断 build_compile_diagnostics 输出 error_count=0、warnings=[]（单列空清单）、compile_ok=true，error_count 与 warning 清单分离。含 warning 的判定用产品纯函数 evaluate_compile(error_count=0, warnings=['示例 warning']) 验证 compile_ok 仍 true、error_count=1 时 false（明确标注为纯函数口径，非真机含 warning 样本）。证据：evidence/uc05_real_machine_report.json#cases/UC-02。",
       "real_machine_evidence": "evidence/uc05_real_machine_report.json#cases/UC-02",
@@ -114,8 +142,13 @@
       "owner": "WP-01 → 收口核验",
       "gate": "G1",
       "layer": "L2",
-      "layers": ["L2"],
-      "evidence_artifacts": ["接口响应记录", "GF_TIA_UNAVAILABLE / GF_TIA_EXEC_ERROR 映射记录"],
+      "layers": [
+        "L2"
+      ],
+      "evidence_artifacts": [
+        "接口响应记录",
+        "GF_TIA_UNAVAILABLE / GF_TIA_EXEC_ERROR 映射记录"
+      ],
       "status": "pass",
       "real_machine_facts": "Agent M 真机探针（serve 未启动路径，2026-11-06）：openness_session.session_status() 返回 available=false；SessionModeTiaPort.open_project() 返回 ok=false / code=GF_TIA_UNAVAILABLE / http_status=503（显式非 200、非 ok=true）；直接对未启动端口 POST /open 非 200。诚实记录：C# SessionServer 路由对业务失败返回 HTTP 200 + ok=false（SessionServer.cs:170），非 200 由 Python 交付层映射。证据：evidence/uc05_real_machine_report.json#cases/UC-03。",
       "real_machine_evidence": "evidence/uc05_real_machine_report.json#cases/UC-03",
@@ -132,15 +165,53 @@
       "owner": "F（真机）→ Agent G 修复模板后复测",
       "gate": "G1",
       "layer": "L2",
-      "layers": ["L2"],
-      "evidence_artifacts": ["导入日志", "PCEC", "K1 复测真实返回"],
-      "status": "pending_real_machine",
-      "real_machine_facts": "F 真机实测 K1 失败：自产 OB XML 导入返回 openness_error（culture 'en-US' 不存在 + StructuredText/v4 namespace 不正确），exit_code=4；xml_package_unverified 保持 True。按 F 正式口径 UC-04 标 pending_real_machine（K1 待 Agent G 修复模板后复测），不标 fail。",
-      "sub_checks": [
-        {"id": "UC-04-K1", "name": "自产 OB XML 原样导入 V19", "status": "fail", "failure_code": "openness_error", "repro": "research/Gate0_环境与档位实测_2026-11-06.md §6.1"}
+      "layers": [
+        "L2"
       ],
-      "repro_command": "见 06-gate0-report.md §3 / 归档 §2.4 + §6；修复 _render_ob_xml 模板（culture 适配 + FlgNet/v5）属 Agent G",
-      "notes": "K1 探针实测未通过（失败事实如实留痕）；folders.json 非 SimaticML 导入对象，SW.PlcBlockGroup XML 可导入性仍未确证。"
+      "evidence_artifacts": [
+        "导入日志",
+        "PCEC",
+        "K1 复测真实返回"
+      ],
+      "status": "pending_real_machine",
+      "real_machine_facts": "批次 3 包级复测（Agent R，evidence/uc04_package_probe.json）：① SW.PlcBlockGroup XML 经 import-xml --kind auto / --kind block 均失败（exit=4 / openness_error，\"Class of the Siemens.Engineering.SW.PlcBlockGroup type is not supported\"），确证不可作为 SimaticML 块对象导入；create-block-group API 路径 2× ok=true/saved=true 且随后编译 0/0 Success。② 完整 AF 包 5 个 OB 中 4 个空网络 OB 导入成功，但 Call 网络 OB GF_U1EM1_CallOB 导入即失败（exit=4，\"The name GF_U1EM1_InstDB cannot be used for Call at the object with UID 21\"）；联合编译 errorCount=0 是在 Call OB 未进入项目前提下的结果，绝不宣称含 Call OB 的完整包编译零错误。结论：xml_package_unverified 仍须保持 True。",
+      "sub_checks": [
+        {
+          "id": "UC-04-K1",
+          "name": "自产 OB XML 原样导入 V19",
+          "status": "fail",
+          "failure_code": "openness_error",
+          "repro": "research/Gate0_环境与档位实测_2026-11-06.md §6.1"
+        },
+        {
+          "id": "UC-04-K1-OBXML",
+          "name": "自产 OB XML（K 修复后）V19 导入 + 编译",
+          "status": "pass",
+          "evidence": "docs/greenfield/08-k1-probe-fix.md §4 caseA；批次 3 复测 4 个空网络 OB import.ok=true"
+        },
+        {
+          "id": "UC-04-PKG-BLOCKGROUP",
+          "name": "SW.PlcBlockGroup XML 可导入性",
+          "status": "fail",
+          "failure_code": "openness_error / exit=4",
+          "evidence": "evidence/uc04_package_probe.json#probe_a_sw_plcblockgroup"
+        },
+        {
+          "id": "UC-04-PKG-CALLOB",
+          "name": "含 Call 网络 OB 的完整 AF 包联合导入编译",
+          "status": "fail",
+          "failure_code": "openness_error / exit=4（call_db 命名约束）",
+          "evidence": "evidence/uc04_package_probe.json#probe_b_full_af_package"
+        }
+      ],
+      "repro_command": "见 06-gate0-report.md §3 / 归档 §2.4 + §6；修复 _render_ob_xml 模板（culture 适配 + FlgNet/v5）属 Agent G；批次 3 包级复测见 evidence/uc04_package_probe.json#repro_commands / tools/run_batch3_real_machine.py --only R1",
+      "notes": "K1 探针实测未通过（失败事实如实留痕）；folders.json 非 SimaticML 导入对象，SW.PlcBlockGroup XML 可导入性仍未确证。 批次 3 保持 pending_real_machine：两处真实失败未修复，xml_package_unverified 不消除。",
+      "evidence_refs": [
+        "evidence/uc04_package_probe.json",
+        "docs/greenfield/12-batch3-real-machine.md",
+        "docs/greenfield/08-k1-probe-fix.md"
+      ],
+      "batch3_closeout": "未通过：SW.PlcBlockGroup 不可导入 + Call 网络 OB 导入失败；标志位保持 True。"
     },
     {
       "uc": "UC-05",
@@ -151,8 +222,14 @@
       "owner": "G（真机地基）+ 收口实测",
       "gate": "G1",
       "layer": "L4 地基",
-      "layers": ["L4"],
-      "evidence_artifacts": ["P0-G 验收报告", "PCEC 账本 3 条", "会话句柄复用记录"],
+      "layers": [
+        "L4"
+      ],
+      "evidence_artifacts": [
+        "P0-G 验收报告",
+        "PCEC 账本 3 条",
+        "会话句柄复用记录"
+      ],
       "status": "pass",
       "real_machine_facts": "Agent M 真机实测（P0-G 地基，2026-11-06）：serve 常驻会话 /open 一次（open_call_count=1），连续 3 次 /fast-writeback 增量覆盖（3 个最小可编译 SCL 变体，等价代替改 EM 步序 / 增 CM / 改连线），每次真实 /compile-plc 返回 errorCount=0 / warningCount=0 / state=Success；G 的 run_incremental_writebacks 返回 increment_count=3 / pcec_records=3（账本磁盘核对 3 条）/ session_handle 恒定 / handle_reused=true / /health openProject 全程唯一；sequence 中 close=0、create_project=0、archive_project=0（项目未关闭 / 未重载 / 未新建）。另跑 /import-xml 等价路径（K 修复的 3 个空网络 OB XML 变体）同样 3× 0/0 Success。证据：evidence/uc05_real_machine_report.json#cases/UC-05 与 #cases/UC-05-equivalent-xml。",
       "real_machine_evidence": "evidence/uc05_real_machine_report.json#cases/UC-05",
@@ -169,15 +246,28 @@
       "owner": "WP-03 → 收口全量 pytest 核验",
       "gate": "G1",
       "layer": "L3",
-      "layers": ["L3"],
-      "evidence_artifacts": ["单测报告", "spec_hash 全域校验记录"],
+      "layers": [
+        "L3"
+      ],
+      "evidence_artifacts": [
+        "单测报告",
+        "spec_hash 全域校验记录"
+      ],
       "status": "pass",
       "real_machine_facts": "",
       "repro_command": "cd <R> && ./.venv/Scripts/python.exe -m pytest tests/unit/test_greenfield_ir.py tests/unit/test_greenfield_patch_api.py -q",
       "notes": "Agent N 离线证据复核：spec_hash 全域确定性 + patch 原子拒绝单测实跑通过（test_greenfield_ir.py 17 passed / test_greenfield_patch_api.py 9 passed），状态由 not_run 如实更新为 pass（offline_unit_test）。纯离线证据，不涉真机编译/导入；L3 层仍需 UC-15 端到端与四层静态门禁全绿。",
       "offline_evidence": [
-        {"file": "tests/unit/test_greenfield_ir.py", "case": "test_spec_hash_is_deterministic_and_covers_full_domain", "passed": 17},
-        {"file": "tests/unit/test_greenfield_patch_api.py", "case": "test_patch_atomic_reject_keeps_ir", "passed": 9}
+        {
+          "file": "tests/unit/test_greenfield_ir.py",
+          "case": "test_spec_hash_is_deterministic_and_covers_full_domain",
+          "passed": 17
+        },
+        {
+          "file": "tests/unit/test_greenfield_patch_api.py",
+          "case": "test_patch_atomic_reject_keeps_ir",
+          "passed": 9
+        }
       ],
       "offline_verified_by": "Agent N · 离线用例证据复核 2026-11-06（实跑 pytest，非真机）",
       "evidence_kind": "offline_unit_test",
@@ -192,14 +282,23 @@
       "owner": "WP-03/05 → 收口核验",
       "gate": "G1/G2",
       "layer": "L3",
-      "layers": ["L3"],
-      "evidence_artifacts": ["重启恢复记录", "specs/vN.json"],
+      "layers": [
+        "L3"
+      ],
+      "evidence_artifacts": [
+        "重启恢复记录",
+        "specs/vN.json"
+      ],
       "status": "pass",
       "real_machine_facts": "",
       "repro_command": "cd <R> && ./.venv/Scripts/python.exe -m pytest tests/unit/test_greenfield_ir.py -q（用例 test_specs_vn_json_rebuilds_canvas_including_topology）",
       "notes": "Agent N 离线证据复核：仅凭 specs/vN.json 重建画布（含逻辑拓扑）单测实跑通过（test_greenfield_ir.py 17 passed），状态由 not_run 如实更新为 pass（offline_unit_test）。此为离线单元级持久化证据，非服务进程真实重启；L3 层仍需 UC-15 端到端与四层静态门禁全绿。",
       "offline_evidence": [
-        {"file": "tests/unit/test_greenfield_ir.py", "case": "test_specs_vn_json_rebuilds_canvas_including_topology", "passed": 17}
+        {
+          "file": "tests/unit/test_greenfield_ir.py",
+          "case": "test_specs_vn_json_rebuilds_canvas_including_topology",
+          "passed": 17
+        }
       ],
       "offline_verified_by": "Agent N · 离线用例证据复核 2026-11-06（实跑 pytest，非真机）",
       "evidence_kind": "offline_unit_test",
@@ -214,14 +313,23 @@
       "owner": "WP-05 → 收口核验",
       "gate": "G2",
       "layer": "L1",
-      "layers": ["L1"],
-      "evidence_artifacts": ["fidelity_report.json", "coverage_matrix"],
+      "layers": [
+        "L1"
+      ],
+      "evidence_artifacts": [
+        "fidelity_report.json",
+        "coverage_matrix"
+      ],
       "status": "pass",
       "real_machine_facts": "",
       "repro_command": "cd <R> && ./.venv/Scripts/python.exe -m pytest tests/unit/test_greenfield_fidelity.py -q",
       "notes": "Agent N 离线证据复核：正向覆盖 coverage==1.0 且 coverage_matrix 逐对象定位单测实跑通过（test_greenfield_fidelity.py 12 passed，用例 test_minimal_sample_fidelity_ok_uc08），状态由 not_run 如实更新为 pass（offline_unit_test）。N9：fidelity_ok 与 compile_ok 独立，不得据此宣称编译通过。",
       "offline_evidence": [
-        {"file": "tests/unit/test_greenfield_fidelity.py", "case": "test_minimal_sample_fidelity_ok_uc08", "passed": 12}
+        {
+          "file": "tests/unit/test_greenfield_fidelity.py",
+          "case": "test_minimal_sample_fidelity_ok_uc08",
+          "passed": 12
+        }
       ],
       "offline_verified_by": "Agent N · 离线用例证据复核 2026-11-06（实跑 pytest，非真机）",
       "evidence_kind": "offline_unit_test",
@@ -236,14 +344,23 @@
       "owner": "WP-05 → 收口核验",
       "gate": "G2/G3",
       "layer": "L1",
-      "layers": ["L1"],
-      "evidence_artifacts": ["负例报告", "fidelity_report.json"],
+      "layers": [
+        "L1"
+      ],
+      "evidence_artifacts": [
+        "负例报告",
+        "fidelity_report.json"
+      ],
       "status": "pass",
       "real_machine_facts": "",
       "repro_command": "cd <R> && ./.venv/Scripts/python.exe -m pytest tests/unit/test_greenfield_fidelity.py -q",
       "notes": "Agent N 离线证据复核：人为删除产物块 → coverage<1 且列 unmapped_spec_objects、fidelity_ok=false 单测实跑通过（test_greenfield_fidelity.py 12 passed，用例 test_missing_artifact_reduces_coverage_uc09），状态由 not_run 如实更新为 pass（offline_unit_test）。",
       "offline_evidence": [
-        {"file": "tests/unit/test_greenfield_fidelity.py", "case": "test_missing_artifact_reduces_coverage_uc09", "passed": 12}
+        {
+          "file": "tests/unit/test_greenfield_fidelity.py",
+          "case": "test_missing_artifact_reduces_coverage_uc09",
+          "passed": 12
+        }
       ],
       "offline_verified_by": "Agent N · 离线用例证据复核 2026-11-06（实跑 pytest，非真机）",
       "evidence_kind": "offline_unit_test",
@@ -258,14 +375,23 @@
       "owner": "WP-05 → 收口核验",
       "gate": "G2/G3",
       "layer": "L1",
-      "layers": ["L1"],
-      "evidence_artifacts": ["负例报告", "orphan_blocks"],
+      "layers": [
+        "L1"
+      ],
+      "evidence_artifacts": [
+        "负例报告",
+        "orphan_blocks"
+      ],
       "status": "pass",
       "real_machine_facts": "",
       "repro_command": "cd <R> && ./.venv/Scripts/python.exe -m pytest tests/unit/test_greenfield_fidelity.py -q",
       "notes": "Agent N 离线证据复核：人为塞入无来源逻辑块 → orphan==1 且 fidelity_ok=false 单测实跑通过（test_greenfield_fidelity.py 12 passed，用例 test_orphan_block_uc10），状态由 not_run 如实更新为 pass（offline_unit_test）。",
       "offline_evidence": [
-        {"file": "tests/unit/test_greenfield_fidelity.py", "case": "test_orphan_block_uc10", "passed": 12}
+        {
+          "file": "tests/unit/test_greenfield_fidelity.py",
+          "case": "test_orphan_block_uc10",
+          "passed": 12
+        }
       ],
       "offline_verified_by": "Agent N · 离线用例证据复核 2026-11-06（实跑 pytest，非真机）",
       "evidence_kind": "offline_unit_test",
@@ -280,14 +406,23 @@
       "owner": "WP-07 → 收口核验",
       "gate": "G2",
       "layer": "L1",
-      "layers": ["L1"],
-      "evidence_artifacts": ["基线校验记录", "baseline_manifest.json"],
+      "layers": [
+        "L1"
+      ],
+      "evidence_artifacts": [
+        "基线校验记录",
+        "baseline_manifest.json"
+      ],
       "status": "pass",
       "real_machine_facts": "",
       "repro_command": "cd <R> && ./.venv/Scripts/python.exe -m pytest tests/unit/test_greenfield_fidelity.py -q",
       "notes": "Agent N 离线证据复核：改动任一基线块内容 → drift!=0 且报警单测实跑通过（test_greenfield_fidelity.py 12 passed，用例 test_baseline_content_change_drift_uc11），状态由 not_run 如实更新为 pass（offline_unit_test）。",
       "offline_evidence": [
-        {"file": "tests/unit/test_greenfield_fidelity.py", "case": "test_baseline_content_change_drift_uc11", "passed": 12}
+        {
+          "file": "tests/unit/test_greenfield_fidelity.py",
+          "case": "test_baseline_content_change_drift_uc11",
+          "passed": 12
+        }
       ],
       "offline_verified_by": "Agent N · 离线用例证据复核 2026-11-06（实跑 pytest，非真机）",
       "evidence_kind": "offline_unit_test",
@@ -302,8 +437,13 @@
       "owner": "H + 收口实测",
       "gate": "G2/G3",
       "layer": "L4",
-      "layers": ["L4"],
-      "evidence_artifacts": ["阻止记录", "reverse_protection / tia_side_drift 报告"],
+      "layers": [
+        "L4"
+      ],
+      "evidence_artifacts": [
+        "阻止记录",
+        "reverse_protection / tia_side_drift 报告"
+      ],
       "status": "pass",
       "real_machine_facts": "Agent M 真机演练（2026-11-06）：/open 一次后真实导入基线块 OB501_Base，再人为导入无关块 OB502_Unrelated（模拟 TIA 侧手工改动无关块）；产品纯函数 check_reverse_guard(gen={OB501}, tia_side={OB501,OB502}) 返回 allowed=false / tia_side_drift=1 / blocked_source_ids=[OB502_Unrelated]；第 4 次增量被阻止（attempted=false、未调用任何写入路由），阻止后真实 /compile-plc 仍 errorCount=0。证据：evidence/uc05_real_machine_report.json#cases/UC-12。",
       "real_machine_evidence": "evidence/uc05_real_machine_report.json#cases/UC-12",
@@ -320,8 +460,13 @@
       "owner": "H + 收口实测",
       "gate": "G2",
       "layer": "L4",
-      "layers": ["L4"],
-      "evidence_artifacts": ["回滚记录", "写前备份 sha256"],
+      "layers": [
+        "L4"
+      ],
+      "evidence_artifacts": [
+        "回滚记录",
+        "写前备份 sha256"
+      ],
       "status": "pass",
       "real_machine_facts": "Agent M 真机演练（2026-11-06）：写前文件系统级备份 + sha256；/open 一次后触发一次失败导入（把自产 OB XML culture 由 zh-CN 改为 en-US），C# /import-xml 返回 ok=false / import.ok=false / error.code=openness_error（'Cannot import multilingual text with culture en-US ... does not exist within the current project'，与 F §6.1 同形态）；失败后 .ap19 sha256 与写前一致、/compile-plc 仍 errorCount=0 / state=Success；serve 停止后从备份恢复，sha256 与写前一致（backup_restore.matches_pre_write_sha256=true）。证据：evidence/uc05_real_machine_report.json#cases/UC-13。",
       "real_machine_evidence": "evidence/uc05_real_machine_report.json#cases/UC-13",
@@ -338,17 +483,38 @@
       "owner": "WP-05/07 → 收口核验",
       "gate": "G2/G3",
       "layer": "L3",
-      "layers": ["L3"],
-      "evidence_artifacts": ["reproducibility 记录", "产物哈希"],
+      "layers": [
+        "L3"
+      ],
+      "evidence_artifacts": [
+        "reproducibility 记录",
+        "产物哈希"
+      ],
       "status": "pass",
       "real_machine_facts": "",
       "repro_command": "cd <R> && ./.venv/Scripts/python.exe -m pytest tests/unit/test_greenfield_fidelity.py tests/unit/test_greenfield_spec_diff.py tests/unit/test_greenfield_gate.py tests/unit/test_greenfield_e2e_delivery.py -q",
       "notes": "Agent N 离线证据复核：不改输入重跑产物哈希一致性 / baseline_manifest 确定性 / 冻结规格不可变可复现 / 端到端打包 compat_integrity 单测实跑通过（12+10+10+2 passed），状态由 not_run 如实更新为 pass（offline_unit_test）。此为离线纯函数级哈希确定性证据，非真机工程两次生成的产物哈希比对。",
       "offline_evidence": [
-        {"file": "tests/unit/test_greenfield_fidelity.py", "case": "test_reproducible_product_hash_uc14", "passed": 12},
-        {"file": "tests/unit/test_greenfield_spec_diff.py", "case": "test_build_baseline_manifest_deterministic_uc14", "passed": 10},
-        {"file": "tests/unit/test_greenfield_gate.py", "case": "test_frozen_spec_is_reproducible_and_immutable", "passed": 10},
-        {"file": "tests/unit/test_greenfield_e2e_delivery.py", "case": "test_full_pipeline_three_pdfs_to_af_tia_zip_package", "passed": 2}
+        {
+          "file": "tests/unit/test_greenfield_fidelity.py",
+          "case": "test_reproducible_product_hash_uc14",
+          "passed": 12
+        },
+        {
+          "file": "tests/unit/test_greenfield_spec_diff.py",
+          "case": "test_build_baseline_manifest_deterministic_uc14",
+          "passed": 10
+        },
+        {
+          "file": "tests/unit/test_greenfield_gate.py",
+          "case": "test_frozen_spec_is_reproducible_and_immutable",
+          "passed": 10
+        },
+        {
+          "file": "tests/unit/test_greenfield_e2e_delivery.py",
+          "case": "test_full_pipeline_three_pdfs_to_af_tia_zip_package",
+          "passed": 2
+        }
       ],
       "offline_verified_by": "Agent N · 离线用例证据复核 2026-11-06（实跑 pytest，非真机）",
       "evidence_kind": "offline_unit_test",
@@ -363,12 +529,31 @@
       "owner": "I（编排脚本）+ 收口实测",
       "gate": "G3",
       "layer": "L1-L3（含步骤 7 真机编译）",
-      "layers": ["L1", "L2", "L3"],
-      "evidence_artifacts": ["端到端验收报告", ".zap19", "fidelity_report.json", "结构化编译报告"],
-      "status": "pending_real_machine",
-      "real_machine_facts": "F 归档明确：未跑 Greenfield 生成链全链（自然语言→冻结→生成→导入→编译），UC-15 端到端属 WP-10 / M4，本轮未跑。",
+      "layers": [
+        "L1",
+        "L2",
+        "L3"
+      ],
+      "evidence_artifacts": [
+        "端到端验收报告",
+        ".zap19",
+        "fidelity_report.json",
+        "结构化编译报告"
+      ],
+      "status": "pass",
+      "real_machine_facts": "步骤 7：run_action_b 注入真机 SessionModeTiaPort，step_order=open→fast_writeback→compile_plc→save，真实 error_count=0 / warnings=[] / compile_ok=true / static_gate_passed=true / tia_version=V19 / elapsed_ms≈1034.01；.zap19 归档 sha256=033e7dc00a85c7813475b57e81d0070410a574bac89db2aac8a3e69eb38b9114（326869 bytes）。九步：Q 用进程内 ASGI TestClient 真实驱动 1–6/8/9 共 8 步全部 pass（pass=8 / pending=1 / fail=0）；步骤 9 由主 agent 升级为真实服务启停两轮，data.spec 完全一致、spec_hash 与步骤 4 吻合。",
       "repro_command": "./.venv/Scripts/python.exe tools/greenfield_acceptance.py --real-machine --workdir <AppData/Local/Temp/gf_real_*/副本>（见 --help 与 §9.2 九步编排）",
-      "notes": "本 Agent 只做九步步骤编排与证据留痕，步骤 1-9 在 --offline 下全部 not_run/pending + 复现命令，绝不伪造执行结果。"
+      "notes": "本 Agent 只做九步步骤编排与证据留痕，步骤 1-9 在 --offline 下全部 not_run/pending + 复现命令，绝不伪造执行结果。",
+      "evidence_kind": "offline_chain + real_machine",
+      "real_machine_evidence": "evidence/uc15_step7_real.json（Agent R 真机 Action B：编译 0/0、.zap19、结构化报告）；evidence/uc15_restart_recovery.json（主 agent 真实 gateway 启停两轮恢复）；evidence/nine_steps_offline_run.json（Agent Q 九步 1–6/8/9 真实响应）；evidence/uc15_evidence_bundle.json（EvidenceBundle 实例化）；evidence/uc05_real_machine_report.json（批次 2 会话/编译口径）",
+      "verified_by": "Agent Q（九步离线链真实驱动）+ Agent R（V19 真机步骤 7）+ 主 agent（真实服务重启恢复）+ 收口",
+      "caveat": "步骤 2 为禁用外部 LLM 走产品既有零依赖确定性 planner 兜底；步骤 6 为基于真实 spec_hash/source_id 的最小只读负例复现；步骤 8 为同一 v1 spec 重跑 Action A 比对哈希（未重复 /confirm）；其余步骤为真实端点响应。步骤 7 首次写入（full 模式）PCEC 增量账本为 0 条（3 条属 UC-16 增量）。本 UC pass 不等同 L2/L4 通过，不使 M4 可签署。",
+      "batch3_closeout": {
+        "nine_steps": "pass=8 / pending_real_machine=1（步骤7，已由 R 真机补齐）/ fail=0 / not_run=0",
+        "step7_real_machine": "error_count=0, warnings=[], compile_ok=true, zap19 sha256=033e7dc0…",
+        "step9_upgrade": "evidence/uc15_restart_recovery.json 真实服务启停两轮 spec 全等",
+        "evidence_bundle": "12 项全量工件由 uc15_step7_real.json 补齐 3 项真机缺项"
+      }
     },
     {
       "uc": "UC-16",
@@ -379,12 +564,24 @@
       "owner": "I（编排）+ 收口实测",
       "gate": "G3",
       "layer": "L4",
-      "layers": ["L4"],
-      "evidence_artifacts": ["增量 fidelity_report", "PCEC 账本", "增量 EvidenceBundle（含 6 个增量字段）"],
+      "layers": [
+        "L4"
+      ],
+      "evidence_artifacts": [
+        "增量 fidelity_report",
+        "PCEC 账本",
+        "增量 EvidenceBundle（含 6 个增量字段）"
+      ],
       "status": "pending_real_machine",
-      "real_machine_facts": "真机三次增量未实测；增量模式必须追加 mode / base_spec_version / changed_source_ids / reverse_protection / tia_side_drift / ob_number_deviations。",
-      "repro_command": "./.venv/Scripts/python.exe tools/greenfield_acceptance.py --real-machine --workdir <Temp/gf_real_*/副本>（见六条增量用例编排）",
-      "notes": "L4 完整通过需 §13.9 六条全绿；本轮未达成。"
+      "real_machine_facts": "批次 3（Agent R，evidence/uc16_incremental_real.json）：/open=1 + 句柄复用 + 3 次差异确认覆盖 + 3× 编译 errorCount=0/warningCount=0/Success + PCEC 3 条（磁盘 3/3）+ 项目未关闭/未重载/未新建。增量六字段：mode=incremental / base_spec_version=null（诚实：未跑 Greenfield 冻结规格链，无真实 specs/vN.json）/ changed_source_ids=[R_FC_Inc1,R_FC_Inc2,R_FC_Inc3] / reverse_protection={allowed:true,drift_count:0}/ tia_side_drift=0 / ob_number_deviations=[]（显式留痕）。D10 负例与 UC-13 回滚引用 Agent M 既有真机证据（注明不重做）。未闭环：增量 FidelityChecker(mode=incremental) 未跑通、base_spec_version 为 null、fidelity_ok 引用 Q 的离线 L1 全量真值（非增量真机）；R 明确不宣称 L4 正式通过。",
+      "repro_command": "./.venv/Scripts/python.exe tools/greenfield_acceptance.py --real-machine --workdir <Temp/gf_real_*/副本>（见六条增量用例编排）；批次 3 见 evidence/uc16_incremental_real.json / tools/run_batch3_real_machine.py --only R3",
+      "notes": "L4 完整通过需 §13.9 六条全绿；本轮未达成。 批次 3 保持 pending_real_machine：六字段与三次增量已真机取证，但增量 fidelity / base_spec_version 未闭环。",
+      "evidence_refs": [
+        "evidence/uc16_incremental_real.json",
+        "evidence/uc05_real_machine_report.json",
+        "docs/greenfield/12-batch3-real-machine.md"
+      ],
+      "batch3_closeout": "部分达成（真机六字段 + PCEC 3 条）；L4 仍未正式通过。"
     },
     {
       "uc": "UC-17",
@@ -395,15 +592,28 @@
       "owner": "H → 收口核验",
       "gate": "G3",
       "layer": "L1",
-      "layers": ["L1"],
-      "evidence_artifacts": ["拒绝记录", "fidelity_report.json"],
+      "layers": [
+        "L1"
+      ],
+      "evidence_artifacts": [
+        "拒绝记录",
+        "fidelity_report.json"
+      ],
       "status": "pass",
       "real_machine_facts": "",
       "repro_command": "cd <R> && ./.venv/Scripts/python.exe -m pytest tests/unit/test_greenfield_action_abc.py -q（见 05-parallel-wp2-contract.md §3.2 Action B 前置 fidelity_ok==true）",
       "notes": "Agent N 离线证据复核：fidelity_ok=false 时 Action B 被拒绝并给出明确原因单测实跑通过（test_greenfield_action_abc.py 20 passed，用例 test_uc17_action_b_rejected_when_action_a_fidelity_false / test_uc17_action_b_rejected_with_explicit_false_report），状态由 not_run 如实更新为 pass（offline_unit_test）。N9：fidelity_ok 与 compile_ok 独立。",
       "offline_evidence": [
-        {"file": "tests/unit/test_greenfield_action_abc.py", "case": "test_uc17_action_b_rejected_when_action_a_fidelity_false", "passed": 20},
-        {"file": "tests/unit/test_greenfield_action_abc.py", "case": "test_uc17_action_b_rejected_with_explicit_false_report", "passed": 20}
+        {
+          "file": "tests/unit/test_greenfield_action_abc.py",
+          "case": "test_uc17_action_b_rejected_when_action_a_fidelity_false",
+          "passed": 20
+        },
+        {
+          "file": "tests/unit/test_greenfield_action_abc.py",
+          "case": "test_uc17_action_b_rejected_with_explicit_false_report",
+          "passed": 20
+        }
       ],
       "offline_verified_by": "Agent N · 离线用例证据复核 2026-11-06（实跑 pytest，非真机）",
       "evidence_kind": "offline_unit_test",
@@ -418,12 +628,22 @@
       "owner": "WP-08 → 收口实测",
       "gate": "G3",
       "layer": "L2",
-      "layers": ["L2"],
-      "evidence_artifacts": ["PCEC 账本", "结构化编译报告"],
-      "status": "pending_real_machine",
-      "real_machine_facts": "",
-      "repro_command": "收口真机实测（注入 SCL 语法错误 → 复编译 error_count==0）；warning 单列不并入成功",
-      "notes": "涉真机编译，离线模式明确标注 pending。"
+      "layers": [
+        "L2"
+      ],
+      "evidence_artifacts": [
+        "PCEC 账本",
+        "结构化编译报告"
+      ],
+      "status": "pass",
+      "real_machine_facts": "注入前 errorCount=0/warningCount=0/Success → 注入 1 个 SCL 语法错误（R_FC_BadSyntax）后 errorCount=2/warningCount=0/Error、inconsistentBlocks=[\"R_FC_BadSyntax\"] → 修正 SCL 后复编译 errorCount=0/warningCount=0/Success。heal_ok=true，located_errors.blocks=[\"R_FC_BadSyntax\"]，账本可追溯（坏/修 SCL sha256 + 三段原始返回索引）。首次过程性失败（脚本编排缺陷导致三段恒为 2,2,2）原始返回完整保留，未以重跑掩盖。",
+      "repro_command": "收口真机实测（注入 SCL 语法错误 → 复编译 error_count==0）；warning 单列不并入成功；原始返回与复现命令见 evidence/uc18_compile_feedback_real.json / tools/run_batch3_real_machine.py --only R4",
+      "notes": "涉真机编译，离线模式明确标注 pending。",
+      "evidence_kind": "real_machine",
+      "real_machine_evidence": "evidence/uc18_compile_feedback_real.json（Agent R 三段真机 --cli compile-plc 原始返回 + 账本）；evidence/uc05_real_machine_report.json（批次 2 编译判定口径）",
+      "verified_by": "Agent R V19 真机实测 + 主 agent 收口",
+      "caveat": "三段数字全部来自真实 --cli compile-plc 原始返回；warning 单列不并入 compile_ok；离线单测只验证编排函数结构、不计入真机证据。本 UC pass 不宣称 L2/L4 通过，不使 M4 可签署。",
+      "batch3_closeout": "新增 sanctioned 派生层编排函数 compile_feedback_heal（未改冻结的 writeback_heal.py / compile_jobs.py / scl_precheck.py）。"
     },
     {
       "uc": "UC-19",
@@ -434,17 +654,38 @@
       "owner": "H → 收口核验",
       "gate": "G3",
       "layer": "硬门禁",
-      "layers": ["L1"],
-      "evidence_artifacts": ["计数器快照", "confirm-diff 响应记录"],
+      "layers": [
+        "L1"
+      ],
+      "evidence_artifacts": [
+        "计数器快照",
+        "confirm-diff 响应记录"
+      ],
       "status": "pass",
       "real_machine_facts": "",
       "repro_command": "cd <R> && ./.venv/Scripts/python.exe -m pytest tests/unit/test_greenfield_gate.py tests/unit/test_greenfield_action_abc.py -q（见 05-parallel-wp2-contract.md §3.2 D11）",
       "notes": "Agent N 离线证据复核：差异清单未确认时 ops/disk_writes/writebacks/generations 四计数器恒 0（服务端 fail-closed）单测实跑通过（test_greenfield_gate.py 10 passed / test_greenfield_action_abc.py 20 passed），状态由 not_run 如实更新为 pass（offline_unit_test）。",
       "offline_evidence": [
-        {"file": "tests/unit/test_greenfield_gate.py", "case": "test_confirm_diff_unconfirmed_keeps_zero_side_effects", "passed": 10},
-        {"file": "tests/unit/test_greenfield_gate.py", "case": "test_no_side_effects_before_confirm", "passed": 10},
-        {"file": "tests/unit/test_greenfield_action_abc.py", "case": "test_uc19_confirm_gate_zero_side_effects_service", "passed": 20},
-        {"file": "tests/unit/test_greenfield_action_abc.py", "case": "test_uc19_confirm_gate_zero_side_effects_http", "passed": 20}
+        {
+          "file": "tests/unit/test_greenfield_gate.py",
+          "case": "test_confirm_diff_unconfirmed_keeps_zero_side_effects",
+          "passed": 10
+        },
+        {
+          "file": "tests/unit/test_greenfield_gate.py",
+          "case": "test_no_side_effects_before_confirm",
+          "passed": 10
+        },
+        {
+          "file": "tests/unit/test_greenfield_action_abc.py",
+          "case": "test_uc19_confirm_gate_zero_side_effects_service",
+          "passed": 20
+        },
+        {
+          "file": "tests/unit/test_greenfield_action_abc.py",
+          "case": "test_uc19_confirm_gate_zero_side_effects_http",
+          "passed": 20
+        }
       ],
       "offline_verified_by": "Agent N · 离线用例证据复核 2026-11-06（实跑 pytest，非真机）",
       "evidence_kind": "offline_unit_test",
@@ -464,9 +705,9 @@
   "summary": {
     "case_count": 19,
     "by_status": {
-      "pass": 14,
+      "pass": 17,
       "fail": 0,
-      "pending_real_machine": 5,
+      "pending_real_machine": 2,
       "not_run": 0
     },
     "agent_n_offline_review": {
@@ -489,10 +730,32 @@
       "honest_boundary": "UC 主状态 pass 不等于 L1/L2/L3/L4 任一 L 层通过，也不等于 M4 可签署"
     },
     "preexisting_baseline_failure_exclusions": 1,
-    "pending_uc_ids": ["UC-01", "UC-04", "UC-15", "UC-16", "UC-18"],
-    "l1_l4_recheck": "本次 Agent M 真机实测拿到 UC-02/03/05/12/13 的真实结构化证据（evidence/uc05_real_machine_report.json），5 个 UC 主状态更新为 pass；但按『只有拿到真实证据的层才能标 pass』，L2 还需四层静态门禁全绿与 UC-04/UC-18/UC-15 闭环，L4 还需 §13.9 六条用例的 fidelity_ok / tia_side_drift==0 与 UC-16 增量 EvidenceBundle，L1/L3 离线链与 UC-15 端到端仍未跑 → L1∧L2∧L3∧L4 仍未全绿，四层逐层均判 pending，本次不把任何 L 层标 pass",
+    "pending_uc_ids": [
+      "UC-04",
+      "UC-16"
+    ],
+    "l1_l4_recheck": "批次 3 后：L1 与 L3 的绑定 UC 已全部 pass（含 UC-15 九步离线链与可复现证据），具备离线层证据；L2 因 UC-04 保持 pending_real_machine（SW.PlcBlockGroup 不可导入、Call OB 导入失败）未通过；L4 因 UC-16 保持 pending_real_machine（增量 fidelity / base_spec_version 未闭环）未通过。L1∧L2∧L3∧L4 仍未全绿，且 --offline 口径下 L2/L4 恒 pending_real_machine。",
     "m4": "未通过",
-    "m4_reason": "pending_real_machine 台账未清零（cleared=false，items 未删）；L1∧L2∧L3∧L4 未全绿；EvidenceBundle 未完整归档；P0-D 待用户拍板；UC-15/16/18 与 L1/L3 离线链未闭环",
-    "honest_note": "本次 5 个 UC 由收口实测 Agent M 逐条勾选为 pass，证据全部来自 TIA V19 真机 HTTP / CLI 原始返回（非 mock / 非离线单测），并如实记录 /fast-writeback writtenBlockCount=0、UC-02 无原生含 warning 真机样本、UC-12 判定为纯函数、UC-13 备份为文件系统级等边界。UC pass ≠ L 层通过 ≠ M4 可签署：pending 台账未清零前 M4 保持未通过。注意：tests/unit/test_greenfield_acceptance.py 中锁定『收口实测前 pass=0 / pending=10』的护栏断言（test_rtm_status_counts_and_no_fake_pass / test_offline_full_report_m4_not_pass）在本次状态更新后会失败，已由主 agent 同步为动态自洽断言（计数与 summary 一致 + pass 必须带真机证据三件套），不再锁死 pass=0 / pending=10，且未改任何产品代码 / 冻结清单 / C# 源码。Agent N 补充：本次又把 9 个确有离线单测证据的 UC 如实登记为 offline_unit_test pass（非真机、附 caveat），并对 test_rtm_status_counts_and_no_fake_pass 做最小同步——证据校验由『仅真机三件套』扩展为『真机三件套 OR 离线单测四要素（offline_evidence / offline_verified_by / evidence_kind / caveat）且严格区分口径、离线 pass 不得挂真机证据』，完整保留『pass 必须带证据』『M4 未通过』『涉 L2/L4 无真机证据不得 pass』等不变量，未回退主 agent 的动态自洽断言。"
+    "m4_reason": "pending_real_machine 台账未清零（cleared=false，UC-04 / UC-16 仍 pending）；L1∧L2∧L3∧L4 未全绿；xml_package_unverified 仍为 True；uc15_evidence_bundle.json 的 6 个增量字段为 UC-15 full 模式离线值、不构成 UC-16 增量真机证据；且 M4 签署权归用户本人，任何 agent 不得代签。",
+    "honest_note": "本次 5 个 UC 由收口实测 Agent M 逐条勾选为 pass，证据全部来自 TIA V19 真机 HTTP / CLI 原始返回（非 mock / 非离线单测），并如实记录 /fast-writeback writtenBlockCount=0、UC-02 无原生含 warning 真机样本、UC-12 判定为纯函数、UC-13 备份为文件系统级等边界。UC pass ≠ L 层通过 ≠ M4 可签署：pending 台账未清零前 M4 保持未通过。注意：tests/unit/test_greenfield_acceptance.py 中锁定『收口实测前 pass=0 / pending=10』的护栏断言（test_rtm_status_counts_and_no_fake_pass / test_offline_full_report_m4_not_pass）在本次状态更新后会失败，已由主 agent 同步为动态自洽断言（计数与 summary 一致 + pass 必须带真机证据三件套），不再锁死 pass=0 / pending=10，且未改任何产品代码 / 冻结清单 / C# 源码。Agent N 补充：本次又把 9 个确有离线单测证据的 UC 如实登记为 offline_unit_test pass（非真机、附 caveat），并对 test_rtm_status_counts_and_no_fake_pass 做最小同步——证据校验由『仅真机三件套』扩展为『真机三件套 OR 离线单测四要素（offline_evidence / offline_verified_by / evidence_kind / caveat）且严格区分口径、离线 pass 不得挂真机证据』，完整保留『pass 必须带证据』『M4 未通过』『涉 L2/L4 无真机证据不得 pass』等不变量，未回退主 agent 的动态自洽断言。 【批次 3 收口补充】UC-01/15/18 转 pass 均附真机证据三件套与复现命令，测试白名单同步扩展为「批次 2 uc05 总报告 + 批次 3 逐 UC 真机证据文件」，仍强制真机证据、离线单测证据恒走独立分支。UC-04/UC-16 如实保持 pending，绝不为凑数标 pass。所有真机数字来自 V19 临时副本的真实 CLI/HTTP 返回。",
+    "p0d": "P0-D 已由用户 2026-11-06 以编号 1 拍板：AF Basic 文件夹版（docs/greenfield/11-p0d-decision.md）；Gate-0 升 go。",
+    "batch3_closeout": {
+      "date": "2026-11-07",
+      "agent": "主 agent 收口（P 决策固化 / Q 九步离线链 / R V19 真机全链）",
+      "status_change": "UC-01 / UC-15 / UC-18 由 pending_real_machine 转 pass；UC-04 / UC-16 因真实失败与未闭环项保持 pending_real_machine",
+      "new_real_machine_evidence": [
+        "evidence/uc04_package_probe.json",
+        "evidence/uc15_step7_real.json",
+        "evidence/uc16_incremental_real.json",
+        "evidence/uc18_compile_feedback_real.json",
+        "evidence/uc15_restart_recovery.json"
+      ],
+      "new_offline_evidence": [
+        "evidence/nine_steps_offline_run.json",
+        "evidence/uc15_evidence_bundle.json"
+      ],
+      "xml_package_unverified": "仍为 True（UC-04 包级两处真实失败），未擅自消除",
+      "m4": "未通过 / 不可签署；签署权归用户本人"
+    }
   }
 }

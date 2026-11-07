@@ -395,3 +395,34 @@ cd <R>/frontend && npm run test && npm run build
 「真机三件套 **OR** 离线单测四要素（`offline_evidence` / `offline_verified_by` / `evidence_kind` / `caveat`），
 且离线 pass 不得挂真机证据、不得含 L2/L4 层」。**未回退主 agent 的动态自洽断言**；不变量
 「pass 必须带证据」「涉 L2/L4 无真机证据不得 pass」「M4 未通过」全部保留。同步后 `22 passed`。
+
+---
+
+## 12. 批次 3 决策与范围（Agent P 追加，2026-11-07）
+
+> 本节为**范围与责任分工追加**，不修改 §0–§11 任何既有文字；**§2 / §2.1 / §10.1 / §11.2 的 RTM 状态计数一律不动**（`pass` / `pending_real_machine` / `not_run` 等计数与逐 UC 状态由**主 agent 收口**按 P/Q/R 真实结果统一更新，Agent P 不碰 `evidence/rtm.json` / `pending_real_machine.json` / `acceptance_template.json` / `uc05_real_machine_report.json` 与 `10-real-machine-acceptance.md`）。
+> 以下均为**待产出的验收目标与判定所需证据**，非既有结论；Agent P 未连真机、未跑测试，不宣称 `L2` / `L4` 通过、不宣称「编译零错误」、不宣称 `L1∧L2∧L3∧L4` 全绿、不宣称 `xml_package_unverified` 已消除、不宣称 M4 通过。
+
+### 12.1 批次 3 前提
+
+- **P0-D 已拍板**：用户 2026-11-06 编号「1」坚持「AF Basic 文件夹版」、暂不切「软件单元版」，正式记录 `11-p0d-decision.md`；映射层定型为文件夹版口径，Gate-0 升 `go`（准入放行），见 `06-gate0-report.md` §7。
+- **范围**：本批次推进 5 个剩余 pending UC：**UC-01 / UC-04 / UC-15 / UC-16 / UC-18**（`13-batch3-contract.md` §3）。其余 UC 状态与计数不在本节改动范围。
+- **保留口径**：`xml_package_unverified` 仍保持 `True`；`go` = 准入放行 ≠ `L1∧L2∧L3∧L4` 全绿 ≠ M4 可签署；M4 签署栏仍「待用户签署」，批次 3 最多推进到「证据齐备 / 待用户签署」。
+
+### 12.2 五个 UC 的验收口径与证据产出责任人
+
+> 责任人三分：**Q = 离线链**（验收编排器真实化 + 九步离线链，不连真机）、**R = 真机**（独占 TIA / SessionServer）、**主 agent = 收口台账**（`evidence/rtm.json` / `pending_real_machine.json` 等与 `10-real-machine-acceptance.md` 统一更新）。P 只产出决策与文档口径。
+
+| UC | 目标 | 判定所需真实证据（待产出） | Q 离线链 | R 真机 | 主 agent 收口台账 |
+|---|---|---|---|---|---|
+| **UC-01** | 档位兼容性最小样例导入编译 | P0-D 用户拍板记录（`11-p0d-decision.md`）+ F 已有真机结果（文件夹版 1U+2EM 分组编译 `errorCount=0`，`06-gate0-report.md` §2.3 / 归档 §5.3，**仅对应建立分组结构后的 CanvasE2E 副本，非端到端全链**）+ Gate-0 升 `go` 决策记录（`06` §7）；**端到端全链仍由 UC-15 承担** | — | 端到端全链随 UC-15 步骤 7 | 按真实结果统一更新 RTM / pending 台账 |
+| **UC-04** | K1 探针包级闭环 | 自产 `folders.json` / `SW.PlcBlockGroup XML` 在 V19 副本的**可导入性实测** + **完整 AF 包联合编译 `errorCount`**；据此给 `xml_package_unverified` 处置结论（**不擅自改**） | — | `evidence/uc04_package_probe.json`（包级复测真实结果） | 依据 R 的真实结果统一处置标志与台账；`xml_package_unverified` 是否消除**以 UC-04 包级真实结果为唯一依据** |
+| **UC-15** | §9.2 九步端到端 | Q 真实驱动九步中离线可跑步骤（1–6、8、9）并留每步真实响应；R 真机完成步骤 7（Action B 编译 + `.zap19` + 结构化报告）；EvidenceBundle 实例化 | `evidence/nine_steps_offline_run.json`、离线可跑步骤真实响应、`evidence/uc15_evidence_bundle.json`（离线实例化） | `evidence/uc15_step7_real.json`（步骤 7 真机，判定目标为 Action B 编译 `error_count==0` + `.zap19` + 结构化报告，**待真机产出**） | 按 Q/R 真实结果统一更新 RTM / 台账与 `10-real-machine-acceptance.md` |
+| **UC-16** | §13.9 六条增量 | R 真机：`/open` 一次 + 3 次差异确认覆盖 + 未重载校验 + D10 负例 + 回滚；增量 EvidenceBundle 六字段齐全、`fidelity_ok=true`、`tia_side_drift==0`、PCEC 可追溯（**均为判定目标，待真机证据**） | — | `evidence/uc16_incremental_real.json` | 按真实结果统一更新 RTM / 台账 |
+| **UC-18** | 编译错误回喂 | R 真机：注入 1 个 SCL 语法错误 → 编译返回 error → 诊断定位 → 修正 → 复编译 `error_count==0`；warning 单列、账本可追溯；新通道派生层补编排函数（不改冻结的 `writeback_heal.py` / `compile_jobs.py`） | — | `evidence/uc18_compile_feedback_real.json` | 按真实结果统一更新 RTM / 台账 |
+
+### 12.3 证据三件套与边界
+
+- 所有 UC 状态变更须带**证据三件套**（真实返回 / 复现命令 / 证据文件路径）；真机失败项一律 `pending_real_machine` + 失败码 + 复现命令，绝不降级冒充（`13-batch3-contract.md` §5）。
+- 台账（`evidence/rtm.json` / `pending_real_machine.json`）与 `10-real-machine-acceptance.md` 由主 agent 收口统一更新；Q 不连真机、不启动 SessionServer；**只有 Agent R 独占 TIA**。
+- 本节不改动 §2.1 / §10.1 / §11.2 任何 RTM 状态计数；`M4 未通过 / 不可签署`、签署栏「待用户签署」口径不变。

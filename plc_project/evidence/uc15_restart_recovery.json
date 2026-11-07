@@ -1,0 +1,57 @@
+{
+  "schema": "gf-uc15-restart-recovery-v1",
+  "uc": "UC-15",
+  "step": "NINE-09",
+  "title": "真实服务启停两轮后从 specs/v1.json 恢复画布（补齐九步步骤 9）",
+  "agent": "主 agent 收口",
+  "generated_at": "2026-11-07",
+  "branch": "dev/greenfield-wp",
+  "baseline": "6986699",
+  "purpose": "Agent Q 的 nine_steps_offline_run.json 中步骤 9 使用进程内 registry.reset() 近似，非真实服务重启。本记录用真实 gateway 进程启停两轮补齐该缺口。",
+  "method": {
+    "driver": "python tools/devctl.py up gateway / down --all（真实独立进程，非 ASGI TestClient）",
+    "env": {
+      "PLC_WORK_DIR": "C:/Users/vboxuser/AppData/Local/Temp/gf_nine_steps_busydzmo"
+    },
+    "spec_file": "C:/Users/vboxuser/AppData/Local/Temp/gf_nine_steps_busydzmo/greenfield/3546b9b8ed4a/specs/v1.json",
+    "endpoint": "GET /api/v1/plc/canvas/greenfield/specs/1?project_id=GF-Q-UC15&session_id=3546b9b8ed4a",
+    "rounds": [
+      "round 1: up gateway (pid=17476, 健康=OK) → GET → down --all",
+      "round 2: up gateway (pid=6520, 健康=OK) → GET → down --all"
+    ],
+    "service_state_after": "gateway/web/gateway_test 全部停止，恢复开工前状态"
+  },
+  "real_results": {
+    "round1_http_bytes": 21034,
+    "round2_http_bytes": 21034,
+    "round1_ok": true,
+    "round2_ok": true,
+    "raw_bytes_identical": false,
+    "raw_bytes_identical_reason": "ApiResponse 信封含每次请求随机生成的 request_id，故整包字节不同；业务载荷 data.spec 完全一致",
+    "envelope_request_id_differs": true,
+    "spec_identical_excluding_envelope": true,
+    "spec_hash": "sha256:5b92b82e9155cc518311d154cba822817f9b9379f461f0cd5fd6044129a826a5",
+    "ir_sha256": "sha256:a7ddba5fc7c34190c8c6a8745b35a42301f1b5fc2d26a28857166abaf825d950",
+    "af_profile": "SIEMENS_AF_BASIC_FOLDER_V19",
+    "project_id": "GF-Q-UC15",
+    "spec_version": 1,
+    "ir_snapshot_key_count": 21,
+    "canonical_spec_sha256": "c067a1b15aec2a5b656efe6569dad4aef85778a34476c1a6457538f27677d3ff",
+    "matches_q_nine_steps_step4_spec_hash": true
+  },
+  "conclusion": "真实 gateway 进程停止并重启后，仅凭磁盘 specs/v1.json 重建的 FrozenSpec 与确认时完全一致（spec_hash / ir_sha256 / af_profile / project_id / ir_snapshot 全等），九步端到端步骤 9 由近似验证升级为真实服务重启验证。",
+  "honest_boundary": [
+    "本验证只证明 FrozenSpec 的磁盘持久化与跨进程重建（含 ir_snapshot），不等同 TIA 编译通过、不等同 L2/L4 通过、不使 M4 可签署。",
+    "PLC_WORK_DIR 指向 Agent Q 九步演练留下的临时会话目录；数据来自真实 HTTP 返回，未构造或伪造任何字段。",
+    "ir_snapshot 中 hw_nodes 为空数组，属于 Q 演练会话的既有产物事实，未在此处补数据、未据此推断拓扑完整性结论。",
+    "本验证不新增真机 TIA 操作，不占用 SessionServer / 8791 端口。"
+  ],
+  "repro_commands": [
+    "cd C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project",
+    "export PLC_WORK_DIR=C:/Users/vboxuser/AppData/Local/Temp/gf_nine_steps_busydzmo",
+    "python tools/devctl.py up gateway",
+    "curl -s --retry-connrefused --retry 20 --retry-delay 1 \"http://127.0.0.1:8000/api/v1/plc/canvas/greenfield/specs/1?project_id=GF-Q-UC15&session_id=3546b9b8ed4a\"",
+    "python tools/devctl.py down --all",
+    "# 重复 up / curl / down 一轮，比对两次响应的 data.spec"
+  ]
+}
