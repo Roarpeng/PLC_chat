@@ -1,17 +1,20 @@
 /**
- * 新建工程通道容器（Agent D · 前端批次）：
- * - `project_id` 一等公民：向导第一步生成并落盘，启动时 `ensureProjectId()` 贯穿
- *   会话 / 拓扑 / 资料 / 规格 / 产物；所有相关请求带 `project_id`；
- * - 项目内对话注入「已定拓扑」约束（结果不得与已定拓扑矛盾），复用
- *   `GFSpecMeta.open_questions` 与 `GFInterlock.source == "inferred"` 现成机制；
- * - 初始 loading / 操作 busy / 统一 error（可读中文）/ 变更事件反馈四态齐全；
- * - 差异清单显式确认（D11）、反向保护（D10）、fidelity（N9）、编译诊断（P1-I）
- *   与 F13 只读预览全部接线到 GateBar / Panel。
+ * 新建工程通道容器 · 唯一后端编排者。
  *
- * 消息真值 = 后端会话 state.messages；画布手动编辑以系统事件回流对话。
- * 根节点 gf-root[data-stage] 驱动整站纸色随阶段换底。
+ * 保留全部既有 state 字段与 run / runAction / refresh / loadDiff / onConnect /
+ * onRemoveEdge / onPatchNodes / onConfirmDiff / onToggleDiffItem 等回调；
+ * render tree 换成 4 步主链 <GreenfieldWizard/>，契约信息移入默认折叠的工程视角。
+ *
+ * ★ 合法主链 API 序列（严禁变形）：
+ *   fetchState → fetchWhitelist
+ *   → [步 1 用户点主按钮] sendChat
+ *   → [步 2] applyLinkPatch(add_edge / remove_edge)
+ *   → [步 3 进入时] fetchEngineeringSummary（★隐藏硬门禁，置 engineering_summary_shown）
+ *   → [步 3 主按钮] confirmSpec(explicit=true) → generateProjectPackage → refresh → GO(4)
+ *   → [步 4] downloadPackageUrl
+ * 严禁跳过 /confirm 直调 /generate；严禁伪造 frozen / delivery / 任何 mock 数据。
  */
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import "@fontsource/albert-sans/400.css";
 import "@fontsource/albert-sans/500.css";
 import "@fontsource/albert-sans/600.css";
@@ -23,6 +26,8 @@ import {
   applyLinkPatch,
   beginEdit,
   buildTopologyConstraints,
+  canConfirm,
+  confirmBlockers,
   confirmDiff,
   confirmReceipt,
   confirmSpec,
@@ -31,6 +36,7 @@ import {
   diffChecklistComplete,
   diffExplicitlyConfirmed,
   diffWriteBlockers,
+  downloadPackageUrl,
   ensureProjectId,
   exportDraft,
   exportMermaid,
@@ -45,6 +51,8 @@ import {
   loadLaunchContext,
   loadReferenceFixture,
   loadSessionId,
+  mapConfirmError,
+  pendingRealMachineLabel,
   revalidate,
   runActionA,
   runActionB,
@@ -59,16 +67,25 @@ import {
   type GFActionResult,
   type GFBlocker,
   type GFCanvasOp,
+  type GFCompileDiagnostics,
   type GFDraftPayload,
+  type GFFidelityStatus,
+  type GFReverseProtection,
   type GFSpecDiff,
   type GFState,
   type GFWhitelist,
 } from "../state/greenfield";
-import { GreenfieldChatFeed } from "./GreenfieldChatFeed";
-import { GreenfieldGateBar } from "./GreenfieldGateBar";
 import { GreenfieldLinkPanel } from "./GreenfieldLinkPanel";
-import { GreenfieldPanel, toGfEdge } from "./GreenfieldPanel";
+import { GreenfieldWizard } from "./GreenfieldWizard";
+import { toGfEdge } from "./GreenfieldPanel";
+import type { EngineeringActions, EngineeringViewData } from "./EngineeringDrawer";
+import {
+  INITIAL_WIZARD_STATE,
+  resetWizardLocalState,
+  wizardReducer,
+} from "./steps/stepMachine";
 import "./greenfield.css";
+import "./steps/steps.css";
 
 export interface GreenfieldChannelProps {
   onBack: () => void;
@@ -106,6 +123,7 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
   const [diffConfirmed, setDiffConfirmed] = useState(false);
   const [confirmErrorCode, setConfirmErrorCode] = useState("");
   const [confirmErrorMessage, setConfirmErrorMessage] = useState("");
+  const [engineeringSummary, setEngineeringSummary] = useState<Record<string, unknown> | null>(null);
 
   /* —— F20 三动作状态（A 导出 / B 首次写入 / C 增量回写）—— */
   const [actionResults, setActionResults] = useState<
@@ -121,6 +139,9 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
   const [actionBDone, setActionBDone] = useState(false);
   /** Action A 的真实 fidelity 报告，透传给 B/C（不虚构）。 */
   const [actionFidelityReport, setActionFidelityReport] = useState<Record<string, unknown> | null>(null);
+
+  /** 4 步主链状态机：唯一存放位置，不写 localStorage。 */
+  const [wizard, dispatch] = useReducer(wizardReducer, INITIAL_WIZARD_STATE);
 
   /** run 内部始终读最新 state，避免闭包捕获旧快照。 */
   const stateRef = useRef<GFState | null>(null);
@@ -202,28 +223,25 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
     void (async () => {
       setLoading(true);
       try {
-        // project_id：向导第一步已生成并落盘；直接进入（如顶栏按钮）时也保证存在。
         const pid = ensureProjectId();
         setProjectId(pid);
         const ctx = loadLaunchContext();
         const existing = loadSessionId();
-        let initial = await fetchState(existing, pid);
-        // chat 驱动：不再静默自动建稿；带 initialPrompt 或向导工艺描述的入口走一次对话，
-        // 让首版生成也出现在消息流里，并注入已定拓扑约束。
-        const seedPrompt = initialPrompt.trim() || ctx?.prompt?.trim() || "";
-        if (!initial.has_ir && seedPrompt) {
-          initial = (
-            await sendChat(initial.session_id, seedPrompt, {
-              projectId: pid,
-              topologyConstraints: buildTopologyConstraints(initial.ir),
-            })
-          ).state;
-        }
+        const initial = await fetchState(existing, pid);
         if (cancelled) return;
+        // 只预填步 1 唯一输入框，等用户显式点主按钮才发 /chat（不再静默生成）。
+        const seedPrompt = initialPrompt.trim() || ctx?.prompt?.trim() || "";
+        setPrompt(seedPrompt);
+        dispatch({ type: "SET_PROMPT", value: seedPrompt });
         setState(initial);
         setSessionId(initial.session_id);
         saveSessionId(initial.session_id);
-        setWhitelist(await fetchWhitelist());
+        const wl = await fetchWhitelist();
+        if (cancelled) return;
+        setWhitelist(wl);
+        if (wl.edge_kinds.length > 0) {
+          dispatch({ type: "SET_EDGE_KIND", value: wl.edge_kinds[0] });
+        }
       } catch (caught) {
         if (!cancelled) setError(formatGfError(caught));
       } finally {
@@ -255,7 +273,7 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
     }
   }, []);
 
-  // 冻结后自动计算一次差异（新端点由 Agent A 并行实现，暂时 404 时降级）。
+  // 冻结后自动计算一次差异（新端点 404 时降级）。
   useEffect(() => {
     if (!projectId || state?.stage !== "FROZEN") return;
     let cancelled = false;
@@ -318,18 +336,28 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
     });
   };
 
+  /** 步 2 新增连线：白名单由后端裁定；失败给中文提示且画布保持 /state 原样。 */
   const onConnect = (kind: string, connection: Connection) => {
-    void run(async (sid) => {
-      await applyLinkPatch(sid, { op: "add_edge", edge: toGfEdge(kind, connection) });
-      setActionFeedback("设备交互连线已提交，四视图已同步刷新");
-    });
+    dispatch({ type: "SET_LINK_ERROR", value: "" });
+    void run(
+      async (sid) => {
+        await applyLinkPatch(sid, { op: "add_edge", edge: toGfEdge(kind, connection) });
+        setActionFeedback("设备交互连线已提交，四视图已同步刷新");
+      },
+      (err) => dispatch({ type: "SET_LINK_ERROR", value: formatGfError(err) }),
+    );
   };
 
+  /** 步 2 删除连线：禁止本地乐观增删，永远以 refresh() 回读为准。 */
   const onRemoveEdge = (edgeId: string) => {
-    void run(async (sid) => {
-      await applyLinkPatch(sid, { op: "remove_edge", edge_id: edgeId });
-      setActionFeedback("设备交互连线已删除，四视图已同步刷新");
-    });
+    dispatch({ type: "SET_LINK_ERROR", value: "" });
+    void run(
+      async (sid) => {
+        await applyLinkPatch(sid, { op: "remove_edge", edge_id: edgeId });
+        setActionFeedback("设备交互连线已删除，四视图已同步刷新");
+      },
+      (err) => dispatch({ type: "SET_LINK_ERROR", value: formatGfError(err) }),
+    );
   };
 
   const onPatchNodes = (ops: GFCanvasOp[]) => {
@@ -397,6 +425,333 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
     );
   };
 
+  /* ======================================================================
+   * 4 步主链编排（§4.2 唯一合法序列）
+   * ==================================================================== */
+
+  /** 步 1 主按钮：显式 sendChat → refresh；不自动前进，留下草图与「下一步：连线」。 */
+  const onSubmitDescribe = useCallback(() => {
+    const text = wizard.data.prompt.trim();
+    if (!text || !sessionId || busy) return;
+    if (stateRef.current?.has_ir) return; // 已有草图时按钮已切换为纯导航
+    void (async () => {
+      setBusy(true);
+      setError("");
+      try {
+        await sendChat(sessionId, text, {
+          projectId: projectId || undefined,
+          topologyConstraints: buildTopologyConstraints(null),
+        });
+        await refresh(sessionId);
+        setPrompt(text);
+        dispatch({ type: "SET_SUBMITTED_PROMPT", value: text });
+        dispatch({ type: "MARK_COMPLETE", step: 1 });
+        setActionFeedback("工艺描述已解析，设备与步序草图已生成");
+      } catch (caught) {
+        setError(formatGfError(caught));
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, [busy, projectId, refresh, sessionId, wizard.data.prompt]);
+
+  /**
+   * 步 3 进入时：★必须先 fetchEngineeringSummary 置工程摘要已展示标志，
+   * 否则后端确认门禁会拒绝本次确认。
+   */
+  const onEnterConfirm = useCallback(() => {
+    if (!sessionId) return;
+    void (async () => {
+      setBusy(true);
+      setError("");
+      try {
+        const summary = await fetchEngineeringSummary(sessionId);
+        setEngineeringSummary(summary);
+        await refresh(sessionId);
+      } catch (caught) {
+        const note = formatGfError(caught);
+        setError(note);
+        dispatch({ type: "SET_CONFIRM_NOTE", value: note });
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, [refresh, sessionId]);
+
+  /** 步 3 主按钮：严格 confirmSpec → generateProjectPackage → refresh → GO(4)。 */
+  const onConfirmAndGenerate = useCallback(() => {
+    if (!sessionId || busy) return;
+    void (async () => {
+      setBusy(true);
+      setError("");
+      setConfirmErrorCode("");
+      setConfirmErrorMessage("");
+      dispatch({ type: "SET_CONFIRM_NOTE", value: "" });
+      try {
+        await confirmSpec(sessionId, true, projectId || undefined);
+        await generateProjectPackage(sessionId, projectId || undefined);
+        await refresh(sessionId);
+        dispatch({ type: "MARK_COMPLETE", step: 3 });
+        dispatch({ type: "SET_DELIVERY_READY", value: true });
+        dispatch({ type: "GO", step: 4 });
+        setActionFeedback("工程包已生成，可直接下载");
+      } catch (caught) {
+        // 停在步 3：不重试、不绕过、不 GO(4)、不伪造成功态。
+        const gfErr = caught instanceof GFRequestError ? caught : null;
+        const code = gfErr?.code ?? "";
+        const message = gfErr?.message ?? formatGfError(caught);
+        setConfirmErrorCode(code);
+        setConfirmErrorMessage(message);
+        const note = mapConfirmError(code, message);
+        setError(note);
+        dispatch({ type: "SET_CONFIRM_NOTE", value: note });
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, [busy, projectId, refresh, sessionId]);
+
+  /** 步 4「重新调整」：FROZEN 不允许 link，必须先 beginEdit。 */
+  const onBeginEditAndGoLink = useCallback(() => {
+    if (!sessionId) return;
+    void (async () => {
+      setBusy(true);
+      setError("");
+      try {
+        await beginEdit(sessionId);
+        await refresh(sessionId);
+        dispatch({ type: "REENTER_EDIT" });
+      } catch (caught) {
+        setError(formatGfError(caught));
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, [refresh, sessionId]);
+
+  /** 步 4「开始新工程」：清本地键 → fetchState 取真实新会话 → RESET。 */
+  const onRestart = useCallback(() => {
+    void (async () => {
+      setBusy(true);
+      setError("");
+      try {
+        resetWizardLocalState();
+        const pid = ensureProjectId();
+        setProjectId(pid);
+        const fresh = await fetchState(null, pid);
+        setState(fresh);
+        setSessionId(fresh.session_id);
+        saveSessionId(fresh.session_id);
+        setWhitelist(await fetchWhitelist());
+        setPrompt("");
+        setSelectedHwNodeId(null);
+        setSelectedTargetId("");
+        setDiff(null);
+        setDiffError("");
+        setDiffConfirmed(false);
+        setDiffChecked({});
+        setActionResults({});
+        setActionError("");
+        setActionErrorCode("");
+        setActionFeedback("");
+        setActionLoading(null);
+        setConfirmErrorCode("");
+        setConfirmErrorMessage("");
+        setEngineeringSummary(null);
+        setActionARun(false);
+        setActionAFidelityOk(null);
+        setActionBDone(false);
+        setActionFidelityReport(null);
+        dispatch({ type: "RESET" });
+      } catch (caught) {
+        setError(formatGfError(caught));
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, []);
+
+  const onDownloadUrl = useCallback(() => downloadPackageUrl(sessionId), [sessionId]);
+
+  /* ======================================================================
+   * 工程视角抽屉（并行只读 + 局部可写；open/close 零请求）
+   * ==================================================================== */
+
+  const onShowSummary = useCallback(async (): Promise<Record<string, unknown>> => {
+    const summary = await fetchEngineeringSummary(sessionId);
+    setEngineeringSummary(summary);
+    return summary;
+  }, [sessionId]);
+
+  const onGenerateProject = useCallback(() => {
+    void run(async (sid) => {
+      if (writeBlockers.length > 0) {
+        throw new Error(writeBlockers.map((b) => b.reason).join("；"));
+      }
+      await generateProjectPackage(sid, projectId);
+      setActionFeedback("已生成工程包；交付结果区展示结构化编译诊断（这不代表编译零错误）");
+    });
+  }, [projectId, run, writeBlockers]);
+
+  const onDeliverTia = useCallback(
+    (mode: "auto" | "package") => {
+      void run(async (sid) => {
+        if (writeBlockers.length > 0) {
+          throw new Error(writeBlockers.map((b) => b.reason).join("；"));
+        }
+        await deliverTia(sid, mode, projectId);
+        setActionFeedback("真机交付已发起；TIA 不可用时会诚实降级为人工导入指引");
+      });
+    },
+    [projectId, run, writeBlockers],
+  );
+
+  const onRunActionA = useCallback(
+    () => void runAction("A", (sid) => runActionA({ session_id: sid })),
+    [runAction],
+  );
+  const onRunActionB = useCallback(
+    () =>
+      void runAction("B", (sid) =>
+        runActionB({
+          session_id: sid,
+          confirmed: explicitConfirmed,
+          fidelity_report: actionFidelityReport,
+        }),
+      ),
+    [actionFidelityReport, explicitConfirmed, runAction],
+  );
+  const onRunActionC = useCallback(
+    () =>
+      void runAction("C", (sid) =>
+        runActionC({
+          session_id: sid,
+          confirmed: explicitConfirmed,
+          diff: effectiveDiff,
+          fidelity_report: actionFidelityReport,
+        }),
+      ),
+    [actionFidelityReport, effectiveDiff, explicitConfirmed, runAction],
+  );
+
+  const onSendChat = useCallback(
+    (text: string) =>
+      void run(async (sid) => {
+        await sendChat(sid, text, {
+          projectId,
+          topologyConstraints: buildTopologyConstraints(stateRef.current?.ir ?? null),
+        });
+      }),
+    [projectId, run],
+  );
+
+  const onSendPastedScl = useCallback(
+    (sclText: string) =>
+      void run(async (sid) => {
+        await uploadFiles(sid, [{ filename: "pasted.scl", text: sclText, kind: "db" }], projectId);
+      }),
+    [projectId, run],
+  );
+
+  const onConfirmReceiptAction = useCallback(
+    () => void run(async (sid) => { await confirmReceipt(sid); }),
+    [run],
+  );
+
+  const onValidate = useCallback(
+    () => void run(async (sid) => { await revalidate(sid); }),
+    [run],
+  );
+
+  const onGenerateDraft = useCallback(
+    () =>
+      void run(async (sid) => {
+        await createDraft(sid, wizard.data.prompt || prompt, projectId);
+      }),
+    [projectId, prompt, run, wizard.data.prompt],
+  );
+
+  /** 非 memo：onFiles 依赖 run / projectId，每次 render 都要拿到最新闭包。 */
+  const onUploadFilesAction = (files: FileList | null): void => {
+    void onFiles(Array.from(files ?? []));
+  };
+
+  const onBindVar = useCallback(
+    (varKey: string, targetId: string, role: string) =>
+      void run(async (sid) => {
+        await updateHardware(sid, { op: "bind_var", var_key: varKey, target_id: targetId, role });
+      }),
+    [run],
+  );
+
+  const onUnbindVar = useCallback(
+    (varKey: string, targetId?: string) =>
+      void run(async (sid) => {
+        await updateHardware(sid, { op: "unbind_var", var_key: varKey, target_id: targetId || "" });
+      }),
+    [run],
+  );
+
+  const engineeringActions: EngineeringActions = {
+    onBack,
+    onShowSummary,
+    onConfirm: () => {
+      void run(
+        async (sid) => {
+          const result = await confirmSpec(sid, true, projectId);
+          downloadText(`spec-${result.spec.spec_version ?? 1}.md`, result.markdown);
+          setActionFeedback("设备逻辑已确认，还原契约已锁定（规格冻结）");
+        },
+        (err) => {
+          const gfErr = err instanceof GFRequestError ? err : null;
+          setConfirmErrorCode(gfErr?.code ?? "");
+          setConfirmErrorMessage(gfErr?.message ?? "");
+        },
+      );
+    },
+    onBeginEdit: () => void run(async (sid) => { await beginEdit(sid); }),
+    onExportMermaid: () => {
+      void run(async (sid) => {
+        const result = await exportMermaid(sid);
+        downloadText("结构图.md", result.markdown);
+      });
+    },
+    onExportDraft: () => {
+      void run(async (sid) => {
+        const result = await exportDraft(sid);
+        downloadText("草稿.json", JSON.stringify(result.payload, null, 2));
+      });
+    },
+    onImportDraft: (payload: unknown) => {
+      void run(async (sid) => {
+        await importDraft(sid, payload as GFDraftPayload);
+      });
+    },
+    onGenerateProject,
+    onDeliverTia,
+    onLoadReference: () => {
+      void run(async (sid) => {
+        await loadReferenceFixture(sid, wizard.data.prompt || prompt);
+      });
+    },
+    onGenerateDraft,
+    onValidate,
+    onRunActionA,
+    onRunActionB,
+    onRunActionC,
+    onToggleDiffItem,
+    onConfirmDiff,
+    onRefreshDiff,
+    onSendChat,
+    onSendFiles: (files: File[]) => void onFiles(files),
+    onSendPastedScl,
+    onConfirmReceipt: onConfirmReceiptAction,
+    onUploadFiles: onUploadFilesAction,
+    onBindVar,
+    onUnbindVar,
+    onPatchNodes,
+  };
+
   if (!state) {
     return (
       <div
@@ -412,284 +767,107 @@ export const GreenfieldChannel: React.FC<GreenfieldChannelProps> = ({
     );
   }
 
-  const compileDiagnostics =
+  const compileDiagnostics: GFCompileDiagnostics | null =
     state.compile_diagnostics ?? state.delivery_summary?.compile_diagnostics ?? null;
-  const fidelity = state.fidelity ?? state.delivery_summary?.fidelity ?? null;
-  const reverseProtection = state.reverse_protection ?? null;
+  const fidelity: GFFidelityStatus | null =
+    state.fidelity ?? state.delivery_summary?.fidelity ?? null;
+  const reverseProtection: GFReverseProtection | null = state.reverse_protection ?? null;
   const sclSources = state.delivery_summary?.scl_sources ?? null;
   const pendingRealMachine = state.pending_real_machine !== false;
 
+  const engineeringData: EngineeringViewData = {
+    state,
+    whitelist,
+    diff: effectiveDiff,
+    fidelity,
+    compileDiagnostics,
+    reverseProtection,
+    sclSources,
+    pendingRealMachine,
+    pendingLabel: pendingRealMachineLabel(pendingRealMachine),
+    actionResults,
+    actionLoading,
+    actionError,
+    actionErrorCode,
+    actionAvailability: availability,
+    actionCompileDiagnostics,
+    diffChecked,
+    checklistComplete,
+    explicitConfirmed,
+    writeBlockers,
+    blockers: confirmBlockers(state),
+    summary: engineeringSummary,
+    confirmErrorCode,
+    confirmErrorMessage,
+    backendConfirmReason:
+      confirmErrorCode || confirmErrorMessage
+        ? mapConfirmError(confirmErrorCode, confirmErrorMessage)
+        : "",
+    actionFeedback,
+    diffError,
+    projectId,
+    constraintNote,
+    busy,
+  };
+
+  const moreInputs: React.ReactNode = railOpen ? (
+    <GreenfieldLinkPanel
+      whitelist={whitelist}
+      report={state.report}
+      state={state}
+      busy={busy}
+      selectedHwNodeId={selectedHwNodeId}
+      selectedTargetId={selectedTargetId}
+      onSelectTarget={setSelectedTargetId}
+      onPatchNodes={onPatchNodes}
+      actionFeedback={actionFeedback}
+      onUploadFiles={onUploadFilesAction}
+      onUploadPastedScl={onSendPastedScl}
+      onConfirmReceipt={onConfirmReceiptAction}
+      onBindVar={onBindVar}
+      onUnbindVar={onUnbindVar}
+      onValidate={onValidate}
+    />
+  ) : null;
+
   return (
-    <div className="gf-root gf-channel" data-stage={state.stage} data-ui="greenfield-channel">
-      <GreenfieldGateBar
+    <div
+      className="gf-root gf-channel gf-wiz"
+      data-stage={state.stage}
+      data-step={wizard.step}
+      data-ui="greenfield-channel"
+    >
+      <GreenfieldWizard
+        wizard={wizard}
+        dispatch={dispatch}
         state={state}
-        onBack={onBack}
+        whitelist={whitelist}
+        busy={busy}
+        loading={loading}
+        error={error}
+        warning={diffError}
+        sessionId={sessionId}
         projectId={projectId}
-        confirmErrorCode={confirmErrorCode}
-        confirmErrorMessage={confirmErrorMessage}
-        writeBlockers={writeBlockers}
-        pendingRealMachine={pendingRealMachine}
-        diffConfirmed={explicitConfirmed}
-        actionResults={actionResults}
-        onLoadReference={() => {
-          void run(async (sid) => {
-            await loadReferenceFixture(sid, prompt);
-          });
+        canConfirm={canConfirm(state)}
+        engineeringData={engineeringData}
+        engineeringActions={engineeringActions}
+        onBack={onBack}
+        onPromptChange={(value: string) => {
+          setPrompt(value);
+          dispatch({ type: "SET_PROMPT", value });
         }}
-        onShowSummary={() => fetchEngineeringSummary(sessionId)}
-        onConfirm={() => {
-          void run(
-            async (sid) => {
-              const result = await confirmSpec(sid, true, projectId);
-              downloadText(`spec-${result.spec.spec_version ?? 1}.md`, result.markdown);
-              setActionFeedback("设备逻辑已确认，还原契约已锁定（规格冻结）");
-            },
-            (err) => {
-              const gfErr = err instanceof GFRequestError ? err : null;
-              setConfirmErrorCode(gfErr?.code ?? "");
-              setConfirmErrorMessage(gfErr?.message ?? "");
-            },
-          );
-        }}
-        onGenerateProject={() => {
-          void run(async (sid) => {
-            if (writeBlockers.length > 0) {
-              throw new Error(writeBlockers.map((b) => b.reason).join("；"));
-            }
-            await generateProjectPackage(sid, projectId);
-            setActionFeedback("已生成工程包；交付结果区展示结构化编译诊断（这不代表编译零错误）");
-          });
-        }}
-        onDeliverTia={(mode) => {
-          void run(async (sid) => {
-            if (writeBlockers.length > 0) {
-              throw new Error(writeBlockers.map((b) => b.reason).join("；"));
-            }
-            await deliverTia(sid, mode, projectId);
-            setActionFeedback("真机交付已发起；TIA 不可用时会诚实降级为人工导入指引");
-          });
-        }}
-        onBeginEdit={() =>
-          void run(async (sid) => {
-            await beginEdit(sid);
-          })
-        }
-        onExportMermaid={() => {
-          void run(async (sid) => {
-            const result = await exportMermaid(sid);
-            downloadText("结构图.md", result.markdown);
-          });
-        }}
-        onExportDraft={() => {
-          void run(async (sid) => {
-            const result = await exportDraft(sid);
-            downloadText("草稿.json", JSON.stringify(result.payload, null, 2));
-          });
-        }}
-        onImportDraft={(payload) => {
-          void run(async (sid) => {
-            await importDraft(sid, payload as GFDraftPayload);
-          });
-        }}
+        onSubmitDescribe={onSubmitDescribe}
+        onConnect={onConnect}
+        onRemoveEdge={onRemoveEdge}
+        onEnterConfirm={onEnterConfirm}
+        onConfirmAndGenerate={onConfirmAndGenerate}
+        onBeginEditAndGoLink={onBeginEditAndGoLink}
+        onRestart={onRestart}
+        onDownloadUrl={onDownloadUrl}
+        onClearError={() => setError("")}
+        onToggleMoreInputs={() => setRailOpen((v) => !v)}
+        moreInputs={moreInputs}
       />
-
-      <div
-        className={
-          railOpen ? "gf-body gf-body--chat" : "gf-body gf-body--chat gf-body--chat--railoff"
-        }
-      >
-        <GreenfieldChatFeed
-          state={state}
-          busy={busy}
-          projectId={projectId}
-          constraintNote={constraintNote}
-          onSend={(text) =>
-            void run(async (sid) => {
-              await sendChat(sid, text, {
-                projectId,
-                topologyConstraints: buildTopologyConstraints(stateRef.current?.ir ?? null),
-              });
-            })
-          }
-          onSendFiles={(files) => void onFiles(files)}
-          onSendPastedScl={(sclText) =>
-            void run(async (sid) => {
-              await uploadFiles(sid, [{ filename: "pasted.scl", text: sclText, kind: "db" }], projectId);
-            })
-          }
-          onConfirmReceipt={() =>
-            void run(async (sid) => {
-              await confirmReceipt(sid);
-            })
-          }
-        />
-
-        <div className="gf-center-wrap">
-          <button
-            type="button"
-            className="gf-rail-toggle"
-            onClick={() => setRailOpen((v) => !v)}
-            title={railOpen ? "收起右侧变量工作台" : "展开右侧变量工作台"}
-          >
-            {railOpen ? "收起变量台" : "变量台"}
-          </button>
-          <GreenfieldPanel
-            views={state.views}
-            ir={state.ir}
-            hardware={state.hardware ?? null}
-            legalKinds={whitelist?.edge_kinds ?? []}
-            prompt={prompt}
-            busy={busy}
-            projectId={projectId}
-            selectedHwNodeId={selectedHwNodeId}
-            selectedTargetId={selectedTargetId}
-            diff={state.spec_diff ?? diff}
-            fidelity={fidelity}
-            reverseProtection={reverseProtection}
-            compileDiagnostics={compileDiagnostics}
-            diffConfirmed={effectiveDiffConfirmed}
-            onConfirmDiff={onConfirmDiff}
-            onRefreshDiff={onRefreshDiff}
-            onPatchNodes={onPatchNodes}
-            actionFeedback={actionFeedback}
-            pendingRealMachine={pendingRealMachine}
-            sclSources={sclSources}
-            actionAvailability={availability}
-            actionResults={actionResults}
-            actionLoading={actionLoading}
-            actionError={actionError}
-            actionErrorCode={actionErrorCode}
-            actionCompileDiagnostics={actionCompileDiagnostics}
-            diffChecked={diffChecked}
-            onToggleDiffItem={onToggleDiffItem}
-            checklistComplete={checklistComplete}
-            explicitConfirmed={explicitConfirmed}
-            onRunActionA={() =>
-              void runAction("A", (sid) => runActionA({ session_id: sid }))
-            }
-            onRunActionB={() =>
-              void runAction("B", (sid) =>
-                runActionB({
-                  session_id: sid,
-                  confirmed: explicitConfirmed,
-                  fidelity_report: actionFidelityReport,
-                }),
-              )
-            }
-            onRunActionC={() =>
-              void runAction("C", (sid) =>
-                runActionC({
-                  session_id: sid,
-                  confirmed: explicitConfirmed,
-                  diff: effectiveDiff,
-                  fidelity_report: actionFidelityReport,
-                }),
-              )
-            }
-            onSelectHwNode={setSelectedHwNodeId}
-            onSelectTarget={setSelectedTargetId}
-            onPromptChange={setPrompt}
-            onGenerateDraft={() =>
-              void run(async (sid) => {
-                await createDraft(sid, prompt, projectId);
-              })
-            }
-            onMountCm={(cmId, hwNodeId) =>
-              void run(async (sid) => {
-                await updateHardware(sid, { op: "mount_cm", cm_id: cmId, hw_node_id: hwNodeId });
-              })
-            }
-            onUnmountCm={(cmId) =>
-              void run(async (sid) => {
-                await updateHardware(sid, { op: "unmount_cm", cm_id: cmId });
-              })
-            }
-            onRemoveHwNode={(hwNodeId) =>
-              void run(async (sid) => {
-                await updateHardware(sid, { op: "remove_hw_node", hw_node_id: hwNodeId });
-              })
-            }
-            onResetTopology={() =>
-              void run(async (sid) => {
-                await updateHardware(sid, { op: "reset_topology" });
-              })
-            }
-            onEditStepField={(_stepId, fieldPath, value) =>
-              void run(async (sid) => {
-                await applyLinkPatch(sid, {
-                  op: "set_ir_only_field",
-                  field_path: fieldPath,
-                  value,
-                });
-              })
-            }
-            onConnect={onConnect}
-            onRemoveEdge={onRemoveEdge}
-          />
-        </div>
-
-        {railOpen && (
-          <GreenfieldLinkPanel
-            whitelist={whitelist}
-            report={state.report}
-            state={state}
-            busy={busy}
-            selectedHwNodeId={selectedHwNodeId}
-            selectedTargetId={selectedTargetId}
-            onSelectTarget={setSelectedTargetId}
-            onPatchNodes={onPatchNodes}
-            actionFeedback={actionFeedback}
-            onUploadFiles={(files) => void onFiles(Array.from(files))}
-            onUploadPastedScl={(sclText) =>
-              void run(async (sid) => {
-                await uploadFiles(sid, [{ filename: "pasted.scl", text: sclText, kind: "db" }], projectId);
-              })
-            }
-            onConfirmReceipt={() =>
-              void run(async (sid) => {
-                await confirmReceipt(sid);
-              })
-            }
-            onBindVar={(varKey, targetId, role) =>
-              void run(async (sid) => {
-                await updateHardware(sid, {
-                  op: "bind_var",
-                  var_key: varKey,
-                  target_id: targetId,
-                  role,
-                });
-              })
-            }
-            onUnbindVar={(varKey, targetId) =>
-              void run(async (sid) => {
-                await updateHardware(sid, {
-                  op: "unbind_var",
-                  var_key: varKey,
-                  target_id: targetId || "",
-                });
-              })
-            }
-            onValidate={() =>
-              void run(async (sid) => {
-                await revalidate(sid);
-              })
-            }
-          />
-        )}
-      </div>
-
-      {error && (
-        <div className="gf-error" role="alert">
-          {error}
-        </div>
-      )}
-      {diffError && (
-        <div className="gf-warning" role="status">
-          {diffError}
-        </div>
-      )}
-      {loading && <div className="gf-busy">正在加载通道…</div>}
-      {busy && <div className="gf-busy">处理中…</div>}
     </div>
   );
 };

@@ -1,11 +1,12 @@
-/** 顶栏（阶段节点 + 梯级进度带）+ 底栏确认硬门禁（P1-H 升级）。
+/**
+ * 契约与门禁操作区（仅在「工程视角」抽屉内按需挂载，主链不再常驻）。
  *
- *  - 确认按钮文案「确认设备逻辑并锁定还原契约」；
- *  - 前置 = 拓扑定稿 ∧ open_questions 清零 ∧ 节点/连线校验 ∧ 等价性预检 ∧ 基线版本锁定；
- *    任一未满足时按钮 disabled 且给出**具体原因**（不笼统提示）；
- *  - 后端 `/confirm` 返回的 code / message 通过 `mapConfirmError` 映射为可读中文展示；
- *  - 差异清单未显式确认 / 反向保护阻止 / fidelity 未达标时，后续写入按钮锁定并给出原因；
- *  - `pending_real_machine` 常驻可见：不宣称 L2 / L4 通过，不宣称编译零错误。
+ * 保留全部既有接线：canConfirm / confirmBlockers / gateReason / mapConfirmError /
+ * downloadPackageUrl / pendingRealMachineLabel / shortHash，以及确认、生成、
+ * 真机交付、继续调整、导出 / 导入草稿、载入参考实例等能力。
+ *
+ * 变更：删除原始报文弹窗，改为中文结构化摘要列表；
+ * 顶栏徽标、三动作状态条、8 格梯级带只在抽屉内出现。
  */
 import React, { useState } from "react";
 import {
@@ -37,22 +38,16 @@ export interface GreenfieldGateBarProps {
   onDeliverTia?: (mode: "auto" | "package") => void;
   onLoadReference?: () => void;
   onBack: () => void;
-
-  /* —— 本批次新增 —— */
-  /** 后端 `/confirm` 返回的网关 code（如 GF_TOPOLOGY_NOT_FINALIZED）。 */
   confirmErrorCode?: string;
-  /** 后端 `/confirm` 返回的原始 message（映射中文时作为补充说明）。 */
   confirmErrorMessage?: string;
-  /** 后续写入的阻断原因（D11 差异未确认 / D10 反向保护 / fidelity 未达标）。 */
   writeBlockers?: GFBlocker[];
   pendingRealMachine?: boolean;
   diffConfirmed?: boolean;
   projectId?: string;
-  /** F20 三动作结果（顶栏状态徽标；真机结论一律 pending_real_machine）。 */
   actionResults?: Partial<Record<GFActionKind, GFActionResult | null>>;
 }
 
-/** 阶段 → 梯级点亮数（0..8）：蓝图纸上一格一格亮上去。 */
+/** 阶段 → 梯级点亮数（0..8）：蓝图纸上一格一格亮上去（仅工程视角可见）。 */
 const STAGE_RUNGS: Record<GFStage, number> = {
   DRAFT: 1,
   LINKABLE: 3,
@@ -60,6 +55,15 @@ const STAGE_RUNGS: Record<GFStage, number> = {
   FROZEN: 8,
   LOCKED: 8,
 };
+
+function scalar(value: unknown): string {
+  if (value === null || value === undefined) return "—（未提供）";
+  if (typeof value === "boolean") return value ? "是" : "否";
+  if (typeof value === "number" || typeof value === "string") return String(value);
+  if (Array.isArray(value)) return `${value.length} 项`;
+  if (typeof value === "object") return `结构化明细（${Object.keys(value as object).length} 个字段）`;
+  return String(value);
+}
 
 export const GreenfieldGateBar: React.FC<GreenfieldGateBarProps> = ({
   state,
@@ -118,37 +122,37 @@ export const GreenfieldGateBar: React.FC<GreenfieldGateBarProps> = ({
       try {
         onImportDraft(JSON.parse(text) as unknown);
       } catch {
-        setSummaryError("草稿文件不是合法 JSON");
+        setSummaryError("草稿文件不是合法格式，已拒绝导入。");
       }
     });
     event.target.value = "";
   };
 
   return (
-    <>
-      <header className="gf-topbar" data-ui="greenfield-gate-top">
+    <div className="gf-eng-gatebar" data-ui="greenfield-gate-bar">
+      <div className="gf-topbar" data-ui="greenfield-gate-top">
         <button type="button" className="gf-btn gf-btn--ghost" onClick={onBack}>
           返回工作台
         </button>
-        <div className="gf-topbar__title">新建工程 · 对话 / 资料 → 逻辑图 → 博途</div>
+        <div className="gf-topbar__title">工程视角 · 契约与门禁</div>
         {projectId && <span className="gf-project-tag">项目 {projectId}</span>}
 
-        {/* 梯级进度带：阶段一格一格点亮 */}
         <div className="gf-rungs" aria-label={`阶段进度 ${state.stage_label}`} title={`阶段 ${state.stage_label}`}>
           {Array.from({ length: 8 }, (_, i) => (
             <i key={i} className={i < lit ? "is-done" : undefined} />
           ))}
         </div>
 
-        {/* 阶段节点（母题：带桩步块） */}
         <span className={frozen ? "gf-stage-node gf-stage-node--frozen" : "gf-stage-node"}>
           {state.stage_label}
         </span>
-        <span className="gf-muted">{latest ? `v${latest.spec_version} · ${shortHash(latest.spec_hash)}` : "草稿 · 未冻结"}</span>
+        <span className="gf-muted">
+          {latest ? `v${latest.spec_version} · ${shortHash(latest.spec_hash)}` : "草稿 · 未冻结"}
+        </span>
         {state.framework_baseline_version && (
           <span className="gf-muted" title="框架基线版本锁定状态">基线 {state.framework_baseline_version}</span>
         )}
-        {/* pending_real_machine 常驻可见：真机未跑时显示「待真机」，绝不显示「成功」 */}
+        {/* 真机口径只在工程视角出现：不宣称 L2 / L4 通过，不宣称编译零错误 */}
         <span className="gf-pending-chip" title={pendingRealMachineLabel(pendingRealMachine)}>
           {pendingRealMachine ? "pending_real_machine" : "真机证据待收口核验"}
         </span>
@@ -172,14 +176,14 @@ export const GreenfieldGateBar: React.FC<GreenfieldGateBarProps> = ({
             type="button"
             className="gf-btn gf-btn--accent-outline"
             onClick={onLoadReference}
-            title="一键加载内置 PLC_IO.pdf (113点) + KUKA_DATA.pdf (DB720) + PC_DATA.pdf (DB1900) 及参考工艺步序"
+            title="一键加载内置参考资料与参考工艺步序"
           >
             载入参考实例
           </button>
         )}
-      </header>
+      </div>
 
-      <footer className="gf-gatebar" data-ui="greenfield-gate-bottom">
+      <div className="gf-gatebar" data-ui="greenfield-gate-bottom">
         <div className="gf-gatebar__actions">
           <button type="button" className="gf-btn gf-btn--ghost" onClick={onExportMermaid}>
             导出结构图
@@ -211,7 +215,6 @@ export const GreenfieldGateBar: React.FC<GreenfieldGateBarProps> = ({
         </div>
 
         <div className="gf-gatebar__gate">
-          {/* 破坏级（赭红）：改工程状态的两个门 */}
           <button
             type="button"
             className={frozen ? "gf-btn gf-btn--danger" : "gf-btn"}
@@ -262,7 +265,7 @@ export const GreenfieldGateBar: React.FC<GreenfieldGateBarProps> = ({
           )}
         </div>
 
-        {/* 具体原因区：任一前置未满足时逐条展示，绝不笼统提示「操作失败」 */}
+        {/* 具体原因区：逐条展示，绝不笼统提示「操作失败」 */}
         {!ready && !frozen && (
           <div className="gf-gate-reasons" role="status">
             <div className="gf-gate-reasons__head">确认硬门禁未满足（{blockers.length} 项）：</div>
@@ -276,7 +279,7 @@ export const GreenfieldGateBar: React.FC<GreenfieldGateBarProps> = ({
         )}
         {backendReason && (
           <div className="gf-gate-reasons gf-gate-reasons--backend" role="alert">
-            <div className="gf-gate-reasons__head">后端 `/confirm` 返回的确认原因：</div>
+            <div className="gf-gate-reasons__head">后端返回的确认原因：</div>
             <div className="gf-gate-reason">{backendReason}</div>
           </div>
         )}
@@ -299,13 +302,13 @@ export const GreenfieldGateBar: React.FC<GreenfieldGateBarProps> = ({
         )}
         {summaryError && <div className="gf-bad">{summaryError}</div>}
 
+        {/* 中文结构化摘要：不展示原始报文、不展示 JSON、不展示锁定清单原文 */}
         {summary && (
           <div className="gf-modal" role="dialog" aria-label="确认设备逻辑并锁定还原契约">
             <div className="gf-modal__card">
               <div className="gf-modal__title">确认设备逻辑并锁定还原契约</div>
               <div className="gf-muted">
-                下面是工程视角摘要。确认后仅冻结规格，不会生成工程、不会写回博途。
-                硬门禁前置：拓扑定稿 ∧ 待确认问题清零 ∧ 节点/连线校验 ∧ 等价性预检 ∧ 基线版本锁定。
+                下面是工程视角摘要的中文结构化清单。确认后仅冻结规格，不会生成工程、不会写回博途。
               </div>
               <div className="gf-gate-checks">
                 {blockers.length === 0 ? (
@@ -319,7 +322,13 @@ export const GreenfieldGateBar: React.FC<GreenfieldGateBarProps> = ({
                   ))
                 )}
               </div>
-              <pre className="gf-modal__json">{JSON.stringify(summary, null, 2)}</pre>
+              <ul className="gf-eng__list" data-ui="engineering-summary-structured">
+                {Object.entries(summary).map(([key, value]) => (
+                  <li key={key}>
+                    <span className="gf-eng__code">{key}</span> · {scalar(value)}
+                  </li>
+                ))}
+              </ul>
               <div className="gf-modal__actions">
                 <button type="button" className="gf-btn gf-btn--ghost" onClick={() => setSummary(null)}>
                   返回修改
@@ -340,7 +349,7 @@ export const GreenfieldGateBar: React.FC<GreenfieldGateBarProps> = ({
             </div>
           </div>
         )}
-      </footer>
-    </>
+      </div>
+    </div>
   );
 };

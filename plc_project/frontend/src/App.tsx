@@ -291,7 +291,7 @@ const ChangeLogIcon: React.FC = () => (
 
 const App: React.FC = () => {
   /* Greenfield 独立通道（与既有工作台互不触发） */
-  const [channel, setChannel] = useState<"workbench" | "greenfield">("workbench");
+  const [channel, setChannel] = useState<"workbench" | "greenfield">("greenfield");
   const [greenfieldPrompt, setGreenfieldPrompt] = useState<string>("");
   /* 画布与会话 */
   const [canvas, setCanvas] = useState<CanvasStateData>(() => blankCanvas(""));

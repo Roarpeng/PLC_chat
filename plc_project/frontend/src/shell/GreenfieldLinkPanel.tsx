@@ -155,7 +155,10 @@ export const GreenfieldLinkPanel: React.FC<GreenfieldLinkPanelProps> = ({
   const questions = [...(report?.open_questions ?? []), ...(state.notes ?? [])];
 
   return (
-    <aside className="gf-side" data-ui="greenfield-link-panel">
+    <details className="gf-wiz-more" data-ui="greenfield-more-inputs">
+      <summary className="gf-wiz-more__summary">更多输入方式（辅助）</summary>
+      <div className="gf-wiz-more__body">
+        <aside className="gf-side" data-ui="greenfield-link-panel">
       {/* 顶部：外部文档解析与锁定状态 */}
       <div className="gf-var-header">
         <div className="gf-var-header__top">
@@ -570,6 +573,8 @@ export const GreenfieldLinkPanel: React.FC<GreenfieldLinkPanelProps> = ({
           </div>
         )}
       </div>
-    </aside>
+        </aside>
+      </div>
+    </details>
   );
 };
