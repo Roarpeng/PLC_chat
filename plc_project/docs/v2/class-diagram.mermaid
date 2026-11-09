@@ -1,0 +1,280 @@
+%% PLC Agent V2 · EngineeringIR v2 领域模型与服务类图
+%% 来源：docs/v2/02-架构设计与任务分解.md §3
+classDiagram
+    class ProjectWorkspace {
+        +str project_id
+        +str origin
+        +str tia_version
+        +str baseline_hash
+        +int current_revision
+        +str state
+        +str evidence_level
+        +list~str~ artifact_ids
+        +read_ir() EngineeringIRV2
+        +commit_patch(patch) PatchResult
+    }
+    class AFProfile {
+        +str profile_id
+        +str library_id
+        +str library_version
+        +str template_sha256
+        +str number_policy
+        +str folder_tree
+    }
+    class HardwareIntent {
+        +str cpu_template
+        +str io_binding
+        +str device_type_identifier
+        +str capability_receipt_id
+    }
+    class ImportedSnapshot {
+        +str snapshot_id
+        +str original_archive_hash
+        +dict block_index
+        +str hardware_hash
+        +str safety_block_hash
+    }
+    class EngineeringIRV2 {
+        +str schema_version
+        +str project_id
+        +int revision
+        +str ir_sha256
+        +dict legacy_raw
+        +semantic_hash() str
+        +derive_all() DerivedBundle
+    }
+    class ComponentDefinition {
+        +str id
+        +str name
+        +str component_type
+        +str driver_template
+        +str source
+        +dict io_bindings
+    }
+    class DriverSpec {
+        +str id
+        +str component_type
+        +dict typed_ports
+        +dict parameters
+        +list~str~ states
+        +list~dict~ transitions
+        +str failure_policy
+        +str compile_mode
+        +bool safety_permit_required
+    }
+    class SequenceIR {
+        +str id
+        +str mode
+        +str initial_step
+        +list~Step~ steps
+        +list~Transition~ transitions
+        +list~Exception~ exceptions
+        +list~dict~ parallel_groups
+    }
+    class Step {
+        +str id
+        +list~Action~ entry_actions
+        +list~Action~ cyclic_actions
+        +int min_duration_ms
+        +int max_duration_ms
+        +str failure_target
+    }
+    class Transition {
+        +str id
+        +str from_step
+        +str to_step
+        +GuardAST guard_ast
+        +int priority
+        +str edge_type
+    }
+    class GuardAST {
+        +str node_type
+        +str value_type
+        +str signal
+        +list~GuardAST~ children
+        +evaluate(snapshot) bool
+        +validate_types() list~str~
+    }
+    class SourceBinding {
+        +str source_id
+        +str tia_path
+        +str block_type
+        +int block_number
+        +str original_xml_sha256
+        +list~str~ referenced_by
+        +list~str~ ir_entities
+        +str writable
+        +str fidelity
+    }
+    class DiffPlan {
+        +str plan_id
+        +list~dict~ ops
+        +list~str~ impact_closure
+        +str baseline_hash
+        +bool executable
+    }
+    class CandidatePatch {
+        +str candidate_id
+        +int base_revision
+        +str before_hash
+        +str after_hash
+        +list~ChangeOp~ ops
+        +str explanation
+    }
+    class ChangeOp {
+        +str op
+        +str target_source_id
+        +str ir_id
+        +dict payload
+    }
+    class ChangeSet {
+        +str id
+        +str project_id
+        +int base_revision
+        +str before_hash
+        +str after_hash
+        +str spec_hash
+        +str status
+        +list~ChangeOp~ ops
+        +dict impacts
+        +ValidationReport validation
+    }
+    class ArtifactManifest {
+        +str manifest_id
+        +list~dict~ files
+        +list~str~ import_order
+        +dict dependencies
+        +str sha256
+        +str af_profile_id
+    }
+    class SourceMap {
+        +str map_id
+        +list~dict~ mappings
+        +locate(tia_block, line) IRRef
+        +reverse_locate(ir_id) list~SclRef~
+    }
+    class NativeTiaArtifact {
+        +str artifact_id
+        +str job_id
+        +str project_id
+        +str project_path
+        +str archive_path
+        +str archive_sha256
+        +int size_bytes
+        +str kind
+        +CompileReceipt compile
+        +str evidence_id
+        +str evidence_level
+        +bool reopen_ok
+    }
+    class CompileReceipt {
+        +str state
+        +int error_count
+        +int warning_count
+        +str raw_api_receipt
+        +bool static_gate_passed
+        +bool compile_ok
+    }
+    class ValidationReport {
+        +bool passed
+        +list~dict~ issues
+        +str unchanged_ir_hash
+    }
+    class PatchResult {
+        +int revision
+        +str ir_sha256
+        +list~str~ changed_ir_ids
+        +list~str~ source_map_dirty
+        +list~str~ warnings
+    }
+    class V1ToV2Adapter {
+        +to_v2(v1_ir) EngineeringIRV2
+        +to_v1_view(v2_ir) dict
+        +assert_zero_field_loss(v1_ir, v2_ir) bool
+    }
+    class ValidationEngine {
+        +validate(ir) ValidationReport
+        +validate_patch(ir, patch) ValidationReport
+    }
+    class CompilerService {
+        +lower(ir, profile) ArtifactManifest
+        +build_source_map(ir, manifest) SourceMap
+    }
+    class ScanSimulator {
+        +run(ir, scenario) list~TraceFrame~
+        +shortest_counterexample(ir) list~str~
+    }
+    class ApprovalGate {
+        +freeze(changeset) ChangeSet
+        +approve(id, reviewer, explicit) bool
+        +recheck_baseline(hash) bool
+    }
+    class DeliveryCoordinator {
+        +start(approved_id, baseline_hash, idem_key) str
+        +run_chain(job_id) bool
+        +recover(job_id) bool
+    }
+    class ArtifactService {
+        +store(path, kind) str
+        +authorize(project_id, job_id, artifact_id, sha256) bool
+        +download(artifact_id) bytes
+    }
+    class TiaOpennessWorker {
+        +create_project(dir, name) dict
+        +open_project(path) dict
+        +import_blocks(order) dict
+        +compile() CompileReceipt
+        +save() dict
+        +archive() dict
+        +retrieve_reopen(archive) dict
+    }
+    class WorkspaceServiceV2 {
+        +get_ir(project_id) EngineeringIRV2
+        +commit(project_id, patch) PatchResult
+        +next_revision(project_id) int
+    }
+    class EvidenceTag {
+        <<enumeration>>
+        OFFLINE
+        MOCKED
+        V19_REAL
+        PENDING_REAL_MACHINE
+    }
+
+    ProjectWorkspace "1" *-- "1" AFProfile : owns(pinned)
+    ProjectWorkspace "1" *-- "1" HardwareIntent : owns
+    ProjectWorkspace "1" o-- "0..1" ImportedSnapshot : brownfield_only
+    ProjectWorkspace "1" *-- "1" EngineeringIRV2 : authoritative
+    EngineeringIRV2 "1" *-- "0..*" ComponentDefinition : components
+    EngineeringIRV2 "1" *-- "1" SequenceIR : process
+    EngineeringIRV2 "1" *-- "0..*" SourceBinding : source_bindings
+    ComponentDefinition "1" *-- "1" DriverSpec : driven_by
+    SequenceIR "1" *-- "1..*" Step : steps
+    SequenceIR "1" *-- "0..*" Transition : transitions
+    Transition "1" *-- "1" GuardAST : guard
+    CandidatePatch "1" *-- "1..*" ChangeOp : ops
+    ChangeSet "1" *-- "1..*" ChangeOp : ops
+    ChangeSet ..> EngineeringIRV2 : base_revision / before_hash
+    SourceBinding ..> DiffPlan : feeds(interface_only)
+    DiffPlan ..> SourceBinding : references
+    V1ToV2Adapter ..> EngineeringIRV2 : produces
+    V1ToV2Adapter ..> ProjectWorkspace : legacy_raw
+    ValidationEngine ..> ValidationReport : produces
+    WorkspaceServiceV2 ..> ValidationEngine : calls
+    WorkspaceServiceV2 ..> PatchResult : returns
+    CompilerService ..> ArtifactManifest : produces
+    CompilerService ..> SourceMap : produces
+    CompilerService ..> EngineeringIRV2 : reads(never_writes)
+    ScanSimulator ..> SequenceIR : reads
+    SourceMap ..> ArtifactManifest : N:N mapping
+    ApprovalGate ..> ChangeSet : freezes / approves
+    ApprovalGate ..> SourceBinding : writable check
+    DeliveryCoordinator ..> ApprovalGate : requires(explicit)
+    DeliveryCoordinator ..> ArtifactManifest : consumes
+    DeliveryCoordinator ..> TiaOpennessWorker : single_writer(STA)
+    DeliveryCoordinator ..> NativeTiaArtifact : produces
+    NativeTiaArtifact "1" *-- "1" CompileReceipt : compile
+    NativeTiaArtifact ..> ArtifactService : registered_by(4-tuple)
+    ArtifactService ..> ProjectWorkspace : artifact_ids
+    EvidenceTag ..> NativeTiaArtifact : stamps
+    EvidenceTag ..> ProjectWorkspace : stamps

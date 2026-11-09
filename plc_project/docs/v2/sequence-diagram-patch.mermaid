@@ -1,0 +1,61 @@
+%% PLC Agent V2 · 编辑链时序图：NL/Canvas → CandidatePatch → validate → IR 原子更新 → 派生物重算
+%% 来源：docs/v2/02-架构设计与任务分解.md §4.1
+%% 交付链见 sequence-diagram.mermaid
+sequenceDiagram
+    autonumber
+    actor U as 工艺工程师
+    participant FE as Workbench / SequenceCanvas
+    participant API as routers/projects_v2.py
+    participant IS as IntentService_v2
+    participant ES as EngineeringService_v2
+    participant WS as WorkspaceService_v2 / SQLite WAL
+    participant VE as ValidationEngine
+    participant DP as DerivationPipeline_v2
+    participant SM as SourceMap / ArtifactManifest
+
+    U->>FE: 双击 S2，min_duration_ms 1000 → 2000（或 NL 输入）
+    FE->>FE: 局部乐观显示（可被回滚，不私建真值）
+    alt NL 入口
+        FE->>API: POST /projects/{id}/intent {message, context_slice}
+        API->>IS: 结构化提取 + 对象解析 + 最小披露上下文
+        IS-->>API: CandidatePatch(ops, before_hash, after_hash, explanation) [不写 IR / 不写 TIA]
+        API-->>FE: 200 {candidate_id, ops, questions[]} evidence_level=offline
+        FE->>U: 展示候选 + 待确认字段（缺参数进问题队列，不猜测）
+    end
+    FE->>API: POST /projects/{id}/patches {base_revision, ops[], request_id}
+    API->>WS: 校验信封 + request_id 幂等
+    alt request_id 已处理
+        WS-->>API: 幂等命中（返回首次 PatchResult）
+        API-->>FE: 200 {revision, ir_sha256} 无重复变更
+    else 新请求
+        API->>ES: apply_patch(project_id, base_revision, ops)
+        ES->>WS: 事务内读 current_revision + ir_sha256
+        alt base_revision != current_revision
+            WS-->>ES: revision mismatch
+            ES-->>API: 409 BASE_REVISION_CONFLICT
+            API-->>FE: 409 {code, current_revision}
+            FE->>FE: 回滚局部乐观显示，重拉 IR，提示重新合并（US-6）
+        else revision 匹配
+            ES->>ES: 在候选副本上 apply（不触碰真值）
+            ES->>VE: validate_patch(candidate_ir) 9 类静态检查
+            alt 语义/类型/可达性/单写者/Guard 非法/并行语义未实现
+                VE-->>ES: ValidationReport(passed=false, issues[], unchanged_ir_hash)
+                ES-->>API: 422 SEMANTIC_VALIDATION_FAILED
+                API-->>FE: 422 {code, issues[source_id,node_id,field]}
+                FE->>U: 在对应 Canvas 节点红标，IR 保持不变
+            else 校验通过
+                VE-->>ES: passed=true
+                ES->>WS: BEGIN → 写 revisions(revision+1, ir_hash) → INSERT change_ops → COMMIT
+                WS-->>ES: PatchResult{revision, ir_sha256, changed_ir_ids}
+                ES->>DP: derive_all(frozen_ir) 单向重算
+                DP->>SM: 重算 SourceMap / SCL / ArtifactManifest（source_id 注解）
+                DP->>DP: 重算离线 Trace（预测模型，非实机）与 Mermaid（单向投影）
+                SM-->>DP: SourceMap(N:N) + SCL diff
+                DP-->>ES: DerivedBundle{trace, scl, mermaid, source_map, source_map_dirty[]}
+                Note over DP,SM: Trace 显示「预测，不是实机验证」；派生物只读 IR，绝不反向覆写
+                ES-->>API: 200 {revision, ir_sha256, changed_ir_ids, source_map_dirty, derived}
+                API-->>FE: 200 + evidence_level=offline
+                FE->>U: IR / Trace 波形 / SCL 常量三方同步（1000→2000），刷新不丢失（US-2/US-3）
+            end
+        end
+    end

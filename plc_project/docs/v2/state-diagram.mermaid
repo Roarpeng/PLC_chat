@@ -1,0 +1,21 @@
+%% PLC Agent V2 · 原生交付状态机（DRAFT → NATIVE_ARCHIVED / FAILED / RECOVERY_REQUIRED）
+%% 来源：docs/v2/02-架构设计与任务分解.md §4.3
+%% Retrieve/reopen 为 NATIVE_ARCHIVED 强制条件（主理人裁定 Q-06）
+stateDiagram-v2
+    [*] --> DRAFT
+    DRAFT --> SPEC_FROZEN : 业务审核确认 / spec_hash 锁定
+    SPEC_FROZEN --> SOURCE_READY : SCL·XML·AF 目录 + manifest 生成并通过静态门禁
+    SOURCE_READY --> TIA_IMPORTED : 真实 Openness 导入完成（不代表可运行）
+    TIA_IMPORTED --> TIA_COMPILED : 真实编译 error_count=0（warning 单列）
+    TIA_COMPILED --> NATIVE_ARCHIVED : Save + Archive 精确路径 + sha256 + Retrieve/reopen 全部通过【Q-06 强制】
+    NATIVE_ARCHIVED --> [*]
+
+    DRAFT --> FAILED : 校验 / 契约失败
+    SPEC_FROZEN --> FAILED : 基线漂移 409
+    SOURCE_READY --> FAILED : 静态门禁失败 / 未知 Guard / 未实现并行语义
+    TIA_IMPORTED --> FAILED : tia_unavailable / CPU 未选 / 路径缺失 / 归档缺失
+    TIA_COMPILED --> FAILED : 编译 error_count>0 或 reopen 失败
+    TIA_COMPILED --> RECOVERY_REQUIRED : worker 崩溃 / 超时 / 进程中断
+    RECOVERY_REQUIRED --> TIA_IMPORTED : ledger 恢复 + 幂等续跑（stage 游标）
+    RECOVERY_REQUIRED --> FAILED : 无法恢复，保留完整证据
+    FAILED --> DRAFT : 保留日志与可编辑设计，重新编辑

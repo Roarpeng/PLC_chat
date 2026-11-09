@@ -1,0 +1,103 @@
+%% PLC Agent V2 · 主时序图：approve → DeliveryCoordinator → STA 单写者 → 精确 artifact 下载
+%% 来源：docs/v2/02-架构设计与任务分解.md §4.2
+%% 另一条（NL/Canvas 编辑链）见 sequence-diagram-patch.mermaid
+sequenceDiagram
+    autonumber
+    actor R as 审核工程师
+    participant FE as DeliveryView / DiffReview
+    participant API as routers/projects_v2.py
+    participant AG as ApprovalGate (pcec adapter)
+    participant DC as DeliveryCoordinator
+    participant LK as ProjectLock / JobLedger
+    participant WK as TIA Openness Worker (C# STA, net481)
+    participant AS as ArtifactService / Artifact Store
+    participant DB as SQLite WAL
+
+    R->>FE: 查看 Before/After、依赖闭包、基线 sha256、删除数=0、安全块更改=0
+    FE->>API: POST /changesets/{id}/approve {reviewer_id, explicit=true, expected_baseline_hash}
+    API->>AG: freeze + 人工批准（LLM 不持有此工具）
+    alt 基线漂移 / 保护块 / 删除依赖未解除 / FAILED 态
+        AG-->>API: 409 BASELINE_HASH_MISMATCH 或 403 WRITEBACK_FORBIDDEN
+        API-->>FE: 拒绝批准（确认前零 TIA 写入）
+    else 批准通过
+        AG-->>API: ChangeSet{status=APPROVED, signed_spec_hash, signed_at}
+        API-->>FE: 200 {approved_changeset_id, spec_hash}
+        Note over AG,DB: 批准前「确认前零 TIA 写入」，批准后写 copy-on-write 副本，原件不动
+
+        FE->>API: POST /projects/{id}/deliveries {approved_changeset_id, expected_baseline_hash, idempotency_key, artifact_type, tia_version:V19}
+        API->>DC: start(...)
+        DC->>LK: 取项目独占锁 + idempotency_key 唯一约束
+        alt idempotency_key 已存在
+            LK-->>DC: 命中既有 job
+            DC-->>API: 202 {job_id(既有), state} 不重复生成
+        else 新作业
+            DC->>DB: INSERT jobs(QUEUED) + job_events(ledger 起点)
+            DC-->>API: 202 {job_id, state=QUEUED, artifact_id=null}
+            API-->>FE: 202 + SSE /delivery-jobs/{id}/events
+            FE->>FE: 逐步日志 01→06 高亮；编译结果字段 pending_real_machine
+
+            DC->>LK: 串行进入唯一 STA 队列
+            DC->>WK: Create(dir, name) 或 Open(workcopy)
+            WK-->>DC: {ok, create:{projectPath}} 精确回执
+            DC->>DC: fail-closed 解包 create.projectPath；缺失即 FAILED（禁止猜路径）
+            alt CPU 未选 / 路径缺失 / tia_unavailable
+                DC->>DB: job_events(FAILED, raw_receipt) + state=FAILED
+                DC-->>FE: 显式失败 ok=false + error_code，pending_real_machine，无下载按钮
+            else 创建成功
+                DC->>DB: job_events(state=TIA_IMPORTED 前置, stage=CREATE)
+                DC->>WK: Import(ArtifactManifest.import_order: UDT→FB/FC→DB→OB)
+                WK-->>DC: import 回执
+                DC->>WK: Compile() 真实编译
+                WK-->>DC: CompilerResult{State, ErrorCount, WarningCount, raw_api_receipt}
+                alt error_count > 0 或 static_gate 失败
+                    DC->>DB: job_events(FAILED, compile 诊断 + SourceMap 反定位)
+                    DC-->>FE: FAILED；诊断逐条定位 source_id→IR 节点→Canvas 红标；绝不 NATIVE_ARCHIVED
+                else error_count == 0（warning 单列）
+                    DC->>DB: job_events(state=TIA_COMPILED)
+                    DC->>WK: Save() → Archive() 精确 ArchivePath
+                    WK-->>DC: {archivePath, archive_sha256, size_bytes}（禁止 candidates[0] 通配）
+                    alt 归档文件不存在 / sha256 不匹配
+                        DC->>DB: job_events(FAILED, archive_missing)
+                        DC-->>FE: FAILED，不提供伪造原生项目
+                    else 归档存在
+                        DC->>WK: Retrieve(archive) + reopen 独立目标目录  【Q-06 强制】
+                        alt Retrieve/reopen 失败
+                            WK-->>DC: reopen_ok=false
+                            DC->>DB: job_events(FAILED, reopen 回执)
+                            DC-->>FE: FAILED，禁止置 NATIVE_ARCHIVED
+                        else reopen_ok=true
+                            WK-->>DC: reopen 回执（V19 real）
+                            DC->>AS: store(archive, kind=zap19) + evidence bundle
+                            AS->>DB: INSERT artifacts(id, project_id, job_id, sha256, path, size_bytes, evidence_level=V19_real)
+                            DC->>DB: job_events(state=NATIVE_ARCHIVED, evidence_id) 单一事务
+                            DC-->>API: state=NATIVE_ARCHIVED
+                            API-->>FE: {state, compile{error_count:0,warning_count}, native_artifact{artifact_id,sha256,size_bytes}, evidence_id, evidence_level=V19_real}
+                            FE->>FE: 显示真实 .zap19 下载 + evidence（不再显示 pending_real_machine）
+                        end
+                    end
+                end
+            end
+
+            opt worker 崩溃 / 超时 / 进程中断（G7）
+                WK--xDC: 连接中断
+                DC->>DB: job_events(state=RECOVERY_REQUIRED, stage 游标, worker_lease_until)
+                DC->>LK: 恢复：检测现存工程与实际成果，按 stage 游标幂等续跑
+                alt 可恢复
+                    DC->>WK: 从 TIA_IMPORTED 幂等续跑（不盲目重发非幂等写入）
+                else 不可恢复
+                    DC->>DB: state=FAILED，保留完整证据
+                end
+            end
+
+            R->>FE: 点击下载
+            FE->>API: GET /artifacts/{artifact_id}/download
+            API->>AS: authorize(project_id, job_id, artifact_id, sha256) 四元组精确匹配
+            alt 不匹配 / 跨 job 旧归档 / 路径非白名单
+                AS-->>API: 404 ARTIFACT_NOT_FOUND 或 403 ARTIFACT_JOB_MISMATCH
+                API-->>FE: 拒绝；禁止目录通配扫描
+            else 匹配
+                AS-->>API: 精确 artifact 字节流 + sha256 校验
+                API-->>R: .zap19 + evidence bundle（AC-01-6）
+            end
+        end
+    end

@@ -22,3 +22,6 @@ __pycache__/
 # AF 参考归档(docs/17-18 引用的下载件,大文件按需本地下载,不入库)
 plc_project/docs/*.zip
 plc_project/docs/*.pdf
+
+# V2 重构基线备份(77MB 全量归档, 仅本地保留, 不入库)
+backup/
