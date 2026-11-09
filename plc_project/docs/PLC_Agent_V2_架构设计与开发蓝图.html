@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC Agent · V2.0 可执行重构蓝图</title>
+<style>
+:root{--ink:#172640;--ink2:#41516b;--muted:#63718a;--blue:#315fbb;--blue2:#eaf0fc;--teal:#178a83;--green:#187552;--orange:#bb7a28;--red:#b54c4c;--line:#dce3ef;--canvas:#f4f7fc;--paper:#fff;--nav:#11213b;--shadow:0 7px 24px rgba(21,38,70,.07)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:var(--ink);background:var(--canvas);font:15px/1.7 "Microsoft YaHei","PingFang SC","Noto Sans CJK SC",Arial,sans-serif}a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}button,input,select{font:inherit}button{cursor:pointer}.layout{display:grid;grid-template-columns:255px minmax(0,1fr);min-height:100vh}.sidebar{background:var(--nav);color:#eaf1ff;padding:26px 17px;position:sticky;top:0;height:100vh;overflow-y:auto}.brand{padding:0 8px 24px;border-bottom:1px solid #2d425e}.brand .over{letter-spacing:.18em;font-size:11px;color:#8eaeda}.brand strong{font-size:22px;letter-spacing:-.04em;display:block}.brand p{font-size:12px;color:#aebdd4;line-height:1.7;margin:5px 0}.navhead{font-size:10px;letter-spacing:.13em;color:#7995bc;margin:24px 9px 9px}.sidebar a{display:block;color:#b9c8dc;padding:8px 10px;border-radius:7px;font-size:12px;margin-bottom:2px}.sidebar a:hover,.sidebar a.active{color:#fff;background:#253d62;text-decoration:none}.sidefoot{font-size:11px;color:#8fa3be;margin:20px 9px;border-top:1px solid #2d425e;padding-top:12px}.main{min-width:0;max-width:1480px;padding:34px 44px 72px}.hero{border-radius:18px;background:linear-gradient(125deg,#132b52 0%,#204b86 67%,#2e6ab0 100%);padding:40px 42px;color:white;box-shadow:var(--shadow);position:relative;overflow:hidden}.hero:after{content:"";position:absolute;right:-70px;top:-140px;width:400px;height:400px;border:1px solid #ffffff30;border-radius:50%;box-shadow:0 0 0 40px #ffffff08,0 0 0 100px #ffffff05;pointer-events:none}.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:11px;color:#8bd3ee;font-weight:700}.hero h1{font-size:34px;line-height:1.2;margin:10px 0 16px;letter-spacing:-.04em}.hero p{font-size:15px;color:#d9e7fa;max-width:800px;position:relative;z-index:1}.hero .hero-grid{display:flex;gap:14px;flex-wrap:wrap;margin-top:23px}.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #b5d0f360;border-radius:40px;padding:5px 12px;font-size:11px;color:#e3eeff;background:#16315445}.section{margin-top:34px;padding:29px 32px;border:1px solid var(--line);border-radius:15px;background:var(--paper);box-shadow:var(--shadow);scroll-margin-top:22px}.section h2{font-size:24px;letter-spacing:-.025em;line-height:1.4;margin:0 0 9px}.section h3{font-size:17px;margin:28px 0 11px}.section h4{font-size:14px;margin:18px 0 8px}.intro{color:var(--muted);margin:0 0 17px}.kicker{color:var(--blue);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}.lead{font-size:16px;color:#233c65}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}.tile{border:1px solid var(--line);padding:16px;border-radius:11px;min-width:0;background:#fff}.tile h4{margin:3px 0 7px}.tile p{font-size:12px;color:var(--muted);margin:0}.tile .num{font-size:22px;color:var(--blue);font-weight:800}.tile.green{background:#f0faf6;border-color:#cae9de}.tile.soft{background:#f5f8fe}.callout{border-left:4px solid #3a72ca;background:#eff5fe;padding:14px 18px;border-radius:7px;margin:16px 0;color:#2a4165;font-size:13px}.callout.warn{border-color:#d49b44;background:#fff9ed}.callout.danger{border-color:#c96161;background:#fff4f3}.tags{display:flex;flex-wrap:wrap;gap:6px}.tag{padding:2px 8px;font-size:11px;border-radius:5px;border:1px solid #cfdbef;background:#f3f7fe;color:#40649a}.tag.ok{background:#effbf5;color:#176349;border-color:#b9dec9}.tag.warn{background:#fff8e9;color:#996223;border-color:#efdaaa}.tag.muted{background:#f2f3f6;color:#667187;border-color:#dadfe6}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:10px;margin:12px 0}table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:11px 13px}th{background:#f0f5fc;font-size:11px;letter-spacing:.02em;color:#35527d}tr:last-child td{border-bottom:0}tr:hover td{background:#fbfcff}code{font-family:Consolas,"SFMono-Regular",monospace;font-size:.92em;background:#f0f4fc;padding:1px 4px;border-radius:3px;overflow-wrap:anywhere}pre{white-space:pre;overflow:auto;border-radius:10px;background:#14253f;color:#dbe9ff;padding:19px 20px;font:12px/1.6 Consolas,"SFMono-Regular",monospace;tab-size:2}pre code{background:transparent;color:inherit;padding:0;font-size:inherit}details{margin:11px 0;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:white}summary{padding:12px 14px;background:#f8fafd;cursor:pointer;font-size:13px;font-weight:700;color:#304563}details .inside{padding:14px 17px}ul,ol{padding-left:21px}li{margin:4px 0}.flowchart{display:grid;gap:10px;grid-template-columns:repeat(5, minmax(0,1fr));margin:20px 0}.flowstep{padding:14px 11px;background:#f3f7ff;border:1px solid #cbdcf8;border-radius:9px;text-align:center;position:relative;font-size:12px;font-weight:700}.flowstep:not(:last-child):after{content:'→';font-size:24px;position:absolute;right:-16px;top:31%;color:var(--blue);z-index:1}.flowstep small{font-size:11px;display:block;color:#7184a0;font-weight:400;margin-top:4px}.arch{padding:19px;border:1px solid #cfdbec;border-radius:12px;background:#f8fbff}.archrow{display:flex;align-items:stretch;gap:8px;justify-content:center;flex-wrap:wrap}.archnode{flex:1;min-width:170px;padding:15px 12px;border-radius:9px;background:#edf3fc;text-align:center;border:1px solid #d5e1f4}.archnode.dark{background:#203b66;color:#fff;border-color:#203b66}.archnode.green{background:#effbf5;border-color:#c2e7d5}.archnode strong{display:block;font-size:13px}.archnode small{display:block;color:#5b7194;font-size:11px;margin-top:4px}.archnode.dark small{color:#c7defa}.archarrow{text-align:center;color:#3c6ba8;font-size:24px;line-height:1.2;margin:4px}.archnote{text-align:center;color:var(--muted);font-size:11px;margin:7px 0}.fig{font-size:11px;color:var(--muted);text-align:center;margin:7px}.tabs{display:flex;flex-wrap:wrap;gap:5px;border-bottom:1px solid var(--line);padding-bottom:10px;margin:12px 0}.tabbtn{border:1px solid transparent;background:#f2f5fa;color:#3f5474;border-radius:6px;padding:8px 13px;font-size:12px;font-weight:600}.tabbtn.active{color:#fff;background:#315fbb}.preview{border:1px solid #cad6e9;border-radius:12px;overflow:hidden;background:#f4f6fa;margin:10px 0}.preview .windowbar{height:35px;background:#1b2c46;display:flex;align-items:center;justify-content:space-between;padding:0 15px;color:#d8e7fc;font-size:11px}.preview .windowbar em{color:#86bceb;font-style:normal}.appui{display:grid;grid-template-columns:185px minmax(0,1fr) 235px;min-height:360px;font-size:11px;color:#2e4162}.appnav{background:#e8eef7;border-right:1px solid #cad7e9;padding:13px}.appnav h5,.inspector h5{margin:0 0 12px;color:#586a81;font-size:11px;text-transform:uppercase;letter-spacing:.07em}.treeitem{border-radius:5px;padding:7px 8px;margin:4px 0;background:#f7fafe}.treeitem.sel{background:#ccddfa;color:#1b56a9;font-weight:700}.stage{padding:15px;min-width:0}.stagetop{display:flex;justify-content:space-between;gap:10px;padding-bottom:9px;border-bottom:1px solid #d8e0ea;margin-bottom:11px}.stage h4{margin:0;font-size:13px}.mini{font-size:10px;color:#677b96}.canvasgrid{min-height:230px;border:1px dashed #b8cbe2;border-radius:7px;background-image:radial-gradient(#cddaf0 .7px,transparent .7px);background-size:14px 14px;display:flex;align-items:center;justify-content:center;overflow:auto}.diagram svg{width:100%;max-width:590px;height:auto}.inspector{padding:14px;background:#f8fafd;border-left:1px solid #d6e1ed}.field{padding:7px 9px;background:#fff;border:1px solid #d9e3f0;border-radius:5px;margin:6px 0}.field b{color:#4d6282;font-size:10px;display:block}.inspectbtn{border:0;border-radius:5px;background:#315fbb;color:white;padding:7px 11px;font-size:11px}.windowfoot{background:#e4ebf5;color:#385173;padding:6px 12px;font-size:10px;border-top:1px solid #c9d8e9}.screen{display:none}.screen.active{display:block}.tx{max-width:600px;padding:11px 14px;border-radius:10px;margin:9px 0;font-size:12px}.tx.user{background:#e3edfc;border:1px solid #cadcf7;margin-left:20px}.tx.agent{background:#eef5ef;border:1px solid #cfe6d5}.logiclist{display:flex;flex-direction:column;gap:8px;margin:10px 0}.logicrow{border:1px solid #c5d5e9;border-radius:7px;background:#fff;padding:9px 11px;font-size:11px;display:flex;justify-content:space-between;gap:12px;align-items:center}.logicrow .stepid{border-radius:4px;background:#ddecff;padding:4px 7px;color:#1d5ba2;font-weight:800}.logicrow .condition{color:#6b7f9b;font-family:Consolas,monospace}.wave{width:100%;height:auto;max-height:250px}.phase{display:grid;grid-template-columns:110px 1fr;gap:12px;padding:18px 0;border-top:1px solid #e2eaf3}.phase:first-of-type{border-top:0}.phase .phaseid{font-size:19px;font-weight:800;color:var(--blue)}.phase .phasedesc{font-size:13px;color:#455673}.check{list-style:none;padding-left:0}.check li{padding-left:26px;position:relative}.check li:before{content:'□';font-size:18px;color:#3269b8;position:absolute;left:0;top:-4px}.footer{padding:26px 8px;color:var(--muted);font-size:12px}.btncopy{float:right;background:#25476e;color:white;border:1px solid #4b6690;padding:4px 9px;border-radius:5px;font-size:11px}.srcgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.citeitem{border:1px solid #dbe4ef;border-radius:7px;padding:12px;font-size:12px;color:#405779}.citeitem a{font-weight:700;display:block}.notechip{font-size:11px;color:#53709e;background:#e8f1ff;padding:4px 9px;border-radius:5px}.interact{font-size:11px;color:#526c8c;border:1px dashed #b4c7e2;padding:7px 10px;border-radius:7px;background:#f6f9fe}#toTop{position:fixed;right:23px;bottom:23px;border:0;border-radius:50%;background:#315fbb;color:#fff;width:40px;height:40px;font-size:20px;box-shadow:var(--shadow)}
+@media(max-width:1250px){.main{padding:22px}.appui{grid-template-columns:140px minmax(0,1fr) 180px}.grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.layout{display:block}.sidebar{height:auto;position:static;padding:15px}.sidebar nav{display:none}.main{padding:13px}.hero{padding:25px}.hero h1{font-size:27px}.section{padding:20px}.grid,.grid.two,.grid.four{grid-template-columns:1fr}.appui{grid-template-columns:1fr}.appnav,.inspector{border:0;border-bottom:1px solid var(--line)}.flowchart{grid-template-columns:1fr}.flowstep:not(:last-child):after{content:'↓';right:50%;top:auto;bottom:-21px}.archrow{flex-direction:column}.srcgrid{grid-template-columns:1fr}.phase{grid-template-columns:1fr}.appui{font-size:11px}}
+@media print{body{background:white;font-size:11px;color:black}.layout{display:block}.sidebar,.btncopy,#toTop,.tabs,.interact{display:none!important}.main{padding:0;max-width:none}.hero{background:#e8eff8!important;color:#172640!important;box-shadow:none;page-break-after:avoid}.hero p{color:#172640}.hero .eyebrow,.hero .pill{color:#304c70}.section{box-shadow:none;break-inside:avoid;border:1px solid #ccc;margin-top:16px;padding:16px}.screen{display:block!important;page-break-inside:avoid}.screen:before{content:'交互界面示意';display:block;font-weight:bold;margin-top:14px}.appui{min-height:auto}.windowfoot{print-color-adjust:exact}.section h2{font-size:19px}.tablewrap{overflow:visible}pre{white-space:pre-wrap;overflow:visible;print-color-adjust:exact}details{break-inside:avoid}details .inside{display:block!important}a{color:#133e87;text-decoration:underline}@page{size:A4;margin:14mm}}
+</style>
+</head>
+<body><div class="layout"><aside class="sidebar"><div class="brand"><span class="over">ENGINEERING ARCHITECTURE</span><strong>PLC Agent <span style="color:#7fc8ff">/ V2.0</span></strong><p>自然语言 · 工艺可视化 · AF · 原生 TIA 工程</p></div><nav>
+<div class="navhead">决策与现状</div><a href="#executive">00　设计结论</a><a href="#audit">01　仓库审查</a><a href="#scope">02　边界与 AF 基线</a>
+<div class="navhead">产品与技术架构</div><a href="#architecture">03　总架构与职责</a><a href="#ux">04　前端交互原型</a><a href="#model">05　统一领域模型</a><a href="#agents">06　智能体和工具</a><a href="#algorithms">07　核心算法</a><a href="#tia">08　TIA 原生交付</a><a href="#brownfield">09　旧项目增删改</a>
+<div class="navhead">工程落地</div><a href="#api">10　API 与存储</a><a href="#migration">11　重构文件映射</a><a href="#qa">12　验证与安全</a><a href="#roadmap">13　开发任务包</a><a href="#kickoff">14　首批 Agent 指令</a><a href="#references">15　依据与参考</a>
+</nav><div class="sidefoot">基线：<code style="background:#1b365a;color:#bddaff">dev/greenfield-wp</code><br>审查时间：2026-11-09<br>状态：设计方案，非实机验收</div></aside><main class="main">
+<header class="hero" id="top"><div class="eyebrow">IMPLEMENTATION-READY / ARCHITECTURE BLUEPRINT</div><h1>PLC Agent<br>西门子 PLC 工程智能体重构蓝图</h1><p>不是“AI 写 SCL”，而是一个能够理解工程、生成元器件驱动、编辑工艺时序、最小化修改既有工程，并通过真实 TIA Portal 完成编译和原生归档的工业软件产品。</p><div class="hero-grid"><span class="pill">目标：TIA V19</span><span class="pill">AF Basic · 文件夹</span><span class="pill">React 19 / ReactFlow</span><span class="pill">FastAPI / Python</span><span class="pill">C# .NET / TIA Openness</span><span class="pill">Greenfield + Brownfield</span></div></header>
+<section class="section" id="executive"><div class="kicker">00 / Executive decisions</div><h2>先拍板五个技术原则</h2><p class="intro">以下是建议实施的默认方案；与已确定的 AF Basic 文件夹版路线保持一致。</p><div class="grid"><div class="tile"><div class="num">01</div><h4>同一个工程工作区</h4><p>新项目和旧项目都进入 <code>ProjectWorkspace</code>。只在初始化策略和变更约束上分叉。</p></div><div class="tile"><div class="num">02</div><h4>一个权威语义模型</h4><p>自然语言、设备 Canvas、步序 Canvas 都操作同一 <code>EngineeringIR</code>；图形不是另一个数据库。</p></div><div class="tile"><div class="num">03</div><h4>驱动和工艺分离</h4><p><code>DriverSpec</code> 控制元件的行为；<code>SequenceIR</code> 决定什么时间调用它。</p></div><div class="tile"><div class="num">04</div><h4>AI 只提交候选变更</h4><p>LLM 不返回直接执行的 SCL；必须先生成受限 Patch，经过规则验证和人工批准。</p></div><div class="tile"><div class="num">05</div><h4>TIA 是工程事实来源</h4><p>可下载源码包 ≠ 完整工程。只有实际编译、保存、归档并核对的 <code>.zap19</code> 才是原生交付。</p></div><div class="tile green"><div class="num">→</div><h4>第一里程碑</h4><p>双作用气缸案例：自然语言建驱动→图上修改步序→TIA 编译归档→重新导入并修改。</p></div></div>
+<div class="callout"><b>重构战略：</b> 不推倒现有代码。把 Greenfield 现有的 <code>GreenfieldIR + AF Generator + PCEC + Openness</code> 抽象成共享内核，旧项目先通过 Adapter 接入。禁止拷贝一套新的后端重新发明相同功能。</div></section>
+<section class="section" id="audit"><div class="kicker">01 / Source-grounded assessment</div><h2>仓库现状：哪些保留，哪些必须补</h2><p class="intro">依据指定分支的实际文件与此前已有真机证据；“已有代码”和“用户主流程可用”分开判断。</p>
+<div class="tablewrap"><table><thead><tr><th>能力</th><th>当前证据 / 文件</th><th>差距和动作</th><th>优先级</th></tr></thead><tbody>
+<tr><td>AF 代码生成</td><td><code>plc_engine/af/af_model.py</code>、<code>af_generator.py</code></td><td>保留；添加 AFProfile 版本清单、DriverCompiler；明确 self-contained 不是官方 LBC 等价实现。</td><td><span class="tag ok">复用</span></td></tr>
+<tr><td>结构化编辑</td><td><code>greenfield_ir.py</code>、<code>greenfield_validator.py</code></td><td>保留强类型 IR、原子 Patch；新增驱动端口、步骤行为、转移条件、源块归属。</td><td><span class="tag">P0</span></td></tr>
+<tr><td>自然语言生成</td><td><code>greenfield_draft_llm.py</code>、<code>greenfield_chat.py</code></td><td>从自由结构抽取升级为 schema 约束的意图→对象引用→候选变更→解释。</td><td><span class="tag">P0</span></td></tr>
+<tr><td>画布</td><td><code>StepLink.tsx</code>、<code>greenfield_views.py</code></td><td>当前主要编辑连接线，Mermaid 为单向投影；必须新增真正的步骤/转移/动作编辑器。</td><td><span class="tag">P0</span></td></tr>
+<tr><td>真正创建 TIA 项目</td><td>C# <code>ProjectService.CreateProject</code> / <code>CreateDevice</code></td><td>已有基础 API；需要将新项目首页和真实 TIA 工作区身份绑定。固定 C#→Python 响应契约。</td><td><span class="tag">P0</span></td></tr>
+<tr><td>TIA 写回及编译</td><td><code>tia_delivery.py</code>、<code>SessionServer.cs</code></td><td>已有自动编译与会话写回链；整合唯一事务接口，完善原生项目归档及其交付证明。</td><td><span class="tag">P0</span></td></tr>
+<tr><td>旧项目导入</td><td><code>canvas_import.py</code>、<code>af_import.py</code>、<code>agents/plc/tia</code></td><td>现有解析链与 AF 角色叠加可复用；尚需不丢数据的目标块身份映射和最小修改路径。</td><td><span class="tag">P0</span></td></tr>
+<tr><td>变更验证</td><td><code>pcec.py</code>、Action A/B/C、<code>evidence/</code></td><td>保留审批门禁、编译证据、增量账本；须统一到 ProjectWorkspace 的不可变基线。</td><td><span class="tag ok">复用</span></td></tr>
+<tr><td>当前主界面终态</td><td><code>GreenfieldChannel.tsx</code> 的 <code>confirmSpec → generateProjectPackage → GO(4)</code></td><td>源码包一生成就进入“交付完成”，未证明已生成真实 TIA 项目；必须拆分状态。</td><td><span class="tag warn">P0 / 重要</span></td></tr>
+</tbody></table></div><p style="font-size:12px;color:var(--muted)">注：之前的批次已有 TIA V19 副本真机导入编译证据，但其覆盖对象不能外推为这版前端的完整原生工程交付闭环。本文是架构设计，未执行新的 TIA 实机测试。</p></section>
+<section class="section" id="scope"><div class="kicker">02 / Scope and compatibility</div><h2>明确范围：AF 版本与硬件占位</h2><div class="grid two"><div class="tile soft"><h4>AF 不切换用户已选择的档位</h4><p><b>当前目标：</b> TIA V19 + AF Basic 普通 BlockGroup 文件夹结构，Unit / EM / CM 层级和状态语义。仓库已有 <code>AF_PROFILE=SIEMENS_AF_BASIC_FOLDER_V19</code> 与 AF V1.2 Generator。保留现有基线；不擅自切换到真正的 Software Unit。新增 <code>af_profile_id + library_version + template_sha256</code>，不得把 Siemens AF V1.2、AF Basic V2.2、AF V3.0 的文档与库接口默认为同一版本。</p></div><div class="tile soft"><h4>“真实工程”与“占位”要分层</h4><p><b>真实：</b> 调用 TIA Openness 创建 <code>.ap19</code>；若要生成可编译逻辑，使用已确认、受支持的 CPU 设备或预制 CPU 骨架。<br><b>占位：</b> 元器件、接线、I/O 标签地址、站内通讯和设备参数可以保留 <code>unbound</code>；不自动编造 <code>%I/%Q</code> 地址。<br><b>不能混淆：</b> 只有空 TIA Project 而无 PlcSoftware 时，不能声称 PLC 编译完成。</p></div></div>
+<div class="tablewrap"><table><thead><tr><th>功能级别</th><th>当前版本必须支持</th><th>明确不做 / 需要独立审批</th></tr></thead><tbody><tr><td>硬件组态</td><td>真实工程 / CPU 骨架 + 逻辑占位 + TIA 导出树</td><td>自动规划全部网络/从站/GSD/IO-Link 物理组态</td></tr><tr><td>软件</td><td>CM、EM、步序、联锁、变量/UDT、OB 调用、编译</td><td>未经确认自动在线下载、修改 F-block 或解锁受保护程序</td></tr><tr><td>旧工程</td><td>只读解析、明确可写范围内的增删改、复制验证</td><td>默认强制 AF 改造整个旧项目；静默重排 DB 偏移/硬件地址</td></tr><tr><td>安全</td><td>外部安全许可反馈、软件行为约束、事件记录</td><td>把普通 SCL 联锁误作安全完整性的急停功能</td></tr></tbody></table></div><div class="callout warn"><b>安全边界：</b>急停、光幕等安全功能必须由合适的安全控制系统、风险评估与验证承担。本产品可表达“安全许可丢失时普通工艺禁止新动作”的软件接口，但不默认生成安全完整性等级相关的 F 程序。</div></section>
+<section class="section" id="architecture"><div class="kicker">03 / Architecture</div><h2>推荐系统架构：六层、一个工程事务边界</h2><p class="intro">核心不是多 Agent 的数量，而是“LLM 不越权、模型不分叉、TIA 写入串行且可恢复”。</p>
+<div class="arch"><div class="archrow"><div class="archnode dark"><strong>Web Engineering Workbench</strong><small>项目树 / 自然语言 / 设备画布 / SFC 步序 / Trace / Diff</small></div></div><div class="archarrow">↓ PATCH / PREVIEW / APPROVE / JOB / SSE</div><div class="archrow"><div class="archnode"><strong>FastAPI Application</strong><small>鉴权 / Workspace / EventLog / 审批 / Job 队列</small></div><div class="archnode"><strong>Agent Orchestrator</strong><small>意图路由 / 工具调用 / 结构化候选 Patch</small></div></div><div class="archarrow">↓ 只有受控命令可以改变项目</div><div class="archrow"><div class="archnode"><strong>EngineeringIR</strong><small>AF 层级、DriverSpec、SequenceIR、引用关系、来源</small></div><div class="archnode"><strong>Validation Engine</strong><small>类型 / 可达性 / 联锁 / 唯一写者 / 依赖 / 版本</small></div><div class="archnode"><strong>Compiler / Diff Planner</strong><small>模板生成 / SCL AST / SourceMap / ChangeSet</small></div></div><div class="archarrow">↓ 可审计变更计划，不直接写实体</div><div class="archrow"><div class="archnode green"><strong>TIA Delivery Coordinator</strong><small>基线锁 / 事务 / 导入顺序 / 编译 / 归档 / 失败恢复</small></div><div class="archnode green"><strong>Snapshot + Artifact Store</strong><small>原始归档 / IR 版本 / 生成 SCL / 编译回执 / hash</small></div></div><div class="archarrow">↓ 仅通过 Windows 专属受控端口</div><div class="archrow"><div class="archnode dark"><strong>Windows TIA Openness Worker</strong><small>C# STA 单写者 · TIA Portal V19 · 工程工作副本</small></div></div></div><p class="fig">图 1 · 所有修改先在工程内核完成，只有 Delivery Coordinator 可以调用写入型 TIA 工具。</p>
+<h3>部署拓扑</h3><div class="grid three"><div class="tile"><h4>浏览器 / 本地</h4><p>React/Vite。浏览和编辑 IR；不上传私有工程到外部 LLM，除非用户明确配置并接受数据范围。</p></div><div class="tile"><h4>Python 服务</h4><p>Windows 本机或 LAN 后端。提供持久化、LLM 路由、编译与规则引擎。Linux 可以运行纯离线层。</p></div><div class="tile"><h4>Windows 主机</h4><p>V19、合法 STEP 7、Siemens.Engineering PublicAPI。单项目独占锁与单 STA 请求队列。只向已授权客户端开放受控 API。</p></div></div>
+<h3>工程事实流和派生物</h3><pre><code>Natural language ──┐
+ReactFlow edits ────┼─> CandidatePatch ─> Validator ─> EngineeringIR (authoritative)
+Imported TIA ──────┘                           │                  │
+                                     Reject / questions       ├─> DeviceGraph projection
+                                                              ├─> SFC Editor projection
+                                                              ├─> Timing Trace projection
+                                                              ├─> SCL / SimaticML / AF package
+                                                              └─> ChangeSet / source map
+                                                                          │
+                                                      Human sign-off + baseline recheck
+                                                                          │
+                                                 TIA Openness apply → compile → archive</code></pre>
+</section>
+<section class="section" id="ux"><div class="kicker">04 / Frontend UX (clickable mock)</div><h2>前端不是“四个孤立向导页”，而是持续工作的工程 IDE</h2><p class="intro">首次新建/导入使用项目启动向导；进入工作台后持续使用同一空间完成设计、修改和交付。下面的标签可切换交互原型示意。</p>
+<div class="tabs" role="tablist" aria-label="前端工作模式"><button class="tabbtn active" data-screen="s-project">① 项目总览</button><button class="tabbtn" data-screen="s-device">② 元器件驱动</button><button class="tabbtn" data-screen="s-sequence">③ 工艺步序</button><button class="tabbtn" data-screen="s-trace">④ 时序预览</button><button class="tabbtn" data-screen="s-diff">⑤ 变更审核</button><button class="tabbtn" data-screen="s-delivery">⑥ TIA 交付</button></div><p class="interact">交互说明：点击模式标签查看同一工作台的不同中间区域。此处为可切换的设计示意，不连接真实 PLC/TIA。</p>
+<div class="screen active" id="s-project"><div class="preview"><div class="windowbar"><span>PLC Agent / Demo_Project</span><em>● V19 · AF Basic Folder · 草稿 v3</em></div><div class="appui"><div class="appnav"><h5>PROJECT EXPLORER</h5><div class="treeitem sel">▸ Demo_Project</div><div class="treeitem">　▸ TIA 工程骨架</div><div class="treeitem">　▾ Unit 01</div><div class="treeitem">　　▸ EM01 Clamp</div><div class="treeitem">　　　CM01 cylClamp</div><div class="treeitem">　　　CM02 sensorHome</div><div class="treeitem">　▸ Block Index</div><div class="treeitem">　▸ 变更历史</div></div><div class="stage"><div class="stagetop"><h4>项目工作区 / 首页</h4><span class="notechip">基线锁定　•　未发布</span></div><div class="grid two" style="gap:8px"><div class="tile"><b>真实工程</b><p>.ap19 已存在<br>CPU 模板已确认<br>I/O 地址未绑定</p></div><div class="tile"><b>生成状态</b><p>2 个 CM<br>1 个 EM<br>5 个步骤 / 1 项待确认</p></div></div><h4 style="margin:15px 0 6px">下一步建议</h4><div class="logicrow">① 先确认气缸两端反馈信号 <span class="tag">打开驱动</span></div><div class="logicrow">② 检查缩回超时处理 <span class="tag">查看时序</span></div><div class="logicrow">③ 导入前检查单一输出写点 <span class="tag">运行预检</span></div></div><div class="inspector"><h5>AI ENGINEERING COPILOT</h5><div class="tx user">新建一个工位，气缸夹紧后等待视觉完成。</div><div class="tx agent">已识别 1 个执行器、2 个反馈、1 个外部握手。缺少超时时间，需确认。</div><div class="field"><b>建议的下一动作</b>确认 TimeOut：3000 ms</div><button class="inspectbtn">生成候选变更</button></div></div><div class="windowfoot">设计信息 ≠ TIA 实时状态　｜　草稿持久化　｜　未触发实际写入</div></div></div>
+<div class="screen" id="s-device"><div class="preview"><div class="windowbar"><span>PLC Agent / 元器件驱动编辑器</span><em>CM01 / TwoWayActuator</em></div><div class="appui"><div class="appnav"><h5>DEVICE LIBRARY</h5><div class="treeitem">执行器</div><div class="treeitem sel">　双作用气缸</div><div class="treeitem">　单线圈阀</div><div class="treeitem">　电机接触器</div><div class="treeitem">传感器</div><div class="treeitem">运动轴</div><div class="treeitem">自定义 CM</div></div><div class="stage"><div class="stagetop"><h4>CM01 · cylClamp</h4><span class="tag ok">端口检查通过</span></div><div class="canvasgrid diagram"><svg viewBox="0 0 550 245" xmlns="http://www.w3.org/2000/svg"><defs><marker id="a1" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0 0L6 3L0 6" fill="none" stroke="#3f77b4"/></marker></defs><rect x="171" y="48" width="205" height="148" rx="9" fill="#e6f0fe" stroke="#3c75ba" stroke-width="2"/><text x="273" y="72" font-weight="bold" font-size="15" text-anchor="middle" fill="#214a7e">FB_cylClamp</text><text x="273" y="91" font-size="10" text-anchor="middle" fill="#52749c">CM / LBC_TwoWayActuator</text><g fill="#274e7f" font-size="12"><text x="19" y="55">CmdExtend</text><text x="19" y="97">CmdRetract</text><text x="19" y="140">SafetyPermit</text><text x="19" y="181">SensorOut / In</text><text x="423" y="56">Status</text><text x="423" y="97">Busy</text><text x="423" y="141">Error / ID</text><text x="423" y="181">Q_Ext / Q_Ret</text></g><g stroke="#3f77b4" stroke-width="2" marker-end="url(#a1)"><path d="M108 51H170"/><path d="M119 94H170"/><path d="M122 136H170"/><path d="M142 178H170"/><path d="M376 52H418"/><path d="M376 94H418"/><path d="M376 137H418"/><path d="M376 178H418"/></g><text x="273" y="120" fill="#426993" font-size="12" text-anchor="middle">MANUAL / AUTO</text><text x="273" y="145" fill="#426993" font-size="12" text-anchor="middle">TIMEOUT / FAULT</text><text x="273" y="169" fill="#426993" font-size="12" text-anchor="middle">COMMAND INTERLOCK</text></svg></div></div><div class="inspector"><h5>DRIVER INSPECTOR</h5><div class="field"><b>类型</b>LBC_TwoWayActuator</div><div class="field"><b>超时</b>3000 ms</div><div class="field"><b>反向互斥</b>启用</div><div class="field"><b>IO 绑定</b>4 个符号 / 地址待绑定</div><div class="field"><b>安全反馈</b>SafetyPermit (外部)</div><button class="inspectbtn">提出修改</button></div></div><div class="windowfoot">端口 schema / 生成 SCL / CM 单写点检查 / 可复用 Driver Template</div></div></div>
+<div class="screen" id="s-sequence"><div class="preview"><div class="windowbar"><span>PLC Agent / 工艺步序编辑器</span><em>EM01.Sequence · Editable SFC-like</em></div><div class="appui"><div class="appnav"><h5>PROCESS STRUCTURE</h5><div class="treeitem">工作模式 Automatic</div><div class="treeitem sel">EM01 ClampSequence</div><div class="treeitem">　S0 待机</div><div class="treeitem">　S1 夹紧</div><div class="treeitem">　S2 保持</div><div class="treeitem">　S3 复位</div><div class="treeitem">　S4 结束</div></div><div class="stage"><div class="stagetop"><h4>状态/步骤/转移条件</h4><span class="tag">拖拽 / 双击 / 添加分支</span></div><div class="canvasgrid diagram"><svg viewBox="0 0 560 270" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#6b88a9" stroke-width="1.5"/></marker></defs><g font-family="Arial,sans-serif" font-size="12" text-anchor="middle"><rect x="10" y="98" width="90" height="66" rx="7" fill="#e8f0fc" stroke="#6a94cc"/><text x="55" y="121" fill="#294a77" font-weight="bold">S0 待机</text><text x="55" y="142" fill="#57718d" font-size="10">Ready</text><rect x="145" y="98" width="90" height="66" rx="7" fill="#d6e5fd" stroke="#326cb3"/><text x="190" y="121" fill="#244c81" font-weight="bold">S1 伸出</text><text x="190" y="142" fill="#4b709a" font-size="10">Extend</text><rect x="280" y="98" width="90" height="66" rx="7" fill="#ccece7" stroke="#25877a"/><text x="325" y="121" fill="#26685e" font-weight="bold">S2 保持</text><text x="325" y="142" fill="#427c75" font-size="10">2000 ms</text><rect x="415" y="98" width="90" height="66" rx="7" fill="#d6e5fd" stroke="#326cb3"/><text x="460" y="121" fill="#244c81" font-weight="bold">S3 缩回</text><text x="460" y="142" fill="#4b709a" font-size="10">Retract</text><rect x="280" y="12" width="90" height="49" rx="7" fill="#fff0ee" stroke="#bb6c64"/><text x="325" y="32" fill="#96514b" font-weight="bold">FAULT</text><text x="325" y="49" fill="#ab6158" font-size="10">异常停止</text></g><g stroke="#5b80af" stroke-width="2" marker-end="url(#arr2)" fill="none"><path d="M101 131H143"/><path d="M236 131H278"/><path d="M371 131H413"/><path d="M461 98V36H372" stroke="#be6b64" stroke-dasharray="5 3" marker-end="url(#arr2)"/><path d="M190 98V36H278" stroke="#be6b64" stroke-dasharray="5 3" marker-end="url(#arr2)"/></g><g fill="#517197" font-size="10" text-anchor="middle"><text x="122" y="91">Start</text><text x="257" y="91">Extended</text><text x="393" y="91">T≥2s</text></g><text x="325" y="222" fill="#ad615d" font-size="11" text-anchor="middle">伸出或缩回超时 → FAULT（拒绝进入下一工步）</text></svg></div><p class="mini">选中步骤可编辑：动作/进入条件/持续条件/退出条件/超时/异常/复位路径。连线使用具名端口；拒绝没有终点的分支和类型不匹配的条件。</p></div><div class="inspector"><h5>SELECTED STEP / S2</h5><div class="field"><b>动作</b>Hold(cylClamp)</div><div class="field"><b>进入条件</b>cylClamp.Extended</div><div class="field"><b>保持时间</b>2000 ms</div><div class="field"><b>转移条件</b>elapsed ≥ hold_ms</div><div class="field"><b>超时分支</b>to Fault</div><button class="inspectbtn">验证修改</button></div></div><div class="windowfoot">双向绑定：Canvas edit → SequencePatch → Validator → IR revision → SCL preview</div></div></div>
+<div class="screen" id="s-trace"><div class="preview"><div class="windowbar"><span>PLC Agent / 控制时序验证</span><em>预测模型 Trace · 非在线 PLC 波形</em></div><div class="appui"><div class="appnav"><h5>TEST SCENARIOS</h5><div class="treeitem sel">正常循环</div><div class="treeitem">伸出不到位</div><div class="treeitem">缩回超时</div><div class="treeitem">安全许可丢失</div><div class="treeitem">复位后重启</div></div><div class="stage"><div class="stagetop"><h4>时序图 / 模拟预期结果</h4><span class="tag warn">预测，不是实机验证</span></div><div class="canvasgrid" style="min-height:260px"><svg class="wave" viewBox="0 0 585 252" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#d2dce8" stroke-width="1"><path d="M95 25H563M95 67H563M95 109H563M95 151H563M95 193H563M95 235H563"/><path d="M95 25V235M173 25V235M251 25V235M329 25V235M407 25V235M485 25V235M563 25V235" stroke-dasharray="3 5"/></g><g font-family="Consolas,monospace" font-size="11" fill="#46607d"><text x="7" y="42">Step S1</text><text x="7" y="84">Q_Extend</text><text x="7" y="126">Extended</text><text x="7" y="168">Step S2</text><text x="7" y="210">Q_Retract</text><text x="95" y="248">0</text><text x="251" y="248">2s</text><text x="407" y="248">4s</text><text x="540" y="248">6s</text></g><g fill="none" stroke-width="3" stroke-linejoin="round"><path d="M95 51H125V30H235V51H563" stroke="#3676c3"/><path d="M95 93H125V72H229V93H563" stroke="#4c8bcb"/><path d="M95 135H229V114H485V135H563" stroke="#2b9683"/><path d="M95 177H235V156H407V177H563" stroke="#2b9683"/><path d="M95 219H407V198H540V219H563" stroke="#b57a37"/></g><rect x="240" y="152" width="165" height="39" fill="#2b9683" fill-opacity=".08" stroke="none"/><text x="245" y="186" font-size="9" fill="#287f72">保持时间 2000ms（示意）</text></svg></div><p class="mini">时间值由驱动参数与仿真输入场景计算。默认不构造假的“实时运行”。点击区间可定位到相应 SFC 步骤和生成代码行。</p></div><div class="inspector"><h5>TRACE ASSERTIONS</h5><div class="field"><b>规则</b>Q_Extend ∧ Q_Retract 必须为 false</div><div class="field"><b>规则</b>异常时不得进入下一工步</div><div class="field"><b>覆盖</b>5 个离线场景</div><div class="field"><b>来源</b>deterministic scan simulator</div><button class="inspectbtn">导出 Trace JSON</button></div></div><div class="windowfoot">支持编辑参数后重新模拟；显示真实编译/在线数据时必须标记独立来源。</div></div></div>
+<div class="screen" id="s-diff"><div class="preview"><div class="windowbar"><span>PLC Agent / 旧工程变更审核</span><em>ChangeSet CHG-00024 · 未批准</em></div><div class="appui"><div class="appnav"><h5>PROJECT BASELINE</h5><div class="treeitem sel">Legacy_Line01.ap19</div><div class="treeitem">　保留：硬件 / IO</div><div class="treeitem">　保留：F/Safety 块</div><div class="treeitem">　修改：FB_Clamp</div><div class="treeitem">　新增：DB_Counter</div><div class="treeitem">　未改：其他 87 块</div></div><div class="stage"><div class="stagetop"><h4>针对原工程的变更清单</h4><span class="tag warn">确认前零 TIA 写入</span></div><div class="logiclist"><div class="logicrow"><span><span class="tag ok">ADD</span> DB_Counter · 新建实例数据块</span><span>依赖 0</span></div><div class="logicrow"><span><span class="tag">MODIFY</span> FB_Clamp · Step S3 新增计数动作</span><span>影响 1 块</span></div><div class="logicrow"><span><span class="tag muted">KEEP</span> IO / 硬件 / F-Blocks</span><span>Hash 不变</span></div></div><pre style="font-size:11px">@@ FB_Clamp / Sequence S3 @@
+  IF #Retracted THEN
++   #ControlNodes.counter := #ControlNodes.counter + 1;
+    #Step := 4;
+  END_IF;</pre></div><div class="inspector"><h5>REVIEW &amp; APPROVAL</h5><div class="field"><b>工程基线</b>sha256: 9e24…</div><div class="field"><b>源码匹配</b>已确认目标块</div><div class="field"><b>删除操作</b>0</div><div class="field"><b>安全块更改</b>0</div><div class="field"><b>评审结论</b>待审核</div><button class="inspectbtn">批准本次变更</button></div></div><div class="windowfoot">原工程保留不动；批准后写入 copy-on-write 副本。</div></div></div>
+<div class="screen" id="s-delivery"><div class="preview"><div class="windowbar"><span>PLC Agent / TIA 工程交付</span><em>JOB-0167 · 等待真机执行</em></div><div class="appui"><div class="appnav"><h5>DELIVERY STEPS</h5><div class="treeitem">01 冻结规格</div><div class="treeitem">02 生成 SCL</div><div class="treeitem sel">03 TIA 导入</div><div class="treeitem">04 Compile PLC</div><div class="treeitem">05 Save Project</div><div class="treeitem">06 Archive .zap19</div></div><div class="stage"><div class="stagetop"><h4>交付事务 / 严格阶段门禁</h4><span class="tag warn">演示状态 · 未执行</span></div><div class="flowchart" style="grid-template-columns:repeat(3,1fr)"><div class="flowstep">IR 冻结<small>spec_hash</small></div><div class="flowstep">导入 / 编译<small>真机回执</small></div><div class="flowstep">原生归档<small>exact artifact</small></div></div><div class="logicrow">离线源码包 <span class="tag ok">可下载 · 不是 TIA 原生项目</span></div><div class="logicrow">TIA 工程归档 <span class="tag warn">未就绪 · 等待编译与归档</span></div><p class="mini">真实成功条件 = 原工程路径存在 + TIA API 返回编译成功/0 errors + Save + Archive 返回可校验的 zap19 路径 + SHA256 + 读取或恢复校验。</p></div><div class="inspector"><h5>ENGINEERING RECEIPT</h5><div class="field"><b>规格版本</b>v3 / frozen</div><div class="field"><b>目标</b>TIA V19</div><div class="field"><b>项目类型</b>新建原生工程</div><div class="field"><b>编译结果</b>pending_real_machine</div><div class="field"><b>归档 SHA256</b>未生成</div><button class="inspectbtn">查看日志和建议</button></div></div><div class="windowfoot">状态来自后端真实 Job，不由前端自行标记成功。</div></div></div>
+<h3>六个前端交互协议（必须遵守）</h3><div class="tablewrap"><table><thead><tr><th>操作</th><th>UI 行为</th><th>后端事务</th><th>拒绝时反馈</th></tr></thead><tbody>
+<tr><td>自然语言新增元件</td><td>聊天窗口展示识别实体 + 新驱动卡片，预览待确认端口</td><td>parse → resolve → <code>proposePatch</code>（不写 TIA）</td><td>缺少型号/反馈/超时则显示待确认字段</td></tr>
+<tr><td>手工增加设备/接线</td><td>节点拖入、端口连线、右侧属性面板</td><td>带 <code>base_revision</code> 的原子 Patch；服务端回传新 IR</td><td>字段类型/CM 唯一性校验，回滚局部乐观显示</td></tr>
+<tr><td>时序步序编辑</td><td>双击 Step 修改动作、Guard、超时；Fork/Join 专用节点</td><td><code>SequencePatch</code> → 结构化 AST 校验 → 更新 SCL 预览</td><td>缺少错误分支/不可达/条件冲突标注于节点</td></tr>
+<tr><td>时序仿真</td><td>切换场景，展示周期扫描 Trace；可点时刻跳转 Step</td><td>离线 <code>simulateScenario</code>，输入场景明确、确定性可复现</td><td>显示反例及到达路径，而非一行“仿真失败”</td></tr>
+<tr><td>审核旧工程变更</td><td>Before/After、受影响块、依赖、原始源码旁路对比</td><td>冻结 <code>ChangeSet</code>，等待 <code>review_approved</code></td><td>基线漂移、保护块、删除依赖未解除时禁止批准</td></tr>
+<tr><td>交付 TIA</td><td>逐步日志、编译诊断到源代码/画布反向定位</td><td>单工程锁 → Openness → Compile → Save → Archive</td><td>失败保留日志与可编辑设计，不出现伪成功下载按钮</td></tr>
+</tbody></table></div><div class="callout"><b>布局建议：</b>左侧 220–260px 项目树，中间弹性 Canvas / Code / Trace，右侧 300–380px 工程师属性面板和 Copilot，底部可展开编译诊断。不要把所有功能做成弹窗；用户应始终能看到当前工程、当前步骤、待解决问题。</div></section>
+<section class="section" id="model"><div class="kicker">05 / Domain and contracts</div><h2>统一领域模型：EngineeringIR v2</h2><p class="intro">建议升级现有 GreenfieldIR，不要求一次性改掉所有消费者。先增加可序列化的新字段，使用 schema version 与兼容层逐步迁移。</p>
+<div class="arch"><div class="archrow"><div class="archnode"><strong>ProjectWorkspace</strong><small>身份/来源/路径/基线/修订/权限</small></div></div><div class="archarrow">↓ owns</div><div class="archrow"><div class="archnode green"><strong>AFProfile</strong><small>版本/文件夹树/库类型/编号空间</small></div><div class="archnode green"><strong>HardwareIntent</strong><small>真实 CPU skeleton / IO symbolic placeholders</small></div><div class="archnode green"><strong>ImportedSnapshot</strong><small>旧块原文/调用图/保护属性/hash</small></div></div><div class="archarrow">↓ canonical model</div><div class="archrow"><div class="archnode"><strong>ComponentDefinition</strong><small>器件类型/端口/参数规则</small></div><div class="archnode"><strong>DriverSpec</strong><small>状态/命令/反馈/故障/手自动</small></div><div class="archnode"><strong>SequenceIR</strong><small>步骤/动作/转移/并行/时限</small></div></div><div class="archarrow">↓ patches & lowering</div><div class="archrow"><div class="archnode"><strong>ChangeSet</strong><small>语义实体操作/目标块身份/审批</small></div><div class="archnode"><strong>ArtifactManifest</strong><small>UDT/FB/DB/OB、SCL/XML、导入顺序</small></div><div class="archnode"><strong>SourceMap</strong><small>Canvas Node / IR ID ↔ SCL 行 ↔ TIA 块</small></div></div></div>
+<h3>模型字段与不变量</h3><div class="tablewrap"><table><thead><tr><th>实体</th><th>关键字段</th><th>不可违反的不变量</th></tr></thead><tbody><tr><td><code>ProjectWorkspace</code></td><td>project_id, origin, tia_version, baseline_hash, revision, artifact_ids</td><td>历史不可变；所有操作绑定 project_id 与 revision；旧工程副本独立于原件</td></tr><tr><td><code>AFProfile</code></td><td>profile_id, library_id, library_version, template_hash, number_policy</td><td>生成/编译期版本一致；不得直接用“最新版本”替换已选基线</td></tr><tr><td><code>DriverSpec</code></td><td>component_type, typed_ports, params, states, transitions, failure_policy</td><td>驱动输出写者唯一；命令/反馈类型一致；必须有异常约束</td></tr><tr><td><code>SequenceIR</code></td><td>steps, transitions, guards AST, actions, modes, timeout, parallel_groups</td><td>入口明确；分支条件有优先级或互斥证明；Fork/Join 配对</td></tr><tr><td><code>SourceBinding</code></td><td>source_block_id, original_hash, source_span, ir_ids, writable</td><td>旧块不可解析时仍保留；不凭块名猜测可写范围</td></tr><tr><td><code>ChangeSet</code></td><td>base_revision, before_hash, ops, impacts, review, validation</td><td>无批准不写实体；发现基线变更则拒绝/重新差异合并</td></tr><tr><td><code>NativeTiaArtifact</code></td><td>job_id, project_path, archive_path, archive_hash, compile, evidence</td><td>归档来自同一项目/任务；真实存在且经校验；不是文件夹扫描所得</td></tr></tbody></table></div>
+<h3>建议的数据契约：气缸 DriverSpec + 步序</h3><details open><summary>示例 JSON · 用于 schema 设计和集成测试（不是直接写入真实 TIA 的数据）</summary><div class="inside"><button class="btncopy" data-copy="model-example">复制 JSON</button><pre id="model-example"><code>{
+  "schema_version": "engineering-ir/2.0",
+  "project_id": "prj_demo_001",
+  "revision": 7,
+  "origin": "greenfield",
+  "af_profile": {
+    "id": "SIEMENS_AF_BASIC_FOLDER_V19",
+    "library_version": "PINNED_BY_WORKSPACE",
+    "template_sha256": "REQUIRED_ON_COMPILE"
+  },
+  "hardware": {"cpu_template": "selected_by_user", "io_binding": "unbound"},
+  "components": [{
+    "id": "cm_clamp", "name": "cylClamp",
+    "component_type": "double_acting_cylinder",
+    "driver_template": "LBC_TwoWayActuator",
+    "ports": {
+      "cmd_extend": "BOOL", "cmd_retract": "BOOL",
+      "fb_extended": "BOOL", "fb_retracted": "BOOL",
+      "safety_permit": "BOOL", "error_id": "WORD"
+    },
+    "parameters": {"move_timeout_ms": 3000},
+    "io_bindings": {"coil_extend": null, "coil_retract": null},
+    "source": "user_confirmed"
+  }],
+  "process": {
+    "id": "seq_clamp", "mode": "automatic", "initial_step": "S0",
+    "steps": [
+      {"id":"S0","action":[],"on_entry":[]},
+      {"id":"S1","action":[{"command":"cm_clamp.extend"}]},
+      {"id":"S2","action":[{"command":"wait"}],"min_duration_ms":2000},
+      {"id":"S3","action":[{"command":"cm_clamp.retract"}]},
+      {"id":"S4","action":[{"command":"complete"}]}
+    ],
+    "transitions": [
+      {"from":"S0","to":"S1","guard":{"signal":"start_edge"}},
+      {"from":"S1","to":"S2","guard":{"signal":"cm_clamp.fb_extended"}},
+      {"from":"S2","to":"S3","guard":{"gte":[{"step_elapsed_ms":"S2"},2000]}},
+      {"from":"S3","to":"S4","guard":{"signal":"cm_clamp.fb_retracted"}}
+    ],
+    "exceptions": [{"any_step":true,"when":"driver_fault","goto":"FAULT"}]
+  }
+}</code></pre></div></details>
+<h3>关键建模决定</h3><ul><li><b>对象 ID 与名称分离：</b><code>cm_clamp</code> 是不可变 ID，<code>cylClamp</code> 是可改展示/生成名。修改名字不能导致已有引用失效。</li><li><b>IR 与 TIA 块不是一一对应：</b>一个 EM 的步序可能派生 FB、实例 DB、OB 等多个块。SourceMap 必须支持 N:N。</li><li><b>强类型 Guard AST：</b>不能在生成器里接受 <code>eval()</code>、拼接任意自然语言作为 SCL 布尔表达式。</li><li><b>图形布局不进入工程语义哈希：</b>步骤位置、缩放、颜色属于 UI layout；改变这些不应导致 SCL 重新生成。</li><li><b>明确未绑定：</b>物理地址 <code>null</code> 和“假默认地址 %Q0.0”含义完全不同；源代码生成不能偷偷使用占位符地址。</li></ul></section>
+<section class="section" id="agents"><div class="kicker">06 / Agent orchestration</div><h2>Agent 是编排层，编译/校验必须可重复</h2><div class="grid two"><div class="tile"><h4>Coordinator / Intent Router</h4><p>分类任务：问答、增加元器件、调整驱动、变更工艺、查询旧工程、生成预览、执行工程交付。调用只读检索和候选变更工具。</p></div><div class="tile"><h4>Component Engineer</h4><p>自然语言 → 组件类型与参数 → 标准 DriverSpec → CM 实例。未知端口不得自行补出物理地址。</p></div><div class="tile"><h4>Process Engineer</h4><p>自然语言 → 步骤、动作、转移、联锁、异常 → SequenceIR。不能提交未经校验的自由文本代码。</p></div><div class="tile"><h4>Project Analyst</h4><p>旧工程块检索、引用关系、现状解释、修改目标定位、受影响范围分析，遇到不确定来源标注。</p></div><div class="tile"><h4>Review Planner</h4><p>对候选 Patch 生成影响分析、测试场景、风险等级和用户需要补充的决策。</p></div><div class="tile"><h4>TIA Executor / deterministic</h4><p>不是放权给 LLM 的自由 Agent。它是受控事务服务：准备→编译→保存→归档；所有写操作由显式批准触发。</p></div></div>
+<h3>推荐工具合同</h3><pre><code>read_project(project_id)                # read-only
+find_component(project_id, query)       # read-only
+get_block_source(project_id, block_id)  # read-only / protected block returns metadata
+propose_driver(spec)                    # returns CandidatePatch, never writes TIA
+propose_sequence(spec)                  # returns CandidatePatch
+validate_patch(project_id, base_rev, ops)
+preview_scl(project_id, candidate_id)
+simulate_sequence(project_id, scenario)
+request_review(project_id, candidate_id)
+# The following actions are NOT exposed to the LLM as free-form tools:
+approve_changeset(changeset_id, reviewer_id, explicit=True)
+start_tia_delivery(approved_changeset_id, target_workspace_id)</code></pre>
+<h3>一轮 LLM 请求的受控路径</h3><div class="flowchart"><div class="flowstep">提取意图<small>JSON Schema</small></div><div class="flowstep">解析对象<small>Block/CM ID</small></div><div class="flowstep">生成 Patch<small>候选，不写盘</small></div><div class="flowstep">本地验证<small>失败反馈</small></div><div class="flowstep">提交可审草稿<small>用户可修改</small></div></div><p>LLM 模型选择可替换；工程一致性不依赖模型“记忆力”。读取上下文应使用最小需要的块索引、设备定义和当前步骤，不能一次塞入整个 TIA 项目。</p></section>
+<section class="section" id="algorithms"><div class="kicker">07 / Core algorithms</div><h2>核心算法设计：从语言到可编译控制程序</h2><p class="intro">以下是重构最重要的算法合同，算法应独立于 React 和 TIA Openness，具备纯函数单元测试。</p>
+<h3>A1 · 自然语言 → 类型化需求 → CandidatePatch</h3><pre><code>function parse_request(message, context):
+  intent = llm.extract(message, schema=IntentSchema)
+  targets = resolver.match(intent.targets, context.symbol_index)
+  if ambiguous(targets) or missing_required(intent):
+      return ClarificationIssues(unresolved_slots, candidate_ids)
+  proposal = domain_mapper.to_patch(intent, targets)
+  preview = apply_to_clone(current_ir, proposal)
+  errors = validate_all(preview)
+  if errors: return RejectedProposal(errors, unchanged_ir_hash)
+  return CandidatePatch(ops=proposal, before_hash, after_hash, explanation)
+
+# LLM never returns unrestricted SCL for direct TIA execution.</code></pre>
+<p><b>实现重点：</b>规则表先识别“气缸/电机/按钮/开关”等常见实体，再使用 LLM 结构化填槽；别名词典解决“夹紧气缸/气缸1/cylClamp”指代；字段来源分别标记 <code>user_explicit / inferred / imported / library_default</code>。未知关键参数在确认前进入问题队列。</p>
+<h3>A2 · 元器件 Driver 自动合成</h3><div class="tablewrap"><table><thead><tr><th>阶段</th><th>确定性算法</th><th>输出</th></tr></thead><tbody><tr><td>分类</td><td>设备类型 → CM Catalog 匹配；无法命中则标 <code>custom_pending</code></td><td>component_type / template_id</td></tr><tr><td>接口</td><td>从模板抽取命令/反馈/参数，生成 typed ports；区分必需/可选</td><td>DriverSpec</td></tr><tr><td>行为</td><td>把状态转移表编译为故障/超时/动作状态机；避免同时驱动反向线圈</td><td>Driver FSM</td></tr><tr><td>AF 绑定</td><td>生成 CM 控制节点、实例、Config、CallEquipment 引用，优先官方 LBC 模板</td><td>AF CM + SCL/XML</td></tr><tr><td>安全检查</td><td>端口类型校验、单写点、命令冲突、异常路径、无绑定 IO 明示</td><td>DriverValidation</td></tr></tbody></table></div>
+<p>驱动内核例：<code>IDLE → EXTENDING → EXTENDED → RETRACTING → RETRACTED</code>，另有 <code>FAULT</code>；命令在自动和手动模式下通过唯一仲裁器进入驱动，并不能绕过 SafetyPermit。对于不确定的阀型、失电状态和恢复策略，必须要求工程师确认。</p>
+<h3>A3 · 步序图的有限状态语义（SFC-like）</h3><p>第一版建议使用受限 SFC 语义，生成 SCL 中的确定性步进状态机；不要声称生成与 TIA GRAPH 完全等价的原生 GRAPH 工程。</p>
+<pre><code>SequenceIR = (Steps, Transitions, Actions, Guards, Modes, Exceptions)
+Step = {id, entry_actions[], cyclic_actions[], exit_actions[],
+        min_duration, max_duration, failure_target}
+Transition = {from[], to[], guard_ast, priority, edge_type}
+
+# 在“当前扫描周期开始时”的稳定快照上判定转换：
+scan(input_snapshot, active_steps, timers, driver_feedback):
+  snapshot = freeze(input_snapshot, active_steps, driver_feedback)
+  enabled = evaluate_typed_guards(snapshot)                # no eval()
+  selected = resolve_priority_and_fork_join(enabled)       # deterministic
+  next_steps = atomic_transition(active_steps, selected)
+  actions = compose_actions(next_steps)                    # documented policy
+  commands = arbitrate_single_writer(actions, safety_permit)
+  next_drivers = tick_driver_fsms(commands, snapshot, timers)
+  return next_steps, next_drivers, trace
+
+# Scan ordering is fixed and documented; compiled SCL and simulator must match.</code></pre>
+<p>若以后支持真正的并行 Step，需要引入 Token/Fork/Join 语义，避免用一个整数 <code>CASE step</code> 假装可处理并行分支。默认 MVP 先实现确定性串行步骤、优先级分支和异常路径；并行图可以展示但在实现其运行语义前必须阻止交付。</p>
+<h3>A4 · 自动验证：图论 + 类型系统 + 约束求解</h3><div class="grid two"><div class="tile"><h4>图论</h4><p>DFS/BFS 判定不可达步骤与未到达终态；Tarjan SCC 检查非终止循环；DAG/拓扑排序处理生成块依赖；反向调用索引分析删除后影响。</p></div><div class="tile"><h4>类型与资源检查</h4><p>Guard AST 中 BOOL/TIME/INT 等类型统一；命令端口与反馈端口不能混用；对所有物理输出及符号映射做单写者和互斥约束。</p></div><div class="tile"><h4>互斥和死锁</h4><p>同一步两个分支的 Guard 若同时成立，必须有显式 priority，或采用约束求解检查互斥。不能用输入顺序偷偷决定执行顺序。</p></div><div class="tile"><h4>故障场景</h4><p>每个运动/执行步骤自动产生超时、反馈不一致、SafetyPermit 失效、复位重新进入等测试场景；出错时返回最短反例路径。</p></div></div>
+<details><summary>静态检查算法伪代码</summary><div class="inside"><pre><code>def validate_process(ir):
+    errors = []
+    errors += schema_and_type_checks(ir)
+    errors += unknown_reference_checks(ir)
+    errors += graph_reachability(ir.steps, ir.initial_step)
+    errors += scc_without_exit_checks(ir.transitions)
+    errors += branch_priority_or_exclusivity_checks(ir.transitions)
+    errors += single_writer_checks(ir.io_bindings, ir.drivers, ir.steps)
+    errors += driver_precondition_checks(ir)
+    errors += cycle_and_timeout_policy_checks(ir)
+    errors += unsupported_parallel_construct_checks(ir)
+    return sort_by_source_id(errors)
+
+# Rule: unknown == fail-closed for code generation;
+# 'no findings' only means these checks passed, not machine safety proven.</code></pre></div></details>
+<h3>A5 · 带 Trace 的离线运行器：可预测，不冒充实机</h3><p>使用 <code>Scenario = [(t, input_signal, value), …]</code> 定义外部输入波形；用与 SCL Lowering 共享的语义规则逐个扫描周期更新状态。记录 <code>TraceFrame</code>：周期、活动步骤、条件、动作、Driver 状态、输出、报警、SourceMap。时序图仅渲染 Trace；若测试结果来自 TIA PLCSIM 或真实 PLC，必须显式显示 <code>data_source</code>。</p>
+<h3>A6 · IR → SCL / SimaticML 编译（最关键的确定性层）</h3><pre><code>FrozenSpec + AFProfile
+    → semantic validation (not just Mermaid parsing)
+    → typed lowering to AF roles / UDT / FB / DB / FC / OB
+    → symbol table & number allocator (respect imported block registry)
+    → dependency graph: UDT → FB / FC → instance DB → call OB
+    → emit SCL / SimaticML with source_id annotations + SourceMap
+    → SCL syntax precheck + AF linter + single_writer checks
+    → ArtifactManifest {files, sha256, import_order, dependencies}
+
+# Avoid generating block names by regex on DB suffix when explicit source IDs exist.
+# Never invent block numbers, do not assume DB / FB are one-to-one.</code></pre>
+<p>产物确定性测试：同一冻结 IR + AFProfile + 模板 hash，重复编译两次应得到相同的语义文件及 manifest hash（可变时间戳移到独立 receipt）。编译错误映射：TIA block/file/line → SourceMap → IR 节点 → Canvas 红色标记。</p>
+<h3>A7 · 新增/修改/删除的最小变更规划</h3><pre><code>baseline = snapshot(project.ap19)
+proposal = validated EngineeringIR patch
+new_artifacts = compile_incremental(proposal)
+source_map = map_IR_to_TIA_blocks()
+changeset = diff(baseline, new_artifacts)
+impact = reverse_dependency_closure(changeset.changed_blocks)
+
+for block in changeset.delete:
+    assert not referenced_by_kept_blocks(block)
+for block in changeset.modify:
+    assert writable(block) and source_hash_matches(block)
+assert hardware_hash_unchanged and safety_block_hash_unchanged
+assert no_unapproved_number_or_interface_change
+assert approved(changeset) and base_revision_matches
+
+# Write to a copy, compile there, never perform speculative writes to the original.</code></pre>
+<div class="callout warn"><b>验证口径：</b>可达性、静态规则、离线 Trace、TIA 编译、运行行为等价、安全符合性是不同级别的证据。任何一个通过都不得自动代替其余级别。旧 LAD→SCL 转换只能对已验证的覆盖范围作等价声明。</div></section>
+<section class="section" id="tia"><div class="kicker">08 / Native TIA delivery</div><h2>真实 TIA 工程交付：定义唯一成功状态</h2><p class="intro">必须把当前的“生成 SCL/XML ZIP”和“真实 TIA 原生工程”分成独立交付类型。</p><div class="flowchart"><div class="flowstep">核验工程身份<small>project + baseline</small></div><div class="flowstep">创建/打开副本<small>Openness V19</small></div><div class="flowstep">导入依赖块<small>UDT/FB/DB/OB</small></div><div class="flowstep">真实编译保存<small>0 errors / Save</small></div><div class="flowstep">归档核对<small>.zap19 + SHA256</small></div></div>
+<div class="tablewrap"><table><thead><tr><th>状态</th><th>允许表示的事实</th><th>允许下载什么</th></tr></thead><tbody><tr><td><code>DRAFT</code></td><td>可编辑需求/Canvas，尚未冻结</td><td>草稿 JSON</td></tr><tr><td><code>SPEC_FROZEN</code></td><td>业务审核确认，版本哈希锁定</td><td>规格文档</td></tr><tr><td><code>SOURCE_READY</code></td><td>SCL/XML、AF 目录和 manifest 已生成并通过静态门禁</td><td>源码导入包 ZIP</td></tr><tr><td><code>TIA_IMPORTED</code></td><td>真实 Openness 导入完成，但不代表可运行</td><td>编译前诊断，不得称完整交付</td></tr><tr><td><code>TIA_COMPILED</code></td><td>真实编译成功，错误数为零（warning 单列）</td><td>编译诊断、源码包</td></tr><tr><td><code>NATIVE_ARCHIVED</code></td><td>Save + Archive 成功；精确归档路径存在，hash 校验通过</td><td><b>真实 .zap19</b> + evidence bundle</td></tr><tr><td><code>FAILED / RECOVERY_REQUIRED</code></td><td>失败或进程中断，保留完整证据</td><td>诊断报告；不提供伪造原生项目</td></tr></tbody></table></div>
+<h3>Openness Worker 职责与线程模型</h3><ul><li><b>Windows 专属：</b>C# <code>Siemens.Engineering</code> API；新建项目使用 <code>Projects.Create</code>，创建 CPU 使用已在本机证明支持的 <code>Devices.CreateWithItem</code>。</li><li><b>每项目独占：</b>一个写入事务、一条 STA 执行队列；禁止两个 Agent 并发打开同一工作副本并同时写入。</li><li><b>实际创建路径：</b>C# <code>create-project</code> 返回 <code>{ok, create:{projectPath}}</code>，Python 必须解包此字段并失败关闭，不允许猜测路径。</li><li><b>明确准备副本：</b>旧工程首先 Openness Retrieve/copy 成独立路径，验证快照后写入副本。</li><li><b>可恢复性：</b>作业阶段写持久 ledger；如果进程中断，恢复时检测现存工程和实际成果，不盲目重发非幂等写入。</li><li><b>交付校验：</b>CompilerResult 的 State/ErrorCount/WarningCount，Save 后 Archive 返回路径，计算 hash，必要时在独立目标目录 Retrieve + reopen（增强验收）。</li></ul>
+<h3>原生工程接口的状态契约</h3><pre><code>POST /api/v2/projects/{id}/deliveries
+{
+  "approved_changeset_id": "cs_024",
+  "expected_baseline_hash": "sha256:...",
+  "artifact_type": "native_tia_archive",
+  "tia_version": "V19",
+  "idempotency_key": "delivery-prj001-v7"
+}
+
+HTTP 202
+{ "job_id":"job_167", "state":"QUEUED", "artifact_id":null }
+
+GET /api/v2/delivery-jobs/job_167
+{
+  "state":"NATIVE_ARCHIVED",
+  "compile":{"state":"Success","error_count":0,"warning_count":0},
+  "native_artifact":{"artifact_id":"a_316","kind":"zap19",
+    "sha256":"sha256:...","size_bytes":12345678},
+  "evidence_id":"ev_167"
+}
+
+GET /api/v2/artifacts/a_316/download  # exact artifact ID, not directory glob</code></pre>
+<h3>为什么不能继续用“找第一个 zap19”</h3><div class="callout danger">旧路由存在从若干目录或临时目录按通配符寻找归档的逻辑。这可能把另一个工程的旧归档当成当前结果。新交付必须使用 <code>(project_id, job_id, artifact_id, sha256)</code> 的精确绑定，下载端不允许扫描目录猜文件。</div></section>
+<section class="section" id="brownfield"><div class="kicker">09 / Brownfield change engineering</div><h2>旧 TIA 工程：先保真，再实现最小增删改</h2><div class="grid two"><div class="tile"><h4>导入分层</h4><p><b>层 A：</b>原生项目快照、设备树、硬件版本、原始字节。<br><b>层 B：</b>可解析块、标签、引用图、接口与编号。<br><b>层 C：</b>AF 角色分析和用户工艺语义。<br>不可解析区域必须保留原文/原件及其属性，不能悄悄消失。</p></div><div class="tile"><h4>变更策略</h4><p><b>默认：</b>只修改明确选择的目标块与必要依赖。<br><b>增加：</b>先检查编号/符号冲突。<br><b>删除：</b>反向引用闭包检查，含实例 DB、OB、调用边。<br><b>重构 AF：</b>单独的高风险明确任务，不是编辑旧工程的前置条件。</p></div></div>
+<h3>导入建立 SourceBinding</h3><pre><code>source_id = (project_snapshot_id, software_target, block_guid_or_stable_key,
+             block_type, block_number, original_hash)
+source_binding = {
+  "source_id": "src_...",
+  "tia_path": "PLC_1/Program blocks/FB_Clamp",
+  "block_type": "FB", "block_number": 105,
+  "language": "LAD", "writable": "requires_review",
+  "original_xml_sha256": "...",
+  "referenced_by": ["OB1", "FB_Cell"],
+  "ir_entities": ["cm_clamp", "seq_clamp"],
+  "fidelity": "parsed_partial"
+}</code></pre>
+<p><b>保真验证：</b>未修改的原始块应在导出后以适合该对象的语义/字节级比较策略校验。不能要求所有 TIA 导出 XML 原样字节相同（导出顺序/元数据可能变化）；对 PLC 块源、接口、布局、属性、硬件和 F 块分别选择可验证的比较方法，并保存异常说明。</p>
+<h3>最小修改的“四次闸门”</h3><div class="grid four"><div class="tile"><div class="num">G1</div><h4>编辑许可</h4><p>目标块可写；无受保护/F-block 内容；用户目标明确。</p></div><div class="tile"><div class="num">G2</div><h4>Diff 审核</h4><p>新增/修改/删除明确列出；依赖和地址不冲突。</p></div><div class="tile"><div class="num">G3</div><h4>基线未漂移</h4><p>写前再次确认原工程/副本版本与批准时一致。</p></div><div class="tile"><div class="num">G4</div><h4>编译 + 保真</h4><p>新副本编译成功；不受影响区域未出现意外变更。</p></div></div><p>当新的自然语言指令涉及既有 LAD/GRAPH 逻辑且无法证明正确的源码转换时，应提出候选修改与人工操作说明，而不是虚构完整自动回写能力。</p></section>
+<section class="section" id="api"><div class="kicker">10 / APIs and storage</div><h2>后端分层、API 合同与持久化</h2><h3>服务边界（推荐）</h3><div class="tablewrap"><table><thead><tr><th>服务</th><th>职责</th><th>不可做的事</th></tr></thead><tbody><tr><td>WorkspaceService</td><td>工程 ID、版本、来源、持久化、导入基线与对象索引</td><td>调用大模型或写入 TIA</td></tr><tr><td>IntentService</td><td>LLM 结构化提取、目标对象解析、候选 Patch 解释</td><td>创建项目/写回/编译</td></tr><tr><td>EngineeringService</td><td>在候选副本上原子应用 Patch、验证、审核与冻结</td><td>把自由 JSON 当作可执行代码</td></tr><tr><td>CompilerService</td><td>驱动/步序降低至 AF/SCL/XML、依赖顺序和 SourceMap</td><td>打开 Openness 工程</td></tr><tr><td>DeliveryCoordinator</td><td>执行批准事务、工程锁、TIA Worker、日志、归档、失败恢复</td><td>绕开 PCEC 或批量猜测文件路径</td></tr><tr><td>ArtifactService</td><td>确切存储/哈希/下载生成物与版本化证据</td><td>按通配符抓“最近生成”的 zap 文件</td></tr></tbody></table></div>
+<h3>推荐 API 分组（v2 增量引入，v1 保持兼容）</h3><pre><code>POST   /api/v2/projects                     create or import workspace
+GET    /api/v2/projects/{id}                project metadata and capability
+GET    /api/v2/projects/{id}/ir             read authoritative EngineeringIR
+GET    /api/v2/projects/{id}/blocks         legacy block index / references
+POST   /api/v2/projects/{id}/intent         NL → candidate patches
+POST   /api/v2/projects/{id}/patches        atomic semantic patch / base_revision
+POST   /api/v2/projects/{id}/validate       full static validation
+POST   /api/v2/projects/{id}/simulate       scenario → trace
+POST   /api/v2/projects/{id}/preview        IR → generated artifacts / source map
+POST   /api/v2/projects/{id}/changesets     freeze diff and review pack
+POST   /api/v2/changesets/{id}/approve      explicit human approval
+POST   /api/v2/projects/{id}/deliveries     start job from approved frozen spec
+GET    /api/v2/delivery-jobs/{id}           durable job state
+GET    /api/v2/delivery-jobs/{id}/events    SSE diagnostics
+GET    /api/v2/artifacts/{id}/download      exact authorized archive</code></pre>
+<h3>Patch API（避免自然语言和拖拽各维护一套状态）</h3><pre><code>POST /api/v2/projects/prj_001/patches
+{
+ "base_revision": 7,
+ "ops": [
+   {"op":"set_step_parameter","step_id":"S2",
+    "field":"min_duration_ms","value":2000},
+   {"op":"add_transition","id":"tr_new","from":"S3","to":"FAULT",
+    "guard":{"signal":"cm_clamp.error"}}
+ ],
+ "request_id":"req_abc"
+}
+
+HTTP 200 {"revision":8,"ir_sha256":"sha256:...", "warnings":[],
+  "changed_ir_ids":["S2","tr_new"],"source_map_dirty":["FB_Sequence"]}
+HTTP 409 {"code":"BASE_REVISION_CONFLICT", "current_revision":9}
+HTTP 422 {"code":"SEMANTIC_VALIDATION_FAILED", "issues":[...]}</code></pre>
+<h3>持久化方案</h3><div class="grid two"><div class="tile"><h4>优先本地实施</h4><p><b>SQLite WAL</b> 保存 projects、revisions、patches、approvals、jobs、events、artifact indexes；版本化 JSON 文件保存完整 IR；大文件用 hash 命名的 Artifact Store。一个服务实例按项目锁串行写。</p></div><div class="tile"><h4>未来多用户部署</h4><p>替换为 PostgreSQL 事务库和对象存储，保留相同 Repository 接口。不要让数据库迁移阻止第一条 V19 原生交付闭环。</p></div></div><pre><code>Workspace tables:
+projects(id, origin, tia_version, af_profile, current_revision, base_artifact_id)
+revisions(project_id, revision, ir_hash, ir_artifact_id, author, created_at)
+changesets(id, project_id, base_revision, before_hash, after_hash, status)
+change_ops(changeset_id, seq, op_type, target_source_id, payload_json)
+approvals(changeset_id, reviewer, signed_spec_hash, signed_at)
+artifacts(id, project_id, job_id, kind, sha256, path, size_bytes)
+jobs(id, project_id, changeset_id, state, idempotency_key, created_at)
+job_events(job_id, seq, state, raw_api_receipt, timestamp)
+
+# Do not store arbitrary file paths supplied by the browser for artifact download.</code></pre></section>
+<section class="section" id="migration"><div class="kicker">11 / Migration mapping</div><h2>重构目录与现有代码对应关系</h2><p class="intro">按“扩展原模块 → 适配旧接口 → 提取共享服务”的顺序迁移，不建立第三套同名实现。</p><div class="tablewrap"><table><thead><tr><th>未来新模块</th><th>接入/复用的当前代码</th><th>迁移方式</th></tr></thead><tbody>
+<tr><td><code>plc_engine/engineering_ir/</code></td><td><code>plc_engine/af/greenfield_ir.py</code>、<code>canvas_model.py</code></td><td>先用 Adapter 包装，不立刻全量搬迁类型</td></tr>
+<tr><td><code>plc_engine/components/</code></td><td><code>af_model.py</code>、<code>af_generator.py</code>、<code>device_cards.py</code></td><td>增加 DriverCatalog、DriverSpec、DriverCompiler</td></tr>
+<tr><td><code>plc_engine/process/</code></td><td><code>greenfield_views.py</code>、<code>af_generator.py</code></td><td>新增 GuardAST、SequenceCompiler、ScanSimulator</td></tr>
+<tr><td><code>plc_engine/changeplan/</code></td><td><code>pcec.py</code>、<code>changesets.py</code>、<code>af_import.py</code></td><td>增量 SourceBinding/Impact/DiffPlan</td></tr>
+<tr><td><code>gateway/app/services/plc/workspace_v2.py</code></td><td><code>project_store.py</code>、<code>greenfield_session.py</code></td><td>抽持久化与状态；保留旧会话读取兼容</td></tr>
+<tr><td><code>gateway/app/services/plc/delivery_v2.py</code></td><td><code>tia_delivery.py</code>、<code>compile_jobs.py</code></td><td>在现有 Openness 操作之上新增事务编排，不复制底层工具</td></tr>
+<tr><td><code>gateway/app/routers/projects_v2.py</code></td><td><code>routers/plc.py</code>、<code>greenfield.py</code></td><td>v2 API 转发同一应用服务；逐步淘汰 v1 主路径</td></tr>
+<tr><td><code>frontend/src/workbench/</code></td><td><code>GreenfieldChannel.tsx</code>、<code>StepLink.tsx</code>、<code>EngineeringDrawer.tsx</code></td><td>抽独立 ProjectShell、CanvasMode、Inspector；旧 Wizard 作为可回退入口</td></tr>
+<tr><td><code>industrial/tia_openness_cli/</code></td><td><code>ProjectService.cs</code>、<code>SessionServer.cs</code></td><td>保留原写 API；新增 exact archive 作业回执及身份核验</td></tr>
+</tbody></table></div><h3>禁止做的重构方式</h3><ul><li>删除历史 LAD→SCL、AF 和 PCEC 功能后重写一个看起来更简短的同名工具。</li><li>同时维护 <code>GreenfieldIR</code>、<code>CanvasState</code>、<code>ProjectIR</code> 三份都允许任意写入的模型。</li><li>大范围修改 40+ 旧接口但不保持行为回归，随后依赖 LLM 修复编译错误。</li><li>让 React 前端保存完整工程真值、后端只存一次 session；刷新或服务重启造成“工程消失”。</li><li>把一个 Python/C# 服务中的每个函数包装成 Agent，导致权限边界难以审计。</li></ul></section>
+<section class="section" id="qa"><div class="kicker">12 / Acceptance and industrial safety</div><h2>质量与可验证性：定义硬闸门</h2><div class="tablewrap"><table><thead><tr><th>Gate</th><th>验收要求</th><th>测试方式</th></tr></thead><tbody>
+<tr><td>G0 / 契约</td><td>确定版本、TiaCapabilityManifest、CPU 模板和 AFProfile</td><td>Schema + Windows status 实机探针</td></tr><tr><td>G1 / IR</td><td>同一 IR 可以完整序列化、Patch 原子性、Canvas 投影不反向覆写</td><td>pytest pure functions + vitest</td></tr><tr><td>G2 / 驱动</td><td>所有必需端口、超时、反向互斥、单写者通过</td><td>属性测试 + 正反例单测</td></tr><tr><td>G3 / 工艺</td><td>可达性/异常转移/优先级/无未实现并行语义</td><td>Guard AST + Graph algorithms + scenario trace</td></tr><tr><td>G4 / SCL</td><td>确定性产物 + SourceMap + 依赖排序；静态检查通过</td><td>golden files + compiler precheck</td></tr><tr><td>G5 / TIA</td><td>真实 V19 工程导入、编译成功、Save、Archive、重新打开</td><td>Windows TIA 单机集成测试，不是 mock</td></tr><tr><td>G6 / Brownfield</td><td>原工程不动；只改批准对象；删除无悬空引用；其他块保真</td><td>已知 V19 旧工程副本三类增删改案例</td></tr><tr><td>G7 / 故障恢复</td><td>超时/编译失败/重复请求/worker 崩溃/基线漂移不造成错项目写入</td><td>fault injection + transaction recovery</td></tr></tbody></table></div>
+<h3>最小端到端回归套件</h3><ol><li><b>Greenfield：</b>真实 TIA V19 建工程，选择受支持 CPU，生成一只气缸控制驱动及正常/异常步序，编译 0 errors，Save，Archive 为真实 <code>.zap19</code>。</li><li><b>时序编辑：</b>把 S2 保持时间由 1000 改为 2000 ms，验证 IR Patch、SCL diff、Trace 波形都准确变化。</li><li><b>重新导入：</b>将刚归档的工程恢复成新工作区，解析真实块并定位源 ID。执行“缩回完成后增加计数”并仅生成目标增量。</li><li><b>旧工程修改：</b>分别新增、修改、删除一个可写、无保留引用的普通块，比较未受影响对象。</li><li><b>负例：</b>工程路径缺失、CPU 未选、两个线圈同时使能、删除被引用 FB、修改 F-block、版本漂移、未知 Guard、TIA 编译失败、归档缺失都拒绝出现“交付完成”。</li></ol>
+<div class="callout danger"><b>重要：</b>任何 Safety/F-block、在线下装、运行/停止设备的能力必须走独立风险评估、权限设计与人工授权。第一版的自动化范围仅限离线工程设计和真实 TIA 的离线编辑/编译/归档。</div></section>
+<section class="section" id="roadmap"><div class="kicker">13 / Work packages</div><h2>开发路线：按依赖切成可合并的最小任务包</h2><p class="intro">每一阶段给出文件边界、完成物与验收门槛。可以并行的仅限互不争用的文件；TIA 真机连接必须串行安排。</p>
+<div class="phase"><div class="phaseid">WP-00</div><div><h4>架构冻结 / 兼容基线 <span class="tag warn">必须最先完成</span></h4><p class="phasedesc">建立 EngineeringIR v2 JSON Schema、AFProfile Manifest、TIA Capability Manifest、旧 API 契约测试。整理冻结测试清单，禁止直接突破遗留 guard。</p><b>完成标准：</b>无业务改动时，现有 Greenfield/Legacy/Openness 测试与构建仍通过；契约 schema 可被 TS 和 Python 解析。<br><code>docs/architecture/</code> + <code>plc_engine/engineering_ir/contracts.py</code> + fixture tests</div></div>
+<div class="phase"><div class="phaseid">WP-01</div><div><h4>原生 TIA 工程创建与交付 <span class="tag warn">第一条端到端价值链</span></h4><p class="phasedesc">修复 C#→Python 响应与工程路径，接入真实 TIA skeleton、CPU 模板、精确归档/下载，拆分 SOURCE_READY 与 NATIVE_ARCHIVED。</p><b>完成标准：</b>真实项目创建→生成→编译→Save→Archive→Retrieve/reopen；失败时绝不展示完成。<br><code>tia_delivery.py</code> + <code>industrial/tia_openness_cli/</code> + <code>delivery_jobs.py</code></div></div>
+<div class="phase"><div class="phaseid">WP-02</div><div><h4>Component / Driver 引擎 <span class="tag">可与 WP-01 的非冲突子任务并行</span></h4><p class="phasedesc">完成 DriverCatalog、强类型 DriverSpec、端口、状态机、模板 AF 映射和驱动检查。第一批元件：双作用气缸、单向执行器、DI/DO、电机启停。</p><b>完成标准：</b>输入自然语言→生成确定性 FB/DB 接口；支持两套场景复用驱动；不产生未经绑定的 IO 地址。<br><code>plc_engine/components/*</code> + <code>tests/unit/test_driver_*</code></div></div>
+<div class="phase"><div class="phaseid">WP-03</div><div><h4>Process / SequenceIR 编译器 <span class="tag">核心算法</span></h4><p class="phasedesc">实现 Step/Transition/GuardAST/Action、静态图验证、扫描周期模拟器、SCL 降低与 SourceMap。MVP 限制串行步骤和确定性分支，不假装支持所有并行语义。</p><b>完成标准：</b>至少 5 个场景 Trace 与预期一致；导出的 SCL 能走真实 V19 编译。<br><code>plc_engine/process/*</code> + <code>plc_engine/af/*</code></div></div>
+<div class="phase"><div class="phaseid">WP-04</div><div><h4>前端工作台 + 双 Canvas <span class="tag">产品交互</span></h4><p class="phasedesc">重构主界面：项目树、设备拓扑、可编辑步序、Trace/波形、SCL 预览、Copilot、审查抽屉。所有编辑统一走 Patch API，保留旧向导供回归。</p><b>完成标准：</b>鼠标编辑 2s 保持时间后，IR、Trace、SCL 均同步变化；不刷新丢失；409 冲突正确反馈。<br><code>frontend/src/workbench/*</code> + <code>frontend/src/canvas/*</code></div></div>
+<div class="phase"><div class="phaseid">WP-05</div><div><h4>Brownfield 精确增删改 <span class="tag warn">须先具备受控 SourceMap</span></h4><p class="phasedesc">把旧工程导入映射到 ProjectWorkspace，建立 SourceBinding、调用图、最小 DiffPlan、基线防漂移、原工程副本修改和回滚。</p><b>完成标准：</b>添加/修改/删除各一例真机副本通过，未批准区域不改变；删除有引用块被拒绝。<br><code>plc_engine/changeplan/*</code> + <code>canvas_import.py</code> adapter</div></div>
+<div class="phase"><div class="phaseid">WP-06</div><div><h4>工程级质量/安全/可恢复 <span class="tag">上线前必须</span></h4><p class="phasedesc">作业持久化、重试幂等、项目独占锁、Worker 进程崩溃恢复、版本兼容矩阵、外部模型最小数据发送及审计日志。</p><b>完成标准：</b>10 类故障注入下无错工程覆盖；重复请求不重复生成变更；所有证据可回溯。<br><code>delivery_jobs.py</code> + <code>artifact_store.py</code> + tests</div></div>
+<div class="phase"><div class="phaseid">WP-07</div><div><h4>统一产品验收与发布</h4><p class="phasedesc">端到端录屏/报告、用户验收、旧工程兼容套件、AF 模板许可证检查、性能基线、文档和部署安装包。完成再考虑 HMI、伺服复杂轴、并行 Sequence、更多 TIA 版本。</p><b>完成标准：</b>新建和旧工程两条真实链完整闭环；验收矩阵有实机证据，无“mock=real”的状态混淆。</div></div>
+<h3>建议任务拆分与并行冲突</h3><div class="tablewrap"><table><thead><tr><th>开发角色</th><th>模块所有权</th><th>依赖</th><th>并行限制</th></tr></thead><tbody><tr><td>Agent A · Model</td><td>EngineeringIR schema / adapters / validators</td><td>无</td><td>独占 IR schema 变更</td></tr><tr><td>Agent B · Driver</td><td>DriverCatalog / DriverCompiler</td><td>WP-00 Schema</td><td>不改 TIA Worker 和前端</td></tr><tr><td>Agent C · Process</td><td>SequenceIR / GuardAST / simulator</td><td>WP-00 Schema</td><td>不直接改旧 AF Generator 主体，先经 Adapter</td></tr><tr><td>Agent D · Frontend</td><td>Workbench/DeviceCanvas/SequenceCanvas</td><td>API schema</td><td>先 Mock schema contract；不私建后端状态</td></tr><tr><td>Agent E · TIA</td><td>C# Worker / NativeDelivery / Evidence</td><td>WP-00；后续 WP-02/03 产物</td><td>真机独占；不得写原工程</td></tr><tr><td>Agent F · Integration/QA</td><td>E2E、fixtures、PCEC、diff 证据</td><td>每批任务产物</td><td>独立验收，不能替代用户审批</td></tr></tbody></table></div></section>
+<section class="section" id="kickoff"><div class="kicker">14 / Ready-to-run agent instructions</div><h2>第一轮开发 Agent 可以直接执行的工作指令</h2><p class="intro">用于 Cursor / Codex / Claude Code 等。在独立分支先做契约和真实交付，不在一个 PR 里完成全部重构。</p><div class="callout">优先顺序：<b>WP-00 Schema/Contract → WP-01 Native TIA Delivery → WP-02 Driver → WP-03 Sequence → WP-04 Frontend → WP-05 Brownfield</b>。之所以先做原生交付，是因为它决定整个产品的真实验收边界。</div>
+<details open><summary>Agent Kickoff Prompt · 首批可复制执行</summary><div class="inside"><button class="btncopy" data-copy="agent-prompt">复制指令</button><pre id="agent-prompt"><code>你是 PLC_chat 工程重构主 Agent。工作仓库：Roarpeng/PLC_chat；
+基线：dev/greenfield-wp。目标：Siemens TIA V19 + AF Basic 文件夹版。
+
+先完整阅读本蓝图与仓库 AGENTS.md、README、docs/greenfield/11-p0d-decision.md。
+禁止自行切换到 Software Unit 或重新实施一套并行后端。
+
+任务一：WP-00（只做 schema / contracts / tests）。
+1. 盘点 current GreenfieldIR、CanvasState、AfProject、PCEC、TIA CLI JSON 契约。
+2. 新增 ProjectWorkspace / AFProfile / DriverSpec / SequenceIR / ChangeSet 的 v2 schema。
+3. 写 adapter：GreenfieldIR -> EngineeringIR v2（不得丢当前字段）。
+4. 写输入合法性、序列化往返、冻结哈希、base_revision、原子 patch 单测。
+5. 提供文件级 diff、兼容性报告和运行测试的真实输出。
+
+任务二：WP-01（独立 PR，不能与 WP-00 互相覆盖文件）。
+1. 修复/验证 C# create-project 嵌套 projectPath 结果。
+2. 设计工程真实身份及 Copy-On-Write 路径；避免猜测 .ap19。
+3. 把 source_package 和 native_project_archive 分开存储与显示。
+4. Openness: Create/Open -> Import/Generate -> Compile -> Save -> Archive。
+5. artifact_id 精确下载，拒绝扫描任意目录查找 zap19。
+6. 离线单测与 Windows V19 真机测试严格分开记账。
+
+每一步都须：先报告改动范围、写负例测试、实现、完整回归、列出未验证项。
+禁止未经审批碰 F-block、在线 download、run/stop、用户原始工程。
+禁止把生成源码包或 Mock 编译称为已生成完整 TIA 工程。
+完成一次小任务后提交独立 PR，不进行一次性全仓大改。</code></pre></div></details>
+<h3>交给开发 Agent 的“完成判据”</h3><ul class="check"><li>改动均包含 schema/接口/单测/负例测试/迁移说明。</li><li>源 IR 可定位到生成 SCL 和真实 TIA 块；每个诊断有 source_id。</li><li>新项目有精确原生归档，旧项目默认只修改副本。</li><li>所有验证结论区分 offline / mocked / V19 real。</li><li>现有 4 步入口和存量代码仍可用或有明确兼容适配层。</li></ul></section>
+<section class="section" id="references"><div class="kicker">15 / Research and traceability</div><h2>研究依据和可复核参考</h2><p class="intro">官方资料用于结构及接口原则。真正可用的成员、CPU 型号和版本兼容性还必须以装机 TIA V19 的 Openness 返回为准。</p><div class="srcgrid"><div class="citeitem"><a href="https://docs.tia.siemens.cloud/r/en-us/v2.2/automation-framework-basic/automation-framework-basic-v2.2/6.-plc-software-architecture/6.9.-tia-portal-implementation?contentId=tbYBSqXL2HWLnGt8MjFooQ" target="_blank" rel="noopener">Siemens · AF Basic V2.2 · TIA Portal Implementation</a>文件夹组织、Unit/EM 模板及现行官方对照。</div><div class="citeitem"><a href="https://support.industry.siemens.com/cs/attachments/109817223/109817223_Automation_Framework_DOC_V1_2_en.pdf" target="_blank" rel="noopener">Siemens · Automation Framework V1.2 (SIOS 109817223)</a>既有仓库使用的 AF V1.2 层级、ControlNodes、CM/LBC 背景。</div><div class="citeitem"><a href="https://docs.tia.siemens.cloud/r/en-us/v3.0/automation-framework/automation-framework-v3.0/3.-overview/3.4.-plc-software/3.4.1.-program-parts/3.4.1.2.-units-and-equipment-modules?contentId=EOqkRpihEYk7YWmPBUavsg" target="_blank" rel="noopener">Siemens · Automation Framework V3.0 2026</a>用于识别版本差异，不作为本次自动迁移目标。</div><div class="citeitem"><a href="https://docs.tia.siemens.cloud/r/en-us/v21/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-projects-and-project-data/creating-a-project" target="_blank" rel="noopener">Siemens · Openness Projects.Create (V21 docs)</a>标准的项目创建行为；V19 支持以当前 C# 封装和实际测试判定。</div><div class="citeitem"><a href="https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-projects-and-project-data/archiving-and-retrieving-a-project" target="_blank" rel="noopener">Siemens · Openness Archive / Retrieve</a>保存/归档/恢复工程 API 结构。</div><div class="citeitem"><a href="https://docs.tia.siemens.cloud/r/en-us/v21/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-projects-and-project-data/compiling-a-project?contentId=Lh19wmmzQOEBZSyi3sS~RQ" target="_blank" rel="noopener">Siemens · CompilerResult / ICompilable</a>真实编译应读取状态、警告及错误数；以 V19 装机实测复核。</div><div class="citeitem"><a href="https://www.plcopen.org/standards/motion-control/" target="_blank" rel="noopener">PLCopen · Motion Control</a>运动功能块接口/状态模型背景。</div><div class="citeitem"><a href="https://reactflow.dev/learn/customization/handles" target="_blank" rel="noopener">React Flow · Custom Nodes / Handles</a>带类型的连接端口、可视化步骤和元件节点。</div><div class="citeitem"><a href="https://www.automation.siemens.com/sce-static/learning-training-documents/classic/appendix/ii-iec61131-en.pdf" target="_blank" rel="noopener">Siemens · IEC 61131-3 / SFC 基础</a>Step/Transition/Action 等工艺步序建模。</div><div class="citeitem"><a href="https://github.com/Roarpeng/PLC_chat/tree/dev/greenfield-wp" target="_blank" rel="noopener">仓库 · dev/greenfield-wp</a>原代码与决策文档：AF Basic Folder、GreenfieldIR、TIA Openness、PCEC、现有 Canvas。</div></div><div class="callout warn"><b>版本和许可：</b>Siemens 示例/官方库需要遵循其授权与安全说明；不要把第三方受版权保护的库源码复制到公开仓库或用于训练 AI 模型。当前方案只把其公开接口文档用于系统架构与兼容设计。</div></section>
+<div class="footer">PLC Agent · Architecture Blueprint V2.0 · 2026-11-09　|　静态离线 HTML，所有示例均为设计示意　|　建议存档在 <code>plc_project/docs/architecture/</code></div></main></div><button id="toTop" aria-label="返回顶部" title="返回顶部">↑</button>
+<script>
+(function(){
+  const btns=[...document.querySelectorAll('[data-screen]')], screens=[...document.querySelectorAll('.screen')];
+  btns.forEach(btn=>btn.addEventListener('click',()=>{
+    btns.forEach(b=>{b.classList.remove('active');b.setAttribute('aria-selected','false')});
+    screens.forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');btn.setAttribute('aria-selected','true');
+    document.getElementById(btn.dataset.screen)?.classList.add('active');
+  }));
+  document.querySelectorAll('[data-copy]').forEach(btn=>btn.addEventListener('click',async()=>{
+    const el=document.getElementById(btn.dataset.copy);if(!el)return;
+    const t=el.innerText;try{await navigator.clipboard.writeText(t);btn.textContent='已复制';setTimeout(()=>btn.textContent='复制内容',2000)}catch(e){btn.textContent='复制失败，请手动选择'}
+  }));
+  document.getElementById('toTop').addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+  const nav=[...document.querySelectorAll('.sidebar a')];const observer=new IntersectionObserver(entries=>{const e=entries.filter(x=>x.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];if(e){nav.forEach(n=>n.classList.toggle('active',n.hash==='#'+e.target.id))}},{rootMargin:'-15% 0px -70% 0px'});document.querySelectorAll('.section').forEach(s=>observer.observe(s));
+})();
+</script>
+</body></html>
