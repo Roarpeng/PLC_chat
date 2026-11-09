@@ -1149,6 +1149,19 @@ def _device_type_identifier() -> str:
     return os.environ.get("PLC_GREENFIELD_TIA_DEVICE_TYPE", "").strip()
 
 
+def _created_project_path(created: dict[str, Any]) -> str:
+    """Read the project path from the actual TIA Openness CLI create-project contract.
+
+    Program.cs returns {"ok": true, "create": {"projectPath": "..."}}.
+    Do not guess a .ap19 path: a mismatched path can redirect subsequent TIA writes.
+    """
+    creation = created.get("create")
+    if not isinstance(creation, dict):
+        return ""
+    project_path = creation.get("projectPath")
+    return project_path.strip() if isinstance(project_path, str) else ""
+
+
 def _run_openness_import_compile(
     *,
     project_name: str,
@@ -1186,7 +1199,16 @@ def _run_openness_import_compile(
         _record("create-project", False, str(created.get("error") or created))
         return {"status": "tia_error", "steps": steps, "compile": None,
                 "error": "create-project 失败（TIA 可能被独占占用）"}
-    project_path = str(created.get("path") or created.get("project") or project_dir / f"{project_name}.ap19")
+    # C# Program.cs nests the real path under create.projectPath (not path/project).
+    project_path = _created_project_path(created)
+    if not project_path:
+        _record("create-project", False, "Openness create-project 响应缺少 create.projectPath")
+        return {
+            "status": "tia_error",
+            "steps": steps,
+            "compile": None,
+            "error": "create-project 未返回真实工程路径 create.projectPath，拒绝猜测 .ap19 路径",
+        }
     _record("create-project", True, project_path)
 
     # 2. 组态 CPU 设备（号型来自环境变量，未配置则诚实降级）
