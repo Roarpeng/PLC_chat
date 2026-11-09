@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 
 namespace TiaOpenness.Models;
@@ -306,6 +309,108 @@ public sealed class SaveProjectResult
     public ToolError? Error { get; set; }
 }
 
+/// <summary>Exact-path archive verification result (no directory wildcard, D-2).</summary>
+public sealed class ExactArchiveResult
+{
+    [JsonPropertyName("ok")]
+    public bool Ok { get; set; }
+
+    [JsonPropertyName("archivePath")]
+    public string ArchivePath { get; set; } = "";
+
+    [JsonPropertyName("archiveSha256")]
+    public string? ArchiveSha256 { get; set; }
+
+    [JsonPropertyName("sizeBytes")]
+    public long SizeBytes { get; set; }
+
+    [JsonPropertyName("errorCode")]
+    public string ErrorCode { get; set; } = "";
+
+    [JsonPropertyName("evidenceLevel")]
+    public string EvidenceLevel { get; set; } = "V19_real";
+}
+
+/// <summary>One controlled delivery-chain stage receipt (WP-01 / G5).</summary>
+public sealed class DeliveryChainReceipt
+{
+    [JsonPropertyName("ok")]
+    public bool Ok { get; set; }
+
+    [JsonPropertyName("stage")]
+    public string Stage { get; set; } = "";
+
+    [JsonPropertyName("state")]
+    public string State { get; set; } = "";
+
+    [JsonPropertyName("projectPath")]
+    public string? ProjectPath { get; set; }
+
+    [JsonPropertyName("archivePath")]
+    public string? ArchivePath { get; set; }
+
+    [JsonPropertyName("sha256")]
+    public string? Sha256 { get; set; }
+
+    [JsonPropertyName("reopenOk")]
+    public bool ReopenOk { get; set; }
+
+    [JsonPropertyName("evidenceLevel")]
+    public string EvidenceLevel { get; set; } = "pending_real_machine";
+
+    [JsonPropertyName("rawReceipts")]
+    public List<string> RawReceipts { get; set; } = new();
+}
+
+/// <summary>
+/// Pure, Siemens-independent exact archive policy. T02 removes the old
+/// "Directory.GetFiles + candidates[0]" wildcard: the ONLY accepted archive
+/// is the exact Path.Combine(dir, name) produced by Projects.Archive.
+/// </summary>
+public static class ExactArchivePolicy
+{
+    public static string ResolveExactPath(string targetDirectory, string archiveName)
+    {
+        var dir = Path.GetFullPath(string.IsNullOrWhiteSpace(targetDirectory)
+            ? Path.GetTempPath()
+            : targetDirectory);
+        var name = Path.GetFileName(string.IsNullOrWhiteSpace(archiveName) ? "project.zap19" : archiveName);
+        return Path.Combine(dir, name);
+    }
+
+    public static ExactArchiveResult Verify(string targetDirectory, string archiveName)
+    {
+        var exact = ResolveExactPath(targetDirectory, archiveName);
+        if (!File.Exists(exact))
+        {
+            return new ExactArchiveResult
+            {
+                Ok = false,
+                ArchivePath = exact,
+                ErrorCode = "archive_missing",
+                EvidenceLevel = "V19_real",
+            };
+        }
+        string hash;
+        using (var stream = new FileStream(exact, FileMode.Open, FileAccess.Read, FileShare.Read))
+        using (var sha = SHA256.Create())
+        {
+            hash = "sha256:" + BitConverter.ToString(sha.ComputeHash(stream))
+                .Replace("-", "").ToLowerInvariant();
+        }
+        var info = new FileInfo(exact);
+        return new ExactArchiveResult
+        {
+            Ok = true,
+            ArchivePath = exact,
+            ArchiveSha256 = hash,
+            SizeBytes = info.Length,
+            ErrorCode = "",
+            EvidenceLevel = "V19_real",
+        };
+    }
+}
+
 public sealed class ArchiveProjectResult
 {
     [JsonPropertyName("ok")]
@@ -316,6 +421,13 @@ public sealed class ArchiveProjectResult
 
     [JsonPropertyName("archivePath")]
     public string? ArchivePath { get; set; }
+
+    /// <summary>Exact content hash of the archive at ArchivePath (D-2 / G5).</summary>
+    [JsonPropertyName("archiveSha256")]
+    public string? ArchiveSha256 { get; set; }
+
+    [JsonPropertyName("sizeBytes")]
+    public long SizeBytes { get; set; }
 
     [JsonPropertyName("message")]
     public string? Message { get; set; }
@@ -350,6 +462,10 @@ public sealed class RetrieveProjectResult
 
     [JsonPropertyName("api")]
     public string? Api { get; set; }
+
+    /// <summary>Q-06: Retrieve/reopen MUST pass before NATIVE_ARCHIVED.</summary>
+    [JsonPropertyName("reopenOk")]
+    public bool ReopenOk { get; set; }
 
     [JsonPropertyName("message")]
     public string? Message { get; set; }

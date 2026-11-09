@@ -1,0 +1,89 @@
+{
+  "candidate_cpu_templates": [
+    "6ES7511-1AK02-0AB0/V2.9",
+    "6ES7513-1AL02-0AB0/V2.9",
+    "6ES7515-2AM02-0AB0/V2.9",
+    "6ES7214-1AG40-0XB0/V4.5"
+  ],
+  "manifest": {
+    "cpu_templates": [
+      {
+        "catalog_source": "static_approved_candidate_v19",
+        "cpu_template": "S7-1500 / CPU 1511-1 PN",
+        "firmware": "V2.9",
+        "type_identifier": "6ES7511-1AK02-0AB0/V2.9",
+        "verified_create_with_item": false
+      },
+      {
+        "catalog_source": "static_approved_candidate_v19",
+        "cpu_template": "S7-1500 / CPU 1513-1 PN",
+        "firmware": "V2.9",
+        "type_identifier": "6ES7513-1AL02-0AB0/V2.9",
+        "verified_create_with_item": false
+      },
+      {
+        "catalog_source": "static_approved_candidate_v19",
+        "cpu_template": "S7-1500 / CPU 1515-2 PN",
+        "firmware": "V2.9",
+        "type_identifier": "6ES7515-2AM02-0AB0/V2.9",
+        "verified_create_with_item": false
+      },
+      {
+        "catalog_source": "static_approved_candidate_v19",
+        "cpu_template": "S7-1200 / CPU 1214C DC/DC/DC",
+        "firmware": "V4.5",
+        "type_identifier": "6ES7214-1AG40-0XB0/V4.5",
+        "verified_create_with_item": false
+      }
+    ],
+    "evidence_level": "V19_real",
+    "probe_receipt_id": "g0_d32beeb9478950dd",
+    "probed_at": "2026-11-09T15:03:48.281136+00:00",
+    "raw_probe_receipt": {
+      "probe": {
+        "error": "",
+        "ok": true,
+        "raw_probe_receipt": {
+          "_exit_code": 0,
+          "connected": false,
+          "engineeringDll": "C:\\Program Files\\Siemens\\Automation\\Portal V19\\PublicAPI\\V19\\Siemens.Engineering.dll",
+          "message": "TIA Portal process detected.",
+          "ok": true,
+          "opennessAvailable": true,
+          "opennessGroupInToken": true,
+          "processCount": 1,
+          "projectOpen": false,
+          "tiaRunning": true,
+          "tiaVersion": "V19"
+        }
+      },
+      "status_receipt": {
+        "_exit_code": 0,
+        "connected": false,
+        "engineeringDll": "C:\\Program Files\\Siemens\\Automation\\Portal V19\\PublicAPI\\V19\\Siemens.Engineering.dll",
+        "message": "TIA Portal process detected.",
+        "ok": true,
+        "opennessAvailable": true,
+        "opennessGroupInToken": true,
+        "processCount": 1,
+        "projectOpen": false,
+        "tiaRunning": true,
+        "tiaVersion": "V19"
+      }
+    },
+    "selected_cpu_template": "",
+    "selection_note": "real status receipt obtained; CPU candidates are static V19 order numbers, CreateWithItem verification still pending_real_machine",
+    "status_receipt": {
+      "engineering_dll": "C:\\Program Files\\Siemens\\Automation\\Portal V19\\PublicAPI\\V19\\Siemens.Engineering.dll",
+      "error": "",
+      "note": "real status receipt obtained; CPU candidates are static V19 order numbers, CreateWithItem verification still pending_real_machine",
+      "ok": true,
+      "openness_available": true,
+      "tia_running": true
+    },
+    "tia_version": "V19"
+  },
+  "note": "CPU skeleton selection awaits the lead's explicit approval (U-02)",
+  "raw_evidence_path": "evidence/v2/T01/capability_probe.json",
+  "real_tia_v19_tested": true
+}

@@ -153,6 +153,7 @@ public sealed class ProjectService
             return new RetrieveProjectResult
             {
                 Ok = _project is not null,
+                ReopenOk = _project is not null && !string.IsNullOrWhiteSpace(_projectPath),
                 ArchivePath = full,
                 TargetDirectory = dest,
                 ProjectPath = _projectPath,
@@ -815,33 +816,25 @@ public sealed class ProjectService
             var dirInfo = Activator.CreateInstance(dirInfoType, dir)!;
             archiveMethod.Invoke(_project, new[] { dirInfo, name, mode });
 
-            var archivePath = Path.Combine(dir, name);
-            if (!File.Exists(archivePath))
-            {
-                // Openness may append extension; search for newest matching zap*
-                var stem = Path.GetFileNameWithoutExtension(name);
-                var candidates = Directory.GetFiles(dir, stem + "*")
-                    .Concat(Directory.GetFiles(dir, "*.zap*"))
-                    .Distinct()
-                    .OrderByDescending(File.GetLastWriteTimeUtc)
-                    .ToList();
-                if (candidates.Count > 0)
-                {
-                    archivePath = candidates[0];
-                }
-            }
+            // D-2 (T02): exact ArchivePath only. The former newest-match
+            // directory wildcard is forbidden by the PRD. A missing exact
+            // file is an explicit archive_missing failure, never a guess.
+            var verified = ExactArchivePolicy.Verify(dir, name);
+            var archivePath = verified.ArchivePath;
 
             return new ArchiveProjectResult
             {
-                Ok = File.Exists(archivePath),
+                Ok = verified.Ok,
                 ProjectPath = _projectPath,
                 ArchivePath = archivePath,
-                Message = File.Exists(archivePath)
-                    ? $"Project archived to {archivePath}"
-                    : "Archive completed but output file was not found.",
-                Error = File.Exists(archivePath)
+                ArchiveSha256 = verified.ArchiveSha256,
+                SizeBytes = verified.SizeBytes,
+                Message = verified.Ok
+                    ? $"Project archived to {archivePath} (sha256={verified.ArchiveSha256})"
+                    : "Archive completed but output file was not found at the exact path.",
+                Error = verified.Ok
                     ? null
-                    : new ToolError { Code = "archive_missing", Message = $"Expected archive under {dir}" },
+                    : new ToolError { Code = "archive_missing", Message = $"Exact archive not found: {archivePath}" },
             };
         }
         catch (TargetInvocationException ex)

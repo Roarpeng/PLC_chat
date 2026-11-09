@@ -1,0 +1,12 @@
+{
+  "profile_id": "SIEMENS_AF_BASIC_FOLDER_V19",
+  "library_id": "SIEMENS_AF_BASIC_FOLDER",
+  "library_version": "V19-BASIC-FOLDER-2.2",
+  "template_sha256": "sha256:af_basic_folder_v19_template_unbound",
+  "number_policy": "AF_BASIC_FOLDER_DERIVED_OB_NUMBERS",
+  "folder_tree": "AF/Units/EquipmentModules/ControlModules",
+  "tia_version": "V19",
+  "locked": true,
+  "decision_source": "docs/greenfield/11-p0d-decision.md (AF Basic folder edition, 2026-11-06)",
+  "note": "generation/compile must use the pinned baseline; never silently upgrade to AF V3.0 or Software Unit"
+}

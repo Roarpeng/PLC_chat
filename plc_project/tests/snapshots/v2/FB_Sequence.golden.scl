@@ -1,0 +1,54 @@
+// AF FB: deterministic SFC-like step state machine
+// source_id: prj_demo
+// af_profile: SIEMENS_AF_BASIC_FOLDER_V19
+// template_sha256: sha256:af_basic_folder_v19_template_unbound
+// ir_sha256: sha256:3ee31ae438c7470835b41d4846ea5db12e7a9c792d641691650e7470d0268a4e
+// deterministic semantic output: no timestamps in this file
+
+FUNCTION_BLOCK "FB_Sequence"
+VAR_INPUT
+  CmdStart : BOOL; // unbound logical signal
+  HoldDone : BOOL; // unbound logical signal
+  Reset : BOOL; // unbound logical signal
+  SensorIn : BOOL; // unbound logical signal
+  SensorOut : BOOL; // unbound logical signal
+END_VAR
+VAR
+  stepCurrent : INT;
+  stepElapsed_ms : TIME;
+  minDuration_ms : TIME;
+END_VAR
+BEGIN
+  // Scan order: FREEZE_INPUT_SNAPSHOT -> EVALUATE_TYPED_GUARDS -> RESOLVE_PRIORITY_AND_EXCLUSIVITY -> ATOMIC_TRANSITION -> COMPOSE_ACTIONS -> ARBITRATE_SINGLE_WRITER -> TICK_DRIVER_FSMS -> EMIT_OUTPUTS_AND_ALARMS
+  CASE #stepCurrent OF
+    0: // source_id: S0 (IDLE)
+      #minDuration_ms := T#0ms; // source_id: S0
+      // guard T0: #CmdStart -> S1
+      ;
+    1: // source_id: S1 (EXTEND)
+      #minDuration_ms := T#0ms; // source_id: S1
+      // timeout_ms := 500; // source_id: S1
+      // action CmdExtend := True; // source_id: S1
+      // guard T1: #SensorOut -> S2
+      ;
+    2: // source_id: S2 (HOLD)
+      #minDuration_ms := T#1000ms; // source_id: S2
+      // timeout_ms := 5000; // source_id: S2
+      // guard T2: #HoldDone -> S3
+      ;
+    3: // source_id: S3 (RETRACT)
+      #minDuration_ms := T#0ms; // source_id: S3
+      // timeout_ms := 500; // source_id: S3
+      // action CmdRetract := True; // source_id: S3
+      // guard T3: #SensorIn -> S4
+      ;
+    4: // source_id: S4 (DONE)
+      #minDuration_ms := T#0ms; // source_id: S4
+      // guard T4: NOT (#CmdStart) -> S0
+      ;
+    5: // source_id: FAULT (FAULT)
+      #minDuration_ms := T#0ms; // source_id: FAULT
+      // guard T5: #Reset -> S0
+      ;
+  END_CASE;
+END_FUNCTION_BLOCK

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plc-agent.local/evidence/v2/batch_receipt.schema.json",
+  "title": "V2 per-batch evidence receipt (defined by engineer, ledger closed by team lead)",
+  "description": "Historical evidence/*.json files are never modified. This directory is append-only for V2 batches.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_id", "base_commit", "batch", "evidence_level", "real_tia_v19_tested", "commands", "results", "scope"],
+  "properties": {
+    "task_id": { "type": "string" },
+    "base_commit": { "type": "string" },
+    "batch": { "enum": ["T01", "T02", "T03", "T04"] },
+    "evidence_level": { "enum": ["offline", "mocked", "V19_real", "pending_real_machine"] },
+    "real_tia_v19_tested": { "type": "boolean" },
+    "raw_evidence_path": { "type": "string" },
+    "commands": { "type": "array", "items": { "type": "string" } },
+    "results": {
+      "type": "object",
+      "properties": {
+        "pytest_passed": { "type": "integer" },
+        "pytest_failed": { "type": "integer" },
+        "vitest_passed": { "type": "integer" },
+        "dotnet_passed": { "type": "integer" },
+        "dotnet_failed": { "type": "integer" }
+      }
+    },
+    "negative_cases": { "type": "array", "items": { "type": "string" } },
+    "scope": { "type": "array", "items": { "type": "string" } },
+    "pending_real_machine": { "type": "array", "items": { "type": "string" } },
+    "notice": { "type": "string" }
+  }
+}

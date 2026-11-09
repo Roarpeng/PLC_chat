@@ -189,3 +189,45 @@ uv run researchos-tia-cli --exports C:\Export\Line --result-dir .\ResearchOS_PLC
 - PowerShell bulk export remains at `industrial/tia_adapter/ExportProject.ps1`
 - Python offline analyzer: `researchos-tia-cli` / `agents.plc.tia`
 - C# write tools: this package (`TiaOpenness.Server` CLI + MCP). `industrial/README.md` is **not** read-only for HostGateway write-back.
+
+## V19 native delivery chain (WP-01 / G5, T02 incremental)
+
+TargetFramework stays **net481** (Siemens.Engineering is .NET Framework 4.8 Remoting);
+.NET 8 is only the build SDK. The Python side (`gateway/app/services/plc/tia_delivery_v2.py`)
+orchestrates the chain via these exact one-shot CLI commands. All replies use
+`JsonDefaults.Options` (CamelCase).
+
+```text
+status                                   # G0 read-only probe (no project write)
+create-project --dir <dir> --name <name>
+create-device --project <ap19> --type-id <approved CPU> --name <name>
+generate-from-source --project <ap19> --scl <file.scl>
+import-xml --project <ap19> --xml <file.xml> --kind auto
+compile-plc --project <ap19>
+save-project --project <ap19>             # T02 incremental command
+archive-project --project <ap19> --out-dir <dir> --name <file.zap19>
+retrieve --archive <file.zap19> --out-dir <dir>
+```
+
+Exact receipt shapes (D-1 / D-2 / Q-06):
+
+```json
+{"ok":true,"create":{"ok":true,"projectPath":"C:\\work\\Demo.ap19","projectName":"Demo"}}
+{"ok":true,"archive":{"ok":true,"projectPath":"C:\\work\\Demo.ap19",
+  "archivePath":"C:\\work\\out\\Demo.zap19","archiveSha256":"sha256:...","sizeBytes":123456}}
+{"ok":true,"reopenOk":true,"archiveSha256":"sha256:...",
+  "retrieve":{"ok":true,"reopenOk":true,"projectPath":"C:\\work\\reopen\\Demo.ap19"}}
+```
+
+Rules: `create.projectPath` is unpacked **fail-closed** by Python (no guessed
+`dir/name.ap19`); `archive.archivePath` is the exact path (the former
+`Directory.GetFiles` + newest-match wildcard is removed); a missing exact file
+is `archive_missing`; `reopenOk` must be true before `NATIVE_ARCHIVED`.
+`warningCount` is reported separately from `errorCount` and never folded into
+success.
+
+Real-machine chain execution is serial-only (exclusive TIA Portal V19) and is
+driven by `scripts/tia_delivery_chain_v2.py --real`; without `--real` the script
+reports `pending_real_machine` and never claims a native delivery.
+See `docs/v2/evidence/T02/` and `evidence/v2/T02/batch_receipt.json`.
+

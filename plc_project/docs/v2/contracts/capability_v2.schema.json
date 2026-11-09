@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plc-agent.local/contracts/capability_v2.schema.json",
+  "title": "G0 TiaCapabilityManifest (real status probe receipt)",
+  "description": "CPU candidates are static V19 order numbers until a real CreateWithItem probe attaches a receipt. A missing real probe => pending_real_machine.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "probe_receipt_id", "tia_version", "cpu_templates", "selected_cpu_template",
+    "probed_at", "raw_probe_receipt", "evidence_level"
+  ],
+  "properties": {
+    "probe_receipt_id": { "type": "string" },
+    "tia_version": { "const": "V19" },
+    "cpu_templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cpu_template", "type_identifier", "firmware", "catalog_source", "verified_create_with_item"],
+        "properties": {
+          "cpu_template": { "type": "string" },
+          "type_identifier": { "type": "string" },
+          "firmware": { "type": "string" },
+          "catalog_source": { "type": "string" },
+          "verified_create_with_item": { "type": "boolean" },
+          "verification_receipt": { "type": "string" }
+        }
+      }
+    },
+    "selected_cpu_template": { "type": "string" },
+    "selection_note": { "type": "string" },
+    "probed_at": { "type": "string", "format": "date-time" },
+    "raw_probe_receipt": { "type": "object" },
+    "evidence_level": { "enum": ["offline", "mocked", "V19_real", "pending_real_machine"] },
+    "status_receipt": {
+      "type": "object",
+      "properties": {
+        "ok": { "type": "boolean" },
+        "openness_available": { "type": "boolean" },
+        "tia_running": { "type": "boolean" },
+        "engineering_dll": { "type": "string" },
+        "error": { "type": "string" }
+      }
+    }
+  }
+}

@@ -70,6 +70,7 @@ public static class Program
                 "  compile-hmi --project <ap19> [--hmi name]\n" +
                 "  hmi-unified-apply --project <ap19> --ops <ops.json> [--hmi name]\n" +
                 "  serve [--host 127.0.0.1] [--port 8791] [--token secret]\n" +
+                "  save-project --project <ap19> [--plc name]\n" +
                 "  archive-project --project <ap19> --out-dir <dir> [--name file.zap19]\n" +
                 "  create-device --project <ap19> --type-id <id> --name <name> [--device-name <dname>]\n" +
                 "  probe-device-types --project <ap19> --type-ids <id1|id2|...> (probe only, never saves)\n" +
@@ -527,6 +528,25 @@ public static class Program
                 return 7;
             }
 
+            if (command == "save-project")
+            {
+                if (!opts.TryGetValue("project", out var project) || string.IsNullOrWhiteSpace(project))
+                {
+                    Console.Error.WriteLine("Missing --project");
+                    return 2;
+                }
+                opts.TryGetValue("plc", out var plc);
+                var opened = projects.OpenProject(project, plc, withoutUi: true);
+                if (!opened.Ok)
+                {
+                    Console.WriteLine(JsonSerializer.Serialize(opened, JsonDefaults.Options));
+                    return 3;
+                }
+                var saved = projects.SaveProject();
+                Console.WriteLine(JsonSerializer.Serialize(new { ok = saved.Ok, save = saved }, JsonDefaults.Options));
+                return saved.Ok ? 0 : 5;
+            }
+
             if (command == "archive-project")
             {
                 if (!opts.TryGetValue("project", out var project) || string.IsNullOrWhiteSpace(project))
@@ -643,8 +663,27 @@ public static class Program
 
                 opts.TryGetValue("plc", out var plc);
                 var retrieved = projects.RetrieveProject(archive, outDir, plc);
-                Console.WriteLine(JsonSerializer.Serialize(new { ok = retrieved.Ok, retrieve = retrieved }, JsonDefaults.Options));
-                return retrieved.Ok ? 0 : 4;
+                // Q-06: reopen is MANDATORY before NATIVE_ARCHIVED. The receipt
+                // carries an explicit reopenOk plus the exact archive sha256.
+                var reopenOk = retrieved.Ok && retrieved.ReopenOk;
+                string? archiveSha256 = null;
+                if (File.Exists(archive))
+                {
+                    using (var stream = File.OpenRead(archive))
+                    using (var sha = System.Security.Cryptography.SHA256.Create())
+                    {
+                        archiveSha256 = "sha256:" + BitConverter.ToString(sha.ComputeHash(stream))
+                            .Replace("-", "").ToLowerInvariant();
+                    }
+                }
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    ok = reopenOk,
+                    retrieve = retrieved,
+                    reopenOk,
+                    archiveSha256,
+                }, JsonDefaults.Options));
+                return reopenOk ? 0 : 4;
             }
 
             if (command == "create-project")

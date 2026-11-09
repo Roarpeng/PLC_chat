@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plc-agent.local/contracts/changeset_v2.schema.json",
+  "title": "V2 frozen ChangeSet / approval",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id", "project_id", "base_revision", "before_hash", "after_hash", "spec_hash",
+    "status", "ops", "impacts", "validation", "review_approved", "explicit"
+  ],
+  "properties": {
+    "id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "base_revision": { "type": "integer", "minimum": 0 },
+    "before_hash": { "type": "string" },
+    "after_hash": { "type": "string" },
+    "spec_hash": { "type": "string" },
+    "status": { "enum": ["PROPOSED", "APPROVED", "FAILED", "REJECTED"] },
+    "ops": { "type": "array", "items": { "type": "object" } },
+    "impacts": {
+      "type": "object",
+      "required": ["delete_count", "safety_block_changes"],
+      "properties": {
+        "delete_count": { "const": 0 },
+        "safety_block_changes": { "const": 0 },
+        "components": { "type": "integer" },
+        "steps": { "type": "integer" },
+        "transitions": { "type": "integer" }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "required": ["passed", "issues", "unchanged_ir_hash"],
+      "properties": {
+        "passed": { "type": "boolean" },
+        "issues": { "type": "array", "items": { "type": "object" } },
+        "warnings": { "type": "array", "items": { "type": "string" } },
+        "unchanged_ir_hash": { "type": "string" }
+      }
+    },
+    "review_approved": { "type": "boolean" },
+    "approved_by": { "type": "string" },
+    "signed_spec_hash": { "type": "string" },
+    "signed_baseline_hash": { "type": "string" },
+    "signed_at": { "type": "string" },
+    "explicit": { "type": "boolean", "description": "must be true (human sign-off; LLM never holds this tool)" },
+    "created_at": { "type": "string" }
+  }
+}

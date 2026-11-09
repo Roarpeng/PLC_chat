@@ -1,0 +1,28 @@
+// AF FB: driver command/permission interface
+// source_id: prj_demo
+// af_profile: SIEMENS_AF_BASIC_FOLDER_V19
+// template_sha256: sha256:af_basic_folder_v19_template_unbound
+// ir_sha256: sha256:3ee31ae438c7470835b41d4846ea5db12e7a9c792d641691650e7470d0268a4e
+// deterministic semantic output: no timestamps in this file
+
+FUNCTION_BLOCK "FB_Drivers"
+VAR_INPUT
+  // source_id: CM1 (official_lbc)
+  CM1_CmdExtend : BOOL; // binding=None
+  CM1_CmdRetract : BOOL; // binding=None
+  CM1_Reset : BOOL; // binding=None
+  CM1_SafetyPermit : BOOL; // binding=None
+  CM1_SensorIn : BOOL; // binding=None
+  CM1_SensorOut : BOOL; // binding=None
+END_VAR
+VAR_OUTPUT
+  CM1_Busy : BOOL; // writer=FB_Cylinder
+  CM1_Error : BOOL; // writer=FB_Cylinder
+  CM1_ErrorID : INT; // writer=FB_Cylinder
+  CM1_Q_Extend : BOOL; // writer=FB_Cylinder
+  CM1_Q_Retract : BOOL; // writer=FB_Cylinder
+END_VAR
+BEGIN
+  // Reverse outputs are interlocked by arbitrate_single_writer().
+  // source_id: CM1 ; move_timeout_ms := 3000;
+END_FUNCTION_BLOCK

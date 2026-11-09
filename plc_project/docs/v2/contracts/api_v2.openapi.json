@@ -1,0 +1,3603 @@
+{
+  "components": {
+    "schemas": {
+      "ActionAIn": {
+        "description": "POST /action-a：导出工程包（离线可校验，不写 TIA）。",
+        "properties": {
+          "include_zip_base64": {
+            "default": false,
+            "title": "Include Zip Base64",
+            "type": "boolean"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "tia_side_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tia Side Snapshot"
+          }
+        },
+        "title": "ActionAIn",
+        "type": "object"
+      },
+      "ActionBIn": {
+        "description": "POST /action-b：首次写入博途编译（以 Action A 的 fidelity_ok==true 为前提，D11 确认）。",
+        "properties": {
+          "ap_path": {
+            "default": "",
+            "title": "Ap Path",
+            "type": "string"
+          },
+          "confirmed": {
+            "default": false,
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "fidelity_report": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fidelity Report"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "static_gate_passed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Static Gate Passed"
+          }
+        },
+        "title": "ActionBIn",
+        "type": "object"
+      },
+      "ActionCIn": {
+        "description": "POST /action-c：调试期增量回写（§13.5 八步；D11 / D10 / D9 fail-closed）。",
+        "properties": {
+          "ap_path": {
+            "default": "",
+            "title": "Ap Path",
+            "type": "string"
+          },
+          "confirmed": {
+            "default": false,
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "diff": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diff"
+          },
+          "fidelity_report": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fidelity Report"
+          },
+          "last_generated": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Generated"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "static_gate_passed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Static Gate Passed"
+          },
+          "tia_owned_by_ui": {
+            "default": false,
+            "title": "Tia Owned By Ui",
+            "type": "boolean"
+          },
+          "tia_side_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tia Side Snapshot"
+          }
+        },
+        "title": "ActionCIn",
+        "type": "object"
+      },
+      "ApiResponse_DeviceCardListResponse_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeviceCardListResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "title": "ApiResponse[DeviceCardListResponse]",
+        "type": "object"
+      },
+      "ApiResponse_DeviceSensorCard_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeviceSensorCard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "title": "ApiResponse[DeviceSensorCard]",
+        "type": "object"
+      },
+      "ApiResponse_PlcChatTurn_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlcChatTurn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "title": "ApiResponse[PlcChatTurn]",
+        "type": "object"
+      },
+      "ApiResponse_PlcGraphQueryResponse_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlcGraphQueryResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "title": "ApiResponse[PlcGraphQueryResponse]",
+        "type": "object"
+      },
+      "ApiResponse_PlcJobDetail_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlcJobDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "title": "ApiResponse[PlcJobDetail]",
+        "type": "object"
+      },
+      "ApiResponse_PlcJobSummary_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlcJobSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "title": "ApiResponse[PlcJobSummary]",
+        "type": "object"
+      },
+      "ApiResponse_PlcProjectBrief_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlcProjectBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "title": "ApiResponse[PlcProjectBrief]",
+        "type": "object"
+      },
+      "ApiResponse_dict_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "title": "ApiResponse[dict]",
+        "type": "object"
+      },
+      "ApiResponse_dict_str__Any__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "title": "ApiResponse[dict[str, Any]]",
+        "type": "object"
+      },
+      "ApiResponse_list_PlcJobSummary__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PlcJobSummary"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "title": "ApiResponse[list[PlcJobSummary]]",
+        "type": "object"
+      },
+      "ApiResponse_list_dict__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "title": "ApiResponse[list[dict]]",
+        "type": "object"
+      },
+      "ApiResponse_list_dict_str__Any___": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "title": "ApiResponse[list[dict[str, Any]]]",
+        "type": "object"
+      },
+      "ApproveIn": {
+        "description": "POST /api/v2/changesets/{id}/approve — explicit human sign-off.",
+        "properties": {
+          "base_revision": {
+            "default": 0,
+            "title": "Base Revision",
+            "type": "integer"
+          },
+          "expected_baseline_hash": {
+            "default": "",
+            "title": "Expected Baseline Hash",
+            "type": "string"
+          },
+          "explicit": {
+            "default": false,
+            "title": "Explicit",
+            "type": "boolean"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "request_id": {
+            "default": "",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "reviewer_id": {
+            "default": "",
+            "title": "Reviewer Id",
+            "type": "string"
+          }
+        },
+        "title": "ApproveIn",
+        "type": "object"
+      },
+      "Body_canvas_import_upload_endpoint_api_v1_plc_canvas_import_upload_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "progress_id": {
+            "default": "",
+            "title": "Progress Id",
+            "type": "string"
+          },
+          "project_name": {
+            "default": "",
+            "title": "Project Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_canvas_import_upload_endpoint_api_v1_plc_canvas_import_upload_post",
+        "type": "object"
+      },
+      "Body_create_job_from_upload_api_v1_plc_jobs_upload_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "plc_name": {
+            "default": "",
+            "title": "Plc Name",
+            "type": "string"
+          },
+          "project_name": {
+            "default": "",
+            "title": "Project Name",
+            "type": "string"
+          },
+          "publish_graph": {
+            "default": true,
+            "title": "Publish Graph",
+            "type": "boolean"
+          },
+          "tia_version": {
+            "default": "",
+            "title": "Tia Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_create_job_from_upload_api_v1_plc_jobs_upload_post",
+        "type": "object"
+      },
+      "BrownfieldDiffPlanIn": {
+        "description": "A-3 placeholder: interface + schema only (Q-04, no real TIA write).",
+        "properties": {
+          "base_revision": {
+            "default": 0,
+            "title": "Base Revision",
+            "type": "integer"
+          },
+          "ops": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Ops",
+            "type": "array"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "request_id": {
+            "default": "",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "source_bindings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Source Bindings",
+            "type": "array"
+          }
+        },
+        "title": "BrownfieldDiffPlanIn",
+        "type": "object"
+      },
+      "ChangesetIn": {
+        "description": "POST /api/v2/projects/{id}/changesets.",
+        "properties": {
+          "base_revision": {
+            "default": 0,
+            "title": "Base Revision",
+            "type": "integer"
+          },
+          "ops": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Ops",
+            "type": "array"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "request_id": {
+            "default": "",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "title": "ChangesetIn",
+        "type": "object"
+      },
+      "ChatIn": {
+        "properties": {
+          "message": {
+            "default": "",
+            "title": "Message",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "title": "ChatIn",
+        "type": "object"
+      },
+      "ConfirmDiffIn": {
+        "description": "POST /confirm-diff：{project_id, diff_id, confirmed}。",
+        "properties": {
+          "confirmed": {
+            "default": false,
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "diff_id": {
+            "default": "",
+            "title": "Diff Id",
+            "type": "string"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "title": "ConfirmDiffIn",
+        "type": "object"
+      },
+      "ConfirmIn": {
+        "properties": {
+          "explicit": {
+            "default": false,
+            "title": "Explicit",
+            "type": "boolean"
+          },
+          "frozen_by": {
+            "default": "user",
+            "title": "Frozen By",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "title": "ConfirmIn",
+        "type": "object"
+      },
+      "CreateProjectIn": {
+        "description": "POST /api/v2/projects.",
+        "properties": {
+          "legacy_ir": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legacy Ir"
+          },
+          "origin": {
+            "default": "greenfield",
+            "title": "Origin",
+            "type": "string"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "request_id": {
+            "default": "",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "v1_fixture": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "V1 Fixture"
+          }
+        },
+        "title": "CreateProjectIn",
+        "type": "object"
+      },
+      "DeliverTiaIn": {
+        "description": "POST /deliver-tia：mode=auto 尝试 Openness 自动导入编译（TIA 不可用时显式失败、\n非 200，禁止静默降级）；mode=package 只出 SCL+XML 补充包并标 pending_real_machine。\n§9 P2-4..P2-8。",
+        "properties": {
+          "mode": {
+            "default": "auto",
+            "title": "Mode",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "title": "DeliverTiaIn",
+        "type": "object"
+      },
+      "DeliveryIn": {
+        "description": "POST /api/v2/projects/{id}/deliveries.",
+        "properties": {
+          "approved_changeset_id": {
+            "default": "",
+            "title": "Approved Changeset Id",
+            "type": "string"
+          },
+          "artifact_type": {
+            "default": "native_tia_archive",
+            "enum": [
+              "native_tia_archive",
+              "source_package"
+            ],
+            "title": "Artifact Type",
+            "type": "string"
+          },
+          "base_revision": {
+            "default": 0,
+            "title": "Base Revision",
+            "type": "integer"
+          },
+          "expected_baseline_hash": {
+            "default": "",
+            "title": "Expected Baseline Hash",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "default": "",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "request_id": {
+            "default": "",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "tia_version": {
+            "const": "V19",
+            "default": "V19",
+            "title": "Tia Version",
+            "type": "string"
+          }
+        },
+        "title": "DeliveryIn",
+        "type": "object"
+      },
+      "DeviceCardAnnotationRequest": {
+        "description": "Engineer note that overrides cited tag/HMI comments on a Q1 card.",
+        "properties": {
+          "author": {
+            "default": "",
+            "maxLength": 120,
+            "title": "Author",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "DeviceCardAnnotationRequest",
+        "type": "object"
+      },
+      "DeviceCardCitation": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "locator": {
+            "default": "",
+            "title": "Locator",
+            "type": "string"
+          },
+          "quote": {
+            "default": "",
+            "title": "Quote",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "DeviceCardCitation",
+        "type": "object"
+      },
+      "DeviceCardHmiText": {
+        "properties": {
+          "device": {
+            "default": "",
+            "title": "Device",
+            "type": "string"
+          },
+          "screen": {
+            "default": "",
+            "title": "Screen",
+            "type": "string"
+          },
+          "text": {
+            "default": "",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "title": "DeviceCardHmiText",
+        "type": "object"
+      },
+      "DeviceCardListResponse": {
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/DeviceSensorCard"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "counts": {
+            "additionalProperties": true,
+            "title": "Counts",
+            "type": "object"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "project_name": {
+            "default": "",
+            "title": "Project Name",
+            "type": "string"
+          },
+          "schema": {
+            "default": "researchos.device_sensor_card.v1",
+            "title": "Schema",
+            "type": "string"
+          }
+        },
+        "title": "DeviceCardListResponse",
+        "type": "object"
+      },
+      "DeviceCardUsage": {
+        "properties": {
+          "access": {
+            "title": "Access",
+            "type": "string"
+          },
+          "block": {
+            "title": "Block",
+            "type": "string"
+          },
+          "network_id": {
+            "default": "",
+            "title": "Network Id",
+            "type": "string"
+          },
+          "network_title": {
+            "default": "",
+            "title": "Network Title",
+            "type": "string"
+          },
+          "part": {
+            "default": "",
+            "title": "Part",
+            "type": "string"
+          }
+        },
+        "required": [
+          "block",
+          "access"
+        ],
+        "title": "DeviceCardUsage",
+        "type": "object"
+      },
+      "DeviceSensorCard": {
+        "properties": {
+          "address": {
+            "default": "",
+            "title": "Address",
+            "type": "string"
+          },
+          "annotation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annotation"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/DeviceCardCitation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "comment": {
+            "default": "",
+            "title": "Comment",
+            "type": "string"
+          },
+          "data_type": {
+            "default": "",
+            "title": "Data Type",
+            "type": "string"
+          },
+          "hardware": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hardware"
+          },
+          "hmi_texts": {
+            "items": {
+              "$ref": "#/components/schemas/DeviceCardHmiText"
+            },
+            "title": "Hmi Texts",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "io_type": {
+            "default": "UNKNOWN",
+            "title": "Io Type",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "meaning_source": {
+            "default": "none",
+            "title": "Meaning Source",
+            "type": "string"
+          },
+          "meaning_status": {
+            "title": "Meaning Status",
+            "type": "string"
+          },
+          "meaning_text": {
+            "default": "",
+            "title": "Meaning Text",
+            "type": "string"
+          },
+          "schema": {
+            "default": "researchos.device_sensor_card.v1",
+            "title": "Schema",
+            "type": "string"
+          },
+          "symbol_name": {
+            "title": "Symbol Name",
+            "type": "string"
+          },
+          "tag_table": {
+            "default": "",
+            "title": "Tag Table",
+            "type": "string"
+          },
+          "used_by": {
+            "items": {
+              "$ref": "#/components/schemas/DeviceCardUsage"
+            },
+            "title": "Used By",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "symbol_name",
+          "meaning_status"
+        ],
+        "title": "DeviceSensorCard",
+        "type": "object"
+      },
+      "DiffIn": {
+        "description": "POST /diff：{project_id, from_version, to_version}。",
+        "properties": {
+          "from_version": {
+            "default": 0,
+            "title": "From Version",
+            "type": "integer"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "to_version": {
+            "default": 0,
+            "title": "To Version",
+            "type": "integer"
+          }
+        },
+        "title": "DiffIn",
+        "type": "object"
+      },
+      "DraftImportIn": {
+        "properties": {
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "title": "DraftImportIn",
+        "type": "object"
+      },
+      "DraftIn": {
+        "properties": {
+          "project_name": {
+            "default": "AssemblyCell",
+            "title": "Project Name",
+            "type": "string"
+          },
+          "prompt": {
+            "default": "",
+            "title": "Prompt",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "title": "DraftIn",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HardwarePatchIn": {
+        "properties": {
+          "cm_id": {
+            "default": "",
+            "title": "Cm Id",
+            "type": "string"
+          },
+          "hw_node_id": {
+            "default": "",
+            "title": "Hw Node Id",
+            "type": "string"
+          },
+          "node": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node"
+          },
+          "op": {
+            "default": "mount_cm",
+            "title": "Op",
+            "type": "string"
+          },
+          "role": {
+            "default": "auto",
+            "title": "Role",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "target_id": {
+            "default": "",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "var_key": {
+            "default": "",
+            "title": "Var Key",
+            "type": "string"
+          }
+        },
+        "title": "HardwarePatchIn",
+        "type": "object"
+      },
+      "IntentIn": {
+        "description": "POST /api/v2/projects/{id}/intent — NL to CandidatePatch only.",
+        "properties": {
+          "base_revision": {
+            "default": 0,
+            "title": "Base Revision",
+            "type": "integer"
+          },
+          "context_slice": {
+            "additionalProperties": true,
+            "title": "Context Slice",
+            "type": "object"
+          },
+          "message": {
+            "default": "",
+            "title": "Message",
+            "type": "string"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "request_id": {
+            "default": "",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "title": "IntentIn",
+        "type": "object"
+      },
+      "LinkIn": {
+        "properties": {
+          "dst_id": {
+            "default": "",
+            "title": "Dst Id",
+            "type": "string"
+          },
+          "edge": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edge"
+          },
+          "edge_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edge Id"
+          },
+          "field_path": {
+            "default": "",
+            "title": "Field Path",
+            "type": "string"
+          },
+          "op": {
+            "default": "add_edge",
+            "title": "Op",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "src_id": {
+            "default": "",
+            "title": "Src Id",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "title": "LinkIn",
+        "type": "object"
+      },
+      "PlcAnalyzeRequest": {
+        "description": "Optional block focus for deterministic KG/folded-logic analysis.",
+        "properties": {
+          "block_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional PLC block focus (OB/FB/FC/DB name)",
+            "title": "Block Name"
+          }
+        },
+        "title": "PlcAnalyzeRequest",
+        "type": "object"
+      },
+      "PlcChatRequest": {
+        "properties": {
+          "block_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional PLC block focus (OB/FB/FC/DB name)",
+            "title": "Block Name"
+          },
+          "message": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "PlcChatRequest",
+        "type": "object"
+      },
+      "PlcChatTurn": {
+        "properties": {
+          "block_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Name"
+          },
+          "citations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "PlcChatTurn",
+        "type": "object"
+      },
+      "PlcGraphQueryRequest": {
+        "properties": {
+          "block_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Name"
+          },
+          "op": {
+            "title": "Op",
+            "type": "string"
+          },
+          "roots": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roots"
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag"
+          },
+          "target_block": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Block"
+          }
+        },
+        "required": [
+          "op"
+        ],
+        "title": "PlcGraphQueryRequest",
+        "type": "object"
+      },
+      "PlcGraphQueryResponse": {
+        "properties": {
+          "evidence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "op": {
+            "title": "Op",
+            "type": "string"
+          },
+          "result": {
+            "title": "Result"
+          }
+        },
+        "required": [
+          "op",
+          "result"
+        ],
+        "title": "PlcGraphQueryResponse",
+        "type": "object"
+      },
+      "PlcJobCreatePath": {
+        "description": "Create a PLC ingest job from a server-visible path.",
+        "properties": {
+          "path": {
+            "description": "Absolute path under PLC_PATH_ALLOWLIST roots",
+            "title": "Path",
+            "type": "string"
+          },
+          "plc_name": {
+            "default": "",
+            "title": "Plc Name",
+            "type": "string"
+          },
+          "project_name": {
+            "default": "",
+            "title": "Project Name",
+            "type": "string"
+          },
+          "publish_graph": {
+            "default": true,
+            "title": "Publish Graph",
+            "type": "boolean"
+          },
+          "source_type": {
+            "const": "path",
+            "default": "path",
+            "title": "Source Type",
+            "type": "string"
+          },
+          "tia_version": {
+            "default": "",
+            "title": "Tia Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "PlcJobCreatePath",
+        "type": "object"
+      },
+      "PlcJobDetail": {
+        "properties": {
+          "block_stubs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Block Stubs",
+            "type": "array"
+          },
+          "blocks": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
+          "body_pull_queue": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Body Pull Queue",
+            "type": "array"
+          },
+          "brief_ready": {
+            "default": false,
+            "title": "Brief Ready",
+            "type": "boolean"
+          },
+          "changeset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changeset"
+          },
+          "chat": {
+            "items": {
+              "$ref": "#/components/schemas/PlcChatTurn"
+            },
+            "title": "Chat",
+            "type": "array"
+          },
+          "coverage": {
+            "additionalProperties": true,
+            "title": "Coverage",
+            "type": "object"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "dossiers": {
+            "additionalProperties": true,
+            "description": "Per-block evidence packs: identity, calls, IO, coverage, preset Q&A",
+            "title": "Dossiers",
+            "type": "object"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "export_ready": {
+            "default": false,
+            "title": "Export Ready",
+            "type": "boolean"
+          },
+          "extraction_notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Extraction Notes",
+            "type": "array"
+          },
+          "folded_logic": {
+            "additionalProperties": true,
+            "title": "Folded Logic",
+            "type": "object"
+          },
+          "graph_publish": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Publish"
+          },
+          "hardware": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Hardware",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "ingest_phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingest Phase"
+          },
+          "knowledge_graph": {
+            "additionalProperties": true,
+            "title": "Knowledge Graph",
+            "type": "object"
+          },
+          "logic_graph": {
+            "additionalProperties": true,
+            "title": "Logic Graph",
+            "type": "object"
+          },
+          "openness_export_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Openness Export Dir"
+          },
+          "optimize_plan": {
+            "default": "",
+            "title": "Optimize Plan",
+            "type": "string"
+          },
+          "progress": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Progress",
+            "type": "array"
+          },
+          "project_name": {
+            "default": "",
+            "title": "Project Name",
+            "type": "string"
+          },
+          "project_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Path"
+          },
+          "report": {
+            "default": "",
+            "title": "Report",
+            "type": "string"
+          },
+          "review": {
+            "additionalProperties": true,
+            "description": "Deterministic review-rule findings (double write, set/reset, orphans)",
+            "title": "Review",
+            "type": "object"
+          },
+          "scl_diffs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Scl Diffs",
+            "type": "array"
+          },
+          "scl_files": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Scl Files",
+            "type": "object"
+          },
+          "scl_skipped": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Scl Skipped",
+            "type": "array"
+          },
+          "scl_sources": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Scl Sources",
+            "type": "object"
+          },
+          "source_artifacts": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "description": "Per-block raw-source artifact *paths* (flgnet_xml / literal_scl / ast_trace); content is fetch-on-demand only",
+            "title": "Source Artifacts",
+            "type": "object"
+          },
+          "source_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Path"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "source_xmls": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Xmls",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "structure": {
+            "additionalProperties": true,
+            "description": "Trusted structure inventory: units + layers + counts",
+            "title": "Structure",
+            "type": "object"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "timings": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Ingest stage wall-clock timings in milliseconds",
+            "title": "Timings",
+            "type": "object"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "writeback": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Writeback"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "source_type"
+        ],
+        "title": "PlcJobDetail",
+        "type": "object"
+      },
+      "PlcJobSummary": {
+        "properties": {
+          "brief_ready": {
+            "default": false,
+            "title": "Brief Ready",
+            "type": "boolean"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Language/Part/TODO histogram; also on GET job detail",
+            "title": "Coverage"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "export_ready": {
+            "default": false,
+            "title": "Export Ready",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "ingest_phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingest Phase"
+          },
+          "project_name": {
+            "default": "",
+            "title": "Project Name",
+            "type": "string"
+          },
+          "project_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Path"
+          },
+          "source_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Path"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "source_type"
+        ],
+        "title": "PlcJobSummary",
+        "type": "object"
+      },
+      "PlcOptimizeRequest": {
+        "description": "Evidence-gated optimization proposal (dead + decouple + SCL rewrite).",
+        "properties": {
+          "block_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional focus block; project-wide dead-block scan always runs",
+            "title": "Block Name"
+          },
+          "message": {
+            "default": "优化工程逻辑并准备反写",
+            "maxLength": 4000,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "PlcOptimizeRequest",
+        "type": "object"
+      },
+      "PlcProjectBrief": {
+        "description": "Layered handover Brief — readable before full SCL translate.",
+        "properties": {
+          "block_counts_by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Block Counts By Status",
+            "type": "object"
+          },
+          "block_stubs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Block Stubs",
+            "type": "array"
+          },
+          "brief_ready": {
+            "default": false,
+            "title": "Brief Ready",
+            "type": "boolean"
+          },
+          "device_sensor_summary": {
+            "additionalProperties": true,
+            "title": "Device Sensor Summary",
+            "type": "object"
+          },
+          "engineer_prompts": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Engineer Prompts",
+            "type": "array"
+          },
+          "export_gaps": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Export Gaps",
+            "type": "array"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "main_entry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main Entry"
+          },
+          "main_ob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main Ob"
+          },
+          "phase": {
+            "default": "queued",
+            "title": "Phase",
+            "type": "string"
+          },
+          "project_name": {
+            "default": "",
+            "title": "Project Name",
+            "type": "string"
+          },
+          "purpose": {
+            "default": "",
+            "title": "Purpose",
+            "type": "string"
+          },
+          "run_logic_entry": {
+            "default": "",
+            "title": "Run Logic Entry",
+            "type": "string"
+          },
+          "timing": {
+            "additionalProperties": true,
+            "title": "Timing",
+            "type": "object"
+          },
+          "top_level_calls": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Top Level Calls",
+            "type": "array"
+          }
+        },
+        "title": "PlcProjectBrief",
+        "type": "object"
+      },
+      "PlcProposeChangeRequest": {
+        "properties": {
+          "block_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Block Name"
+          },
+          "message": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "PlcProposeChangeRequest",
+        "type": "object"
+      },
+      "PlcStructureRetryRequest": {
+        "description": "Re-run Openness/structure export for failed or pending units.",
+        "properties": {
+          "names": {
+            "description": "Optional unit names to emphasize; empty retries the full inventory",
+            "items": {
+              "type": "string"
+            },
+            "title": "Names",
+            "type": "array"
+          }
+        },
+        "title": "PlcStructureRetryRequest",
+        "type": "object"
+      },
+      "PlcWritebackRequest": {
+        "description": "HITL confirm: apply KG changes and optionally import XML/SCL into .apxx.",
+        "properties": {
+          "accept_changeset": {
+            "default": true,
+            "title": "Accept Changeset",
+            "type": "boolean"
+          },
+          "archive_zap": {
+            "default": true,
+            "description": "After successful Openness import+save, Archive compressed .zap*",
+            "title": "Archive Zap",
+            "type": "boolean"
+          },
+          "block_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional node-scoped confirm: apply only this block and helper FCs created for it. Empty = whole-project changeset.",
+            "title": "Block Name"
+          },
+          "execute_openness_import": {
+            "default": true,
+            "title": "Execute Openness Import",
+            "type": "boolean"
+          },
+          "plc_name": {
+            "default": "",
+            "title": "Plc Name",
+            "type": "string"
+          },
+          "project_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Target .ap19/.apxx; defaults to job.project_path from ingest",
+            "title": "Project Path"
+          },
+          "xml_paths": {
+            "description": "Optional XML files to stage; defaults to job source XML",
+            "items": {
+              "type": "string"
+            },
+            "title": "Xml Paths",
+            "type": "array"
+          }
+        },
+        "title": "PlcWritebackRequest",
+        "type": "object"
+      },
+      "PreviewIn": {
+        "description": "POST /api/v2/projects/{id}/preview.",
+        "properties": {
+          "base_revision": {
+            "default": 0,
+            "title": "Base Revision",
+            "type": "integer"
+          },
+          "include_scl": {
+            "default": true,
+            "title": "Include Scl",
+            "type": "boolean"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "request_id": {
+            "default": "",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "title": "PreviewIn",
+        "type": "object"
+      },
+      "SessionIn": {
+        "properties": {
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "title": "SessionIn",
+        "type": "object"
+      },
+      "SimulateIn": {
+        "description": "POST /api/v2/projects/{id}/simulate.",
+        "properties": {
+          "base_revision": {
+            "default": 0,
+            "title": "Base Revision",
+            "type": "integer"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "request_id": {
+            "default": "",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "scenario": {
+            "default": "normal_cycle",
+            "title": "Scenario",
+            "type": "string"
+          }
+        },
+        "title": "SimulateIn",
+        "type": "object"
+      },
+      "UploadIn": {
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "title": "UploadIn",
+        "type": "object"
+      },
+      "ValidateIn": {
+        "description": "POST /api/v2/projects/{id}/validate.",
+        "properties": {
+          "base_revision": {
+            "default": 0,
+            "title": "Base Revision",
+            "type": "integer"
+          },
+          "full": {
+            "default": true,
+            "title": "Full",
+            "type": "boolean"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "request_id": {
+            "default": "",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "title": "ValidateIn",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "gateway__app__routers__greenfield__PatchIn": {
+        "description": "POST /patch：{project_id, ops, base_spec_version, expected_ir_sha256}。",
+        "properties": {
+          "base_spec_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Spec Version"
+          },
+          "expected_ir_sha256": {
+            "default": "",
+            "title": "Expected Ir Sha256",
+            "type": "string"
+          },
+          "ops": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Ops",
+            "type": "array"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "title": "PatchIn",
+        "type": "object"
+      },
+      "gateway__app__schemas__v2_ir__PatchIn": {
+        "description": "POST /api/v2/projects/{id}/patches — atomic semantic patch.",
+        "properties": {
+          "base_revision": {
+            "default": 0,
+            "title": "Base Revision",
+            "type": "integer"
+          },
+          "ops": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Ops",
+            "type": "array"
+          },
+          "project_id": {
+            "default": "",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "request_id": {
+            "default": "",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "title": "PatchIn",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Generated from gateway.app.main:app. v1 /api/v1/plc routes remain registered and unchanged. Every response carries evidence_level.",
+    "title": "PLC Agent V2 Unified Engineering API",
+    "version": "2.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v2/artifacts/{artifact_id}/download": {
+      "get": {
+        "description": "Exact 4-tuple authorisation; no directory scan and no path parameter.",
+        "operationId": "download_artifact_api_v2_artifacts__artifact_id__download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artifact_id",
+            "required": true,
+            "schema": {
+              "title": "Artifact Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "exact project binding (never a file path)",
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "description": "exact project binding (never a file path)",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "exact owning job (no cross-job archives)",
+            "in": "query",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "description": "exact owning job (no cross-job archives)",
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "optional exact sha256 binding",
+            "in": "query",
+            "name": "sha256",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "optional exact sha256 binding",
+              "title": "Sha256",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Artifact",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/capability": {
+      "get": {
+        "description": "G0 TiaCapabilityManifest (real status probe receipt or pending_real_machine).",
+        "operationId": "get_capability_api_v2_capability_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Capability",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/changesets/{changeset_id}/approve": {
+      "post": {
+        "description": "Explicit human approval (LLM never holds this tool).",
+        "operationId": "post_approve_api_v2_changesets__changeset_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "changeset_id",
+            "required": true,
+            "schema": {
+              "title": "Changeset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Approve",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/delivery-jobs/{job_id}": {
+      "get": {
+        "description": "Persistent job state (frontend reads this; never marks success locally).",
+        "operationId": "get_delivery_job_api_v2_delivery_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Delivery Job",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/delivery-jobs/{job_id}/events": {
+      "get": {
+        "description": "SSE stream of the append-only job ledger.",
+        "operationId": "get_delivery_events_api_v2_delivery_jobs__job_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Delivery Events",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects": {
+      "post": {
+        "description": "Create/import a V2 workspace at revision 0.",
+        "operationId": "create_project_api_v2_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Project",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects/{project_id}": {
+      "get": {
+        "description": "Project metadata + capability + delivery state + evidence level.",
+        "operationId": "get_project_api_v2_projects__project_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Project",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects/{project_id}/blocks": {
+      "get": {
+        "description": "v1-compatible read-only block index.",
+        "operationId": "get_blocks_api_v2_projects__project_id__blocks_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Blocks",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects/{project_id}/brownfield/diffplan": {
+      "post": {
+        "description": "A-3 placeholder: interface + schema + negative rejection ONLY (Q-04).\n\nThis batch performs NO real TIA ADD/MODIFY/DELETE and never emits V19_real.",
+        "operationId": "post_brownfield_diffplan_api_v2_projects__project_id__brownfield_diffplan_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrownfieldDiffPlanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Brownfield Diffplan",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects/{project_id}/changesets": {
+      "post": {
+        "description": "Freeze a diff + review pack (no TIA write).",
+        "operationId": "post_changeset_api_v2_projects__project_id__changesets_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangesetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Changeset",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects/{project_id}/deliveries": {
+      "post": {
+        "description": "Accept a delivery: 202 + job_id. No real chain is executed implicitly.",
+        "operationId": "post_delivery_api_v2_projects__project_id__deliveries_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Delivery",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects/{project_id}/intent": {
+      "post": {
+        "description": "NL -> CandidatePatch only (no IR write, no TIA write, no free SCL).",
+        "operationId": "post_intent_api_v2_projects__project_id__intent_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Intent",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects/{project_id}/ir": {
+      "get": {
+        "description": "Read the authoritative EngineeringIR v2.",
+        "operationId": "get_ir_api_v2_projects__project_id__ir_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ir",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects/{project_id}/patches": {
+      "post": {
+        "description": "Atomic semantic patch: 409 on stale revision, 422 on validation failure.",
+        "operationId": "post_patch_api_v2_projects__project_id__patches_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/gateway__app__schemas__v2_ir__PatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Patch",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects/{project_id}/preview": {
+      "post": {
+        "description": "IR -> generated SCL / SourceMap / ArtifactManifest (one-way).",
+        "operationId": "post_preview_api_v2_projects__project_id__preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Preview",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects/{project_id}/simulate": {
+      "post": {
+        "description": "Deterministic offline Trace (explicitly labelled a prediction).",
+        "operationId": "post_simulate_api_v2_projects__project_id__simulate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Simulate",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects/{project_id}/source-package": {
+      "get": {
+        "description": "A-2: offline source import package ZIP — explicitly NOT a native project.",
+        "operationId": "get_source_package_api_v2_projects__project_id__source_package_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Source Package",
+        "tags": [
+          "v2"
+        ]
+      }
+    },
+    "/api/v2/projects/{project_id}/validate": {
+      "post": {
+        "description": "Full deterministic static validation (9 check families).",
+        "operationId": "post_validate_api_v2_projects__project_id__validate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Validate",
+        "tags": [
+          "v2"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "task_id": "T01 (WP-00)",
+  "base_commit": "e228226",
+  "batch": "T01",
+  "evidence_level": "V19_real",
+  "real_tia_v19_tested": true,
+  "raw_evidence_path": "evidence/v2/T01/g0_probe.json",
+  "commands": [
+    "uv run pytest tests/unit/test_*_v2.py tests/contracts -q -rf",
+    "uv run pytest tests -q --disable-warnings -rf",
+    "cd frontend && npm test -- --reporter=dot",
+    "dotnet test industrial/tia_openness_cli/TiaOpenness.sln -c Release",
+    "uv run python scripts/probe_capability_v2.py --no-db",
+    "uv run python -c \"<IR roundtrip / semantic hash determinism>\""
+  ],
+  "results": {
+    "pytest_passed": 162,
+    "pytest_failed": 0,
+    "vitest_passed": 393,
+    "dotnet_passed": 110,
+    "dotnet_failed": 0
+  },
+  "negative_cases": [
+    "schema rejects unknown top-level IR fields",
+    "base_revision mismatch -> 409 BASE_REVISION_CONFLICT",
+    "illegal field / unknown op / free-text guard -> 422",
+    "100 random atomic patches",
+    "v1 fixture zero field loss (21 top-level fields, source-audited)",
+    "io_bindings=null never filled with %Q0.0",
+    "UI layout change does not change ir_sha256",
+    "CPU not selected => explicit failure"
+  ],
+  "scope": [
+    "EngineeringIR v2 + v1 adapter",
+    "5 JSON Schemas + OpenAPI + v1_to_v2_map",
+    "SQLite WAL 10 tables",
+    "v2 router skeleton + all endpoints registered",
+    "G0 read-only status probe (V19_real receipt only for status)"
+  ],
+  "pending_real_machine": [
+    "CreateWithItem verification of CPU candidates is NOT done (tiaRunning=false, processCount=0)",
+    "CPU skeleton awaits explicit lead appointment (U-02)"
+  ],
+  "notice": "V19_real applies ONLY to the read-only C# status probe receipt; no TIA project was created or written."
+}

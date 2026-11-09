@@ -1,0 +1,12 @@
+// AF call OB (block number intentionally not invented)
+// source_id: prj_demo
+// af_profile: SIEMENS_AF_BASIC_FOLDER_V19
+// template_sha256: sha256:af_basic_folder_v19_template_unbound
+// ir_sha256: sha256:3ee31ae438c7470835b41d4846ea5db12e7a9c792d641691650e7470d0268a4e
+// deterministic semantic output: no timestamps in this file
+
+ORGANIZATION_BLOCK "OB_Main"
+BEGIN
+  "FB_Drivers"();
+  "FB_Sequence"();
+END_ORGANIZATION_BLOCK

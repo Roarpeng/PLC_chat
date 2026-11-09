@@ -1,0 +1,42 @@
+{
+  "component_type": "double_acting_cylinder",
+  "driver_template": "double_acting_cylinder",
+  "lbc_name": "LBC_TwoWayActuator",
+  "default_compile_mode": "official_lbc",
+  "compile_modes": ["official_lbc", "self_contained"],
+  "safety_permit_required": true,
+  "move_timeout_ms": 3000,
+  "states": ["IDLE", "EXTENDING", "EXTENDED", "RETRACTING", "RETRACTED", "FAULT"],
+  "transitions": [
+    {"from": "IDLE", "to": "EXTENDING", "on": "CmdExtend AND SafetyPermit"},
+    {"from": "EXTENDING", "to": "EXTENDED", "on": "SensorOut"},
+    {"from": "EXTENDING", "to": "FAULT", "on": "timeout"},
+    {"from": "EXTENDED", "to": "RETRACTING", "on": "CmdRetract AND SafetyPermit"},
+    {"from": "RETRACTING", "to": "RETRACTED", "on": "SensorIn"},
+    {"from": "RETRACTING", "to": "FAULT", "on": "timeout"},
+    {"from": "FAULT", "to": "IDLE", "on": "Reset"}
+  ],
+  "typed_ports": [
+    {"name": "CmdExtend", "data_type": "BOOL", "direction": "INPUT", "role": "COMMAND", "required": true, "source": "library_default", "binding": null, "writer": "FB_Sequence", "description": "extend command (logical, unbound)"},
+    {"name": "CmdRetract", "data_type": "BOOL", "direction": "INPUT", "role": "COMMAND", "required": true, "source": "library_default", "binding": null, "writer": "FB_Sequence", "description": "retract command (logical, unbound)"},
+    {"name": "SafetyPermit", "data_type": "BOOL", "direction": "INPUT", "role": "SAFETY", "required": true, "source": "library_default", "binding": null, "writer": "SafetyInterlock", "description": "software interlock only, not a safety integrity claim"},
+    {"name": "SensorOut", "data_type": "BOOL", "direction": "INPUT", "role": "FEEDBACK", "required": true, "source": "library_default", "binding": null, "writer": "", "description": "extended limit feedback (logical, unbound)"},
+    {"name": "SensorIn", "data_type": "BOOL", "direction": "INPUT", "role": "FEEDBACK", "required": true, "source": "library_default", "binding": null, "writer": "", "description": "retracted limit feedback (logical, unbound)"},
+    {"name": "Reset", "data_type": "BOOL", "direction": "INPUT", "role": "MODE", "required": true, "source": "library_default", "binding": null, "writer": "FB_Sequence", "description": "fault reset"},
+    {"name": "Q_Extend", "data_type": "BOOL", "direction": "OUTPUT", "role": "STATUS", "required": true, "source": "library_default", "binding": null, "writer": "FB_Cylinder", "description": "extend output (logical, unbound)"},
+    {"name": "Q_Retract", "data_type": "BOOL", "direction": "OUTPUT", "role": "STATUS", "required": true, "source": "library_default", "binding": null, "writer": "FB_Cylinder", "description": "retract output (logical, unbound)"},
+    {"name": "Busy", "data_type": "BOOL", "direction": "OUTPUT", "role": "STATUS", "required": false, "source": "library_default", "binding": null, "writer": "FB_Cylinder", "description": "motion in progress"},
+    {"name": "Error", "data_type": "BOOL", "direction": "OUTPUT", "role": "STATUS", "required": false, "source": "library_default", "binding": null, "writer": "FB_Cylinder", "description": "fault latch"},
+    {"name": "ErrorID", "data_type": "INT", "direction": "OUTPUT", "role": "STATUS", "required": false, "source": "library_default", "binding": null, "writer": "FB_Cylinder", "description": "fault code"}
+  ],
+  "parameters": {"move_timeout_ms": 3000},
+  "af_template": {
+    "udt": "UDT_TwoWayActuator",
+    "fb": "LBC_TwoWayActuator",
+    "self_contained_fb": "FB_Cylinder",
+    "cm_control_node": "CN_TwoWayActuator",
+    "call_equipment": "CallEquipment",
+    "folder": "AF/Units/EquipmentModules/ControlModules"
+  },
+  "keywords": ["气缸", "双作用", "cylinder", "two-way", "two_way", "伸出", "缩回", "夹紧缸"]
+}

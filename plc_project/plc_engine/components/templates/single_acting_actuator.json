@@ -1,0 +1,39 @@
+{
+  "component_type": "single_acting_actuator",
+  "driver_template": "single_acting_actuator",
+  "lbc_name": "LBC_OneWayActuator",
+  "default_compile_mode": "official_lbc",
+  "compile_modes": ["official_lbc", "self_contained"],
+  "safety_permit_required": true,
+  "move_timeout_ms": 3000,
+  "states": ["IDLE", "EXTENDING", "EXTENDED", "RETRACTING", "RETRACTED", "FAULT"],
+  "transitions": [
+    {"from": "IDLE", "to": "EXTENDING", "on": "CmdExtend AND SafetyPermit"},
+    {"from": "EXTENDING", "to": "EXTENDED", "on": "SensorOut"},
+    {"from": "EXTENDING", "to": "FAULT", "on": "timeout"},
+    {"from": "EXTENDED", "to": "RETRACTING", "on": "NOT CmdExtend"},
+    {"from": "RETRACTING", "to": "RETRACTED", "on": "SensorIn (spring return)"},
+    {"from": "RETRACTING", "to": "FAULT", "on": "timeout"},
+    {"from": "FAULT", "to": "IDLE", "on": "Reset"}
+  ],
+  "typed_ports": [
+    {"name": "CmdExtend", "data_type": "BOOL", "direction": "INPUT", "role": "COMMAND", "required": true, "source": "library_default", "binding": null, "writer": "FB_Sequence", "description": "single-coil extend command (logical, unbound)"},
+    {"name": "SafetyPermit", "data_type": "BOOL", "direction": "INPUT", "role": "SAFETY", "required": true, "source": "library_default", "binding": null, "writer": "SafetyInterlock", "description": "software interlock only"},
+    {"name": "SensorOut", "data_type": "BOOL", "direction": "INPUT", "role": "FEEDBACK", "required": true, "source": "library_default", "binding": null, "writer": "", "description": "extended feedback (logical, unbound)"},
+    {"name": "SensorIn", "data_type": "BOOL", "direction": "INPUT", "role": "FEEDBACK", "required": true, "source": "library_default", "binding": null, "writer": "", "description": "spring-return home feedback (logical, unbound)"},
+    {"name": "Reset", "data_type": "BOOL", "direction": "INPUT", "role": "MODE", "required": true, "source": "library_default", "binding": null, "writer": "FB_Sequence", "description": "fault reset"},
+    {"name": "Q_Extend", "data_type": "BOOL", "direction": "OUTPUT", "role": "STATUS", "required": true, "source": "library_default", "binding": null, "writer": "FB_OneWayActuator", "description": "coil output (logical, unbound)"},
+    {"name": "Busy", "data_type": "BOOL", "direction": "OUTPUT", "role": "STATUS", "required": false, "source": "library_default", "binding": null, "writer": "FB_OneWayActuator", "description": "motion in progress"},
+    {"name": "Error", "data_type": "BOOL", "direction": "OUTPUT", "role": "STATUS", "required": false, "source": "library_default", "binding": null, "writer": "FB_OneWayActuator", "description": "fault latch"}
+  ],
+  "parameters": {"move_timeout_ms": 3000},
+  "af_template": {
+    "udt": "UDT_OneWayActuator",
+    "fb": "LBC_OneWayActuator",
+    "self_contained_fb": "FB_OneWayActuator",
+    "cm_control_node": "CN_OneWayActuator",
+    "call_equipment": "CallEquipment",
+    "folder": "AF/Units/EquipmentModules/ControlModules"
+  },
+  "keywords": ["单作用", "single", "单线圈", "弹簧复位", "one-way", "solenoid", "电磁阀"]
+}

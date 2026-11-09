@@ -1,0 +1,36 @@
+{
+  "task_id": "T04 (WP-03)",
+  "base_commit": "e228226",
+  "batch": "T04",
+  "evidence_level": "offline",
+  "real_tia_v19_tested": false,
+  "raw_evidence_path": "docs/v2/evidence/T04/t04_pytest.txt",
+  "commands": [
+    "uv run pytest tests/unit/test_guard_ast_v2.py tests/unit/test_sequence_graph_v2.py tests/unit/test_scan_trace_v2.py tests/unit/test_scl_lowering_v2.py tests/unit/test_source_map_v2.py -q -rf",
+    "uv run python scripts/gen_golden_v2.py"
+  ],
+  "results": { "pytest_passed": 46, "pytest_failed": 0 },
+  "negative_cases": [
+    "unreachable step (BFS)",
+    "Tarjan SCC without exit",
+    "branch guards share priority without exclusivity proof",
+    "illegal / unknown Guard type, free-text expression (no eval)",
+    "missing timeout / FAULT path",
+    "unsupported parallel semantics blocks delivery",
+    "double coil command resource conflict",
+    "second-generation semantic hash mismatch (proved equal)",
+    "SCL / Trace semantic mismatch (proved consistent)",
+    "UI layout change triggering regeneration (proved not)"
+  ],
+  "scope": [
+    "GuardAST BOOL/TIME/INT + AND/OR/NOT/comparisons, no eval()",
+    "deterministic 5-scenario offline Trace + shortest counterexample",
+    "SCL Lowering UDT->FB/FC->DB->OB + explicit import order",
+    "SourceMap N:N + compile-error reverse location",
+    "golden snapshots tests/snapshots/v2/"
+  ],
+  "pending_real_machine": [
+    "V19 real compile of generated SCL (0 errors) is T02 / G5, scheduled serially"
+  ],
+  "notice": "Trace is an offline prediction, explicitly not an online PLC waveform."
+}

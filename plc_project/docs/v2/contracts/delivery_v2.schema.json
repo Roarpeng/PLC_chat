@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plc-agent.local/contracts/delivery_v2.schema.json",
+  "title": "V2 native TIA delivery request / job / artifact",
+  "description": "SOURCE_READY != NATIVE_ARCHIVED. NATIVE_ARCHIVED requires compile.error_count=0 + Save + Archive + sha256 + Retrieve/reopen.",
+  "oneOf": [
+    { "$ref": "#/$defs/deliveryRequest" },
+    { "$ref": "#/$defs/jobState" },
+    { "$ref": "#/$defs/nativeArtifact" }
+  ],
+  "$defs": {
+    "deliveryRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_id", "base_revision", "request_id", "approved_changeset_id",
+        "expected_baseline_hash", "idempotency_key", "artifact_type", "tia_version"
+      ],
+      "properties": {
+        "project_id": { "type": "string" },
+        "base_revision": { "type": "integer", "minimum": 0 },
+        "request_id": { "type": "string" },
+        "approved_changeset_id": { "type": "string" },
+        "expected_baseline_hash": { "type": "string" },
+        "idempotency_key": { "type": "string", "minLength": 1 },
+        "artifact_type": { "enum": ["native_tia_archive", "source_package"] },
+        "tia_version": { "const": "V19" }
+      }
+    },
+    "jobState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_id", "state", "evidence_level"],
+      "properties": {
+        "job_id": { "type": "string" },
+        "state": {
+          "enum": ["QUEUED", "DRAFT", "SPEC_FROZEN", "SOURCE_READY", "TIA_IMPORTED",
+                   "TIA_COMPILED", "NATIVE_ARCHIVED", "FAILED", "RECOVERY_REQUIRED"]
+        },
+        "artifact_id": { "type": ["string", "null"] },
+        "evidence_level": { "enum": ["offline", "mocked", "V19_real", "pending_real_machine"] },
+        "compile": {
+          "type": ["object", "null"],
+          "properties": {
+            "state": { "type": "string" },
+            "error_count": { "type": "integer" },
+            "warning_count": { "type": "integer" },
+            "static_gate_passed": { "type": "boolean" },
+            "compile_ok": { "type": "boolean" }
+          }
+        },
+        "evidence_id": { "type": "string" }
+      }
+    },
+    "nativeArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id", "job_id", "project_id", "archive_path", "archive_sha256",
+        "size_bytes", "kind", "evidence_level", "reopen_ok"
+      ],
+      "properties": {
+        "artifact_id": { "type": "string" },
+        "job_id": { "type": "string" },
+        "project_id": { "type": "string" },
+        "project_path": { "type": "string" },
+        "archive_path": { "type": "string", "description": "exact path, never a directory wildcard" },
+        "archive_sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "kind": { "const": "zap19" },
+        "evidence_id": { "type": "string" },
+        "evidence_level": { "const": "V19_real" },
+        "reopen_ok": { "const": true },
+        "compile": { "type": "object" },
+        "receipt": { "type": "object" }
+      }
+    }
+  }
+}

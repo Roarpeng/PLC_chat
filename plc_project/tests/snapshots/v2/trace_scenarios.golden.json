@@ -1,0 +1,54 @@
+{
+  "notice": "offline prediction, not a real machine verification",
+  "scenarios": {
+    "extend_timeout": {
+      "alarms": [
+        "CM1:EXTEND_TIMEOUT"
+      ],
+      "data_source": "offline_model",
+      "evidence_level": "offline",
+      "first_step": "S1",
+      "frames": 400,
+      "last_step": "FAULT"
+    },
+    "fault_reset": {
+      "alarms": [],
+      "data_source": "offline_model",
+      "evidence_level": "offline",
+      "first_step": "S1",
+      "frames": 500,
+      "last_step": "S0"
+    },
+    "normal_cycle": {
+      "alarms": [],
+      "data_source": "offline_model",
+      "evidence_level": "offline",
+      "first_step": "S1",
+      "frames": 250,
+      "last_step": "S0"
+    },
+    "retract_timeout": {
+      "alarms": [],
+      "data_source": "offline_model",
+      "evidence_level": "offline",
+      "first_step": "S1",
+      "frames": 400,
+      "last_step": "FAULT"
+    },
+    "safety_permit_lost": {
+      "alarms": [
+        "safety_permit_lost:all_commands_inhibited_software_interlock_only",
+        "safety_permit_lost:software_interlock_only"
+      ],
+      "data_source": "offline_model",
+      "evidence_level": "offline",
+      "first_step": "S1",
+      "frames": 200,
+      "last_step": "FAULT"
+    }
+  },
+  "shortest_counterexample": [
+    "S0",
+    "FAULT"
+  ]
+}

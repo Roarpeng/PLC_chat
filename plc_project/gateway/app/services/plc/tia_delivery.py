@@ -1186,7 +1186,17 @@ def _run_openness_import_compile(
         _record("create-project", False, str(created.get("error") or created))
         return {"status": "tia_error", "steps": steps, "compile": None,
                 "error": "create-project 失败（TIA 可能被独占占用）"}
-    project_path = str(created.get("path") or created.get("project") or project_dir / f"{project_name}.ap19")
+    # D-1 (T02): the C# create-project reply is {ok, create:{projectPath}}
+    # (CamelCase via JsonDefaults). Unpack it fail-closed through the V2
+    # adapter; a missing key is an explicit failure, NEVER a guessed path.
+    from gateway.app.services.plc.tia_delivery_v2 import unpack_create_project_path
+
+    try:
+        project_path = unpack_create_project_path(created)
+    except ValueError as exc:
+        _record("create-project", False, str(exc))
+        return {"status": "tia_error", "steps": steps, "compile": None,
+                "error": f"create-project 回执缺少 create.projectPath（禁止猜路径）: {exc}"}
     _record("create-project", True, project_path)
 
     # 2. 组态 CPU 设备（号型来自环境变量，未配置则诚实降级）

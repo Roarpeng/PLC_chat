@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plc-agent.local/contracts/engineering_ir_v2.schema.json",
+  "title": "EngineeringIR v2 (engineering-ir/2.0)",
+  "description": "Single writable semantic truth. UI layout, timestamps and receipt are excluded from ir_sha256.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "project_id", "revision", "ir_sha256", "af_profile", "hardware",
+    "components", "driver_specs", "process", "source_bindings", "views", "spec_meta",
+    "legacy_raw", "legacy_raw_sha256"
+  ],
+  "properties": {
+    "schema_version": { "const": "engineering-ir/2.0" },
+    "project_id": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_.:-]{0,127}$" },
+    "revision": { "type": "integer", "minimum": 0 },
+    "ir_sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "af_profile": { "$ref": "#/$defs/afProfile" },
+    "hardware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpu_template", "io_binding", "device_type_identifier", "capability_receipt_id", "notes"],
+      "properties": {
+        "cpu_template": { "type": "string" },
+        "io_binding": { "enum": ["unbound", null] },
+        "device_type_identifier": { "type": "string" },
+        "capability_receipt_id": { "type": "string" },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "components": { "type": "array", "items": { "$ref": "#/$defs/component" } },
+    "driver_specs": { "type": "object", "additionalProperties": { "$ref": "#/$defs/driverSpec" } },
+    "process": { "$ref": "#/$defs/sequence" },
+    "source_bindings": { "type": "array", "items": { "$ref": "#/$defs/sourceBinding" } },
+    "views": {
+      "type": "object",
+      "required": ["layout"],
+      "properties": {
+        "layout": { "type": "object", "description": "pure UI coordinates, excluded from semantic hash" },
+        "projection_version": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "spec_meta": { "type": "object" },
+    "legacy_raw": { "type": ["object", "null"], "description": "opaque verbatim v1 GreenfieldIR payload (zero field loss)" },
+    "legacy_raw_sha256": { "type": "string" },
+    "receipt": { "type": "object", "description": "timestamps / diagnostics; excluded from semantic hash" },
+    "created_at": { "type": "string" },
+    "updated_at": { "type": "string" }
+  },
+  "$defs": {
+    "afProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "library_id", "library_version", "template_sha256", "number_policy", "folder_tree", "tia_version"],
+      "properties": {
+        "profile_id": { "const": "SIEMENS_AF_BASIC_FOLDER_V19" },
+        "library_id": { "type": "string" },
+        "library_version": { "type": "string" },
+        "template_sha256": { "type": "string" },
+        "number_policy": { "type": "string" },
+        "folder_tree": { "type": "string" },
+        "tia_version": { "const": "V19" }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "component_type", "driver_template", "driver_spec_id", "source", "io_bindings", "parameters", "metadata"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_.:-]{0,127}$" },
+        "name": { "type": "string" },
+        "component_type": { "type": "string" },
+        "driver_template": { "type": "string" },
+        "driver_spec_id": { "type": "string" },
+        "source": { "enum": ["user_explicit", "inferred", "imported", "library_default"] },
+        "io_bindings": { "type": ["object", "null"], "description": "null means unbound; never invent %I/%Q" },
+        "parameters": { "type": "object" },
+        "metadata": { "type": "object" }
+      }
+    },
+    "typedPort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "data_type", "direction", "role", "required", "source", "description", "binding", "writer", "default"],
+      "properties": {
+        "name": { "type": "string" },
+        "data_type": { "enum": ["BOOL", "TIME", "INT", "REAL", "WORD"] },
+        "direction": { "enum": ["INPUT", "OUTPUT", "INOUT", "PARAMETER"] },
+        "role": { "enum": ["COMMAND", "FEEDBACK", "STATUS", "SAFETY", "MODE", "PARAMETER"] },
+        "required": { "type": "boolean" },
+        "source": { "enum": ["user_explicit", "inferred", "imported", "library_default"] },
+        "description": { "type": "string" },
+        "binding": { "type": ["string", "null"] },
+        "writer": { "type": "string" },
+        "default": {}
+      }
+    },
+    "driverSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "component_type", "typed_ports", "parameters", "states", "transitions", "failure_policy", "compile_mode", "safety_permit_required", "move_timeout_ms", "lbc_name", "field_sources", "open_questions"],
+      "properties": {
+        "id": { "type": "string" },
+        "component_type": { "type": "string" },
+        "typed_ports": { "type": "object", "additionalProperties": { "$ref": "#/$defs/typedPort" } },
+        "parameters": { "type": "object" },
+        "states": { "type": "array", "items": { "type": "string" } },
+        "transitions": { "type": "array", "items": { "type": "object" } },
+        "failure_policy": { "enum": ["enter_fault_require_reset", "enter_fault_auto_retry"] },
+        "compile_mode": { "enum": ["official_lbc", "self_contained"] },
+        "safety_permit_required": { "type": "boolean" },
+        "move_timeout_ms": { "type": "integer", "minimum": 1 },
+        "lbc_name": { "type": "string" },
+        "field_sources": { "type": "object" },
+        "open_questions": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "guardAst": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_type", "value_type", "signal", "value", "children", "source_id"],
+      "properties": {
+        "node_type": { "enum": ["CONST", "SIGNAL", "AND", "OR", "NOT", "EQ", "NE", "LT", "LE", "GT", "GE", "ELAPSED_GE"] },
+        "value_type": { "enum": ["BOOL", "TIME", "INT"] },
+        "signal": { "type": "string" },
+        "value": {},
+        "children": { "type": "array", "items": { "$ref": "#/$defs/guardAst" } },
+        "source_id": { "type": "string" }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "target_component_id", "command", "value", "source_id"],
+      "properties": {
+        "id": { "type": "string" },
+        "target_component_id": { "type": "string" },
+        "command": { "type": "string" },
+        "value": {},
+        "source_id": { "type": "string" }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "entry_actions", "cyclic_actions", "exit_actions", "min_duration_ms", "max_duration_ms", "failure_target", "source_id", "layout"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "entry_actions": { "type": "array", "items": { "$ref": "#/$defs/action" } },
+        "cyclic_actions": { "type": "array", "items": { "$ref": "#/$defs/action" } },
+        "exit_actions": { "type": "array", "items": { "$ref": "#/$defs/action" } },
+        "min_duration_ms": { "type": "integer", "minimum": 0 },
+        "max_duration_ms": { "type": "integer", "minimum": 0 },
+        "failure_target": { "type": "string" },
+        "source_id": { "type": "string" },
+        "layout": { "type": "object" }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "from_step", "to_step", "guard_ast", "priority", "edge_type", "source_id"],
+      "properties": {
+        "id": { "type": "string" },
+        "from_step": { "type": "string" },
+        "to_step": { "type": "string" },
+        "guard_ast": { "anyOf": [{ "$ref": "#/$defs/guardAst" }, { "type": "null" }] },
+        "priority": { "type": "integer" },
+        "edge_type": { "enum": ["NORMAL", "EXCEPTION", "TIMEOUT", "RESET"] },
+        "source_id": { "type": "string" }
+      }
+    },
+    "sequence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "mode", "initial_step", "steps", "transitions", "exceptions", "modes", "parallel_groups", "source_id"],
+      "properties": {
+        "id": { "type": "string" },
+        "mode": { "type": "string" },
+        "initial_step": { "type": "string" },
+        "steps": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/step" } },
+        "transitions": { "type": "array", "items": { "$ref": "#/$defs/transition" } },
+        "exceptions": { "type": "array", "items": { "type": "object" } },
+        "modes": { "type": "array", "items": { "type": "object" } },
+        "parallel_groups": { "type": "array", "items": { "type": "object" }, "description": "display only; run semantics unimplemented => fail-closed" },
+        "source_id": { "type": "string" }
+      }
+    },
+    "sourceBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "tia_path", "block_type", "block_number", "original_xml_sha256", "original_hash", "source_span", "ir_entities", "referenced_by", "writable", "fidelity"],
+      "properties": {
+        "source_id": { "type": "string" },
+        "tia_path": { "type": "string" },
+        "block_type": { "type": "string" },
+        "block_number": { "type": ["integer", "null"] },
+        "original_xml_sha256": { "type": "string" },
+        "original_hash": { "type": "string" },
+        "source_span": { "type": "object" },
+        "ir_entities": { "type": "array", "items": { "type": "string" } },
+        "referenced_by": { "type": "array", "items": { "type": "string" } },
+        "writable": { "const": "requires_review" },
+        "fidelity": { "type": "string" }
+      }
+    }
+  }
+}

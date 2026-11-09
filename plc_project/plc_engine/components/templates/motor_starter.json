@@ -1,0 +1,40 @@
+{
+  "component_type": "motor_starter",
+  "driver_template": "motor_starter",
+  "lbc_name": "LBC_MotorStarter",
+  "default_compile_mode": "official_lbc",
+  "compile_modes": ["official_lbc", "self_contained"],
+  "safety_permit_required": true,
+  "move_timeout_ms": 2000,
+  "states": ["IDLE", "EXTENDING", "EXTENDED", "RETRACTING", "RETRACTED", "FAULT"],
+  "transitions": [
+    {"from": "IDLE", "to": "EXTENDING", "on": "CmdStart AND SafetyPermit AND NOT CmdStop"},
+    {"from": "EXTENDING", "to": "EXTENDED", "on": "FeedbackRunning"},
+    {"from": "EXTENDING", "to": "FAULT", "on": "timeout"},
+    {"from": "EXTENDED", "to": "RETRACTING", "on": "CmdStop"},
+    {"from": "RETRACTING", "to": "RETRACTED", "on": "NOT FeedbackRunning"},
+    {"from": "RETRACTING", "to": "FAULT", "on": "timeout"},
+    {"from": "FAULT", "to": "IDLE", "on": "Reset"}
+  ],
+  "typed_ports": [
+    {"name": "CmdStart", "data_type": "BOOL", "direction": "INPUT", "role": "COMMAND", "required": true, "source": "library_default", "binding": null, "writer": "FB_Sequence", "description": "start command (logical, unbound)"},
+    {"name": "CmdStop", "data_type": "BOOL", "direction": "INPUT", "role": "COMMAND", "required": true, "source": "library_default", "binding": null, "writer": "FB_Sequence", "description": "stop command (logical, unbound, reverse interlock)"},
+    {"name": "SafetyPermit", "data_type": "BOOL", "direction": "INPUT", "role": "SAFETY", "required": true, "source": "library_default", "binding": null, "writer": "SafetyInterlock", "description": "software interlock only"},
+    {"name": "FeedbackRunning", "data_type": "BOOL", "direction": "INPUT", "role": "FEEDBACK", "required": true, "source": "library_default", "binding": null, "writer": "", "description": "contactor auxiliary feedback (logical, unbound)"},
+    {"name": "Reset", "data_type": "BOOL", "direction": "INPUT", "role": "MODE", "required": true, "source": "library_default", "binding": null, "writer": "FB_Sequence", "description": "fault reset"},
+    {"name": "Q_Contactor", "data_type": "BOOL", "direction": "OUTPUT", "role": "STATUS", "required": true, "source": "library_default", "binding": null, "writer": "FB_MotorStarter", "description": "contactor output (logical, unbound)"},
+    {"name": "Busy", "data_type": "BOOL", "direction": "OUTPUT", "role": "STATUS", "required": false, "source": "library_default", "binding": null, "writer": "FB_MotorStarter", "description": "starting/stopping"},
+    {"name": "Error", "data_type": "BOOL", "direction": "OUTPUT", "role": "STATUS", "required": false, "source": "library_default", "binding": null, "writer": "FB_MotorStarter", "description": "fault latch"},
+    {"name": "ErrorID", "data_type": "INT", "direction": "OUTPUT", "role": "STATUS", "required": false, "source": "library_default", "binding": null, "writer": "FB_MotorStarter", "description": "fault code"}
+  ],
+  "parameters": {"move_timeout_ms": 2000},
+  "af_template": {
+    "udt": "UDT_MotorStarter",
+    "fb": "LBC_MotorStarter",
+    "self_contained_fb": "FB_MotorStarter",
+    "cm_control_node": "CN_MotorStarter",
+    "call_equipment": "CallEquipment",
+    "folder": "AF/Units/EquipmentModules/ControlModules"
+  },
+  "keywords": ["电机", "马达", "motor", "接触器", "启停", "starter", "输送带", "泵"]
+}

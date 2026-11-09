@@ -1,0 +1,36 @@
+{
+  "adapter": "V1ToV2Adapter/1.0",
+  "source": "plc_engine/af/greenfield_ir.py (GreenfieldIR, lines 837-906)",
+  "note": "Design doc says 20 top-level fields; source audit shows 21. The adapter follows the real source code.",
+  "v1_top_level_field_count": 21,
+  "zero_loss_strategy": "verbatim legacy_raw + legacy_raw_sha256 + per-key golden comparison",
+  "fields": [
+    { "v1": "project", "v2": "spec_meta.origin / receipt", "policy": "verbatim in legacy_raw" },
+    { "v1": "ir_version", "v2": "receipt.v1_ir_version", "policy": "verbatim in legacy_raw" },
+    { "v1": "units", "v2": "receipt (ISA-88 hierarchy)", "policy": "verbatim in legacy_raw" },
+    { "v1": "ems", "v2": "receipt (equipment modules)", "policy": "verbatim in legacy_raw" },
+    { "v1": "cms", "v2": "components[] + driver_specs{}", "policy": "stable ID preserved; typed ports projected; free text retained" },
+    { "v1": "control_nodes", "v2": "receipt (control node refs)", "policy": "verbatim in legacy_raw" },
+    { "v1": "jobs", "v2": "process.initial_step / modes", "policy": "initial_step_id resolved to stable step id" },
+    { "v1": "steps", "v2": "process.steps[] + transitions[] + exceptions[]", "policy": "stable ID preserved; free-text transition_condition NOT invented into GuardAST" },
+    { "v1": "modes", "v2": "process.modes[]", "policy": "stable ID preserved" },
+    { "v1": "interlocks", "v2": "receipt.unmapped_free_text", "policy": "free text intentionally not compiled to GuardAST" },
+    { "v1": "io_bindings", "v2": "components[].io_bindings = null", "policy": "unbound; no %I/%Q invented" },
+    { "v1": "compat_refs", "v2": "source_bindings[] (writable=requires_review)", "policy": "interface only" },
+    { "v1": "edges", "v2": "views (read-only projection)", "policy": "verbatim in legacy_raw; not a second writable truth" },
+    { "v1": "views", "v2": "views", "policy": "layout excluded from semantic hash" },
+    { "v1": "spec_meta", "v2": "spec_meta + receipt", "policy": "freeze metadata retained" },
+    { "v1": "project_id", "v2": "project_id", "policy": "stable ID preserved" },
+    { "v1": "baseline_version", "v2": "receipt.v1_baseline_version", "policy": "verbatim in legacy_raw" },
+    { "v1": "hw_nodes", "v2": "receipt (logical topology)", "policy": "verbatim in legacy_raw" },
+    { "v1": "hw_links", "v2": "receipt (logical topology)", "policy": "verbatim in legacy_raw" },
+    { "v1": "cm_mounts", "v2": "receipt (logical topology)", "policy": "verbatim in legacy_raw" },
+    { "v1": "var_bindings", "v2": "receipt (variable bindings)", "policy": "verbatim in legacy_raw" }
+  ],
+  "invariants": [
+    "id immutable, name mutable",
+    "legacy_raw is opaque and never rewritten",
+    "to_v1_view() is read-only, never writes back",
+    "assert_zero_field_loss() compares all 21 top-level keys and the full canonical hash"
+  ]
+}

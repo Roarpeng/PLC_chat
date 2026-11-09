@@ -1,0 +1,32 @@
+{
+  "component_type": "di_do",
+  "driver_template": "di_do",
+  "lbc_name": "LBC_DigitalSignal",
+  "default_compile_mode": "self_contained",
+  "compile_modes": ["self_contained", "official_lbc"],
+  "safety_permit_required": false,
+  "move_timeout_ms": 1000,
+  "states": ["IDLE", "FAULT"],
+  "transitions": [
+    {"from": "IDLE", "to": "FAULT", "on": "feedback_fault"},
+    {"from": "IDLE", "to": "FAULT", "on": "timeout_feedback"},
+    {"from": "FAULT", "to": "IDLE", "on": "Reset"}
+  ],
+  "typed_ports": [
+    {"name": "DI_Value", "data_type": "BOOL", "direction": "INPUT", "role": "FEEDBACK", "required": true, "source": "library_default", "binding": null, "writer": "", "description": "digital input feedback (logical, unbound)"},
+    {"name": "DO_Command", "data_type": "BOOL", "direction": "INPUT", "role": "COMMAND", "required": true, "source": "library_default", "binding": null, "writer": "FB_Sequence", "description": "digital output command (logical, unbound)"},
+    {"name": "Q_Value", "data_type": "BOOL", "direction": "OUTPUT", "role": "STATUS", "required": true, "source": "library_default", "binding": null, "writer": "FB_DigitalIO", "description": "output mirror (logical, unbound)"},
+    {"name": "Error", "data_type": "BOOL", "direction": "OUTPUT", "role": "STATUS", "required": false, "source": "library_default", "binding": null, "writer": "FB_DigitalIO", "description": "feedback fault flag"},
+    {"name": "Reset", "data_type": "BOOL", "direction": "INPUT", "role": "MODE", "required": false, "source": "library_default", "binding": null, "writer": "FB_Sequence", "description": "fault reset"}
+  ],
+  "parameters": {"move_timeout_ms": 1000, "debounce_ms": 0},
+  "af_template": {
+    "udt": "UDT_DigitalSignal",
+    "fb": "FB_DigitalIO",
+    "self_contained_fb": "FB_DigitalIO",
+    "cm_control_node": "CN_DigitalSignal",
+    "call_equipment": "CallEquipment",
+    "folder": "AF/Units/EquipmentModules/ControlModules"
+  },
+  "keywords": ["DI", "DO", "数字量", "传感器", "开关", "digital", "io", "输入", "输出"]
+}

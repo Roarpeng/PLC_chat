@@ -1,0 +1,29 @@
+{
+  "af_profile_id": "SIEMENS_AF_BASIC_FOLDER_V19",
+  "block_numbers": {
+    "scl/DB_Sequence.scl": null,
+    "scl/FB_Drivers.scl": null,
+    "scl/FB_Sequence.scl": null,
+    "scl/OB_Main.scl": null,
+    "scl/UDT_DriverState.scl": null
+  },
+  "deterministic": true,
+  "evidence_level": "offline",
+  "file_hashes": {
+    "scl/DB_Sequence.scl": "sha256:0a3f8113dc76be8327c517733e6e296d8e03502c6a0fafa624e1d72b18c22482",
+    "scl/FB_Drivers.scl": "sha256:b3396b0141f283df19a9663bca45b6475383f0c5d12668513b156ce2dfa6f046",
+    "scl/FB_Sequence.scl": "sha256:874ac9cdcec9d111218f434dc66bd6e955b4aaf97a5dd49f44eb9081de4fc087",
+    "scl/OB_Main.scl": "sha256:c30fb3528fa75e878a2f0468ea67dfb92007fd9a05472e0e4f1fc1efb9b8a352",
+    "scl/UDT_DriverState.scl": "sha256:160db09c30d887fffdf78cd51b375cecfda2c8396c9dffa1eef19faeb750d9b1"
+  },
+  "import_order": [
+    "scl/UDT_DriverState.scl",
+    "scl/FB_Drivers.scl",
+    "scl/FB_Sequence.scl",
+    "scl/DB_Sequence.scl",
+    "scl/OB_Main.scl"
+  ],
+  "ir_sha256": "sha256:3ee31ae438c7470835b41d4846ea5db12e7a9c792d641691650e7470d0268a4e",
+  "manifest_sha256": "sha256:d658d8dac79a048a5ff7e8ee7da18a14811becb1d77b97d4835d898693e7f4e3",
+  "source_map_entries": 44
+}

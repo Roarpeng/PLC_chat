@@ -1,0 +1,11 @@
+// AF instance DB for FB_Sequence (explicit, not inferred from a name)
+// source_id: prj_demo
+// af_profile: SIEMENS_AF_BASIC_FOLDER_V19
+// template_sha256: sha256:af_basic_folder_v19_template_unbound
+// ir_sha256: sha256:3ee31ae438c7470835b41d4846ea5db12e7a9c792d641691650e7470d0268a4e
+// deterministic semantic output: no timestamps in this file
+
+DATA_BLOCK "DB_Sequence"
+  FB_Sequence
+BEGIN
+END_DATA_BLOCK

@@ -1,0 +1,30 @@
+{
+  "task_id": "T03 (WP-02)",
+  "base_commit": "e228226",
+  "batch": "T03",
+  "evidence_level": "offline",
+  "real_tia_v19_tested": false,
+  "raw_evidence_path": "docs/v2/evidence/T03/t03_pytest.txt",
+  "commands": [
+    "uv run pytest tests/unit/test_driver_catalog_v2.py tests/unit/test_driver_spec_v2.py tests/unit/test_driver_validation_v2.py -q -rf"
+  ],
+  "results": { "pytest_passed": 27, "pytest_failed": 0 },
+  "negative_cases": [
+    "double coil simultaneously asserted",
+    "missing timeout / missing feedback port",
+    "fictional %Q0.0 address",
+    "port type mismatch, command/feedback mix-up",
+    "single writer conflict",
+    "unknown component type => custom_pending",
+    "SafetyPermit lost inhibits every command",
+    "unknown command port"
+  ],
+  "scope": [
+    "DriverCatalog + 4 declarative JSON templates",
+    "typed ports / Driver FSM / timeout / feedback / reset / hand-auto / SafetyPermit",
+    "official_lbc vs self_contained explicit distinction",
+    "intent_service_v2 NL -> CandidatePatch (no IR/TIA write, no free SCL)"
+  ],
+  "pending_real_machine": [],
+  "notice": "Offline only; generated SCL is compiled by T02 on the V19 real machine when scheduled."
+}

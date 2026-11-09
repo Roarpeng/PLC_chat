@@ -1,0 +1,41 @@
+{
+  "task_id": "T02 (WP-01)",
+  "base_commit": "e228226",
+  "batch": "T02",
+  "evidence_level": "mocked",
+  "real_tia_v19_tested": false,
+  "raw_evidence_path": "docs/v2/evidence/T02/t02_pytest.txt",
+  "commands": [
+    "uv run pytest tests/unit/test_native_delivery_v2.py tests/unit/test_artifact_binding_v2.py tests/unit/test_retrieve_reopen_v2.py tests/contracts/test_create_projectpath_contract.py -q -rf",
+    "dotnet test industrial/tia_openness_cli/TiaOpenness.sln -c Release"
+  ],
+  "results": {
+    "pytest_passed": 39,
+    "pytest_failed": 0,
+    "dotnet_passed": 110,
+    "dotnet_failed": 0
+  },
+  "negative_cases": [
+    "create.projectPath missing => explicit failure, never guessed (D-1)",
+    "C# archive directory wildcard removed; archive_missing negative (D-2)",
+    "CPU not selected => CPU_TEMPLATE_NOT_SELECTED",
+    "compile error_count>0 => FAILED, no NATIVE_ARCHIVED",
+    "archive missing / sha256 mismatch => FAILED",
+    "Retrieve/reopen failed or reopenOk absent => FAILED (Q-06)",
+    "duplicate non-idempotent request => same job_id",
+    "cross-job download of another job's archive => 403",
+    "mocked full chain => MOCKED_CHAIN_OK, never NATIVE_ARCHIVED"
+  ],
+  "scope": [
+    "tia_delivery_v2 / native_artifact_v2 / delivery_jobs_v2 / artifact_store_v2 / approval_v2",
+    "D-1 minimal fix in tia_delivery.py:1189",
+    "D-2 C# ProjectService.cs + Models.cs + Program.cs (net481 frozen)",
+    "ArchiveContractTests.cs",
+    "executable real-chain script scripts/tia_delivery_chain_v2.py (dry-run by default)"
+  ],
+  "pending_real_machine": [
+    "AC-01 steps 1/5/6 (real .ap19 create, compile 0 error, Save, Archive, .zap19, Retrieve/reopen, exact download)",
+    "G5 Greenfield-only gate requires a serial V19 real run scheduled by the lead / QA"
+  ],
+  "notice": "No V19 real full-chain receipt exists. No native .zap19 was produced and no delivery-complete state is claimed."
+}
