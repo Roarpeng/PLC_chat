@@ -1,0 +1,103 @@
+{
+  "delivery_complete": false,
+  "error": {
+    "code": "IMPORT_FAILED",
+    "message": "import failed for C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\OB_Main.scl"
+  },
+  "evidence_level": "pending_real_machine",
+  "failed_stage": "IMPORT",
+  "g5_status": "pending_real_machine",
+  "mode": "skeleton_chain_failed",
+  "notice": "fail-closed; no native archive published",
+  "real_tia_v19_tested": false,
+  "stage_receipts": [
+    {
+      "error_code": "",
+      "evidence_level": "V19_real",
+      "message": "",
+      "ok": true,
+      "raw_api_receipt": {
+        "_exit_code": 0,
+        "deviceName": "PLC_1",
+        "message": "Project opened via TIA Openness.",
+        "ok": true,
+        "plcName": "PLC_1",
+        "projectName": "CanvasE2E",
+        "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\g5_skeleton_20261112_205500\\proj\\CanvasE2E.ap19"
+      },
+      "stage": "OPEN_SKELETON",
+      "state": "TIA_IMPORTED"
+    },
+    {
+      "error_code": "",
+      "evidence_level": "V19_real",
+      "message": "",
+      "ok": false,
+      "raw_api_receipt": {
+        "error": "import failed for C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\OB_Main.scl",
+        "failed_file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\OB_Main.scl",
+        "ok": false,
+        "receipts": [
+          {
+            "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\UDT_DriverState.scl",
+            "ok": true,
+            "sha256": "sha256:0c1636a131d17e0cfe6df23c35bb851ca2e1b29e5e60dfde605a050a2ada44ae"
+          },
+          {
+            "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\FB_Drivers.scl",
+            "ok": true,
+            "sha256": "sha256:fc7b6218fad439bf657702fd11b2b176d88e85cff7a4f773753ad1afe2b1d62f"
+          },
+          {
+            "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\FB_Sequence.scl",
+            "ok": true,
+            "sha256": "sha256:bdcc2ffe090b232e9ca5a0f9e9c4db3c4f64f531de2c541fea0b688ef256decb"
+          },
+          {
+            "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\DB_Sequence.scl",
+            "ok": true,
+            "sha256": "sha256:d0a8a263a6784f66c917012345ec0dacdbc2159bac9c6b7166e2b1ee42902ff4"
+          }
+        ]
+      },
+      "stage": "IMPORT",
+      "state": "TIA_IMPORTED"
+    },
+    {
+      "error_code": "",
+      "evidence_level": "V19_real",
+      "message": "",
+      "ok": false,
+      "raw_api_receipt": {
+        "error": "import failed for C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\OB_Main.scl",
+        "failed_file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\OB_Main.scl",
+        "ok": false,
+        "receipts": [
+          {
+            "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\UDT_DriverState.scl",
+            "ok": true,
+            "sha256": "sha256:0c1636a131d17e0cfe6df23c35bb851ca2e1b29e5e60dfde605a050a2ada44ae"
+          },
+          {
+            "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\FB_Drivers.scl",
+            "ok": true,
+            "sha256": "sha256:fc7b6218fad439bf657702fd11b2b176d88e85cff7a4f773753ad1afe2b1d62f"
+          },
+          {
+            "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\FB_Sequence.scl",
+            "ok": true,
+            "sha256": "sha256:bdcc2ffe090b232e9ca5a0f9e9c4db3c4f64f531de2c541fea0b688ef256decb"
+          },
+          {
+            "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\generated\\scl\\DB_Sequence.scl",
+            "ok": true,
+            "sha256": "sha256:d0a8a263a6784f66c917012345ec0dacdbc2159bac9c6b7166e2b1ee42902ff4"
+          }
+        ]
+      },
+      "stage": "IMPORT",
+      "state": "FAILED"
+    }
+  ]
+}
+wrote C:\Users\vboxuser\Desktop\Project\Code\PLC_chat\plc_project\evidence\v2\real\attempt_03\chain_receipt.json

@@ -25,43 +25,78 @@ def test_acceptance_matrix_maps_all_six_ac01_steps() -> None:
     assert "evidence_level" in text
 
 
-def test_g5_is_never_marked_passed() -> None:
-    for name in ("03-验收矩阵.md", "g0-g7-matrix.md", "04-交付报告.md"):
+def test_g5_pass_requires_real_receipt_and_scope_limitations() -> None:
+    """G5 may be signed PASS only with a real V19 full-chain receipt."""
+    for name in ("03-验收矩阵.md", "g0-g7-matrix.md"):
         text = read(DOCS / name)
-        assert "pending_real_machine" in text
         assert "G5" in text
+        assert "V19_real" in text
+        assert "PASS" in text
     gates = read(DOCS / "g0-g7-matrix.md")
     g5_line = next(line for line in gates.splitlines() if "**G5**" in line or line.startswith("| G5"))
-    assert "pending_real_machine" in g5_line
-    assert "已通过" not in g5_line
-    assert "NOT PASSED" in g5_line or "未通过" in g5_line
+    assert "V19_real" in g5_line
+    assert "PASS" in g5_line
+    assert "NOT PASSED" not in g5_line
+    chain = json.loads(read(EVIDENCE / "real" / "attempt_04" / "chain_receipt.json"))
+    assert chain["real_tia_v19_tested"] is True
+    assert chain["evidence_level"] == "V19_real"
+    assert chain["evidence_gaps"] == []
+    assert len(chain["stage_receipts"]) == 7
+    assert all(r["ok"] for r in chain["stage_receipts"])
+    assert chain["compile"]["error_count"] == 0
+    assert chain["artifact"]["reopen_ok"] is True
+    assert chain["scope_limitations"]  # limitations must never be hidden
 
 
 def test_acceptance_receipt_is_honest() -> None:
+    """Either fail-closed, or DELIVERED with a provable real V19 receipt."""
+    import hashlib
+
     payload = json.loads(read(EVIDENCE / "acceptance" / "acceptance_receipt.json"))
-    assert payload["status"] == "pending_real_machine"
-    assert payload["real_tia_v19_tested"] is False
-    assert payload["delivery_complete"] is False
-    assert payload["native_artifacts_published"] == 0
-    assert payload["gates"]["G5"]["status"] == "NOT PASSED"
-    assert payload["gates"]["G5"]["evidence_level"] == "pending_real_machine"
-    assert payload["ac01"]["step_1"] == "pending_real_machine"
-    assert payload["ac01"]["step_5"] == "pending_real_machine"
-    assert payload["ac01"]["step_6"] == "pending_real_machine"
+    assert payload["ledger_closed_by"] == "team-lead"
     assert payload["historical_conclusions_unchanged"]["xml_package_unverified"] is True
     assert payload["historical_conclusions_unchanged"]["m4_passed"] is False
-    assert payload["ledger_closed_by"] == "team-lead"
+
+    if not payload["delivery_complete"]:
+        assert payload["status"] == "pending_real_machine"
+        assert payload["real_tia_v19_tested"] is False
+        assert payload["native_artifacts_published"] == 0
+        assert payload["gates"]["G5"]["status"] == "NOT PASSED"
+        assert payload["gates"]["G5"]["evidence_level"] == "pending_real_machine"
+        return
+
+    # DELIVERED: every claim must be backed by the real native archive.
+    assert payload["real_tia_v19_tested"] is True
+    assert payload["native_artifacts_published"] == 1
+    assert payload["gates"]["G5"]["status"] == "PASS"
+    assert payload["gates"]["G5"]["evidence_level"] == "V19_real"
+    success = payload["g5_success"]
+    assert success["evidence_gaps"] == []
+    assert success["compile"]["error_count"] == 0
+    assert len(success["stages"]) == 7 and all(ok for _, ok in success["stages"])
+    art = success["artifact"]
+    assert art["artifact_id"] and art["archive_sha256"].startswith("sha256:")
+    assert art["reopen_ok"] is True and art["size_bytes"] > 0
+    assert payload["scope_limitations"]
+    assert payload["scope_limitations"][0]["excluded_files"]
+    zap = EVIDENCE / "real" / "attempt_04" / "prj_g5_real.zap19"
+    assert zap.is_file()
+    assert "sha256:" + hashlib.sha256(zap.read_bytes()).hexdigest() == art["archive_sha256"]
+    for step_key in ("step_1", "step_5", "step_6"):
+        assert "V19_real" in payload["ac01"][step_key]
 
 
 def test_ac01_matrix_has_six_steps_with_no_upcast() -> None:
+    """Only steps with a real V19 receipt may be V19_real."""
     payload = json.loads(read(EVIDENCE / "acceptance" / "ac01_matrix.json"))
     assert len(payload["steps"]) == 6
     for step in payload["steps"]:
         if step["n"] in (1, 5, 6):
-            assert step["evidence_level"] == "pending_real_machine"
-            assert step["verified"] is False
-            assert step["raw_receipt_path"] is None
-        assert step["evidence_level"] != "V19_real"
+            assert step["evidence_level"] == "V19_real"
+            assert step["verified"] is True
+            assert step["raw_receipt_path"]
+        else:
+            assert step["evidence_level"] != "V19_real"  # offline/mocked never upcast
 
 
 def test_all_five_schemas_and_openapi_are_present() -> None:

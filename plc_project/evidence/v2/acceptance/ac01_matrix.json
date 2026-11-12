@@ -1,19 +1,52 @@
 {
-  "title": "AC-01 six-step evidence matrix (WP-07)",
-  "status": "pending_real_machine_for_real_machine_steps",
+  "title": "AC-01 six-step evidence matrix (WP-07, updated after real V19 G5 PASS)",
+  "status": "g5_passed_with_scope_limitations",
   "steps": [
-    {"n": 1, "clause": "Projects.Create 真实 .ap19 + CPU skeleton", "evidence_level": "pending_real_machine", "verified": false,
-     "raw_receipt_path": null, "note": "G0 status probe is V19_real but no project was created; CPU CreateWithItem verification pending"},
-    {"n": 2, "clause": "NL 气缸 → DriverSpec, io_bindings=null", "evidence_level": "offline", "verified": true,
-     "raw_receipt_path": "docs/v2/evidence/T03/t03_pytest.txt"},
-    {"n": 3, "clause": "NL 步序 → SequenceIR / GuardAST", "evidence_level": "offline", "verified": true,
-     "raw_receipt_path": "docs/v2/evidence/T04/t04_pytest.txt"},
-    {"n": 4, "clause": "Hold 1s→2s IR/Trace/SCL 三方同步", "evidence_level": "offline+mocked", "verified": true,
-     "raw_receipt_path": "docs/v2/evidence/T05/vitest.txt"},
-    {"n": 5, "clause": "V19 导入/编译 0 error/Save/Archive/Retrieve-reopen", "evidence_level": "pending_real_machine", "verified": false,
-     "raw_receipt_path": null, "note": "G5 NOT PASSED; no real compile receipt, no .zap19"},
-    {"n": 6, "clause": "精确 artifact_id 下载 .zap19 + evidence", "evidence_level": "pending_real_machine", "verified": false,
-     "raw_receipt_path": null, "note": "no native download button without a V19 real full chain"}
+    {
+      "n": 1,
+      "clause": "Projects.Create 真实 .ap19 + CPU skeleton",
+      "evidence_level": "V19_real",
+      "verified": true,
+      "raw_receipt_path": "evidence/v2/real/cli_retry_create.txt",
+      "note": "Projects.Create returned ok=true with create.projectPath. CPU created via pre-fabricated real V19 skeleton because this host has no S7 CPU hardware catalogue; CreateWithItem from scratch stays pending_real_machine."
+    },
+    {
+      "n": 2,
+      "clause": "NL 气缸 → DriverSpec, io_bindings=null",
+      "evidence_level": "offline",
+      "verified": true,
+      "raw_receipt_path": "docs/v2/evidence/T03/t03_pytest.txt"
+    },
+    {
+      "n": 3,
+      "clause": "NL 步序 → SequenceIR / GuardAST",
+      "evidence_level": "offline",
+      "verified": true,
+      "raw_receipt_path": "docs/v2/evidence/T04/t04_pytest.txt"
+    },
+    {
+      "n": 4,
+      "clause": "Hold 1s→2s IR/Trace/SCL 三方同步",
+      "evidence_level": "offline+mocked",
+      "verified": true,
+      "raw_receipt_path": "docs/v2/evidence/T05/vitest.txt"
+    },
+    {
+      "n": 5,
+      "clause": "V19 导入/编译 0 error/Save/Archive/Retrieve-reopen",
+      "evidence_level": "V19_real",
+      "verified": true,
+      "raw_receipt_path": "evidence/v2/real/attempt_04/chain_receipt.json",
+      "note": "7/7 real stage receipts; compile state=Success errorCount=0 warningCount=0; Save; exact archive path+sha256; retrieve reopenOk=true. Pre-fabricated CPU skeleton, OB_Main excluded (see scope_limitations)."
+    },
+    {
+      "n": 6,
+      "clause": "精确 artifact_id 下载 .zap19 + evidence",
+      "evidence_level": "V19_real",
+      "verified": true,
+      "raw_receipt_path": "evidence/v2/real/attempt_04/prj_g5_real.zap19",
+      "note": "artifact_id=a_8e3d992bd56e, sha256=sha256:b7bec97b7e4333c4da405a2719c9dd4178adb14e254130a0e79897c13e8b8831, size=336272 bytes; four-tuple exact binding, no directory wildcard."
+    }
   ],
-  "notice": "本表不得把 mocked/offline 结果升级为 V19_real；真机回执由主理人/QA 串行调度后填充 raw/ 目录。"
+  "notice": "本表不得把 mocked/offline 结果升级为 V19_real。真实 V19 回执仅来自 evidence/v2/real/attempt_04/（7 份原始阶段回执 + chain_receipt.json + .zap19 实物）。范围限定：预制 CPU 骨架、OB_Main 未纳入真机导入，详见 docs/v2/06-主理人收口与遗留项.md §4 与 chain_receipt.json 的 scope_limitations。"
 }

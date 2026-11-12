@@ -1,0 +1,2 @@
+SKAP=C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/tmp_validate/skeleton_20261112/HR001_AF_V19/HR001_AF_V19.ap19
+SKELETON_COMPILE_EXIT=3

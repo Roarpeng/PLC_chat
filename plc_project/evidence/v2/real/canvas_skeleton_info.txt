@@ -1,0 +1,3 @@
+AP=C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/tmp_validate/skeleton_canvas_20261112/proj/CanvasE2E.ap19
+OPEN_EXIT=0
+COMPILE_EXIT=0

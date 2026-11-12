@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "project": {
+    "ok": true,
+    "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\g5_skeleton_20261112_210500\\proj\\CanvasE2E.ap19",
+    "projectName": "CanvasE2E",
+    "plcName": "PLC_1",
+    "deviceName": "PLC_1",
+    "message": "Project opened via TIA Openness."
+  },
+  "archive": {
+    "ok": true,
+    "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\g5_skeleton_20261112_210500\\proj\\CanvasE2E.ap19",
+    "archivePath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\g5_skeleton_20261112_210500\\archive\\prj_g5_real.zap19",
+    "archiveSha256": "sha256:b7bec97b7e4333c4da405a2719c9dd4178adb14e254130a0e79897c13e8b8831",
+    "sizeBytes": 336272,
+    "message": "Project archived to C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\g5_skeleton_20261112_210500\\archive\\prj_g5_real.zap19 (sha256=sha256:b7bec97b7e4333c4da405a2719c9dd4178adb14e254130a0e79897c13e8b8831)"
+  },
+  "_exit_code": 0
+}

@@ -1,0 +1,1 @@
+{"ok":true,"create":{"ok":true,"projectPath":"C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\cli_retry_20261112\\probe\\PROBE_RETRY\\PROBE_RETRY.ap19","projectName":"PROBE_RETRY","api":"Projects.Create(DirectoryInfo, String)","message":"Created via Projects.Create(DirectoryInfo, String)"}}

@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "retrieve": {
+    "ok": true,
+    "archivePath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\g5_skeleton_20261112_210500\\archive\\prj_g5_real.zap19",
+    "targetDirectory": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\g5_skeleton_20261112_210500\\reopen",
+    "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\g5_skeleton_20261112_210500\\reopen\\CanvasE2E\\CanvasE2E.ap19",
+    "projectName": "CanvasE2E",
+    "plcName": "PLC_1",
+    "api": "Projects.Retrieve(FileInfo, DirectoryInfo)",
+    "reopenOk": true,
+    "message": "Retrieved via Projects.Retrieve(FileInfo, DirectoryInfo) → C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\g5_skeleton_20261112_210500\\reopen\\CanvasE2E\\CanvasE2E.ap19"
+  },
+  "reopenOk": true,
+  "archiveSha256": "sha256:b7bec97b7e4333c4da405a2719c9dd4178adb14e254130a0e79897c13e8b8831",
+  "_exit_code": 0
+}

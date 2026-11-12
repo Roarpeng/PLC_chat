@@ -1,0 +1,12 @@
+{
+  "attempt": 2,
+  "job_id": "job_ba56d17874cb462f",
+  "changeset_id": "cs_9d04e9d450f84478",
+  "baseline_hash": "sha256:f4a78f43dcfff6ab790fc68df629729a1518b66d91aee8b8684e9038a83dc351",
+  "manifest_json": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\manifest.json",
+  "manifest_sha256": "sha256:69c95578eb41753b423670f5aad0b445d9636d861b61c298a2c87a67ff4c03c3",
+  "files": 5,
+  "db_path": "C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/tmp_validate/v2_real_20261112_204100/workspace/v2.db",
+  "g5_abs": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100",
+  "evidence_abs": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\real\\attempt_02"
+}

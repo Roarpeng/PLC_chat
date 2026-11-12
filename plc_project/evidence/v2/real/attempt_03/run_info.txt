@@ -1,0 +1,2 @@
+AP=C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/tmp_validate/g5_skeleton_20261112_205500/proj/CanvasE2E.ap19
+SKELETON_CHAIN_EXIT=2

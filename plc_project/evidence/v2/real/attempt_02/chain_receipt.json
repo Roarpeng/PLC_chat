@@ -1,0 +1,54 @@
+{
+  "cpu_type_identifier": "6ES7511-1AK02-0AB0/V2.9",
+  "error": {
+    "code": "CPU_TEMPLATE_NOT_SELECTED",
+    "evidence_level": "pending_real_machine",
+    "message": "CreateWithItem probe did not confirm the lead-appointed CPU skeleton",
+    "native_archived": false,
+    "pending_real_machine": true
+  },
+  "mode": "cpu_verification_failed",
+  "notice": "fail-closed: no delivery chain started; no automatic fallback to another CPU model",
+  "raw_evidence_path": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\real\\attempt_02\\T02\\cpu_create_with_item_probe.json",
+  "real_tia_v19_tested": false,
+  "verification_receipt": {
+    "cpu_type_identifier": "6ES7511-1AK02-0AB0/V2.9",
+    "error_code": "CPU_TEMPLATE_NOT_SELECTED",
+    "error_message": "CreateWithItem probe did not confirm the lead-appointed CPU skeleton",
+    "evidence_level": "pending_real_machine",
+    "notice": "fail-closed: no delivery chain, no automatic fallback",
+    "ok": false,
+    "probed_at": "2026-11-12T12:37:23.346539+00:00",
+    "raw_probe_receipt": {
+      "_exit_code": 0,
+      "close": {
+        "api": "Project.Close()",
+        "message": "Project closed.",
+        "ok": true
+      },
+      "ok": false,
+      "probe": [
+        {
+          "api": "Devices.CreateWithItem(typeIdentifier, name, deviceName)",
+          "code": "openness_error",
+          "error": "Error when calling method 'CreateWithItem' of type 'Siemens.Engineering.HW.DeviceComposition'.\r\n\r\nUnknown TypeIdentifer \"6ES7511-1AK02-0AB0/V2.9\".",
+          "ok": false,
+          "typeId": "6ES7511-1AK02-0AB0/V2.9"
+        }
+      ],
+      "project": {
+        "error": {
+          "code": "not_found",
+          "message": "No PLC software found in project.",
+          "retryable": false
+        },
+        "ok": false,
+        "projectName": "CPU_PROBE",
+        "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\cpu_probe\\CPU_PROBE\\CPU_PROBE.ap19"
+      }
+    },
+    "selection_status": "selected_by_lead",
+    "temporary_project_path": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\v2_real_20261112_204100\\cpu_probe\\CPU_PROBE\\CPU_PROBE.ap19",
+    "verified_create_with_item": false
+  }
+}

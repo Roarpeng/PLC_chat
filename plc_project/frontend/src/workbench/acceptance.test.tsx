@@ -26,21 +26,37 @@ describe("WP-07 unified acceptance (offline contract)", () => {
     expect(text).toContain("evidence_level");
   });
 
-  it("G5 is pending_real_machine and never marked passed", () => {
+  it("G5 is PASSED only with real V19 evidence and recorded limitations", () => {
     const gates = read("../../../docs/v2/g0-g7-matrix.md");
     const line = gates.split("\n").find((l) => l.includes("**G5**") || l.startsWith("| G5")) ?? "";
-    expect(line).toContain("pending_real_machine");
-    expect(line).toContain("NOT PASSED");
-    expect(line).not.toContain("已通过");
+    expect(line).toContain("V19_real");
+    expect(line).toContain("PASS");
+    expect(line).not.toContain("NOT PASSED");
+    const chain = JSON.parse(read("../../../evidence/v2/real/attempt_04/chain_receipt.json"));
+    expect(chain.evidence_level).toBe("V19_real");
+    expect(chain.evidence_gaps).toEqual([]);
+    expect(chain.stage_receipts).toHaveLength(7);
+    expect(chain.compile.error_count).toBe(0);
+    expect(chain.artifact.reopen_ok).toBe(true);
+    expect(chain.scope_limitations.length).toBeGreaterThan(0);
   });
 
-  it("acceptance receipt never claims delivery complete", () => {
+  it("acceptance receipt proves delivery with a real V19 full chain", () => {
     const receipt = JSON.parse(read("../../../evidence/v2/acceptance/acceptance_receipt.json"));
-    expect(receipt.status).toBe("pending_real_machine");
-    expect(receipt.real_tia_v19_tested).toBe(false);
-    expect(receipt.delivery_complete).toBe(false);
-    expect(receipt.native_artifacts_published).toBe(0);
-    expect(receipt.gates.G5.status).toBe("NOT PASSED");
+    if (!receipt.delivery_complete) {
+      expect(receipt.status).toBe("pending_real_machine");
+      expect(receipt.gates.G5.status).toBe("NOT PASSED");
+      return;
+    }
+    expect(receipt.real_tia_v19_tested).toBe(true);
+    expect(receipt.native_artifacts_published).toBe(1);
+    expect(receipt.gates.G5.status).toBe("PASS");
+    expect(receipt.gates.G5.evidence_level).toBe("V19_real");
+    expect(receipt.g5_success.evidence_gaps).toEqual([]);
+    expect(receipt.g5_success.compile.error_count).toBe(0);
+    expect(receipt.g5_success.artifact.reopen_ok).toBe(true);
+    expect(receipt.g5_success.artifact.archive_sha256).toMatch(/^sha256:/);
+    expect(receipt.scope_limitations.length).toBeGreaterThan(0);
   });
 
   it("D-3 P0 wording is the source-package wording", () => {
