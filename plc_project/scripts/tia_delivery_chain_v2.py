@@ -19,15 +19,145 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 from gateway.app.services.plc.delivery_jobs_v2 import DeliveryCoordinator
 from gateway.app.services.plc.tia_delivery_v2 import (
     DeliveryChainRequest,
     TiaOpennessCliAdapter,
+    unpack_retrieve_reopen,
 )
 from gateway.app.services.plc.workspace_v2 import get_store
+from plc_engine.engineering_ir.contracts import DELIVERY_STAGES
 from plc_engine.engineering_ir.evidence import EvidenceLevel
+from plc_engine.engineering_ir.models import CompileReceipt
 from plc_engine.process.artifact_manifest import ArtifactManifest
+
+
+def derive_real_chain_evidence(
+    result: dict[str, Any],
+    verification: Any,
+    gate_allowed: bool,
+) -> tuple[bool, list[str]]:
+    """P-14: prove V19_real from persisted receipts, NEVER from a boolean flag.
+
+    ``adapter.real_machine`` is a construction parameter we set ourselves; using
+    it as evidence lets a fake worker self-declare a real machine. Every claim
+    here is derived from the job result, the stage receipts and the CPU probe
+    receipt. Any gap makes the whole chain fail-closed to pending_real_machine.
+    """
+    reasons: list[str] = []
+    real = EvidenceLevel.V19_REAL.value
+
+    # CPU skeleton must be confirmed by a real CreateWithItem probe receipt.
+    if not gate_allowed:
+        reasons.append("CPU CreateWithItem verification gate did not pass")
+    if not getattr(verification, "ok", False) or not getattr(verification, "verified_create_with_item", False):
+        reasons.append("verification receipt has no CreateWithItem confirmation")
+    if getattr(verification, "selection_status", "") != "approved":
+        reasons.append("verification selection_status is not approved")
+    if getattr(verification, "evidence_level", "") != real:
+        reasons.append("verification evidence_level is not V19_real")
+    if not getattr(verification, "raw_probe_receipt", None):
+        reasons.append("verification has no raw C# probe receipt")
+
+    if result.get("state") != "NATIVE_ARCHIVED":
+        reasons.append("job state is not NATIVE_ARCHIVED")
+    if result.get("evidence_level") != real:
+        reasons.append("job evidence_level is not V19_real")
+
+    chain = result.get("chain") if isinstance(result.get("chain"), dict) else {}
+    if not chain.get("ok") or chain.get("state") != "NATIVE_ARCHIVED":
+        reasons.append("chain result is not a successful NATIVE_ARCHIVED chain")
+    if chain.get("evidence_level") != real:
+        reasons.append("chain evidence_level is not V19_real")
+
+    receipts = [r for r in (chain.get("stage_receipts") or []) if isinstance(r, dict)]
+    by_stage = {str(r.get("stage")): r for r in receipts}
+    required = ("CREATE", "CREATE_DEVICE", *DELIVERY_STAGES)
+    for stage_name in dict.fromkeys(required):
+        r = by_stage.get(stage_name)
+        if not r or not r.get("ok") or r.get("evidence_level") != real:
+            reasons.append(f"missing or non-real stage receipt: {stage_name}")
+
+    # Compile: parsed through the same fail-closed parser used by the chain.
+    compile_raw = (by_stage.get("COMPILE") or {}).get("raw_api_receipt") or {}
+    try:
+        parsed = CompileReceipt.from_worker(
+            compile_raw,
+            raw=json.dumps(compile_raw, ensure_ascii=False, sort_keys=True),
+            evidence=EvidenceLevel.V19_REAL,
+        )
+        if parsed.error_count != 0:
+            reasons.append("compile receipt does not prove error_count=0")
+    except Exception as exc:  # noqa: BLE001 - fail-closed
+        reasons.append(f"compile receipt unparsable: {exc}")
+
+    # Retrieve/reopen is MANDATORY (Q-06), parsed through the chain's own unpacker.
+    reopen_raw = (by_stage.get("RETRIEVE_REOPEN") or {}).get("raw_api_receipt") or {}
+    try:
+        unpack_retrieve_reopen(reopen_raw)
+    except Exception as exc:  # noqa: BLE001 - fail-closed
+        reasons.append(f"retrieve/reopen receipt unparsable: {exc}")
+
+    artifact = result.get("artifact") if isinstance(result.get("artifact"), dict) else {}
+    if not artifact.get("artifact_id") or not artifact.get("archive_path"):
+        reasons.append("artifact lacks exact artifact_id / archive_path binding")
+    if not str(artifact.get("archive_sha256") or "").startswith("sha256:"):
+        reasons.append("artifact lacks a real sha256 archive hash")
+    if artifact.get("reopen_ok") is not True:
+        reasons.append("artifact.reopen_ok is not true")
+    if artifact.get("evidence_level") != real:
+        reasons.append("artifact evidence_level is not V19_real")
+    artifact_compile = artifact.get("compile") if isinstance(artifact.get("compile"), dict) else {}
+    if artifact_compile.get("compile_ok") is not True or artifact_compile.get("error_count") != 0:
+        reasons.append("artifact compile receipt does not prove compile_ok / 0 errors")
+
+    return (not reasons), reasons
+
+
+def build_chain_payload(
+    *,
+    result: dict[str, Any],
+    verification: Any,
+    gate_allowed: bool,
+    probe_path: str,
+    cpu_type_id: str,
+) -> dict[str, Any]:
+    """P-14: derive the entire receipt from persisted evidence, never from a flag."""
+    is_real, evidence_gaps = derive_real_chain_evidence(result, verification, gate_allowed)
+    cpu_verified = bool(
+        is_real
+        and gate_allowed
+        and verification.ok
+        and verification.verified_create_with_item
+        and verification.selection_status == "approved"
+        and verification.evidence_level == EvidenceLevel.V19_REAL.value
+        and verification.raw_probe_receipt
+    )
+    return {
+        "mode": "real_chain_probe",
+        "real_tia_v19_tested": is_real,
+        "evidence_level": (
+            EvidenceLevel.V19_REAL.value if is_real
+            else EvidenceLevel.PENDING_REAL_MACHINE.value
+        ),
+        "evidence_gaps": evidence_gaps,
+        "cpu_selection": {
+            "type_identifier": cpu_type_id,
+            "selection_status": "approved" if cpu_verified else "selected_by_lead",
+            "verified_create_with_item": cpu_verified,
+            "raw_evidence_path": probe_path,
+        },
+        "raw_evidence_path": result.get("raw_evidence_path", ""),
+        "result": result,
+        "delivery_complete": is_real,
+        "g5_status": "PASSED" if is_real else "pending_real_machine",
+        "notice": (
+            "V19 real full-chain receipt" if is_real
+            else "chain FAILED or mocked; no native archive published; pending_real_machine where applicable"
+        ),
+    }
 
 
 def main() -> None:
@@ -104,23 +234,16 @@ def main() -> None:
         manifest=manifest,
     )
     result = DeliveryCoordinator(store).run_chain(args.job_id, adapter=adapter, request=request)
-    payload = {
-        "mode": "real_chain_probe",
-        "real_tia_v19_tested": bool(adapter.real_machine),
-        "cpu_selection": {
-            "type_identifier": args.cpu_type_id,
-            "selection_status": "approved",
-            "verified_create_with_item": True,
-            "raw_evidence_path": probe_path,
-        },
-        "raw_evidence_path": result.get("raw_evidence_path", ""),
-        "result": result,
-        "notice": (
-            "V19 real full-chain receipt" if result.get("state") == "NATIVE_ARCHIVED"
-            else "chain FAILED or mocked; no native archive published; pending_real_machine where applicable"
-        ),
-    }
+    payload = build_chain_payload(
+        result=result,
+        verification=verification,
+        gate_allowed=allowed,
+        probe_path=probe_path,
+        cpu_type_id=args.cpu_type_id,
+    )
     _emit(payload, args.output)
+    if payload["evidence_level"] != EvidenceLevel.V19_REAL.value:
+        raise SystemExit(2)
 
 
 def _emit(payload: dict, output: str) -> None:

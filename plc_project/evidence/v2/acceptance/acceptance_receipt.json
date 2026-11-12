@@ -31,7 +31,7 @@
     "G5": {
       "status": "NOT PASSED",
       "evidence_level": "pending_real_machine",
-      "note": "Greenfield-only real .zap19 chain never executed; not signable"
+      "note": "Real V19 attempt blocked at CreateWithItem by Openness Security error / timeout; chain never started; not signable"
     },
     "G6": {
       "status": "interface+schema complete",
@@ -63,7 +63,7 @@
     "m4_passed": false,
     "greenfield_end_to_end_closed": false
   },
-  "notice": "无 V19 real 全链证据；绝不显示「交付完成」；G5 在 L-01 闭环 + 串行真机窗口 + 真实回执取得前不可签署。本次收口为主理人编排范围内操作，未代写成员代码或测试。",
+  "notice": "代码与离线/mocked 验收已交付；无 V19 real 全链证据，绝无「交付完成」，绝不声称 TIA V19 编译零错误已达成。G5 需先解决 TIA Openness 安全/许可证与 UI 会话，再按 docs/v2/qa/02-真机G5执行方案.md 重跑同一串行命令。",
   "qa_paths_reserved": [
     "docs/v2/qa/",
     "evidence/v2/qa/"
@@ -71,23 +71,52 @@
   "ledger_closed_by": "team-lead",
   "ledger_closed_at": "2026-11-12",
   "lead_closeout": {
-    "status": "PARTIAL / NOT DELIVERED",
+    "status": "CODE DELIVERED / G5 BLOCKED BY TIA ENVIRONMENT",
     "reason": "software-engineer and software-qa-engineer interrupted by platform 429 quota exhaustion",
     "p06_final_ruling": "two independent read-only status probes, both authentic; P1 g0_d32beeb9478950dd true/1, P2 g0_acf8be499157d5b4 false/0",
     "independent_regression_2026_11_12": {
-      "pytest": "264 passed / 1 failed",
+      "pytest": "287 passed / 0 failed (full v2 + contracts + QA suite)",
       "vitest": "413 passed / 0 failed",
       "dotnet_test": "110 passed / 0 failed",
       "frontend_build": "EXIT=0",
-      "new_failures_introduced": 1
+      "new_failures_introduced": 0
     },
     "open_items": [
-      "L-01 P-14 real-chain evidence anti-forgery NOT fixed (hardcoded approved / bool(adapter.real_machine)); blocks G5",
-      "L-02 one pytest regression: test_stale_base_revision_returns_409 uses revision-1 = -1, now rejected 422 by strict P-10 validation",
-      "L-03 G5 real V19 full chain NOT executed; AC-01 steps 1/5/6 and CreateWithItem verification remain pending_real_machine"
+      "L-03 G5 real V19 full chain NOT PASSED: blocked by TIA Openness Security error / operation timed out during CreateWithItem verification; fail-closed, no retry",
+      "L-04 low-priority observations (P-09 imported-address policy consistency; C# v1 AdoptProject wildcard already guarded)"
     ],
     "historical_probe_contradiction_resolved": true,
     "handover_doc": "docs/v2/06-主理人收口与遗留项.md",
-    "real_machine_plan": "docs/v2/qa/02-真机G5执行方案.md"
+    "real_machine_plan": "docs/v2/qa/02-真机G5执行方案.md",
+    "resolved_items": [
+      "L-01 P-14 real-chain evidence anti-forgery FIXED: derive_real_chain_evidence() + build_chain_payload() derive every V19_real/approved/delivery_complete claim from persisted CPU probe, stage receipts, compile, reopen and artifact bindings; 20 negative cases in tests/unit/test_real_chain_evidence_v2.py",
+      "L-02 pytest regression FIXED: test_stale_base_revision_returns_409 now uses revision=1 IR with stale base 0 (revision-1=-1 is illegal and must fail 422); 6 new boundary cases assert bool/float/str/None/overflow rejection"
+    ],
+    "real_machine_attempt": {
+      "executed": true,
+      "at": "2026-11-12T11:58Z",
+      "cwd": "plc_project",
+      "isolation": "tmp_validate/v2_real_20261112_195746/ (gitignored)",
+      "job_id": "job_2198329a9cb0481b",
+      "cpu_type_identifier": "6ES7511-1AK02-0AB0/V2.9",
+      "mode": "cpu_verification_failed",
+      "exit_code": 2,
+      "chain_started": false,
+      "api": "Projects.Create(DirectoryInfo, string)",
+      "error": "openness_error: Security error. The operation has timed out. (retryable=false, _exit_code=4)",
+      "evidence_level": "V19_real FAILURE receipt only (NOT a full-chain success)",
+      "real_tia_v19_tested": false,
+      "native_artifacts_published": 0,
+      "native_archived": false,
+      "conclusion": "pending_real_machine; no automatic CPU fallback; no retry per lead ruling F / QA plan section 6",
+      "evidence_paths": [
+        "evidence/v2/real/chain_receipt.json",
+        "evidence/v2/real/chain_stdout.txt",
+        "evidence/v2/real/chain_run_info.txt",
+        "evidence/v2/real/T02/cpu_create_with_item_probe.json",
+        "evidence/v2/real/00_environment.txt",
+        "evidence/v2/real/00_prepare.json"
+      ]
+    }
   }
 }

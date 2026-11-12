@@ -1,0 +1,4 @@
+G5_ABS=C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/tmp_validate/v2_real_20261112_195746
+TIA_VERSION=V19
+RESEARCHOS_TIA_OPENNESS_EXE=C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe
+EXE_OK

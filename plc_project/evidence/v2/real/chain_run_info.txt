@@ -1,0 +1,2 @@
+JOB=job_2198329a9cb0481b WS=C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/tmp_validate/v2_real_20261112_195746
+CHAIN_EXIT=2

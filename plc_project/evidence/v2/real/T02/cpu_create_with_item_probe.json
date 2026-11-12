@@ -1,0 +1,17 @@
+{
+  "notice": "TIA unavailable or receipt malformed; pending_real_machine, no delivery chain",
+  "real_tia_v19_tested": false,
+  "receipt": {
+    "cpu_type_identifier": "6ES7511-1AK02-0AB0/V2.9",
+    "error_code": "CPU_TEMPLATE_NOT_SELECTED",
+    "error_message": "create-project ok=false: {'ok': False, 'create': {'ok': False, 'api': 'Projects.Create(DirectoryInfo, string)', 'error': {'code': 'openness_error', 'message': 'Security error.\\r\\n\\r\\nThe operation has timed out.', 'retryable': False}}, '_exit_code': 4}",
+    "evidence_level": "pending_real_machine",
+    "notice": "TIA unavailable or receipt malformed; pending_real_machine, no delivery chain",
+    "ok": false,
+    "probed_at": "2026-11-12T11:58:16.270319+00:00",
+    "raw_probe_receipt": {},
+    "selection_status": "selected_by_lead",
+    "temporary_project_path": "",
+    "verified_create_with_item": false
+  }
+}

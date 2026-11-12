@@ -17,13 +17,26 @@ from tests.v2_fixtures import build_store, build_valid_demo_ir
 
 
 def test_stale_base_revision_returns_409_with_current_revision() -> None:
+    # P-10: base_revision must be a non-negative int. Simulate a legitimately
+    # advanced workspace (revision 1) with a stale client base (0) instead of
+    # using revision - 1 == -1, which is an illegal value and must fail as 422.
     ir = build_valid_demo_ir()
-    patch = make_patch(ir.project_id, ir.revision - 1, [{"op": "set_view_layout", "layout": {}}])
+    ir.revision = 1
+    patch = make_patch(ir.project_id, 0, [{"op": "set_view_layout", "layout": {}}])
     with pytest.raises(PatchConflictError) as exc:
         apply_patch_atomic(ir, patch)
     assert exc.value.code == "BASE_REVISION_CONFLICT"
-    assert exc.value.current_revision == ir.revision
-    assert exc.value.to_dict()["current_revision"] == 0
+    assert exc.value.current_revision == ir.revision == 1
+    assert exc.value.to_dict()["current_revision"] == 1
+
+
+@pytest.mark.parametrize("bad_revision", [-1, True, 1.5, "1", None, 2**31])
+def test_invalid_base_revision_is_rejected_as_422(bad_revision: object) -> None:
+    """P-10 boundaries: negative/bool/float/str/None/overflow never reach the DB."""
+    with pytest.raises(SemanticValidationError) as exc:
+        make_patch("prj_demo", bad_revision, [])
+    assert exc.value.code == "SEMANTIC_VALIDATION_FAILED"
+    assert exc.value.issues[0]["field"] == "base_revision"
 
 
 def test_unknown_op_returns_422_and_ir_is_unchanged() -> None:
