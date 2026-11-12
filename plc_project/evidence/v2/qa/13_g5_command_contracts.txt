@@ -1,0 +1,83 @@
+### QA G5 read-only source audit: C# CLI command contracts (NO command executed)
+### DATE: 2026-11-10 | METHOD: static source read only, no Openness CLI / TIA invocation
+### Repo: C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project
+
+[exe resolution]  agents/plc/tia/openness_cli.py:30-48 find_openness_exe()
+  - override: RESEARCHOS_TIA_OPENNESS_EXE (absolute, or relative to repo_root)
+  - else scan for each base in (industrial/tia_openness_cli/src/TiaOpenness.Server/bin,
+                                industrial/tia_openness_mcp/src/TiaOpenness.Server/bin)
+    for cfg in (Release, Debug):  <base>/<cfg>/net481/TiaOpenness.Server.exe
+  - _openness_command() (:419-442): if exe found -> [exe, "--cli", *args], cwd = exe.parent
+    else -> dotnet run --project <csproj> -c Release --no-build -- --cli *args, cwd = repo_root
+    (on non-zero exit it RETRIES once WITHOUT --no-build => may trigger a rebuild)
+  - openness_cli(*args, timeout_s=600) (:475-499): subprocess.run(..., timeout=timeout_s)
+    TimeoutExpired is NOT caught here; propagates to execute_chain's except Exception -> TIA_UNAVAILABLE.
+
+[actual built artifact]  industrial/tia_openness_cli/src/TiaOpenness.Server/bin/Release/net481/TiaOpenness.Server.exe
+  (Debug build also present; Release takes priority per find_openness_exe)
+
+[Program.cs usage text]  :55-79  (TiaOpenness.Server.exe [--cli] <command> [options])
+  status
+  open-project --project <ap19> [--plc name] [--version V19]
+  generate-from-source --project <ap19> --scl <file.scl> [--plc name] [--no-overwrite]
+  import-xml --project <ap19> --xml <file> [--kind auto|...] [--no-overwrite]
+  retrieve --archive <file.zap*> --out-dir <dir> [--plc name]
+  create-project --dir <dir> --name <projectName>
+  close-project --project <ap19>
+  compile-plc --project <ap19> [--plc name]
+  save-project --project <ap19> [--plc name]
+  archive-project --project <ap19> --out-dir <dir> [--name file.zap19]
+  create-device --project <ap19> --type-id <id> --name <name> [--device-name <dname>]
+  probe-device-types --project <ap19> --type-ids <id1|id2|...>   (probe only, never saves)
+
+[Program.cs per-command implementation notes]
+  :85      version = Environment.GetEnvironmentVariable("TIA_VERSION") ?? TiaConnection.DefaultVersion
+           TiaConnection.cs:15  DefaultVersion = "V19"   (V20 is also installed; set TIA_VERSION=V19 explicitly)
+  :91      using var connection = new TiaConnection(version)  -- EVERY CLI command creates a connection
+  :97-103  status -> GetStatus(); returns 0 only when OpennessGroupInToken && OpennessAvailable
+  :689-705 create-project -> {ok, create: CreateProjectResult}; create.projectPath (CamelCase)
+  :707-726 close-project -> FIRST OpenProject(project, plc, withoutUi:true) THEN CloseProject()
+           => not a pure close; it reopens the project (extra Portal startup possible)
+  :779-812 create-device -> OpenProject (tolerates "not_found" for empty project), CreateDevice, SaveProject
+  :848-902 probe-device-types -> OpenProject, CreateWithItem per id (PROBE_n), CloseProject() without save
+           returns {ok, project, probe:[{typeId, ok, api, code, error}], close}
+  :409-434 compile-plc -> OpenProject, CompilePlcSoftwareStrict, {ok, project, compile}
+           Models.cs:263-282 CompilePlcResult { State, errorCount, warningCount } (CamelCase via JsonDefaults)
+  :531-548 save-project -> OpenProject, SaveProject, {ok, save}
+  :550-582 archive-project -> OpenProject, ArchiveProject, {ok, project, archive}
+           ProjectService.cs:819-838 ExactArchivePolicy.Verify(dir,name) => exact ArchivePath + sha256
+  :651-687 retrieve -> RetrieveProject, reopenOk = retrieved.Ok && retrieved.ReopenOk, archiveSha256
+           emits {ok, retrieve, reopenOk, archiveSha256}; returns 0 only when reopenOk
+
+[Python adapter timeouts]  gateway/app/services/plc/tia_delivery_v2.py
+  _invoke(command, *args, timeout_s=300)                    :200-212
+  create_project      create-project       timeout_s=300    :214-216   (create is 300s, as flagged by lead)
+  create_device       create-device        timeout_s=300    :218-223
+  import_blocks       generate-from-source timeout_s=900    :233-235
+                      import-xml           timeout_s=300    :237-239
+  compile             compile-plc          timeout_s=900    :245-247
+  save                save-project         timeout_s=300    :249-251
+  archive             archive-project      timeout_s=900    :253-258
+  retrieve_reopen     retrieve             timeout_s=900    :260-262
+  cpu_verification_v2.py:93-109  create-project 300 / probe-device-types 300 / close-project 120
+  NOTE: timeouts are NOT uniformly 300s; compile/archive/retrieve/generate are 900s.
+
+[workspace / evidence / artifact roots]  (all must be set explicitly before any --real run)
+  workspace_v2.py:124-131  PLC_V2_DB_PATH (default ":memory:" => job NOT visible across processes)
+                           ir_store_root = <db parent>/ir_store
+  workspace_v2.py:614-619  get_store() is a PROCESS-LOCAL singleton
+  evidence_v2.py:20-23     PLC_V2_EVIDENCE_ROOT (default "evidence/v2")
+                           write_ledger(task_id, name) -> <root>/<task_id>/<name>.json
+  delivery_jobs_v2.py:46-47 ArtifactStore root = store.ir_store_root.parent / "artifact_store"
+  delivery_jobs_v2.py:153  evidence_path metadata string is HARD-CODED "evidence/v2/T02/job_<id>.json"
+  artifact_store_v2.py:32   router's ArtifactStore(store) uses PLC_V2_ARTIFACT_ROOT or "artifact_store"
+                           => MUST set PLC_V2_ARTIFACT_ROOT to the SAME root as the coordinator,
+                              otherwise /artifacts/{id}/download resolves the wrong path (404)
+
+[P-01..P-05 fix status verified read-only this round]
+  tia_delivery_v2.py:192   real_machine = bool(real_machine) and worker is None
+  models.py:748-758        compile_ok=False then recompute_compile_ok(real_receipt=...)
+  models.py:761-766        recompute_compile_ok = error_count==0 AND static_gate_passed AND real receipt
+  tia_delivery_v2.py:353   recompute_compile_ok(real_receipt=bool(adapter.real_machine and compiled_raw))
+  tia_delivery_v2.py:434-439 NATIVE_ARCHIVED requires real_machine AND static_gate_passed AND compile_ok
+  offline regression: 212 passed (engineer suite) / 6 passed (QA defect probes) -> see 11_*.txt

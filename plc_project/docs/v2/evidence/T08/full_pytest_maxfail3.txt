@@ -1,0 +1,208 @@
+........................................................................ [  4%]
+..............F..........................F......F
+================================== FAILURES ===================================
+____________________________ test_get_startup_zip _____________________________
+
+    def test_get_startup_zip():
+>       zip_path = get_startup_zip()
+                   ^^^^^^^^^^^^^^^^^
+
+tests\unit\test_af_engine.py:214: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+plc_engine\af\baseline.py:46: in get_startup_zip
+    return find_af_asset(STARTUP_ZIP_NAME, base_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+asset_name = 'Automation_Framework_Startup_PROJ_V1_2.zip', base_dir = None
+
+    def find_af_asset(asset_name: str, base_dir: Path | None = None) -> Path:
+        """Locate an AF asset file in docs/ or search roots."""
+        docs = base_dir or DEFAULT_DOCS_DIR
+        target = docs / asset_name
+        if target.is_file():
+            return target
+        # Search parent directories
+        curr = docs
+        for _ in range(3):
+            candidate = curr / "docs" / asset_name
+            if candidate.is_file():
+                return candidate
+            curr = curr.parent
+>       raise FileNotFoundError(f"AF V1.2 asset '{asset_name}' not found under {docs}.")
+E       FileNotFoundError: AF V1.2 asset 'Automation_Framework_Startup_PROJ_V1_2.zip' not found under C:\Users\vboxuser\Desktop\Project\Code\PLC_chat\plc_project\docs.
+
+plc_engine\af\baseline.py:42: FileNotFoundError
+___________________ test_hr001_real_import_roles_and_freeze ___________________
+
+tmp_path = WindowsPath('C:/Users/vboxuser/AppData/Local/Temp/v2pytest_t08_final/test_hr001_real_import_roles_a0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000019ED070BD20>
+
+    @pytest.mark.skipif(not HR001_EXPORT.exists(), reason="HR001 真机导出不在本机")
+    def test_hr001_real_import_roles_and_freeze(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """HR001 真实夹具:roles 覆盖/DB 与 safety 不动/pending 诚实/二次 overlay 逐字节不变。"""
+        monkeypatch.setenv("PLC_WORK_DIR", str(tmp_path))
+        data = import_canvas_from_path(HR001_EXPORT, project_name="hr001")
+    
+        assert data["blocks_parsed"] >= 50
+        af = data["af_analysis"]
+        assert af["conformant"] is False  # 47+ 未知块诚实 pending
+        assert af["roles_count"] >= 30
+        assert af["pending_count"] >= 10
+        assert af["roles_count"] + af["pending_count"] == len(data["canvas"]["blocks"])
+    
+        roles = {}
+        for key, block in data["canvas"]["blocks"].items():
+            roles[key] = block["af_role"]
+>       assert roles["FB1060_AutoStep"] == "em"          # 主步序
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert 'global' == 'em'
+E         
+E         - em
+E         + global
+
+tests\unit\test_af_import.py:322: AssertionError
+---------------------------- Captured stdout call -----------------------------
+2026-11-10 00:35:34,551 INFO gateway.app.services.plc.af_import af_import: 报告已落盘 hr001-20261110T003534-d5ad47.json(roles=62 pending=27)
+2026-11-10 00:35:34,555 INFO gateway.app.services.plc.af_import af_import: PCEC 事务已留痕 chg-10251655dcc0(touched=62)
+------------------------------ Captured log call ------------------------------
+INFO     gateway.app.services.plc.af_import:af_import.py:277 af_import: 报告已落盘 hr001-20261110T003534-d5ad47.json(roles=62 pending=27)
+INFO     gateway.app.services.plc.af_import:af_import.py:375 af_import: PCEC 事务已留痕 chg-10251655dcc0(touched=62)
+____________________ test_api_new_project_with_af_template ____________________
+
+client = <starlette.testclient.TestClient object at 0x0000019ECEBD0D10>
+
+    def test_api_new_project_with_af_template(client: TestClient):
+        """Test creating a new project initialized with official AF V1.2 template."""
+>       resp = client.post(
+            "/api/v1/plc/canvas/projects/new",
+            json={"project_name": "AfAutoProject", "template": "af_v1_2"},
+            headers=AUTH_HEADER,
+        )
+
+tests\unit\test_af_phase3.py:289: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv\Lib\site-packages\httpx2\_client.py:1204: in post
+    return self.request(
+.venv\Lib\site-packages\starlette\testclient.py:457: in request
+    return super().request(
+.venv\Lib\site-packages\httpx2\_client.py:797: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\httpx2\_client.py:980: in send
+    response = self._send_handling_auth(
+.venv\Lib\site-packages\httpx2\_client.py:1008: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv\Lib\site-packages\httpx2\_client.py:1043: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\httpx2\_client.py:1076: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\starlette\testclient.py:354: in handle_request
+    raise exc
+.venv\Lib\site-packages\starlette\testclient.py:351: in handle_request
+    portal.call(self.app, scope, receive, send)
+.venv\Lib\site-packages\anyio\from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Roaming\uv\python\cpython-3.14.2-windows-x86_64-none\Lib\concurrent\futures\_base.py:450: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\AppData\Roaming\uv\python\cpython-3.14.2-windows-x86_64-none\Lib\concurrent\futures\_base.py:395: in __get_result
+    raise self._exception
+.venv\Lib\site-packages\anyio\from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\fastapi\applications.py:1216: in __call__
+    await super().__call__(scope, receive, send)
+.venv\Lib\site-packages\starlette\applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv\Lib\site-packages\starlette\middleware\errors.py:186: in __call__
+    raise exc
+.venv\Lib\site-packages\starlette\middleware\errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+.venv\Lib\site-packages\fastapi\telemetry\_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+.venv\Lib\site-packages\starlette\middleware\cors.py:91: in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+.venv\Lib\site-packages\starlette\middleware\cors.py:149: in simple_response
+    await self.app(scope, receive, send)
+.venv\Lib\site-packages\starlette\middleware\exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv\Lib\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv\Lib\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv\Lib\site-packages\starlette\routing.py:676: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv\Lib\site-packages\fastapi\routing.py:2791: in app
+    await route.handle(scope, receive, send)
+.venv\Lib\site-packages\fastapi\routing.py:1819: in handle
+    await self.original_router.handle(scope, receive, send)
+.venv\Lib\site-packages\fastapi\routing.py:2874: in handle
+    await included_router._handle_selected(scope, receive, send)
+.venv\Lib\site-packages\fastapi\routing.py:1845: in _handle_selected
+    await original_route.handle(scope, receive, send)
+.venv\Lib\site-packages\fastapi\routing.py:1308: in handle
+    await effective_context.app(scope, receive, send)
+.venv\Lib\site-packages\fastapi\routing.py:165: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv\Lib\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv\Lib\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv\Lib\site-packages\fastapi\routing.py:151: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\fastapi\routing.py:727: in app
+    raw_response = await run_endpoint_function(
+.venv\Lib\site-packages\fastapi\routing.py:360: in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+gateway\app\routers\plc.py:885: in create_new_project_endpoint
+    ap19_path = clone_startup_template(dest_dir, project_name)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+plc_engine\af\baseline.py:75: in clone_startup_template
+    zip_path = get_startup_zip(base_dir)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+plc_engine\af\baseline.py:46: in get_startup_zip
+    return find_af_asset(STARTUP_ZIP_NAME, base_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+asset_name = 'Automation_Framework_Startup_PROJ_V1_2.zip', base_dir = None
+
+    def find_af_asset(asset_name: str, base_dir: Path | None = None) -> Path:
+        """Locate an AF asset file in docs/ or search roots."""
+        docs = base_dir or DEFAULT_DOCS_DIR
+        target = docs / asset_name
+        if target.is_file():
+            return target
+        # Search parent directories
+        curr = docs
+        for _ in range(3):
+            candidate = curr / "docs" / asset_name
+            if candidate.is_file():
+                return candidate
+            curr = curr.parent
+>       raise FileNotFoundError(f"AF V1.2 asset '{asset_name}' not found under {docs}.")
+E       FileNotFoundError: AF V1.2 asset 'Automation_Framework_Startup_PROJ_V1_2.zip' not found under C:\Users\vboxuser\Desktop\Project\Code\PLC_chat\plc_project\docs.
+
+plc_engine\af\baseline.py:42: FileNotFoundError
+---------------------------- Captured stdout setup ----------------------------
+2026-11-10 00:35:34,906 INFO plc.gateway PLC Gateway started in env=dev
+-------------------------- Captured stdout teardown ---------------------------
+2026-11-10 00:35:35,447 INFO plc.gateway PLC Gateway stopped
+---------------------------- Captured log teardown ----------------------------
+INFO     plc.gateway:main.py:30 PLC Gateway stopped
+=========================== short test summary info ===========================
+FAILED tests/unit/test_af_engine.py::test_get_startup_zip - FileNotFoundError...
+FAILED tests/unit/test_af_import.py::test_hr001_real_import_roles_and_freeze
+FAILED tests/unit/test_af_phase3.py::test_api_new_project_with_af_template - ...
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 3 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+3 failed, 118 passed in 9.73s

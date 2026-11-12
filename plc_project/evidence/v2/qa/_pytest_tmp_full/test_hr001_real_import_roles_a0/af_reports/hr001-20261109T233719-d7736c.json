@@ -1,0 +1,221 @@
+{
+  "project_name": "hr001",
+  "generated_at": "2026-11-09T23:37:19",
+  "conformant": false,
+  "roles": {
+    "DB1000_StdSignal": "global",
+    "DB1001_SysMode": "global",
+    "DB1003_CR": "global",
+    "DB1009_Constant": "global",
+    "DB1010_Parameter": "global",
+    "DB1040_HomePos": "global",
+    "DB1042_Timer": "global",
+    "DB1060_AutoStep": "global",
+    "DB1080_Component": "global",
+    "DB1081_ValveCall": "global",
+    "DB1089_AddrRegister": "global",
+    "DB1140_Message": "global",
+    "DB1142_TypeChangePrompt": "global",
+    "DB1146_PromptFree": "global",
+    "DB1147_PromptStartNotPmt": "global",
+    "DB1148_PromptBeeper": "global",
+    "DB1200_FB_std_Switch": "global",
+    "DB1202_IOCheck": "global",
+    "DB1210_DPRD_DPWR": "global",
+    "DB1900_Communication_PC": "global",
+    "DB1910_DrillData": "global",
+    "DB2008_CoolingFan[DB2008]": "global",
+    "DB2100 Modbus Value": "global",
+    "DB2300 Point Value": "global",
+    "DB2400 Visual Calibration": "global",
+    "DB2500 Visual Chiseling": "global",
+    "DB2600 FT Control": "global",
+    "DB2700 Visual Point Reset": "global",
+    "DB5000_ParameterLoadMemory": "global",
+    "DB720_KuKa_MainCtrl": "global",
+    "FB1000_StdSignal": "unknown",
+    "FB1001_SysMode": "global",
+    "FB1002_subSysMode": "global",
+    "FB1003_CR": "unknown",
+    "FB1010_Parameter": "global",
+    "FB1021_Prompt_Object": "unknown",
+    "FB1022_Prompt_ObjectV2": "unknown",
+    "FB1040_HomePos": "global",
+    "FB1060_AutoStep": "global",
+    "FB1061_RobotAutoStep": "em",
+    "FB1062_HorDrillAutoStep": "global",
+    "FB1063_DownDrillAutoStep": "global",
+    "FB1064_DiamondAutostep": "global",
+    "FB1080_Component": "global",
+    "FB1081_ValveCall": "cm",
+    "FB1089_AddrRegister": "unknown",
+    "FB1140_Message": "unknown",
+    "FB1141_Prompt": "unknown",
+    "FB1142_TypeChangePrompt": "global",
+    "FB1200_std_Switch": "unknown",
+    "FB1202_IOCheck_": "unknown",
+    "FB1210_DPRD_DPWR": "unknown",
+    "FB1910_DrillData": "global",
+    "FB2008_CoolingFan": "unknown",
+    "FB2009_CoolingFanFunction": "unknown",
+    "FB5002_SafetyDoorV1": "safety",
+    "FB5003_FixtureID": "unknown",
+    "FB5004_ProdCycleTime": "unknown",
+    "FB5005_ProdCounter": "unknown",
+    "FB5006_Analog_IN_V4": "unknown",
+    "FB5007_Analog_Out_V3": "unknown",
+    "FB5008_CycleTime": "unknown",
+    "FB5009_AnalOut": "unknown",
+    "FB5019_stringSegment": "unknown",
+    "FB5020_TypeConvert_4ByteDWORD_Real": "unknown",
+    "FB5021_TypeConvert_Real_4ByteDWord": "unknown",
+    "FB5699_RandomDemoTest": "unknown",
+    "FB5715_Kuka_General": "em",
+    "FB720_KuKa_MainCtrl": "global",
+    "FB950_SDTimer": "unknown",
+    "FB951_SDTimerV2": "unknown",
+    "FC1003_CR": "unknown",
+    "FC1900_Communication_PC": "global",
+    "FC2100 Modbus TCP": "unknown",
+    "FC2300 Time Calculation": "global",
+    "FC2400 Visual Calibration": "em",
+    "FC2500 Visual Chiseling": "global",
+    "FC2600 FT Control": "em",
+    "FC_BlockMove": "global",
+    "OB1Main": "global",
+    "OB30_Cyclic interrupt": "global",
+    "Pull or plug of modules": "global",
+    "Rack or station failure": "global",
+    "Startup": "global",
+    "System Err": "global",
+    "UDT_DrillData": "global",
+    "UDT_Step": "global",
+    "UDT_SystemPara": "global",
+    "UDT_TypePara": "global"
+  },
+  "roles_count": 62,
+  "pending": [
+    {
+      "block": "FB1000_StdSignal",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB1003_CR",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB1021_Prompt_Object",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB1022_Prompt_ObjectV2",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB1089_AddrRegister",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB1140_Message",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB1141_Prompt",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB1200_std_Switch",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB1202_IOCheck_",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB1210_DPRD_DPWR",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB2008_CoolingFan",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB2009_CoolingFanFunction",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB5003_FixtureID",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB5004_ProdCycleTime",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB5005_ProdCounter",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB5006_Analog_IN_V4",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB5007_Analog_Out_V3",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB5008_CycleTime",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB5009_AnalOut",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB5019_stringSegment",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB5020_TypeConvert_4ByteDWORD_Real",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB5021_TypeConvert_Real_4ByteDWord",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB5699_RandomDemoTest",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB950_SDTimer",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FB951_SDTimerV2",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FC1003_CR",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    },
+    {
+      "block": "FC2100 Modbus TCP",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    }
+  ],
+  "pending_count": 27,
+  "coverage": 69.66,
+  "blocks_total": 89,
+  "frozen": {
+    "global": 56,
+    "safety": 1
+  },
+  "mapper": {
+    "units": 1,
+    "ems": 4,
+    "io_total": 113,
+    "io_retained": 113,
+    "io_retention_rate": 100.0
+  }
+}

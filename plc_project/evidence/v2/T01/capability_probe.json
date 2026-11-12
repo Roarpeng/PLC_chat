@@ -5,31 +5,34 @@
     "6ES7515-2AM02-0AB0/V2.9",
     "6ES7214-1AG40-0XB0/V4.5"
   ],
+  "correction_note": "主理人首次裁定（误判为单次探测的二手转述错误、统一改为 tiaRunning=true/processCount=1）已于 2026-11-12 撤销。经回查原始回执确认存在两次独立只读 status 探测，各自真实：P1 g0_d32beeb9478950dd @ 2026-11-09T15:03:48.281136+00:00 → true/1 'TIA Portal process detected.'（g0_probe.json / capability_probe.json）；P2 g0_acf8be499157d5b4 @ 2026-11-09T16:00:50.956689+00:00 → false/0 'TIA Portal process not detected'（cpu_selection.json → capability_manifest 内嵌回执）。两次探测时间点不同，Portal 进程在两次之间退出，禁止互相覆盖，不得用转述错误解释。更正时间 2026-11-12；原 receipt id / probed_at 全部保留不抹历史。evidence_level=V19_real 仅覆盖只读 status 回执，real_tia_v19_chain_tested=false，g5_status=pending_real_machine，绝不外推为 AC-01/G5 全链证据。",
+  "evidence_scope": "read_only_status_probe",
+  "g5_status": "pending_real_machine",
   "manifest": {
     "cpu_templates": [
       {
-        "catalog_source": "static_approved_candidate_v19",
+        "catalog_source": "static_candidate_v19_unverified",
         "cpu_template": "S7-1500 / CPU 1511-1 PN",
         "firmware": "V2.9",
         "type_identifier": "6ES7511-1AK02-0AB0/V2.9",
         "verified_create_with_item": false
       },
       {
-        "catalog_source": "static_approved_candidate_v19",
+        "catalog_source": "static_candidate_v19_unverified",
         "cpu_template": "S7-1500 / CPU 1513-1 PN",
         "firmware": "V2.9",
         "type_identifier": "6ES7513-1AL02-0AB0/V2.9",
         "verified_create_with_item": false
       },
       {
-        "catalog_source": "static_approved_candidate_v19",
+        "catalog_source": "static_candidate_v19_unverified",
         "cpu_template": "S7-1500 / CPU 1515-2 PN",
         "firmware": "V2.9",
         "type_identifier": "6ES7515-2AM02-0AB0/V2.9",
         "verified_create_with_item": false
       },
       {
-        "catalog_source": "static_approved_candidate_v19",
+        "catalog_source": "static_candidate_v19_unverified",
         "cpu_template": "S7-1200 / CPU 1214C DC/DC/DC",
         "firmware": "V4.5",
         "type_identifier": "6ES7214-1AG40-0XB0/V4.5",
@@ -84,6 +87,12 @@
     "tia_version": "V19"
   },
   "note": "CPU skeleton selection awaits the lead's explicit approval (U-02)",
+  "probe_receipt_id": "g0_d32beeb9478950dd",
+  "probed_at": "2026-11-09T15:03:48.281136+00:00",
+  "processCount": 1,
   "raw_evidence_path": "evidence/v2/T01/capability_probe.json",
-  "real_tia_v19_tested": true
+  "real_tia_v19_chain_tested": false,
+  "real_tia_v19_tested": true,
+  "selection_note": "evidence_level=V19_real 仅覆盖本次只读 C# status 探测回执，绝不代表 AC-01 / G5 真机全链已通过；real_tia_v19_chain_tested=false，g5_status=pending_real_machine，CPU 候选均未做 CreateWithItem 验证。",
+  "tiaRunning": true
 }

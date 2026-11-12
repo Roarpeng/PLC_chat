@@ -212,9 +212,10 @@ export const STEP_META: ReadonlyArray<{
   },
   {
     step: 4,
-    title: "工程包已就绪",
+    /* D-3 / Q-03 P0：源码包就绪 ≠ 原生工程归档终态（SOURCE_READY ≠ NATIVE_ARCHIVED） */
+    title: "源码包就绪（非原生工程）",
     kicker: "工位 04 · 交付",
-    primaryLabel: "下载工程包",
+    primaryLabel: "下载源码包",
     ground: "#bcc7e0",
   },
 ];

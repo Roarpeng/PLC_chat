@@ -132,6 +132,10 @@ import {
 } from "./state/longTasks";
 import { buildOpsReview, type OpsReview } from "./state/opsReview";
 import { LongTaskChips } from "./shell/LongTaskChips";
+/* WP-04 / Q-03: default V2 workbench + independent legacy route + top-bar switch.
+   v1 channels stay reachable; no v1 export signature or behaviour is changed. */
+import { WorkbenchShell } from "./workbench/WorkbenchShell";
+import { hashForChannel, initialChannel, type AppChannel } from "./workbench/featureFlags";
 
 /** 一条解析降级告警（coverage.py `warnings[]` 的元素，或 review 截断提示） */
 type DegradationWarning = {
@@ -290,9 +294,23 @@ const ChangeLogIcon: React.FC = () => (
 );
 
 const App: React.FC = () => {
-  /* Greenfield 独立通道（与既有工作台互不触发） */
-  const [channel, setChannel] = useState<"workbench" | "greenfield">("greenfield");
+  /* Greenfield 独立通道（与既有工作台互不触发）。
+     WP-04：V2 工作台为默认，旧 4 步向导保留独立 hash 路由 #/legacy。 */
+  const [channel, setChannel] = useState<AppChannel>(() => initialChannel());
   const [greenfieldPrompt, setGreenfieldPrompt] = useState<string>("");
+  useEffect(() => {
+    const syncChannel = () => setChannel(initialChannel());
+    window.addEventListener("hashchange", syncChannel);
+    if (!window.location.hash) {
+      window.history.replaceState(null, "", hashForChannel(initialChannel()));
+    }
+    return () => window.removeEventListener("hashchange", syncChannel);
+  }, []);
+  /** 顶栏开关：hash 与 state 同步，保证刷新后仍停在所选独立路由。 */
+  const switchChannel = React.useCallback((next: AppChannel) => {
+    window.history.replaceState(null, "", hashForChannel(next));
+    setChannel(next);
+  }, []);
   /* 画布与会话 */
   const [canvas, setCanvas] = useState<CanvasStateData>(() => blankCanvas(""));
   const [backendConnected, setBackendConnected] = useState<boolean | null>(null);
@@ -2681,6 +2699,16 @@ const App: React.FC = () => {
   }
   const npfValid = npfName.length > 0 && npfNameError === "";
 
+  /* WP-04: V2 统一工作台（默认）。六视图 + 三栏 + 底部 diagnostics；
+     编辑统一走 SequencePatch(base_revision)，状态只读后端 Job。 */
+  if (channel === "v2") {
+    return (
+      <WorkbenchShell
+        onSwitch={(target) => switchChannel(target === "legacy" ? "greenfield" : "workbench")}
+      />
+    );
+  }
+
   if (channel === "greenfield") {
     return (
       <GreenfieldChannel
@@ -2709,6 +2737,16 @@ const App: React.FC = () => {
           currentSessionId={activeSessionId}
           onJump={handleJumpToLongTask}
         />
+
+        <button
+          className="topbar__toggle"
+          onClick={() => switchChannel("v2")}
+          aria-label="V2 统一工作台"
+          title="切换到 V2 统一工程工作台（默认入口）"
+          data-ui="switch-v2-workbench"
+        >
+          V2 工作台
+        </button>
 
         <button
           className="topbar__toggle"

@@ -1,0 +1,6 @@
+### CMD: uv run pytest tests/unit/test_*_v2.py tests/contracts -q -rf
+### DATE: 2026-11-09T23:32:40+08:00
+........................................................................ [ 44%]
+........................................................................ [ 88%]
+..................                                                       [100%][safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":116,"threshold":50,"scope":"turn","targets":["\\\\?\\C:\\Users\\vboxuser\\AppData\\Local\\Temp\\pytest-of-vboxuser\\garbage-711c05c3-e569-4239-9295-6c9e3d341d86"],"targetCount":1}
+PYTEST_EXIT=1

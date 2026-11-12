@@ -37,18 +37,38 @@ def test_mocked_full_chain_never_claims_native_archived(tmp_path) -> None:
     assert "retrieve" in adapter.calls[-1]["command"]
 
 
-def test_real_machine_receipt_is_required_for_native_archived(tmp_path) -> None:
+def test_fake_worker_can_never_be_labelled_v19_real(tmp_path) -> None:
+    """QA P-01: an injected Python worker is never a real Openness receipt."""
     worker, _ = make_worker(tmp_path)
     adapter = TiaOpennessCliAdapter(worker=worker, real_machine=True,
                                     evidence_level=EvidenceLevel.V19_REAL)
+    assert adapter.real_machine is False
+    assert adapter.evidence_level is EvidenceLevel.MOCKED
     result = execute_chain(adapter, request_for(tmp_path))
-    assert result.state == "NATIVE_ARCHIVED"
-    assert result.evidence_level == EvidenceLevel.V19_REAL.value
-    assert result.artifact is not None and result.artifact.is_native_archived() is True
-    assert result.artifact.compile.error_count == 0
+    assert result.state == "MOCKED_CHAIN_OK"
+    assert result.evidence_level == EvidenceLevel.MOCKED.value
+    assert result.artifact is not None
     assert result.artifact.compile.warning_count == 2  # warnings listed separately
-    assert result.artifact.reopen_ok is True
-    assert result.artifact.archive_sha256.startswith("sha256:")
+    assert result.artifact.is_native_archived() is False
+
+
+def test_real_compile_receipt_contract_without_a_fake_worker() -> None:
+    """Pure receipt contract: V19_real + static gate + zero errors => compile_ok."""
+    from plc_engine.engineering_ir.models import CompileReceipt
+
+    good = CompileReceipt.from_worker(
+        {"ok": True, "compile": {"state": "Success", "errorCount": 0,
+                                 "warningCount": 2, "staticGatePassed": True}},
+        raw='{"ok":true}', evidence=EvidenceLevel.V19_REAL,
+    )
+    assert good.static_gate_passed is True
+    assert good.compile_ok is True
+    bad_gate = CompileReceipt.from_worker(
+        {"ok": True, "compile": {"state": "Success", "errorCount": 0,
+                                 "warningCount": 0, "staticGatePassed": False}},
+        raw='{"ok":true}', evidence=EvidenceLevel.V19_REAL,
+    )
+    assert bad_gate.compile_ok is False
 
 
 def test_compile_failure_never_publishes_artifact(tmp_path) -> None:

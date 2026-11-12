@@ -1,0 +1,156 @@
+{
+  "approved": false,
+  "candidate_cpu_templates": [
+    {
+      "catalog_source": "static_candidate_v19_unverified",
+      "cpu_template": "S7-1500 / CPU 1511-1 PN",
+      "firmware": "V2.9",
+      "selected_at": "2026-11-09T16:00:50.956926+00:00",
+      "selected_by": "齐活林 (team-lead)",
+      "selection_reason": "主理人齐活林 2026-11-09 裁定（U-02）：指定 S7-1500 CPU 1511-1 PN 为本期目标 CPU skeleton。4 个候选均为静态 V19 订货号、历史文档无可确认的已验证记录，故不得标为 approved/verified。",
+      "selection_status": "selected_by_lead",
+      "type_identifier": "6ES7511-1AK02-0AB0/V2.9",
+      "verification_required": true,
+      "verified_create_with_item": false
+    },
+    {
+      "catalog_source": "static_candidate_v19_unverified",
+      "cpu_template": "S7-1500 / CPU 1513-1 PN",
+      "firmware": "V2.9",
+      "type_identifier": "6ES7513-1AL02-0AB0/V2.9",
+      "verified_create_with_item": false
+    },
+    {
+      "catalog_source": "static_candidate_v19_unverified",
+      "cpu_template": "S7-1500 / CPU 1515-2 PN",
+      "firmware": "V2.9",
+      "type_identifier": "6ES7515-2AM02-0AB0/V2.9",
+      "verified_create_with_item": false
+    },
+    {
+      "catalog_source": "static_candidate_v19_unverified",
+      "cpu_template": "S7-1200 / CPU 1214C DC/DC/DC",
+      "firmware": "V4.5",
+      "type_identifier": "6ES7214-1AG40-0XB0/V4.5",
+      "verified_create_with_item": false
+    }
+  ],
+  "capability_manifest": {
+    "cpu_templates": [
+      {
+        "catalog_source": "static_candidate_v19_unverified",
+        "cpu_template": "S7-1500 / CPU 1511-1 PN",
+        "firmware": "V2.9",
+        "selected_at": "2026-11-09T16:00:50.956926+00:00",
+        "selected_by": "齐活林 (team-lead)",
+        "selection_reason": "主理人齐活林 2026-11-09 裁定（U-02）：指定 S7-1500 CPU 1511-1 PN 为本期目标 CPU skeleton。4 个候选均为静态 V19 订货号、历史文档无可确认的已验证记录，故不得标为 approved/verified。",
+        "selection_status": "selected_by_lead",
+        "type_identifier": "6ES7511-1AK02-0AB0/V2.9",
+        "verification_required": true,
+        "verified_create_with_item": false
+      },
+      {
+        "catalog_source": "static_candidate_v19_unverified",
+        "cpu_template": "S7-1500 / CPU 1513-1 PN",
+        "firmware": "V2.9",
+        "type_identifier": "6ES7513-1AL02-0AB0/V2.9",
+        "verified_create_with_item": false
+      },
+      {
+        "catalog_source": "static_candidate_v19_unverified",
+        "cpu_template": "S7-1500 / CPU 1515-2 PN",
+        "firmware": "V2.9",
+        "type_identifier": "6ES7515-2AM02-0AB0/V2.9",
+        "verified_create_with_item": false
+      },
+      {
+        "catalog_source": "static_candidate_v19_unverified",
+        "cpu_template": "S7-1200 / CPU 1214C DC/DC/DC",
+        "firmware": "V4.5",
+        "type_identifier": "6ES7214-1AG40-0XB0/V4.5",
+        "verified_create_with_item": false
+      }
+    ],
+    "evidence_level": "V19_real",
+    "probe_receipt_id": "g0_acf8be499157d5b4",
+    "probed_at": "2026-11-09T16:00:50.956689+00:00",
+    "raw_probe_receipt": {
+      "cpu_selection": {
+        "notice": "绝不冒充 approved/verified；无 CreateWithItem 回执前不得进入交付链",
+        "reason": "主理人齐活林 2026-11-09 裁定（U-02）：指定 S7-1500 CPU 1511-1 PN 为本期目标 CPU skeleton。4 个候选均为静态 V19 订货号、历史文档无可确认的已验证记录，故不得标为 approved/verified。",
+        "selected_at": "2026-11-09T16:00:50.956935+00:00",
+        "selected_by": "齐活林 (team-lead)",
+        "status": "selected_by_lead",
+        "type_identifier": "6ES7511-1AK02-0AB0/V2.9",
+        "verification_required": true,
+        "verified_create_with_item": false
+      },
+      "probe": {
+        "error": "",
+        "ok": true,
+        "raw_probe_receipt": {
+          "_exit_code": 0,
+          "connected": false,
+          "engineeringDll": "C:\\Program Files\\Siemens\\Automation\\Portal V19\\PublicAPI\\V19\\Siemens.Engineering.dll",
+          "message": "TIA Portal process not detected (Openness can still start WithoutUserInterface).",
+          "ok": true,
+          "opennessAvailable": true,
+          "opennessGroupInToken": true,
+          "processCount": 0,
+          "projectOpen": false,
+          "tiaRunning": false,
+          "tiaVersion": "V19"
+        }
+      },
+      "status_receipt": {
+        "_exit_code": 0,
+        "connected": false,
+        "engineeringDll": "C:\\Program Files\\Siemens\\Automation\\Portal V19\\PublicAPI\\V19\\Siemens.Engineering.dll",
+        "message": "TIA Portal process not detected (Openness can still start WithoutUserInterface).",
+        "ok": true,
+        "opennessAvailable": true,
+        "opennessGroupInToken": true,
+        "processCount": 0,
+        "projectOpen": false,
+        "tiaRunning": false,
+        "tiaVersion": "V19"
+      }
+    },
+    "selected_cpu_template": "6ES7511-1AK02-0AB0/V2.9",
+    "selection_note": "selected_by_lead:6ES7511-1AK02-0AB0/V2.9; verification_required=true; verified_create_with_item=false; NOT approved until a real CreateWithItem probe passes",
+    "status_receipt": {
+      "engineering_dll": "C:\\Program Files\\Siemens\\Automation\\Portal V19\\PublicAPI\\V19\\Siemens.Engineering.dll",
+      "error": "",
+      "note": "real status receipt obtained; CPU candidates are static V19 order numbers, CreateWithItem verification still pending_real_machine",
+      "ok": true,
+      "openness_available": true,
+      "tia_running": false
+    },
+    "tia_version": "V19"
+  },
+  "correction_note": "主理人首次裁定（误判为单次探测的二手转述错误、统一改为 tiaRunning=true/processCount=1）已于 2026-11-12 撤销。经回查原始回执确认存在两次独立只读 status 探测，各自真实：P1 g0_d32beeb9478950dd @ 2026-11-09T15:03:48.281136+00:00 → true/1 'TIA Portal process detected.'（g0_probe.json / capability_probe.json）；P2 g0_acf8be499157d5b4 @ 2026-11-09T16:00:50.956689+00:00 → false/0 'TIA Portal process not detected'（cpu_selection.json → capability_manifest 内嵌回执）。两次探测时间点不同，Portal 进程在两次之间退出，禁止互相覆盖，不得用转述错误解释。更正时间 2026-11-12；原 receipt id / probed_at 全部保留不抹历史。evidence_level=V19_real 仅覆盖只读 status 回执，real_tia_v19_chain_tested=false，g5_status=pending_real_machine，绝不外推为 AC-01/G5 全链证据。",
+  "cpu_template": "S7-1500 / CPU 1511-1 PN",
+  "create_with_item_probe": {
+    "evidence_level": "pending_real_machine",
+    "executed": false,
+    "raw_evidence_path": "evidence/v2/T02/cpu_create_with_item_probe.json"
+  },
+  "evidence_scope": "read_only_status_probe",
+  "g5_status": "pending_real_machine",
+  "notice": "绝不冒充 approved/verified；--real 交付链必须先执行 CreateWithItem 验证（临时副本），验证通过才升级 approved 并允许继续；失败或 TIA 不可用一律 fail-closed，输出 CPU_TEMPLATE_NOT_SELECTED 或 pending_real_machine，绝不自动改用其它型号、绝不猜测。",
+  "probe_receipt_id": "g0_acf8be499157d5b4",
+  "processCount": 0,
+  "real_tia_v19_tested": false,
+  "reason": "主理人齐活林 2026-11-09 裁定（U-02）：指定 S7-1500 CPU 1511-1 PN 为本期目标 CPU skeleton。4 个候选均为静态 V19 订货号、历史文档无可确认的已验证记录，故不得标为 approved/verified。",
+  "selected_at": "2026-11-09T16:00:50.956941+00:00",
+  "selected_by": "齐活林 (team-lead)",
+  "selection_status": "selected_by_lead",
+  "task_id": "T05 / U-02 CPU 选型落地",
+  "tiaRunning": false,
+  "type_identifier": "6ES7511-1AK02-0AB0/V2.9",
+  "verification_required": true,
+  "verified_create_with_item": false,
+  "probed_at": "2026-11-09T16:00:50.956689+00:00",
+  "message": "TIA Portal process not detected (Openness can still start WithoutUserInterface).",
+  "real_tia_v19_chain_tested": false
+}

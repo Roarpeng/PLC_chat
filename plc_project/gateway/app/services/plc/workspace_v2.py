@@ -34,6 +34,10 @@ from plc_engine.engineering_ir.models import (
 )
 from plc_engine.engineering_ir.patch import apply_patch_atomic
 
+#: Bumped in T09 (P-07): fail-closed default for capability_manifest.evidence_level.
+#: Opening a pre-T09 database triggers a real, transactional table rebuild.
+SCHEMA_USER_VERSION = 2
+
 SCHEMA_SQL = """
 PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS projects (
@@ -91,7 +95,7 @@ CREATE TABLE IF NOT EXISTS job_events (
 CREATE TABLE IF NOT EXISTS capability_manifest (
   probe_receipt_id TEXT PRIMARY KEY, tia_version TEXT NOT NULL,
   cpu_templates_json TEXT NOT NULL, probed_at TEXT NOT NULL,
-  raw_probe_receipt TEXT NOT NULL, evidence_level TEXT NOT NULL DEFAULT 'V19_real'
+  raw_probe_receipt TEXT NOT NULL, evidence_level TEXT NOT NULL DEFAULT 'pending_real_machine'
 );
 CREATE TABLE IF NOT EXISTS project_locks (
   project_id TEXT PRIMARY KEY, owner_job_id TEXT, lease_until TEXT
@@ -139,6 +143,50 @@ class WorkspaceStore:
         self._conn.execute("PRAGMA foreign_keys=ON")
         self._conn.execute("PRAGMA busy_timeout=5000")
         self._conn.executescript(SCHEMA_SQL)
+        self._ensure_schema_compatibility()
+
+    def _ensure_schema_compatibility(self) -> None:
+        """Migrate pre-T09 DBs whose capability_manifest default was unsafe.
+
+        ``CREATE TABLE IF NOT EXISTS`` cannot change an existing DEFAULT, so a
+        real transactional rebuild is required for already-created databases.
+        Existing rows (evidence_level included) are preserved verbatim; only a
+        NEW row that omits evidence_level now fails closed to
+        ``pending_real_machine``.
+        """
+        with self._lock:
+            version = int(self._conn.execute("PRAGMA user_version").fetchone()[0])
+            if version >= SCHEMA_USER_VERSION:
+                return
+            row = self._conn.execute(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='capability_manifest'"
+            ).fetchone()
+            legacy_default = row is not None and "V19_real" in str(row["sql"] or "")
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                if legacy_default:
+                    self._conn.execute(
+                        "ALTER TABLE capability_manifest RENAME TO capability_manifest_legacy"
+                    )
+                    self._conn.execute(
+                        "CREATE TABLE capability_manifest ("
+                        "probe_receipt_id TEXT PRIMARY KEY, tia_version TEXT NOT NULL, "
+                        "cpu_templates_json TEXT NOT NULL, probed_at TEXT NOT NULL, "
+                        "raw_probe_receipt TEXT NOT NULL, "
+                        "evidence_level TEXT NOT NULL DEFAULT 'pending_real_machine')"
+                    )
+                    self._conn.execute(
+                        "INSERT INTO capability_manifest "
+                        "(probe_receipt_id, tia_version, cpu_templates_json, probed_at, raw_probe_receipt, evidence_level) "
+                        "SELECT probe_receipt_id, tia_version, cpu_templates_json, probed_at, "
+                        "raw_probe_receipt, evidence_level FROM capability_manifest_legacy"
+                    )
+                    self._conn.execute("DROP TABLE capability_manifest_legacy")
+                self._conn.execute(f"PRAGMA user_version={SCHEMA_USER_VERSION}")
+                self._conn.execute("COMMIT")
+            except BaseException:
+                self._conn.execute("ROLLBACK")
+                raise
 
     # -------------------------------------------------------------- helpers --
     def close(self) -> None:

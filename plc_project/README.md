@@ -122,3 +122,26 @@ cd frontend && npm run build                     # tsc -b && vite build
 | 24-28 | IO/DB/Mermaid 四线契约、Gemini 重构契约、v3.0 进度审计、安全整改、长任务中心 |
 | `greenfield/` | Greenfield 通道 PRD / 架构 / Gate-0 / P0-D 拍板 / 批次 3-4 真机验收 / M4 评审(01-18 + 两张 Mermaid 图) |
 | `frontend-redesign/` | 2026-11-08 前端交互壳重构:`01-prd.md`(增量 PRD) / `02-architecture.md`(架构与任务分解) / `03-qa-report.md`(独立 QA 报告) |
+| `docs/v2/` | V2 完全体增量设计、验收矩阵、交付报告、契约 Schema 与分批留痕(见下表) |
+
+## V2 完全体(增量说明,不改写历史结论)
+
+> 本节只做增量索引。`xml_package_unverified=true`、M4 未通过、Greenfield 端到端
+> 「真实编译→归档→reopen 未闭环」等历史口径**保持不变**;README 中 1341 / 393 为未复跑声明值。
+
+- 后端唯一网关 `gateway/app`:新增 `/api/v2/*` 路由(默认信封兼容 v1 `ApiResponse`),v1 路由保持注册与公共行为不变;SQLite WAL 10 张表 + 版本化 JSON IR + hash 命名 Artifact Store,零新增第三方依赖。
+- 工程内核 `plc_engine/`:`engineering_ir/`(唯一可写语义真值)、`components/`(4 类 DriverCatalog)、`process/`(GuardAST / SequenceIR / 离线 Trace / SCL Lowering / SourceMap N:N)、`changeplan/`(Brownfield **仅接口与 Schema**)、`canonical.py`(零依赖哈希/ID 单一实现)。`af/` 与 `pcec.py` 物理保留、公共行为不变,经 adapter 只读接入。
+- 前端 `frontend/src/workbench/`:统一工程工作台(三栏 + 六视图 + 底部 diagnostics)、SequenceCanvas 双向编辑,所有编辑发 `SequencePatch(base_revision)`;默认 `#/v2`,旧 4 步向导独立路由 `#/legacy` + 顶栏开关(Q-03)。`state/greenfield.ts` 导出签名未改。
+- C# Worker **TargetFramework 冻结 `net481`**(Siemens.Engineering 为 .NET Framework Remoting);.NET 8 仅构建 SDK。D-1 `create.projectPath` fail-closed 解包、D-2 删除目录通配归档、D-3 文案改「源码包就绪(非原生工程)」。
+- 三级证据 `offline / mocked / V19_real / pending_real_machine` 贯穿 API 回执、Job 事件与 UI 徽标;`compile_ok = error_count==0 ∧ static_gate_passed ∧ 存在真实回执`;`warning_count` 单列;`Retrieve/reopen` 强制通过才允许 `NATIVE_ARCHIVED`(Q-06)。
+
+| V2 文档 | 主题 |
+|---|---|
+| `docs/v2/01-增量PRD.md` / `02-架构设计与任务分解.md` | 范围冻结 / 系统设计与 WP 分解 |
+| `docs/v2/contracts/` | 5 个 JSON Schema + AFProfile + v1→v2 映射 + 真实 OpenAPI |
+| `docs/v2/baseline-report.md` / `pre_existing_failures.md` | 三套基线实跑 / 既有失败隔离清单 |
+| `docs/v2/driver-catalog.md` / `process-algorithms.md` / `brownfield-interface-contract.md` / `fault-injection-matrix.md` | 各 WP 技术说明 |
+| `docs/v2/03-验收矩阵.md` / `g0-g7-matrix.md` / `04-交付报告.md` | 统一验收发布(G5 当前 `pending_real_machine`) |
+| `docs/v2/evidence/T01..T08/` | 每批验收命令真实输出 |
+
+**当前真机状态**:`V19_real` 仅适用于 G0 只读 `status` 探测回执;AC-01 第 1/5/6 步与 **G5(Greenfield-only)全链一律 `pending_real_machine`**,未取得真实 `.zap19`、未发布原生归档、不显示「交付完成」。真机全链由主理人/QA 串行调度,探针脚本 `scripts/tia_delivery_chain_v2.py --real` 默认 dry-run。

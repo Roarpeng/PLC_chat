@@ -1,0 +1,23 @@
+{
+  "chain": {
+    "artifact": null,
+    "error_code": "CPU_TEMPLATE_NOT_SELECTED",
+    "error_message": "no approved CPU skeleton; delivery must fail explicitly",
+    "evidence_level": "mocked",
+    "ok": false,
+    "stage_receipts": [
+      {
+        "error_code": "CPU_TEMPLATE_NOT_SELECTED",
+        "evidence_level": "mocked",
+        "message": "no approved CPU skeleton; delivery must fail explicitly",
+        "ok": false,
+        "raw_api_receipt": {},
+        "stage": "CREATE",
+        "state": "FAILED"
+      }
+    ],
+    "state": "FAILED"
+  },
+  "notice": "FAILED: no native archive published; logs and editable design retained",
+  "real_tia_v19_tested": false
+}

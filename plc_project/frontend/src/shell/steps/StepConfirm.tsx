@@ -48,10 +48,10 @@ export const StepConfirm: React.FC<StepConfirmProps> = ({
       <div className="gf-wiz__kicker">工位 03 · 确认</div>
       <h2 className="gf-wiz__title">确认这一轮工作</h2>
       <p className="gf-wiz__lead">
-        下面三张卡片就是本轮全部内容。确认后系统会冻结规格并生成可下载的工程包。
+        下面三张卡片就是本轮全部内容。确认后系统会冻结规格并生成可下载的源码导入包（非 TIA 原生工程）。
       </p>
 
-      {completed && <div className="gf-wiz__done">本步已完成 · 工程包已生成</div>}
+      {completed && <div className="gf-wiz__done">本步已完成 · 源码包已生成（非原生工程）</div>}
 
       <div className="gf-step-confirm__cards">
         <section className="gf-step-confirm__card">

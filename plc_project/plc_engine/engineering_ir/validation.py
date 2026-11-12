@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from plc_engine.engineering_ir.address_policy import imported_address_is_backed, source_value
 from plc_engine.engineering_ir.contracts import SCHEMA_VERSION
 from plc_engine.engineering_ir.hashing import stable_id_report
 from plc_engine.engineering_ir.models import (
@@ -68,6 +69,15 @@ class ValidationEngine:
             if component.io_bindings is not None:
                 for key, address in component.io_bindings.items():
                     if isinstance(address, str) and address.startswith("%"):
+                        # P-09: one shared fail-closed policy with the Patch engine.
+                        # An imported address is legal ONLY with its original
+                        # source_binding; everything else is a fictional address.
+                        if imported_address_is_backed(ir, component.id, source_value(component), address):
+                            warnings.append(
+                                f"{component.id}: imported address {address} retained under original "
+                                "source_binding (writable=requires_review)"
+                            )
+                            continue
                         issues.append(
                             _issue(component.id, f"greenfield component {key} must not invent physical address {address}", "io_bindings")
                         )

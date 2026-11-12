@@ -1,0 +1,4 @@
+### CMD: 3 named pre-existing failures + collection of xfail
+### DATE: 2026-11-09T23:33:34+08:00
+FFF                                                                      [100%][safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":116,"threshold":50,"scope":"turn","targets":["\\\\?\\C:\\Users\\vboxuser\\AppData\\Local\\Temp\\pytest-of-vboxuser\\garbage-5abb5711-48a8-41d9-8387-348eb2e1b586"],"targetCount":1}
+NAMED_EXIT=1

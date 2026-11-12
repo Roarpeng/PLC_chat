@@ -28,28 +28,28 @@ APPROVED_CPU_CANDIDATES: tuple[dict[str, Any], ...] = (
         "cpu_template": "S7-1500 / CPU 1511-1 PN",
         "type_identifier": "6ES7511-1AK02-0AB0/V2.9",
         "firmware": "V2.9",
-        "catalog_source": "static_approved_candidate_v19",
+        "catalog_source": "static_candidate_v19_unverified",
         "verified_create_with_item": False,
     },
     {
         "cpu_template": "S7-1500 / CPU 1513-1 PN",
         "type_identifier": "6ES7513-1AL02-0AB0/V2.9",
         "firmware": "V2.9",
-        "catalog_source": "static_approved_candidate_v19",
+        "catalog_source": "static_candidate_v19_unverified",
         "verified_create_with_item": False,
     },
     {
         "cpu_template": "S7-1500 / CPU 1515-2 PN",
         "type_identifier": "6ES7515-2AM02-0AB0/V2.9",
         "firmware": "V2.9",
-        "catalog_source": "static_approved_candidate_v19",
+        "catalog_source": "static_candidate_v19_unverified",
         "verified_create_with_item": False,
     },
     {
         "cpu_template": "S7-1200 / CPU 1214C DC/DC/DC",
         "type_identifier": "6ES7214-1AG40-0XB0/V4.5",
         "firmware": "V4.5",
-        "catalog_source": "static_approved_candidate_v19",
+        "catalog_source": "static_candidate_v19_unverified",
         "verified_create_with_item": False,
     },
 )
@@ -106,8 +106,9 @@ def probe_capability(
         level = EvidenceLevel.V19_REAL
         cpu_templates = [dict(item) for item in APPROVED_CPU_CANDIDATES]
         status_note = (
-            "real status receipt obtained; CPU candidates are static V19 order numbers, "
-            "CreateWithItem verification still pending_real_machine"
+            "real read-only C# status receipt obtained; CPU candidates are static UNVERIFIED V19 "
+            "order numbers (verified_create_with_item=false); evidence_level=V19_real covers ONLY "
+            "this read-only status probe, never AC-01/G5; g5_status=pending_real_machine"
         )
     else:
         level = EvidenceLevel.PENDING_REAL_MACHINE
@@ -191,6 +192,53 @@ def attach_create_with_item_receipt(
     return manifest
 
 
+def apply_lead_cpu_selection(
+    manifest: TiaCapabilityManifest,
+    type_identifier: str,
+    *,
+    selected_by: str = "team-lead",
+    reason: str = "",
+    store: WorkspaceStore | None = None,
+    selected_at: str = "",
+) -> TiaCapabilityManifest:
+    """Record the lead-appointed CPU skeleton WITHOUT claiming verification.
+
+    U-02 ruling: the selected model stays ``selected_by_lead`` with
+    ``verification_required=true`` and ``verified_create_with_item=false``.
+    It is NEVER marked approved/verified here; only a real CreateWithItem
+    receipt (cpu_verification_v2) can upgrade it.
+    """
+    matches = [c for c in manifest.cpu_templates if c.get("type_identifier") == type_identifier]
+    if not matches:
+        raise ValueError(f"{type_identifier!r} is not present in the G0 probe manifest")
+    for candidate in manifest.cpu_templates:
+        if candidate.get("type_identifier") == type_identifier:
+            candidate["selection_status"] = "selected_by_lead"
+            candidate["verification_required"] = True
+            candidate["verified_create_with_item"] = False
+            candidate["selected_by"] = selected_by
+            candidate["selected_at"] = selected_at or utc_now()
+            candidate["selection_reason"] = reason
+    manifest.selected_cpu_template = type_identifier
+    manifest.selection_note = (
+        f"selected_by_lead:{type_identifier}; verification_required=true; "
+        "verified_create_with_item=false; NOT approved until a real CreateWithItem probe passes"
+    )
+    manifest.raw_probe_receipt["cpu_selection"] = {
+        "selected_by": selected_by,
+        "selected_at": selected_at or utc_now(),
+        "type_identifier": type_identifier,
+        "reason": reason,
+        "verification_required": True,
+        "verified_create_with_item": False,
+        "status": "selected_by_lead",
+        "notice": "绝不冒充 approved/verified；无 CreateWithItem 回执前不得进入交付链",
+    }
+    if store is not None:
+        store.save_capability_probe(manifest)
+    return manifest
+
+
 def select_approved_cpu(
     manifest: TiaCapabilityManifest,
     explicit_type_id: str = "",
@@ -230,5 +278,8 @@ def probe_cli_payload(manifest: TiaCapabilityManifest) -> dict[str, Any]:
         "selected_cpu_template": manifest.selected_cpu_template,
         "selection_note": manifest.selection_note,
         "real_tia_v19_tested": manifest.evidence_level is EvidenceLevel.V19_REAL,
+        "real_tia_v19_chain_tested": False,
+        "evidence_scope": "read_only_status_probe",
+        "g5_status": "pending_real_machine",
         "raw_evidence_path": "evidence/v2/T01/capability_probe.json",
     }

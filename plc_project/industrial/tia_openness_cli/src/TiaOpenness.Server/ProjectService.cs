@@ -1026,8 +1026,24 @@ public sealed class ProjectService
         _deviceName = null;
     }
 
-    private static string? FindApxxUnder(string dir)
+    /// <summary>
+    /// v1 AdoptProject fallback ONLY (P-11): locate an .ap* under a retrieved
+    /// folder when the caller did not supply an exact path. The public v1
+    /// behaviour is intentionally unchanged.
+    ///
+    /// 禁止用于 delivery / artifact 绑定：交付链的 artifact_id 必须来自
+    /// archive.archivePath 精确回执 + ExactArchivePolicy.Verify + sha256，
+    /// 绝不能用本目录通配按最新时间猜归档。callerContext 的运行时护栏即为此设。
+    /// </summary>
+    private static string? FindApxxUnder(string dir, string callerContext = "v1_adopt_fallback")
     {
+        if (string.Equals(callerContext, "delivery_chain", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(callerContext, "artifact_binding", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "DELIVERY_CHAIN_FORBIDDEN: artifact binding must use the exact archive.archivePath " +
+                "receipt and sha256, never a directory wildcard (FindApxxUnder).");
+        }
         if (!Directory.Exists(dir)) return null;
         try
         {

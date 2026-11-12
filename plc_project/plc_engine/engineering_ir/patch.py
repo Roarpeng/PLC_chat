@@ -12,7 +12,8 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-from plc_engine.components.driver_spec import ComponentDefinition, DriverSpec, FieldSource
+from plc_engine.components.driver_spec import ComponentDefinition, DriverSpec
+from plc_engine.engineering_ir.address_policy import imported_address_is_backed, source_value
 from plc_engine.engineering_ir.contracts import (
     PATCH_OPS,
     PATCHABLE_COMPONENT_FIELDS,
@@ -104,6 +105,34 @@ def new_request_id() -> str:
     return f"req_{uuid.uuid4().hex[:16]}"
 
 
+#: P-10: reject absurd revisions instead of letting them flow into the DB.
+MAX_BASE_REVISION = 2**31 - 1
+
+
+def validate_base_revision(value: Any) -> int:
+    """Strict, structured validation of ``base_revision`` (P-10).
+
+    ``type(x) is int`` rejects bool (a subclass of int), floats such as 1.5,
+    strings and None. Out-of-range / negative values raise the SAME structured
+    422 exception as any other semantic validation failure, never a bare
+    ``ValueError`` or ``TypeError`` at the API boundary.
+    """
+    if type(value) is not int or value < 0 or value > MAX_BASE_REVISION:
+        raise SemanticValidationError(
+            [{
+                "source_id": "base_revision",
+                "node_id": "base_revision",
+                "field": "base_revision",
+                "reason": (
+                    f"base_revision must be a non-negative int <= {MAX_BASE_REVISION} "
+                    f"(got {value!r}, type={type(value).__name__})"
+                ),
+            }],
+            "",
+        )
+    return value
+
+
 def make_patch(
     project_id: str,
     base_revision: int,
@@ -134,10 +163,11 @@ def make_patch(
                 source_id=str(raw.get("source_id") or raw.get("ir_id") or raw.get("step_id") or ""),
             )
         )
+    revision = validate_base_revision(base_revision)
     return CandidatePatch(
         candidate_id=f"cand_{uuid.uuid4().hex[:16]}",
         project_id=project_id,
-        base_revision=int(base_revision),
+        base_revision=revision,
         request_id=request_id or new_request_id(),
         ops=normalised,
         explanation=explanation,
@@ -200,8 +230,17 @@ def _apply_op(candidate: EngineeringIRV2, op: ChangeOp) -> list[str]:
                 raise ValueError("io_bindings must be null or an object")
             if isinstance(value, dict):
                 for key, address in value.items():
-                    if isinstance(address, str) and address.startswith("%") and component.source is not FieldSource.IMPORTED:
-                        raise ValueError(f"greenfield component must not invent physical address {address}")
+                    if isinstance(address, str) and address.startswith("%"):
+                        # P-09: identical fail-closed policy as ValidationEngine.
+                        # source=imported alone is NOT sufficient; the original
+                        # source_binding must be present in the IR.
+                        if not imported_address_is_backed(
+                            candidate, component_id, source_value(component), address
+                        ):
+                            raise ValueError(
+                                f"greenfield component must not invent physical address {address} "
+                                "(imported address requires an original source_binding)"
+                            )
         elif field_name == "name":
             if not isinstance(value, str) or not value.strip():
                 raise ValueError("component name must be a non-empty string")

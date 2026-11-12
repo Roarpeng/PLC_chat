@@ -1,0 +1,13 @@
+{
+  "corrected_at": "2026-11-10T10:29:55.570865+00:00",
+  "replacements": {
+    "g0_probe.json": 0,
+    "capability_probe.json": 0,
+    "cpu_selection.json": 0
+  },
+  "probe_receipt_id": "g0_d32beeb9478950dd",
+  "probed_at": "2026-11-09T15:03:48.281136+00:00",
+  "tiaRunning": true,
+  "processCount": 1,
+  "g5_status": "pending_real_machine"
+}

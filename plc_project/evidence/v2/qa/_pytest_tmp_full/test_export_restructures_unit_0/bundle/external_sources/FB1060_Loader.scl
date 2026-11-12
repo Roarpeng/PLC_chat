@@ -1,0 +1,30 @@
+﻿FUNCTION_BLOCK "FB1060_Loader"
+VAR
+    Step : DInt;
+END_VAR
+BEGIN
+    // ==============================================================
+    // AF V1.2 Software Unit : U1Em1_Loader   (af_role = em)
+    // AF Layer              : Equipment Module
+    // AF Call Structure     : OB Main -> CallUnit(U1) -> CallEquipment(U1Em1_Loader) -> Sequence -> CMs
+    // --------------------------------------------------------------
+    // DATA REFERENCES FROZEN / 数据引用冻结:
+    //   原始 DB 名 / 符号名 / %I %Q 地址 / #变量 在下方逐字保留
+    //   且语句顺序不变;仅代码组织结构重排为 AF Unit/EM/CM 分层。
+    // AF ControlNodes 桥接说明(追加式,不改原始 DB 偏移):
+    //   U1Em1_Loader_ControlNodes 为 AF 接口 DB(块号追加),原 DB 不动。
+    // ==============================================================
+// Loader sequence
+CASE #Step OF
+    10:
+    // --- [AF CallEquipment -> CM | 设备 IO 控制层] 以下为原始语句(逐字、原顺序) ---
+        "Q_CylExtend" := TRUE;
+        IF "I_CylExtended" THEN
+    // --- [AF Sequence | EM 步序层] 以下为原始语句(逐字、原顺序) ---
+            #Step := 20;
+        END_IF;
+    20:
+    // --- [AF CallEquipment -> CM | 设备 IO 控制层] 以下为原始语句(逐字、原顺序) ---
+        "Q_CylRetract" := TRUE;
+END_CASE;
+END_FUNCTION_BLOCK

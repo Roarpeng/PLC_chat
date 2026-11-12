@@ -1,0 +1,7 @@
+﻿FUNCTION_BLOCK "FB1020_Helper"
+VAR_INPUT
+    Enable : Bool;
+END_VAR
+BEGIN
+"Q_Buzz" := #Enable;
+END_FUNCTION_BLOCK

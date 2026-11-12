@@ -1,10 +1,6 @@
 {
-  "task_id": "T01 (WP-00)",
   "base_commit": "e228226",
   "batch": "T01",
-  "evidence_level": "V19_real",
-  "real_tia_v19_tested": true,
-  "raw_evidence_path": "evidence/v2/T01/g0_probe.json",
   "commands": [
     "uv run pytest tests/unit/test_*_v2.py tests/contracts -q -rf",
     "uv run pytest tests -q --disable-warnings -rf",
@@ -13,13 +9,8 @@
     "uv run python scripts/probe_capability_v2.py --no-db",
     "uv run python -c \"<IR roundtrip / semantic hash determinism>\""
   ],
-  "results": {
-    "pytest_passed": 162,
-    "pytest_failed": 0,
-    "vitest_passed": 393,
-    "dotnet_passed": 110,
-    "dotnet_failed": 0
-  },
+  "correction_note": "主理人首次裁定（误判为单次探测的二手转述错误、统一改为 tiaRunning=true/processCount=1）已于 2026-11-12 撤销。经回查原始回执确认存在两次独立只读 status 探测，各自真实：P1 g0_d32beeb9478950dd @ 2026-11-09T15:03:48.281136+00:00 → true/1 'TIA Portal process detected.'（g0_probe.json / capability_probe.json）；P2 g0_acf8be499157d5b4 @ 2026-11-09T16:00:50.956689+00:00 → false/0 'TIA Portal process not detected'（cpu_selection.json → capability_manifest 内嵌回执）。两次探测时间点不同，Portal 进程在两次之间退出，禁止互相覆盖，不得用转述错误解释。更正时间 2026-11-12；原 receipt id / probed_at 全部保留不抹历史。evidence_level=V19_real 仅覆盖只读 status 回执，real_tia_v19_chain_tested=false，g5_status=pending_real_machine，绝不外推为 AC-01/G5 全链证据。",
+  "evidence_level": "V19_real",
   "negative_cases": [
     "schema rejects unknown top-level IR fields",
     "base_revision mismatch -> 409 BASE_REVISION_CONFLICT",
@@ -30,6 +21,20 @@
     "UI layout change does not change ir_sha256",
     "CPU not selected => explicit failure"
   ],
+  "notice": "V19_real applies ONLY to the read-only C# status probe receipt; no TIA project was created or written; G5 full chain remains pending_real_machine.",
+  "pending_real_machine": [
+    "CreateWithItem verification of CPU candidates is NOT done (two read-only status probes; neither implies CreateWithItem success)",
+    "CPU skeleton is selected_by_lead (U-02) and remains verification_required=true"
+  ],
+  "raw_evidence_path": "evidence/v2/T01/g0_probe.json",
+  "real_tia_v19_tested": true,
+  "results": {
+    "dotnet_failed": 0,
+    "dotnet_passed": 110,
+    "pytest_failed": 0,
+    "pytest_passed": 162,
+    "vitest_passed": 393
+  },
   "scope": [
     "EngineeringIR v2 + v1 adapter",
     "5 JSON Schemas + OpenAPI + v1_to_v2_map",
@@ -37,9 +42,26 @@
     "v2 router skeleton + all endpoints registered",
     "G0 read-only status probe (V19_real receipt only for status)"
   ],
-  "pending_real_machine": [
-    "CreateWithItem verification of CPU candidates is NOT done (tiaRunning=false, processCount=0)",
-    "CPU skeleton awaits explicit lead appointment (U-02)"
-  ],
-  "notice": "V19_real applies ONLY to the read-only C# status probe receipt; no TIA project was created or written."
+  "task_id": "T01 (WP-00)",
+  "g0_probe_receipts": {
+    "P1": {
+      "probe_receipt_id": "g0_d32beeb9478950dd",
+      "probed_at": "2026-11-09T15:03:48.281136+00:00",
+      "tiaRunning": true,
+      "processCount": 1,
+      "message": "TIA Portal process detected.",
+      "evidence_scope": "read_only_status_probe"
+    },
+    "P2": {
+      "probe_receipt_id": "g0_acf8be499157d5b4",
+      "probed_at": "2026-11-09T16:00:50.956689+00:00",
+      "tiaRunning": false,
+      "processCount": 0,
+      "message": "TIA Portal process not detected (Openness can still start WithoutUserInterface).",
+      "evidence_scope": "read_only_status_probe"
+    }
+  },
+  "real_tia_v19_chain_tested": false,
+  "evidence_scope": "read_only_status_probe",
+  "g5_status": "pending_real_machine"
 }

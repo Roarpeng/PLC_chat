@@ -1,0 +1,81 @@
+### CMD: uv run python tests/qa_v2/_probe_observations.py (fixed cleanup)
+
+==============================================================================
+### P1: fake worker + real_machine=True 是否产生 V19_real / NATIVE_ARCHIVED
+==============================================================================
+worker_type          = function (pure python fake, no Siemens.Engineering.dll)
+chain.state          = NATIVE_ARCHIVED
+chain.evidence_level = V19_real
+artifact.evidence    = V19_real
+compile.compile_ok   = True
+compile.static_gate  = True
+reopen_ok            = True
+
+==============================================================================
+### P2: 违反依赖顺序的 manifest -> static_gate_passed=False 是否仍可 NATIVE_ARCHIVED
+==============================================================================
+manifest issues      = ['file scl/OB_X.scl depends on scl/UDT_X.scl which is not imported before it']
+chain.state          = NATIVE_ARCHIVED
+compile.static_gate  = False
+compile.compile_ok   = True
+
+==============================================================================
+### P3: CompileReceipt.from_worker 的 compile_ok 是否包含 static_gate_passed
+==============================================================================
+static_gate_passed   = False
+compile_ok           = True (PRD 6.4 规则 2 要求 False)
+
+==============================================================================
+### P4: GuardAST signal 名注入 SCL
+==============================================================================
+signal  = 'X : BOOL; (* INJECTED *)'
+scl     = '#X : BOOL; (* INJECTED *)'
+is_valid= True
+signal  = 'Ok" OR TRUE; //'
+scl     = '#Ok" OR TRUE; //'
+is_valid= True
+signal  = 'Ok\n  #malicious := TRUE;'
+scl     = '#Ok\n  #malicious := TRUE;'
+is_valid= True
+signal  = "__import__('os').system('calc')"
+scl     = "#__import__('os').system('calc')"
+is_valid= True
+SCL files containing injected text = ['scl/FB_Sequence.scl']
+ValidationEngine accepts injected signal? = True
+
+==============================================================================
+### P5: GuardAST.from_dict 是否拒绝未知顶层键（docstring 声称 strict）
+==============================================================================
+key 'expression'               -> REJECTED GuardValidationError: free-text guard expression is forbidden: expression
+key 'ExPrEsSiOn'               -> REJECTED GuardValidationError: free-text guard expression is forbidden: ExPrEsSiOn
+key 'arbitrary_unknown_key'    -> ACCEPTED (silently ignored)
+key 'payload'                  -> ACCEPTED (silently ignored)
+
+==============================================================================
+### P6: source=imported 组件绑定真实 %Q 地址是否被 ValidationEngine 接受
+==============================================================================
+component.source     = imported
+validation.passed    = False
+issues about address = [{'source_id': 'CM1', 'node_id': 'CM1', 'field': 'io_bindings', 'reason': 'greenfield component CmdExtend must not invent physical address %Q0.0'}]
+patch.py:203 允许 imported 地址；ValidationEngine:68 无条件拒绝 -> 一致性观察
+
+==============================================================================
+### P7: base_revision 非法输入在 make_patch 阶段的异常类型
+==============================================================================
+value=-1           -> base_revision=-1
+value=0            -> base_revision=0
+value=9223372036854775808 -> base_revision=9223372036854775808
+value=10000000000000000000000000000000000000000 -> base_revision=10000000000000000000000000000000000000000
+value=True         -> base_revision=1
+value='abc'        -> RAISED ValueError: invalid literal for int() with base 10: 'abc'
+value=None         -> RAISED TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'
+value=1.5          -> base_revision=1
+
+==============================================================================
+### P8: artifact store 中文件被篡改后 download 是否拒绝
+==============================================================================
+no sha256 param    -> REJECTED ArtifactJobMismatchError: ARTIFACT_SHA256_MISMATCH: stored file hash drift
+correct sha256     -> REJECTED ArtifactJobMismatchError: ARTIFACT_SHA256_MISMATCH: stored file hash drift
+
+PROBE_DONE
+PROBE_EXIT=0

@@ -1,0 +1,19 @@
+{
+  "title": "AC-01 six-step evidence matrix (WP-07)",
+  "status": "pending_real_machine_for_real_machine_steps",
+  "steps": [
+    {"n": 1, "clause": "Projects.Create 真实 .ap19 + CPU skeleton", "evidence_level": "pending_real_machine", "verified": false,
+     "raw_receipt_path": null, "note": "G0 status probe is V19_real but no project was created; CPU CreateWithItem verification pending"},
+    {"n": 2, "clause": "NL 气缸 → DriverSpec, io_bindings=null", "evidence_level": "offline", "verified": true,
+     "raw_receipt_path": "docs/v2/evidence/T03/t03_pytest.txt"},
+    {"n": 3, "clause": "NL 步序 → SequenceIR / GuardAST", "evidence_level": "offline", "verified": true,
+     "raw_receipt_path": "docs/v2/evidence/T04/t04_pytest.txt"},
+    {"n": 4, "clause": "Hold 1s→2s IR/Trace/SCL 三方同步", "evidence_level": "offline+mocked", "verified": true,
+     "raw_receipt_path": "docs/v2/evidence/T05/vitest.txt"},
+    {"n": 5, "clause": "V19 导入/编译 0 error/Save/Archive/Retrieve-reopen", "evidence_level": "pending_real_machine", "verified": false,
+     "raw_receipt_path": null, "note": "G5 NOT PASSED; no real compile receipt, no .zap19"},
+    {"n": 6, "clause": "精确 artifact_id 下载 .zap19 + evidence", "evidence_level": "pending_real_machine", "verified": false,
+     "raw_receipt_path": null, "note": "no native download button without a V19 real full chain"}
+  ],
+  "notice": "本表不得把 mocked/offline 结果升级为 V19_real；真机回执由主理人/QA 串行调度后填充 raw/ 目录。"
+}

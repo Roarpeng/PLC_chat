@@ -1,0 +1,127 @@
+{
+  "chain": {
+    "artifact": null,
+    "error_code": "REOPEN_FAILED",
+    "error_message": "retrieve ok=false: retrieve_receipt_missing",
+    "evidence_level": "V19_real",
+    "ok": false,
+    "stage_receipts": [
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "create": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_qa_tmp\\test_missing_retrieve_receipt_0\\ws\\tia_project\\Demo.ap19"
+          },
+          "ok": true
+        },
+        "stage": "CREATE",
+        "state": "TIA_IMPORTED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "device": {
+            "typeId": "6ES7511-1AK02-0AB0/V2.9"
+          },
+          "ok": true
+        },
+        "stage": "CREATE_DEVICE",
+        "state": "TIA_IMPORTED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "import_order": [],
+          "ok": true,
+          "receipts": []
+        },
+        "stage": "IMPORT",
+        "state": "TIA_IMPORTED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "compile": {
+            "errorCount": 0,
+            "state": "Success",
+            "warningCount": 2
+          },
+          "ok": true
+        },
+        "stage": "COMPILE",
+        "state": "TIA_COMPILED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "ok": true,
+          "save": {
+            "ok": true
+          }
+        },
+        "stage": "SAVE",
+        "state": "TIA_COMPILED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "archive": {
+            "archivePath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_qa_tmp\\test_missing_retrieve_receipt_0\\ws\\archive\\Demo.zap19",
+            "archiveSha256": "",
+            "ok": true,
+            "sizeBytes": 34
+          },
+          "ok": true
+        },
+        "stage": "ARCHIVE",
+        "state": "TIA_COMPILED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "archive_sha256": "sha256:4a9d9718c225e1583f85184092f2e9b08abc514d16faac5a335c2ab27ba0bac0",
+          "size_bytes": 34
+        },
+        "stage": "HASH",
+        "state": "TIA_COMPILED"
+      },
+      {
+        "error_code": "REOPEN_FAILED",
+        "evidence_level": "V19_real",
+        "message": "retrieve ok=false: retrieve_receipt_missing",
+        "ok": false,
+        "raw_api_receipt": {
+          "error": "retrieve_receipt_missing",
+          "ok": false
+        },
+        "stage": "RETRIEVE_REOPEN",
+        "state": "FAILED"
+      }
+    ],
+    "state": "FAILED"
+  },
+  "notice": "FAILED: no native archive published; logs and editable design retained",
+  "real_tia_v19_tested": false
+}

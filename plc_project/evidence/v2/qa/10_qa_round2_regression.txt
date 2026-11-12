@@ -1,0 +1,30 @@
+### QA ROUND 2 REGRESSION
+### DATE: 2026-11-09T23:46:41+08:00
+--- engineer targeted suite (must stay 162 passed) ---
+........................................................................ [ 44%]
+........................................................................ [ 88%]
+..................                                                       [100%]
+162 passed in 5.64s
+ENGINEER_EXIT=0
+--- QA independent boundary suite (expect stable 30 passed / 6 source defects) ---
+
+    def test_guard_from_dict_rejects_unknown_fields_as_documented(self) -> None:
+        """P-05（guard_ast.py:95 docstring "rejects ... unknown fields" / 设计 9.9）。
+    
+        期望：未知顶层键被拒绝（strict schema）。
+        实际：只拒绝 6 个自由文本键，``arbitrary_unknown_key`` 被静默忽略（探测 P5）。
+        """
+>       with pytest.raises(GuardValidationError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE GuardValidationError
+
+tests\qa_v2\test_qa_v2_independent.py:595: Failed
+=========================== short test summary info ===========================
+FAILED tests/qa_v2/test_qa_v2_independent.py::TestSourceDefectsFoundByQA::test_fake_worker_cannot_be_labelled_v19_real
+FAILED tests/qa_v2/test_qa_v2_independent.py::TestSourceDefectsFoundByQA::test_compile_ok_requires_static_gate_passed
+FAILED tests/qa_v2/test_qa_v2_independent.py::TestSourceDefectsFoundByQA::test_static_gate_failure_blocks_native_archived
+FAILED tests/qa_v2/test_qa_v2_independent.py::TestSourceDefectsFoundByQA::test_malformed_guard_signal_is_rejected_by_static_validation
+FAILED tests/qa_v2/test_qa_v2_independent.py::TestSourceDefectsFoundByQA::test_malformed_guard_signal_does_not_leak_into_generated_scl
+FAILED tests/qa_v2/test_qa_v2_independent.py::TestSourceDefectsFoundByQA::test_guard_from_dict_rejects_unknown_fields_as_documented
+6 failed, 30 passed in 2.94s
+QA_EXIT=1

@@ -1,0 +1,93 @@
+{
+  "task_id": "T08 (WP-07) unified acceptance release",
+  "base_commit": "da029b8",
+  "release_type": "整体验收发布（非巨型 PR）",
+  "status": "pending_real_machine",
+  "real_tia_v19_tested": false,
+  "native_artifacts_published": 0,
+  "delivery_complete": false,
+  "gates": {
+    "G0": {
+      "status": "conditional",
+      "evidence_level": "V19_real (status probe only)",
+      "note": "CPU skeleton selected_by_lead, verification_required=true"
+    },
+    "G1": {
+      "status": "PASS",
+      "evidence_level": "offline"
+    },
+    "G2": {
+      "status": "PASS",
+      "evidence_level": "offline"
+    },
+    "G3": {
+      "status": "PASS",
+      "evidence_level": "offline"
+    },
+    "G4": {
+      "status": "PASS",
+      "evidence_level": "offline"
+    },
+    "G5": {
+      "status": "NOT PASSED",
+      "evidence_level": "pending_real_machine",
+      "note": "Greenfield-only real .zap19 chain never executed; not signable"
+    },
+    "G6": {
+      "status": "interface+schema complete",
+      "evidence_level": "mocked",
+      "note": "AC-02 real-machine acceptance out of scope"
+    },
+    "G7": {
+      "status": "PASS",
+      "evidence_level": "offline+mocked",
+      "note": "15 fault classes, 0 NATIVE_ARCHIVED published"
+    }
+  },
+  "ac01": {
+    "step_1": "pending_real_machine",
+    "step_2": "offline",
+    "step_3": "offline",
+    "step_4": "offline+mocked",
+    "step_5": "pending_real_machine",
+    "step_6": "pending_real_machine"
+  },
+  "evidence_levels": [
+    "offline",
+    "mocked",
+    "V19_real",
+    "pending_real_machine"
+  ],
+  "historical_conclusions_unchanged": {
+    "xml_package_unverified": true,
+    "m4_passed": false,
+    "greenfield_end_to_end_closed": false
+  },
+  "notice": "无 V19 real 全链证据；绝不显示「交付完成」；G5 在 L-01 闭环 + 串行真机窗口 + 真实回执取得前不可签署。本次收口为主理人编排范围内操作，未代写成员代码或测试。",
+  "qa_paths_reserved": [
+    "docs/v2/qa/",
+    "evidence/v2/qa/"
+  ],
+  "ledger_closed_by": "team-lead",
+  "ledger_closed_at": "2026-11-12",
+  "lead_closeout": {
+    "status": "PARTIAL / NOT DELIVERED",
+    "reason": "software-engineer and software-qa-engineer interrupted by platform 429 quota exhaustion",
+    "p06_final_ruling": "two independent read-only status probes, both authentic; P1 g0_d32beeb9478950dd true/1, P2 g0_acf8be499157d5b4 false/0",
+    "independent_regression_2026_11_12": {
+      "pytest": "264 passed / 1 failed",
+      "vitest": "413 passed / 0 failed",
+      "dotnet_test": "110 passed / 0 failed",
+      "frontend_build": "EXIT=0",
+      "new_failures_introduced": 1
+    },
+    "open_items": [
+      "L-01 P-14 real-chain evidence anti-forgery NOT fixed (hardcoded approved / bool(adapter.real_machine)); blocks G5",
+      "L-02 one pytest regression: test_stale_base_revision_returns_409 uses revision-1 = -1, now rejected 422 by strict P-10 validation",
+      "L-03 G5 real V19 full chain NOT executed; AC-01 steps 1/5/6 and CreateWithItem verification remain pending_real_machine"
+    ],
+    "historical_probe_contradiction_resolved": true,
+    "handover_doc": "docs/v2/06-主理人收口与遗留项.md",
+    "real_machine_plan": "docs/v2/qa/02-真机G5执行方案.md"
+  }
+}

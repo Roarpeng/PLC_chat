@@ -1,0 +1,7 @@
+﻿DATA_BLOCK "DB9000_Global"
+STRUCT
+    mode : Int;
+    running : Bool;
+END_STRUCT;
+BEGIN
+END_DATA_BLOCK

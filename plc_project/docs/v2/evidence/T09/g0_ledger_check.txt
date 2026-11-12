@@ -1,0 +1,10 @@
+{
+  "checked": 36,
+  "passed": 36,
+  "failed": [],
+  "tiaRunning": true,
+  "processCount": 1,
+  "probe_receipt_id": "g0_d32beeb9478950dd",
+  "g5_status": "pending_real_machine",
+  "IS_PASS": "YES"
+}

@@ -84,6 +84,28 @@ def unpack_archive_path(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def assert_no_wildcard_artifact_binding(artifact: NativeTiaArtifact) -> None:
+    """P-11: prove the artifact is bound to ONE exact archive receipt.
+
+    C# ``ProjectService.FindApxxUnder`` (v1 AdoptProject fallback) scans a
+    directory for ``*.ap*`` by newest timestamp. It is explicitly FORBIDDEN
+    for delivery/artifact binding (a runtime guard was added on the C# side).
+    Here the binding is ``(project_id, job_id, artifact_id, sha256)`` against
+    the exact ``archive.archivePath`` receipt only.
+    """
+    path_value = str(artifact.archive_path or "")
+    if not artifact.artifact_id or not path_value:
+        raise ArchiveMissingError("artifact binding requires an exact artifact_id and archive path")
+    if any(token in path_value for token in ("*", "?", "..")):
+        raise ArchiveMissingError(
+            f"wildcard / traversal artifact path is forbidden: {path_value!r}"
+        )
+    if not str(artifact.archive_sha256 or "").startswith("sha256:"):
+        raise ArchiveMissingError("artifact binding requires an exact archive sha256")
+    if Path(path_value).is_dir():
+        raise ArchiveMissingError("artifact path must be a file, never a directory to scan")
+
+
 def unpack_retrieve_reopen(payload: dict[str, Any]) -> dict[str, Any]:
     """Q-06: Retrieve/reopen MUST pass with an explicit reopen_ok receipt."""
     if not isinstance(payload, dict) or not payload.get("ok"):
@@ -185,10 +207,16 @@ class TiaOpennessCliAdapter:
         evidence_level: EvidenceLevel = EvidenceLevel.MOCKED,
     ) -> None:
         self._worker = worker
-        self.real_machine = bool(real_machine)
+        # P-01 receipt-level anti-forgery (PRD 6.4): an injected Python worker
+        # can NEVER produce a real Siemens.Engineering receipt, even when a
+        # caller passes real_machine=True. V19_real requires the DEFAULT worker
+        # (the actual C# Openness CLI) plus a real compile receipt.
+        self.real_machine = bool(real_machine) and worker is None
         self.evidence_level = evidence_level if isinstance(evidence_level, EvidenceLevel) else EvidenceLevel.parse(evidence_level)
         if self.real_machine:
             self.evidence_level = EvidenceLevel.V19_REAL
+        elif worker is not None:
+            self.evidence_level = EvidenceLevel.MOCKED
         self.calls: list[dict[str, Any]] = []
 
     def _invoke(self, command: str, *args: str, timeout_s: int = 300) -> dict[str, Any]:
@@ -342,9 +370,12 @@ def execute_chain(
         evidence=adapter.evidence_level,
     )
     compile_receipt.static_gate_passed = not bool(manifest.validate_import_order()) if manifest else True
-    # ``compile_ok`` in the receipt stays strict (V19 real only). The chain uses
-    # the parsed error count so a MOCKED chain can validate orchestration while
-    # still being forbidden from reaching NATIVE_ARCHIVED.
+    # P-03: re-evaluate compile_ok after the static gate is known. A failed gate
+    # must NEVER allow NATIVE_ARCHIVED, even if the worker reported zero errors.
+    compile_receipt.recompute_compile_ok(real_receipt=bool(adapter.real_machine and compiled_raw))
+    # ``compile_ok`` in the receipt stays strict (V19 real + static gate). The
+    # chain uses the parsed error count so a MOCKED chain can validate
+    # orchestration while still being forbidden from reaching NATIVE_ARCHIVED.
     if compile_receipt.error_count != 0 or compile_receipt.warning_count < 0:
         return fail("COMPILE", "FAILED", ErrorCode.COMPILE_FAILED.value,
                     f"compile error_count={compile_receipt.error_count} (warning_count={compile_receipt.warning_count} listed separately)",
@@ -420,9 +451,17 @@ def execute_chain(
             "real_machine": adapter.real_machine,
         },
     )
+    # P-11: the artifact MUST come from the exact archive.archivePath receipt;
+    # the C# v1 AdoptProject directory wildcard is never consulted here.
+    assert_no_wildcard_artifact_binding(artifact)
     result.artifact = artifact
     result.ok = True
-    if adapter.real_machine and artifact.is_native_archived():
+    if (
+        adapter.real_machine
+        and artifact.compile.static_gate_passed
+        and artifact.compile.compile_ok
+        and artifact.is_native_archived()
+    ):
         result.state = "NATIVE_ARCHIVED"
         result.evidence_level = EvidenceLevel.V19_REAL.value
     else:

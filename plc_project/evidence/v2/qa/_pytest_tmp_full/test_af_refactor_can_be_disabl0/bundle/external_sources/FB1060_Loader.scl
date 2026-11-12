@@ -1,0 +1,16 @@
+﻿FUNCTION_BLOCK "FB1060_Loader"
+VAR
+    Step : DInt;
+END_VAR
+BEGIN
+// Loader sequence
+CASE #Step OF
+    10:
+        "Q_CylExtend" := TRUE;
+        IF "I_CylExtended" THEN
+            #Step := 20;
+        END_IF;
+    20:
+        "Q_CylRetract" := TRUE;
+END_CASE;
+END_FUNCTION_BLOCK

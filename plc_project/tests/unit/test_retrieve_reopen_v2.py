@@ -82,23 +82,22 @@ def test_mocked_chain_publishes_no_downloadable_artifact(tmp_path) -> None:
     assert any(e["stage"] == "MOCKED_CHAIN_OK" for e in events)
 
 
-def test_real_receipt_chain_publishes_native_artifact(tmp_path) -> None:
-    """Orchestration contract with an explicitly real adapter; NOT a real TIA run."""
+def test_fake_worker_chain_never_publishes_a_native_artifact(tmp_path) -> None:
+    """QA P-01: a fake worker cannot be upgraded to a V19 real full chain."""
     store, job_id = prepared(tmp_path)
-    worker, archive = make_worker(tmp_path)
+    worker, _archive = make_worker(tmp_path)
     result = DeliveryCoordinator(store).run_chain(
         job_id, adapter=TiaOpennessCliAdapter(worker=worker, real_machine=True,
                                               evidence_level=EvidenceLevel.V19_REAL),
         request=chain_request(tmp_path, job_id),
     )
-    assert result["state"] == "NATIVE_ARCHIVED"
-    assert result["evidence_level"] == "V19_real"
+    assert result["state"] == "TIA_COMPILED"
+    assert result["evidence_level"] == "mocked"
+    assert result["artifact"] is None
     job = DeliveryCoordinator(store).get_job(job_id)
-    assert job["native_artifact"]["reopen_ok"] is True
-    assert job["compile"]["error_count"] == 0
-    assert job["compile"]["warning_count"] == 2  # warnings listed separately, not folded in
-    assert job["evidence_id"].startswith("ev_")
-    assert store.get_artifact(result["artifact"]["artifact_id"]) is not None
+    assert job["native_artifact"] is None
+    assert job["evidence_level"] != EvidenceLevel.V19_REAL.value
+    assert not any(e["state"] == "NATIVE_ARCHIVED" for e in store.get_job_events(job_id))
 
 
 def test_duplicate_delivery_request_is_idempotent(tmp_path) -> None:

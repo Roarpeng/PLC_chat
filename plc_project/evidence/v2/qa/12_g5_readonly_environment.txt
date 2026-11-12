@@ -1,0 +1,53 @@
+﻿### QA G5 READ-ONLY ENVIRONMENT PROBE (no TIA Portal started, no Openness CLI invoked)
+### METHOD: OS-level process/file/token inspection only; historical G0 receipts used as reference
+### DATE: 2026-11-10T18:29:26.3467616+08:00
+
+[1] Siemens / TIA / license processes (snapshot)
+  ALMPanelPlugin (pid=9196)
+  almsrv64x (pid=4388)
+  Siemens.Automation.Help.Viewer.Web.Service (pid=4544)
+  Siemens.Automation.Help.Viewer.WebApi.SelfHost (pid=8568)
+  Siemens.Automation.Tracing.ETW.EventCollector.ServiceHost (pid=4412)
+  Siemens.Simatic.TelemetryConnector.WindowsService (pid=4320)
+  TiaAdminNotifier (pid=8984)
+  => Portal main process names checked: Siemens.Automation.Portal / Siemens.Automation.ObjectFrame.AppBase
+  => Portal main process count = 0  (tiaRunning=false equivalent)
+
+[2] V19 Openness DLL
+  path   = C:\Program Files\Siemens\Automation\Portal V19\PublicAPI\V19\Siemens.Engineering.dll
+  exists = True
+  size   = 2521600 bytes
+  mtime  = 2026-08-08T13:51:18.2300000+08:00
+  V20 also installed = True
+  TiaConnection.DefaultVersion = V19 (source: TiaConnection.cs:15)
+
+[3] Openness group in current logon token
+  WIN\Siemens TIA Engineer               别名   S-1-5-21-625108733-2489427535-3060459255-1004 必需的组, 启用于默认, 启用的组
+  WIN\Siemens TIA Openness               别名   S-1-5-21-625108733-2489427535-3060459255-1005 必需的组, 启用于默认, 启用的组
+
+[4] TIA / RESEARCHOS / PLC_V2 environment variables
+  (none set -> must set TIA_VERSION=V19, PLC_V2_DB_PATH, PLC_V2_EVIDENCE_ROOT explicitly)
+
+[5] Release CLI executable
+  path   = C:\Users\vboxuser\Desktop\Project\Code\PLC_chat\plc_project\industrial\tia_openness_cli\src\TiaOpenness.Server\bin\Release\net481\TiaOpenness.Server.exe
+  exists = True
+  size   = 260608 bytes
+  mtime  = 2026-11-09T23:31:52.4698962+08:00
+
+[6] Protected user data (MUST NOT TOUCH)
+  C:\Users\vboxuser\Desktop\Project\Code\PLC_chat\release_packages -> exists=True
+  C:\Users\vboxuser\Desktop\Project\Code\PLC_chat\PLC_Openness_data -> exists=True
+  parent release_packages contains HR001_AF_V1_2.zap19 / HR001_AF_V1_2_Package.zip
+  parent PLC_Openness_data contains hr001/*.zap19 and openness_e2e artifacts
+
+[7] License / ALM signal
+  ALM processes running: almsrv64x, ALMPanelPlugin (service present)
+  Registry HKLM:\SOFTWARE\Siemens\Automation\LicenseManager not readable/absent
+  NOTE: service presence is NOT proof that STEP7/TIA Portal license is available;
+        license feasibility can only be confirmed by a real CreateWithItem probe (not run in this round).
+
+[8] dry-run script (no --real, SAFE, executed read-only this round)
+  uv run python scripts/tia_delivery_chain_v2.py
+  -> mode=dry_run, evidence_level=pending_real_machine, real_tia_v19_tested=false, exit=0
+
+PROBE_METHOD=OS_READONLY_ONLY; NO_OPENNESS_CLI_INVOKED=true; NO_TIA_WRITE=true

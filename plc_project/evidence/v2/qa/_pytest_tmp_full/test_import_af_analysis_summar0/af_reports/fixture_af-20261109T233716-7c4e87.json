@@ -1,0 +1,26 @@
+{
+  "project_name": "fixture_af",
+  "generated_at": "2026-11-09T23:37:16",
+  "conformant": true,
+  "roles": {
+    "MotorInst": "global",
+    "FB_Motor": "cm",
+    "Main": "global"
+  },
+  "roles_count": 3,
+  "pending": [],
+  "pending_count": 0,
+  "coverage": 100.0,
+  "blocks_total": 3,
+  "frozen": {
+    "global": 2,
+    "safety": 0
+  },
+  "mapper": {
+    "units": 1,
+    "ems": 0,
+    "io_total": 3,
+    "io_retained": 3,
+    "io_retention_rate": 100.0
+  }
+}

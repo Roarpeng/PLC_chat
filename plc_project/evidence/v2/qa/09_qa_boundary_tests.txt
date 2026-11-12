@@ -1,0 +1,158 @@
+### CMD: uv run pytest tests/qa_v2/test_qa_v2_independent.py -q -rf --basetemp=evidence/v2/qa/_pytest_qa_tmp
+### DATE: 2026-11-09T23:45:47+08:00
+..............................FFFFFF                                     [100%]
+================================== FAILURES ===================================
+___ TestSourceDefectsFoundByQA.test_fake_worker_cannot_be_labelled_v19_real ___
+
+self = <test_qa_v2_independent.TestSourceDefectsFoundByQA object at 0x000001E1D4112350>
+tmp_path = WindowsPath('C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/evidence/v2/qa/_pytest_qa_tmp/test_fake_worker_cannot_be_lab0')
+
+    def test_fake_worker_cannot_be_labelled_v19_real(self, tmp_path) -> None:
+        """P-01（PRD 6.4 / 设计 9.3）：V19_real 只认真实 Siemens.Engineering.dll 回执。
+    
+        期望：注入纯 Python fake worker 时，即使调用方传 ``real_machine=True``，
+        链也不得输出 ``V19_real`` / ``NATIVE_ARCHIVED``（缺少 receipt 级防伪）。
+        实际：evidence/v2/qa/07_probe_observations.txt P1 → V19_real + NATIVE_ARCHIVED。
+        工程师测试 tests/unit/test_retrieve_reopen_v2.py:90-95 亦以 fake worker
+        断言 ``V19_real``，注释却写 "NOT a real TIA run"。
+        """
+        worker, _ = make_fake_openness_worker(tmp_path)
+        adapter = TiaOpennessCliAdapter(worker=worker, real_machine=True)
+        chain = execute_chain(adapter, _request(tmp_path, "job_qa_p01"))
+>       assert chain.evidence_level != EvidenceLevel.V19_REAL.value
+E       AssertionError: assert 'V19_real' != 'V19_real'
+E        +  where 'V19_real' = ChainResult(ok=True, state='NATIVE_ARCHIVED', stage_receipts=[StageReceipt(stage='CREATE', ok=True, state='TIA_IMPORTE...tifier': '6ES7511-1AK02-0AB0/V2.9', 'real_machine': True}), error_code='', error_message='', evidence_level='V19_real').evidence_level
+E        +  and   'V19_real' = <EvidenceLevel.V19_REAL: 'V19_real'>.value
+E        +    where <EvidenceLevel.V19_REAL: 'V19_real'> = EvidenceLevel.V19_REAL
+
+tests\qa_v2\test_qa_v2_independent.py:517: AssertionError
+___ TestSourceDefectsFoundByQA.test_compile_ok_requires_static_gate_passed ____
+
+self = <test_qa_v2_independent.TestSourceDefectsFoundByQA object at 0x000001E1D4112490>
+
+    def test_compile_ok_requires_static_gate_passed(self) -> None:
+        """P-02（PRD 6.4 强制规则 2）：compile_ok = error_count==0 ∧ static_gate_passed ∧ 真实回执。
+    
+        期望：staticGatePassed=false 时 compile_ok 必须为 False。
+        实际：plc_engine/engineering_ir/models.py:747 漏掉 static_gate_passed → compile_ok=True。
+        对照：gateway/app/services/plc/evidence_v2.py:111 的 compile_ok() 实现是正确的三条件。
+        """
+        receipt = CompileReceipt.from_worker(
+            {"ok": True, "compile": {"state": "Success", "errorCount": 0,
+                                     "warningCount": 0, "staticGatePassed": False}},
+            raw='{"ok":true}',
+            evidence=EvidenceLevel.V19_REAL,
+        )
+        assert receipt.static_gate_passed is False
+>       assert receipt.compile_ok is False
+E       assert True is False
+E        +  where True = CompileReceipt(state='Success', error_count=0, warning_count=0, raw_api_receipt='{"ok":true}', static_gate_passed=False, compile_ok=True, evidence_level=<EvidenceLevel.V19_REAL: 'V19_real'>, diagnostics=[]).compile_ok
+
+tests\qa_v2\test_qa_v2_independent.py:534: AssertionError
+_ TestSourceDefectsFoundByQA.test_static_gate_failure_blocks_native_archived __
+
+self = <test_qa_v2_independent.TestSourceDefectsFoundByQA object at 0x000001E1D40862C0>
+tmp_path = WindowsPath('C:/Users/vboxuser/Desktop/Project/Code/PLC_chat/plc_project/evidence/v2/qa/_pytest_qa_tmp/test_static_gate_failure_block0')
+
+    def test_static_gate_failure_blocks_native_archived(self, tmp_path) -> None:
+        """P-03（PRD 6.4 / 设计 4.4）：静态门禁失败不得进入 NATIVE_ARCHIVED。
+    
+        期望：manifest 依赖顺序违规（static_gate_passed=False）时应拒绝置位。
+        实际：tia_delivery_v2.py:344 只写 flag、未重算 compile_ok，
+        :425 仍按 adapter.real_machine 置 NATIVE_ARCHIVED（探测 P2）。
+        """
+        udt = ArtifactFile(path="scl/UDT_X.scl", sha256="sha256:aaa", role="UDT", content="x")
+        ob = ArtifactFile(path="scl/OB_X.scl", sha256="sha256:bbb", role="OB", content="y")
+        bad_manifest = ArtifactManifest(
+            files=[udt, ob],
+            import_order=["scl/OB_X.scl", "scl/UDT_X.scl"],
+            dependencies={"scl/OB_X.scl": ["scl/UDT_X.scl"]},
+        )
+        assert bad_manifest.validate_import_order()
+        worker, _ = make_fake_openness_worker(tmp_path)
+        chain = execute_chain(
+            TiaOpennessCliAdapter(worker=worker, real_machine=True),
+            _request(tmp_path, "job_qa_p03", manifest=bad_manifest),
+        )
+        assert chain.artifact is not None
+        assert chain.artifact.compile.static_gate_passed is False
+>       assert chain.state != "NATIVE_ARCHIVED"
+E       AssertionError: assert 'NATIVE_ARCHIVED' != 'NATIVE_ARCHIVED'
+E        +  where 'NATIVE_ARCHIVED' = ChainResult(ok=True, state='NATIVE_ARCHIVED', stage_receipts=[StageReceipt(stage='CREATE', ok=True, state='TIA_IMPORTE...tifier': '6ES7511-1AK02-0AB0/V2.9', 'real_machine': True}), error_code='', error_message='', evidence_level='V19_real').state
+
+tests\qa_v2\test_qa_v2_independent.py:558: AssertionError
+_ TestSourceDefectsFoundByQA.test_malformed_guard_signal_is_rejected_by_static_validation _
+
+self = <test_qa_v2_independent.TestSourceDefectsFoundByQA object at 0x000001E1D40863F0>
+
+    def test_malformed_guard_signal_is_rejected_by_static_validation(self) -> None:
+        """P-04（PRD 7.6 fail-closed / T04 负例）：非法标识符必须被静态校验拒绝。
+    
+        期望：signal 含 ``; (* ... *)`` / 换行 / 引号时 ValidationEngine 不通过。
+        实际：guard_ast.py:139-143 仅检查非空，validate() 返回 passed=True（探测 P4）。
+        """
+        ir = build_valid_demo_ir("prj_qa_p04")
+        ir.process.transitions[0].guard_ast = GuardAST.from_dict(
+            {"node_type": "SIGNAL", "value_type": "BOOL",
+             "signal": "X : BOOL; (* QA_INJECTED *)"}
+        )
+        report = ValidationEngine().validate(ir)
+>       assert not report.passed
+E       AssertionError: assert not True
+E        +  where True = ValidationReport(passed=True, issues=[], warnings=[], unchanged_ir_hash='sha256:adc8369c6217c704fe0aae7ad24d1572745f41c3f41cdca3650d10a76c311ba1').passed
+
+tests\qa_v2\test_qa_v2_independent.py:572: AssertionError
+_ TestSourceDefectsFoundByQA.test_malformed_guard_signal_does_not_leak_into_generated_scl _
+
+self = <test_qa_v2_independent.TestSourceDefectsFoundByQA object at 0x000001E1D4019EB0>
+
+    def test_malformed_guard_signal_does_not_leak_into_generated_scl(self) -> None:
+        """P-04b（PRD 7.9 / A6）：生成的 SCL 不得夹带注入文本。
+    
+        期望：非法 signal 名被转义/拒绝，SCL 内容不含 ``QA_INJECTED``。
+        实际：scl_lowering.py:34 ``f"#{guard.signal}"`` 直接拼接（探测 P4）。
+        """
+        ir = build_valid_demo_ir("prj_qa_p04b")
+        ir.process.transitions[0].guard_ast = GuardAST.from_dict(
+            {"node_type": "SIGNAL", "value_type": "BOOL",
+             "signal": "X : BOOL; (* QA_INJECTED *)"}
+        )
+        manifest, _ = CompilerService(ir.af_profile).lower(ir)
+        generated = "\n".join(item.content for item in manifest.files)
+>       assert "QA_INJECTED" not in generated
+E       AssertionError: assert 'QA_INJECTED' not in '// AF UDT: ...TION_BLOCK\n'
+E         
+E         'QA_INJECTED' is contained here:
+E            BOOL; (* QA_INJECTED *) : BOOL; // unbound logical signal
+E         ?           +++++++++++
+E           END_VAR
+E           VAR
+E             stepCurrent : INT;...
+E         
+E         ...Full output truncated (62 lines hidden), use '-vv' to show
+
+tests\qa_v2\test_qa_v2_independent.py:587: AssertionError
+_ TestSourceDefectsFoundByQA.test_guard_from_dict_rejects_unknown_fields_as_documented _
+
+self = <test_qa_v2_independent.TestSourceDefectsFoundByQA object at 0x000001E1D412C9E0>
+
+    def test_guard_from_dict_rejects_unknown_fields_as_documented(self) -> None:
+        """P-05（guard_ast.py:95 docstring "rejects ... unknown fields" / 设计 9.9）。
+    
+        期望：未知顶层键被拒绝（strict schema）。
+        实际：只拒绝 6 个自由文本键，``arbitrary_unknown_key`` 被静默忽略（探测 P5）。
+        """
+>       with pytest.raises(GuardValidationError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE GuardValidationError
+
+tests\qa_v2\test_qa_v2_independent.py:595: Failed
+=========================== short test summary info ===========================
+FAILED tests/qa_v2/test_qa_v2_independent.py::TestSourceDefectsFoundByQA::test_fake_worker_cannot_be_labelled_v19_real
+FAILED tests/qa_v2/test_qa_v2_independent.py::TestSourceDefectsFoundByQA::test_compile_ok_requires_static_gate_passed
+FAILED tests/qa_v2/test_qa_v2_independent.py::TestSourceDefectsFoundByQA::test_static_gate_failure_blocks_native_archived
+FAILED tests/qa_v2/test_qa_v2_independent.py::TestSourceDefectsFoundByQA::test_malformed_guard_signal_is_rejected_by_static_validation
+FAILED tests/qa_v2/test_qa_v2_independent.py::TestSourceDefectsFoundByQA::test_malformed_guard_signal_does_not_leak_into_generated_scl
+FAILED tests/qa_v2/test_qa_v2_independent.py::TestSourceDefectsFoundByQA::test_guard_from_dict_rejects_unknown_fields_as_documented
+6 failed, 30 passed in 2.83s
+QA_PYTEST_EXIT=1

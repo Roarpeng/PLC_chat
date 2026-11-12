@@ -1,0 +1,20 @@
+### QA G5 stage A/B script self-check v2 (STATIC + IN-MEMORY ONLY; no TIA, no CLI, no writes to real dirs)
+### DATE: 2026-11-10T18:36:28+08:00
+python heredoc blocks found = 4
+  block#1: AST_OK lines=34 defs=[]
+  block#2: AST_OK lines=43 defs=[]
+  block#3: AST_OK lines=29 defs=[]
+  block#4: AST_OK lines=13 defs=[]
+ALL_BLOCKS_SYNTAX_OK = True
+manifest files = 5
+all paths absolute = True
+validate_import_order issues = []
+manifest sha256 = sha256:86c551b4d9820709dd4d6ece70b397add139681a3212bfbe2a249d43932b8d52
+from_dict roundtrip issues = []
+roundtrip sha256 equal = True
+SIG WorkspaceStore.create_project -> (self, project_id: 'str', ir: 'EngineeringIRV2', *, origin: 'str' = 'greenfield', author: 'str' = 'system') -> 'ProjectWorkspace'
+SIG EngineeringServiceV2.freeze_changeset -> (store: 'WorkspaceStore', project_id: 'str', *, base_revision: 'int', ops: 'list[Any] | None' = None) -> 'ChangeSet'
+SIG ApprovalGate.approve -> (self, changeset_id: 'str', *, reviewer: 'str', explicit: 'bool', expected_baseline_hash: 'str') -> 'ChangeSet'
+SIG DeliveryCoordinator.start -> (self, payload: 'dict[str, Any]') -> 'tuple[dict[str, Any], int]'
+SELFCHECK_DONE (no writes, no TIA)
+SELFCHECK_EXIT=0

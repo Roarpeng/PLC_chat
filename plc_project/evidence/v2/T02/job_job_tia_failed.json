@@ -1,0 +1,23 @@
+{
+  "chain": {
+    "artifact": null,
+    "error_code": "TIA_UNAVAILABLE",
+    "error_message": "tia_unavailable: offline fault injection",
+    "evidence_level": "mocked",
+    "ok": false,
+    "stage_receipts": [
+      {
+        "error_code": "TIA_UNAVAILABLE",
+        "evidence_level": "mocked",
+        "message": "tia_unavailable: offline fault injection",
+        "ok": false,
+        "raw_api_receipt": {},
+        "stage": "CREATE",
+        "state": "FAILED"
+      }
+    ],
+    "state": "FAILED"
+  },
+  "notice": "FAILED: no native archive published; logs and editable design retained",
+  "real_tia_v19_tested": false
+}

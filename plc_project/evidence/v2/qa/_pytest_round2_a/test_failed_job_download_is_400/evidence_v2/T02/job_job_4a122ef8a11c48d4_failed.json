@@ -1,0 +1,103 @@
+{
+  "chain": {
+    "artifact": null,
+    "error_code": "ARCHIVE_MISSING",
+    "error_message": "archive-project ok=false: {'ok': False, 'archive': {'ok': False, 'archivePath': 'C:\\\\Users\\\\vboxuser\\\\Desktop\\\\Project\\\\Code\\\\PLC_chat\\\\plc_project\\\\evidence\\\\v2\\\\qa\\\\_pytest_round2_a\\\\test_failed_job_download_is_400\\\\ws\\\\archive\\\\Demo.zap19', 'archiveSha256': '', 'sizeBytes': 0}}",
+    "evidence_level": "V19_real",
+    "ok": false,
+    "stage_receipts": [
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "create": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_round2_a\\test_failed_job_download_is_400\\ws\\tia_project\\Demo.ap19"
+          },
+          "ok": true
+        },
+        "stage": "CREATE",
+        "state": "TIA_IMPORTED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "device": {
+            "typeId": "6ES7511-1AK02-0AB0/V2.9"
+          },
+          "ok": true
+        },
+        "stage": "CREATE_DEVICE",
+        "state": "TIA_IMPORTED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "import_order": [],
+          "ok": true,
+          "receipts": []
+        },
+        "stage": "IMPORT",
+        "state": "TIA_IMPORTED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "compile": {
+            "errorCount": 0,
+            "state": "Success",
+            "warningCount": 2
+          },
+          "ok": true
+        },
+        "stage": "COMPILE",
+        "state": "TIA_COMPILED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "ok": true,
+          "save": {
+            "ok": true
+          }
+        },
+        "stage": "SAVE",
+        "state": "TIA_COMPILED"
+      },
+      {
+        "error_code": "ARCHIVE_MISSING",
+        "evidence_level": "V19_real",
+        "message": "archive-project ok=false: {'ok': False, 'archive': {'ok': False, 'archivePath': 'C:\\\\Users\\\\vboxuser\\\\Desktop\\\\Project\\\\Code\\\\PLC_chat\\\\plc_project\\\\evidence\\\\v2\\\\qa\\\\_pytest_round2_a\\\\test_failed_job_download_is_400\\\\ws\\\\archive\\\\Demo.zap19', 'archiveSha256': '', 'sizeBytes': 0}}",
+        "ok": false,
+        "raw_api_receipt": {
+          "archive": {
+            "archivePath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_round2_a\\test_failed_job_download_is_400\\ws\\archive\\Demo.zap19",
+            "archiveSha256": "",
+            "ok": false,
+            "sizeBytes": 0
+          },
+          "ok": false
+        },
+        "stage": "ARCHIVE",
+        "state": "FAILED"
+      }
+    ],
+    "state": "FAILED"
+  },
+  "notice": "FAILED: no native archive published; logs and editable design retained",
+  "real_tia_v19_tested": false
+}

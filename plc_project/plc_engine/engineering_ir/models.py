@@ -744,18 +744,34 @@ class CompileReceipt:
         error_count = _as_int(inner.get("errorCount", inner.get("error_count", payload.get("error_count", -1))))
         warning_count = _as_int(inner.get("warningCount", inner.get("warning_count", payload.get("warning_count", -1))))
         has_real_receipt = evidence is EvidenceLevel.V19_REAL and bool(raw or payload)
-        compile_ok = error_count == 0 and warning_count >= 0 and has_real_receipt
         diagnostics = [dict(x) for x in (inner.get("diagnostics") or []) if isinstance(x, dict)]
-        return cls(
+        receipt = cls(
             state=state,
             error_count=error_count,
             warning_count=warning_count,
             raw_api_receipt=raw or canonical_dumps(payload),
             static_gate_passed=bool(inner.get("staticGatePassed", inner.get("static_gate_passed", False))),
-            compile_ok=compile_ok,
+            compile_ok=False,
             evidence_level=evidence,
             diagnostics=diagnostics,
         )
+        receipt.recompute_compile_ok(real_receipt=has_real_receipt)
+        return receipt
+
+    def recompute_compile_ok(self, *, real_receipt: bool) -> bool:
+        """PRD 6.4: compile_ok = error_count==0 AND static_gate_passed AND real receipt.
+
+        ``warning_count`` is listed separately and NEVER folded into success.
+        This is the single authoritative implementation, reused by the delivery
+        chain whenever the static gate is (re)evaluated.
+        """
+        self.compile_ok = bool(
+            self.error_count == 0
+            and self.warning_count >= 0
+            and self.static_gate_passed
+            and real_receipt
+        )
+        return self.compile_ok
 
     def to_dict(self) -> dict[str, Any]:
         return {

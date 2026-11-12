@@ -1,0 +1,37 @@
+[
+  {
+    "path": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_tmp_full\\test_export_restructures_unit_0\\bundle\\external_sources\\FB1000_Master.scl",
+    "software_unit": "",
+    "block_name": "FB1000_Master",
+    "af_role": "unit",
+    "af_software_unit": "U1_Master"
+  },
+  {
+    "path": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_tmp_full\\test_export_restructures_unit_0\\bundle\\external_sources\\FB1060_Loader.scl",
+    "software_unit": "",
+    "block_name": "FB1060_Loader",
+    "af_role": "em",
+    "af_software_unit": "U1Em1_Loader"
+  },
+  {
+    "path": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_tmp_full\\test_export_restructures_unit_0\\bundle\\external_sources\\FB8000_Safety.scl",
+    "software_unit": "",
+    "block_name": "FB8000_Safety",
+    "af_role": "safety",
+    "af_software_unit": ""
+  },
+  {
+    "path": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_tmp_full\\test_export_restructures_unit_0\\bundle\\external_sources\\DB9000_Global.scl",
+    "software_unit": "",
+    "block_name": "DB9000_Global",
+    "af_role": "global",
+    "af_software_unit": ""
+  },
+  {
+    "path": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_tmp_full\\test_export_restructures_unit_0\\bundle\\external_sources\\FB1020_Helper.scl",
+    "software_unit": "",
+    "block_name": "FB1020_Helper",
+    "af_role": "",
+    "af_software_unit": ""
+  }
+]

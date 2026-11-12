@@ -1,0 +1,34 @@
+{
+  "project_name": "MixedDemo",
+  "generated_at": "2026-11-09T23:37:19",
+  "conformant": false,
+  "roles": {
+    "FB1060_AutoStep": "em",
+    "FB1081_ValveCall": "cm",
+    "OB1Main": "global",
+    "DB10_Data": "global",
+    "F_GuardDoor": "safety",
+    "FB999_Mystery": "unknown"
+  },
+  "roles_count": 5,
+  "pending": [
+    {
+      "block": "FB999_Mystery",
+      "reason": "映射引擎未能证明该块与标准结构的等价性(未识别为模式控制/步序/设备控制/安全/数据块),保留原始形态待人工确认"
+    }
+  ],
+  "pending_count": 1,
+  "coverage": 83.33,
+  "blocks_total": 6,
+  "frozen": {
+    "global": 2,
+    "safety": 1
+  },
+  "mapper": {
+    "units": 1,
+    "ems": 1,
+    "io_total": 1,
+    "io_retained": 1,
+    "io_retention_rate": 100.0
+  }
+}

@@ -1,0 +1,5 @@
+### CMD: uv run pytest tests -q --disable-warnings -rf --maxfail=3 --ignore=tests/unit/test_canvas_import.py
+### DATE: 2026-11-09T23:33:34+08:00
+.........................................F..........................F... [  4%]
+...F[safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":116,"threshold":50,"scope":"turn","targets":["\\\\?\\C:\\Users\\vboxuser\\AppData\\Local\\Temp\\pytest-of-vboxuser\\garbage-bd6da24a-8d84-40f9-a609-8ae4eeda2231"],"targetCount":1}
+PYTEST_FULL_EXIT=1

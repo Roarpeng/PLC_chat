@@ -1,0 +1,7 @@
+{
+  "output": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\T01\\cpu_selection.json",
+  "selected": "6ES7511-1AK02-0AB0/V2.9",
+  "status": "selected_by_lead",
+  "verification_required": true,
+  "verified_create_with_item": false
+}

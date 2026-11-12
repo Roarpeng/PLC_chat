@@ -1,0 +1,40 @@
+### CMD: QA concurrency + trace probe
+Traceback (most recent call last):
+  File "C:\Users\vboxuser\AppData\Roaming\uv\python\cpython-3.14.2-windows-x86_64-none\Lib\shutil.py", line 701, in _rmtree_unsafe
+    os.unlink(fullname)
+    ~~~~~~~~~^^^^^^^^^^
+PermissionError: [WinError 32] 另一个程序正在使用此文件，进程无法访问。: 'C:\\Users\\vboxuser\\AppData\\Local\\Temp\\tmpp6d4_0ym\\v2.db'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<string>", line 21, in <module>
+    with tempfile.TemporaryDirectory() as t:
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\vboxuser\AppData\Roaming\uv\python\cpython-3.14.2-windows-x86_64-none\Lib\tempfile.py", line 971, in __exit__
+    self.cleanup()
+    ~~~~~~~~~~~~^^
+  File "C:\Users\vboxuser\AppData\Roaming\uv\python\cpython-3.14.2-windows-x86_64-none\Lib\tempfile.py", line 975, in cleanup
+    self._rmtree(self.name, ignore_errors=self._ignore_cleanup_errors)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vboxuser\AppData\Roaming\uv\python\cpython-3.14.2-windows-x86_64-none\Lib\tempfile.py", line 955, in _rmtree
+    _shutil.rmtree(name, onexc=onexc)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vboxuser\AppData\Roaming\uv\python\cpython-3.14.2-windows-x86_64-none\Lib\shutil.py", line 852, in rmtree
+    _rmtree_impl(path, dir_fd, onexc)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vboxuser\AppData\Roaming\uv\python\cpython-3.14.2-windows-x86_64-none\Lib\shutil.py", line 705, in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\vboxuser\AppData\Roaming\uv\python\cpython-3.14.2-windows-x86_64-none\Lib\tempfile.py", line 930, in onexc
+    _os.unlink(path)
+    ~~~~~~~~~~^^^^^^
+PermissionError: [WinError 32] 另一个程序正在使用此文件，进程无法访问。: 'C:\\Users\\vboxuser\\AppData\\Local\\Temp\\tmpp6d4_0ym\\v2.db'
+bundle.trace type= list len= 250
+bundle keys= ['manifest', 'trace', 'scl_files', 'source_map', 'validation']
+S2 frames = 110
+S2 frames after 2000 = 201
+manifest hash changed = True
+concurrency results = [('OK', 1), ('PatchConflictError', 'base_revision 0 != current_revision 1'), ('PatchConflictError', 'base_revision 0 != current_revision 1'), ('PatchConflictError', 'base_revision 0 != current_revision 1'), ('PatchConflictError', 'base_revision 0 != current_revision 1'), ('PatchConflictError', 'base_revision 0 != current_revision 1')]
+final revision = 1
+EXIT=1

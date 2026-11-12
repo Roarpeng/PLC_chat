@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+import re
 from typing import Any
 
 
@@ -43,6 +44,20 @@ BINARY_COMPARISONS: frozenset[GuardNodeType] = frozenset(
 LOGICAL_NODES: frozenset[GuardNodeType] = frozenset({GuardNodeType.AND, GuardNodeType.OR, GuardNodeType.NOT})
 NUMERIC_TYPES: frozenset[GuardValueType] = frozenset({GuardValueType.TIME, GuardValueType.INT})
 FREE_TEXT_KEYS: frozenset[str] = frozenset({"expression", "expr", "text", "code", "eval", "formula"})
+
+#: Strict schema: only these keys are accepted in a GuardAST node.
+ALLOWED_GUARD_KEYS: frozenset[str] = frozenset({
+    "node_type", "value_type", "signal", "value", "children", "source_id",
+})
+
+#: A signal name must be a plain (optionally dotted) identifier. This blocks
+#: SCL injection such as ``X : BOOL; (* payload *)`` from ever reaching codegen.
+GUARD_SIGNAL_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$")
+
+
+def is_valid_guard_signal(signal: str) -> bool:
+    """Return True only for a safe, injection-free signal identifier."""
+    return bool(isinstance(signal, str) and GUARD_SIGNAL_RE.match(signal))
 
 
 class GuardValidationError(ValueError):
@@ -96,8 +111,11 @@ class GuardAST:
         if not isinstance(data, dict):
             raise GuardValidationError("guard must be a structured object, not free text")
         for key in data:
-            if str(key).lower() in FREE_TEXT_KEYS:
+            lowered = str(key).lower()
+            if lowered in FREE_TEXT_KEYS:
                 raise GuardValidationError(f"free-text guard expression is forbidden: {key}")
+            if str(key) not in ALLOWED_GUARD_KEYS:
+                raise GuardValidationError(f"unknown guard field {key!r} (strict schema)")
         node_type = _parse_node_type(data.get("node_type"))
         if not isinstance(node_type, GuardNodeType):
             raise GuardValidationError(f"unknown guard node type: {node_type!r}")
@@ -139,6 +157,11 @@ class GuardAST:
         elif node is GuardNodeType.SIGNAL:
             if not self.signal:
                 issues.append("SIGNAL guard requires a non-empty signal name")
+            elif not is_valid_guard_signal(self.signal):
+                issues.append(
+                    f"SIGNAL guard has an invalid identifier {self.signal!r} "
+                    "(fail-closed: free text / SCL injection is forbidden)"
+                )
             if self.value is not None:
                 issues.append("SIGNAL guard must not carry a literal value")
 

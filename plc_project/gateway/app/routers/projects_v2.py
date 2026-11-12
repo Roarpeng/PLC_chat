@@ -28,6 +28,8 @@ from gateway.app.schemas.v2_ir import (
     ValidateIn,
 )
 from gateway.app.services.plc.approval_v2 import ApprovalGate, ApprovalRejectedError
+from gateway.app.services.plc.brownfield_v2 import BrownfieldServiceV2
+from gateway.app.schemas.v2_brownfield import BrownfieldDiffPlanIn as BrownfieldPlanIn
 from gateway.app.services.plc.artifact_store_v2 import (
     ArtifactJobMismatchError,
     ArtifactNotFoundError,
@@ -160,8 +162,11 @@ def post_patch(project_id: str, body: PatchIn, store: WorkspaceStore = StoreDep)
     if missing:
         return missing
     request_id = _rid(body.request_id)
-    patch = make_patch(project_id, body.base_revision, body.ops, request_id=request_id)
     try:
+        # P-10: make_patch is INSIDE the error boundary now. An illegal
+        # base_revision raises the structured 422 before any DB transaction,
+        # so no half-applied state can be produced.
+        patch = make_patch(project_id, body.base_revision, body.ops, request_id=request_id)
         result = store.commit_patch(project_id, patch)
     except PatchConflictError as exc:
         return error_response(
@@ -176,15 +181,21 @@ def post_patch(project_id: str, body: PatchIn, store: WorkspaceStore = StoreDep)
                   "issues": exc.issues, "unchanged_ir_hash": exc.unchanged_ir_hash},
             request_id=request_id, evidence_level="offline",
         )
-    bundle = DerivationServiceV2(store).derive_all(project_id)
     payload = result.to_dict()
-    payload["derived"] = {
-        "manifest_sha256": bundle.manifest.sha256,
-        "trace_frames": len(bundle.trace),
-        "scl_files": sorted(bundle.scl_files),
-        "source_map_entries": len(bundle.source_map.mappings),
-    }
-    payload["derived_dirty"] = not bundle.validation.passed
+    try:
+        # Derivation is a read-only projection: a failure here must not turn an
+        # already-committed atomic Patch into a 500 or a half-applied response.
+        bundle = DerivationServiceV2(store).derive_all(project_id)
+        payload["derived"] = {
+            "manifest_sha256": bundle.manifest.sha256,
+            "trace_frames": len(bundle.trace),
+            "scl_files": sorted(bundle.scl_files),
+            "source_map_entries": len(bundle.source_map.mappings),
+        }
+        payload["derived_dirty"] = not bundle.validation.passed
+    except Exception as exc:  # noqa: BLE001 - derivation failure never rolls back a committed IR
+        payload["derived_dirty"] = True
+        payload["derived_error"] = str(exc)
     return ok_response(payload, request_id=request_id, evidence_level="offline")
 
 
@@ -465,3 +476,32 @@ def post_brownfield_diffplan(project_id: str, body: BrownfieldDiffPlanIn, store:
         },
         request_id=_rid(body.request_id), evidence_level="mocked",
     )
+
+
+@router.post("/brownfield/diffplan")
+def post_brownfield_plan(body: BrownfieldPlanIn, store: WorkspaceStore = StoreDep):
+    """A-3 / WP-05: Brownfield interface + Schema + negative rejection ONLY.
+
+    No real TIA ADD/MODIFY/DELETE, no write to the original project, and the
+    response is ALWAYS explicitly ``evidence_level=mocked``.
+    """
+    baseline = ""
+    if body.project_id and store.project_exists(body.project_id):
+        baseline = store.get_project(body.project_id).baseline_hash or ""
+    payload = BrownfieldServiceV2.review(
+        project_id=body.project_id,
+        ops=body.ops,
+        bindings_payload=[binding.model_dump() for binding in body.source_bindings],
+        expected_baseline_hash=body.expected_baseline_hash,
+        actual_baseline_hash=baseline,
+        mocked_orchestration=body.mocked_orchestration,
+    )
+    BrownfieldServiceV2.assert_no_real_evidence(payload)
+    if payload["issues"]:
+        first = payload["issues"][0]
+        status = 409 if first["code"] == "BASELINE_HASH_MISMATCH" else 403
+        return error_response(
+            status, first["code"], first["reason"],
+            data=payload, request_id=_rid(body.request_id), evidence_level="mocked",
+        )
+    return ok_response(payload, request_id=_rid(body.request_id), evidence_level="mocked")

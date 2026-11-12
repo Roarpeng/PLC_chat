@@ -19,8 +19,14 @@ class CreateProjectIn(BaseModel):
 
 
 class PatchIn(V2RequestEnvelope):
-    """POST /api/v2/projects/{id}/patches — atomic semantic patch."""
+    """POST /api/v2/projects/{id}/patches — atomic semantic patch.
 
+    P-10: ``base_revision`` is deliberately ``Any`` here so the strict
+    ``type(x) is int`` validation in ``make_patch`` produces ONE structured
+    422 envelope (instead of pydantic silently coercing 1.5 / True to int).
+    """
+
+    base_revision: Any = 0
     ops: list[dict[str, Any]] = Field(default_factory=list)
 
 

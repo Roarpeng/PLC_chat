@@ -1,0 +1,15 @@
+### CMD: dotnet test industrial/tia_openness_cli/TiaOpenness.sln -c Release
+### DATE: 2026-11-09T23:32:40+08:00
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  TiaOpenness.Models -> C:\Users\vboxuser\Desktop\Project\Code\PLC_chat\plc_project\industrial\tia_openness_cli\src\TiaOpenness.Models\bin\Release\netstandard2.0\TiaOpenness.Models.dll
+  TiaOpenness.Server -> C:\Users\vboxuser\Desktop\Project\Code\PLC_chat\plc_project\industrial\tia_openness_cli\src\TiaOpenness.Server\bin\Release\net481\TiaOpenness.Server.exe
+  TiaOpenness.Tests -> C:\Users\vboxuser\Desktop\Project\Code\PLC_chat\plc_project\industrial\tia_openness_cli\tests\TiaOpenness.Tests\bin\Release\net481\TiaOpenness.Tests.dll
+C:\Users\vboxuser\Desktop\Project\Code\PLC_chat\plc_project\industrial\tia_openness_cli\tests\TiaOpenness.Tests\bin\Release\net481\TiaOpenness.Tests.dll (.NETFramework,Version=v4.8.1)的测试运行
+VSTest 版本 17.11.1 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+
+已通过! - 失败:     0，通过:   110，已跳过:     0，总计:   110，持续时间: 481 ms - TiaOpenness.Tests.dll (net481)
+DOTNET_TEST_EXIT=0

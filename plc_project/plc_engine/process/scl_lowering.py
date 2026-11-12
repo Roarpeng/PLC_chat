@@ -17,7 +17,12 @@ from plc_engine.components.driver_compiler import DriverCompiler
 from plc_engine.engineering_ir.contracts import SCAN_ORDER
 from plc_engine.engineering_ir.models import AFProfile, EngineeringIRV2
 from plc_engine.process.artifact_manifest import ArtifactFile, ArtifactManifest
-from plc_engine.process.guard_ast import GuardAST, GuardNodeType, GuardValueType
+from plc_engine.process.guard_ast import (
+    GuardAST,
+    GuardNodeType,
+    GuardValueType,
+    is_valid_guard_signal,
+)
 from plc_engine.process.source_map import SourceMap
 
 
@@ -31,7 +36,8 @@ def guard_to_scl(guard: GuardAST | None) -> str:
             return "TRUE" if bool(guard.value) else "FALSE"
         return str(int(guard.value or 0))
     if node is GuardNodeType.SIGNAL:
-        return f"#{guard.signal}"
+        # Fail-closed: an invalid identifier must never be spliced into SCL.
+        return f"#{guard.signal}" if is_valid_guard_signal(guard.signal) else "FALSE"
     if node is GuardNodeType.AND:
         return "(" + " AND ".join(guard_to_scl(child) for child in guard.children) + ")"
     if node is GuardNodeType.OR:
@@ -229,7 +235,13 @@ class CompilerService:
         signals: set[str] = set()
         for tr in ir.process.transitions:
             if tr.guard_ast is not None:
-                signals.update(tr.guard_ast.referenced_signals())
+                # P-04b: only injection-free identifiers may reach generated SCL
+                # declarations; a malformed signal is already rejected by the
+                # static validator and is omitted here (never spliced verbatim).
+                signals.update(
+                    name for name in tr.guard_ast.referenced_signals()
+                    if is_valid_guard_signal(name)
+                )
         builder.emit('FUNCTION_BLOCK "FB_Sequence"', ir_id="FB_Sequence")
         builder.emit("VAR_INPUT")
         for signal in sorted(signals):

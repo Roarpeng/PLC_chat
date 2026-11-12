@@ -1,0 +1,9 @@
+﻿FUNCTION_BLOCK "FB8000_Safety"
+VAR_INPUT
+    EStopOk : Bool;
+END_VAR
+BEGIN
+IF NOT "I_EStop" THEN
+    "Q_FaultLamp" := TRUE;
+END_IF;
+END_FUNCTION_BLOCK

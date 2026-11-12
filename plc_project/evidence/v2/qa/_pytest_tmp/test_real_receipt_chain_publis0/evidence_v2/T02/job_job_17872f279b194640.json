@@ -1,0 +1,309 @@
+{
+  "chain": {
+    "artifact": {
+      "archive_path": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_tmp\\test_real_receipt_chain_publis0\\ws\\archive\\Demo.zap19",
+      "archive_sha256": "sha256:4a9d9718c225e1583f85184092f2e9b08abc514d16faac5a335c2ab27ba0bac0",
+      "artifact_id": "a_b5daf1c828a0",
+      "compile": {
+        "compile_ok": true,
+        "diagnostics": [],
+        "error_count": 0,
+        "evidence_level": "V19_real",
+        "raw_api_receipt": "{\"compile\": {\"errorCount\": 0, \"state\": \"Success\", \"warningCount\": 2}, \"ok\": true}",
+        "state": "Success",
+        "static_gate_passed": true,
+        "warning_count": 2
+      },
+      "evidence_id": "ev_1b0bd1079d164b42",
+      "evidence_level": "V19_real",
+      "job_id": "job_17872f279b194640",
+      "kind": "zap19",
+      "project_id": "prj_demo",
+      "project_path": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_tmp\\test_real_receipt_chain_publis0\\ws\\tia_project\\Demo.ap19",
+      "receipt": {
+        "cpu_type_identifier": "6ES7511-1AK02-0AB0/V2.9",
+        "generated_at": "2026-11-09T15:33:40.838963+00:00",
+        "raw_evidence_path": "evidence/v2/T02/job_job_17872f279b194640.json",
+        "real_machine": true,
+        "real_tia_v19_tested": true,
+        "stage_order": [
+          "CREATE",
+          "IMPORT",
+          "COMPILE",
+          "SAVE",
+          "ARCHIVE",
+          "HASH",
+          "RETRIEVE_REOPEN"
+        ],
+        "workspace_dir": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_tmp\\test_real_receipt_chain_publis0\\ws"
+      },
+      "reopen_ok": true,
+      "size_bytes": 34
+    },
+    "error_code": "",
+    "error_message": "",
+    "evidence_level": "V19_real",
+    "ok": true,
+    "stage_receipts": [
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "create": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_tmp\\test_real_receipt_chain_publis0\\ws\\tia_project\\Demo.ap19"
+          },
+          "ok": true
+        },
+        "stage": "CREATE",
+        "state": "TIA_IMPORTED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "device": {
+            "typeId": "6ES7511-1AK02-0AB0/V2.9"
+          },
+          "ok": true
+        },
+        "stage": "CREATE_DEVICE",
+        "state": "TIA_IMPORTED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "import_order": [],
+          "ok": true,
+          "receipts": []
+        },
+        "stage": "IMPORT",
+        "state": "TIA_IMPORTED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "compile": {
+            "errorCount": 0,
+            "state": "Success",
+            "warningCount": 2
+          },
+          "ok": true
+        },
+        "stage": "COMPILE",
+        "state": "TIA_COMPILED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "ok": true,
+          "save": {
+            "ok": true
+          }
+        },
+        "stage": "SAVE",
+        "state": "TIA_COMPILED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "archive": {
+            "archivePath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_tmp\\test_real_receipt_chain_publis0\\ws\\archive\\Demo.zap19",
+            "archiveSha256": "",
+            "ok": true,
+            "sizeBytes": 34
+          },
+          "ok": true
+        },
+        "stage": "ARCHIVE",
+        "state": "TIA_COMPILED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "archive_sha256": "sha256:4a9d9718c225e1583f85184092f2e9b08abc514d16faac5a335c2ab27ba0bac0",
+          "size_bytes": 34
+        },
+        "stage": "HASH",
+        "state": "TIA_COMPILED"
+      },
+      {
+        "error_code": "",
+        "evidence_level": "V19_real",
+        "message": "",
+        "ok": true,
+        "raw_api_receipt": {
+          "ok": true,
+          "reopenOk": true,
+          "retrieve": {
+            "ok": true,
+            "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_tmp\\test_real_receipt_chain_publis0\\ws\\reopen\\Demo.ap19",
+            "reopenOk": true
+          }
+        },
+        "stage": "RETRIEVE_REOPEN",
+        "state": "TIA_COMPILED"
+      }
+    ],
+    "state": "NATIVE_ARCHIVED"
+  },
+  "evidence_bundle": {
+    "archive": {
+      "kind": "zap19",
+      "path": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\evidence\\v2\\qa\\_pytest_tmp\\test_real_receipt_chain_publis0\\ws\\archive\\Demo.zap19",
+      "reopen_ok": true,
+      "sha256": "sha256:4a9d9718c225e1583f85184092f2e9b08abc514d16faac5a335c2ab27ba0bac0",
+      "size_bytes": 34
+    },
+    "artifact_id": "a_b5daf1c828a0",
+    "artifact_manifest": null,
+    "compile": {
+      "compile_ok": true,
+      "diagnostics": [],
+      "error_count": 0,
+      "evidence_level": "V19_real",
+      "raw_api_receipt": "{\"compile\": {\"errorCount\": 0, \"state\": \"Success\", \"warningCount\": 2}, \"ok\": true}",
+      "state": "Success",
+      "static_gate_passed": true,
+      "warning_count": 2
+    },
+    "diagnostics": [],
+    "evidence_id": "ev_1b0bd1079d164b42",
+    "evidence_level": "V19_real",
+    "job_events": [
+      {
+        "evidence_level": "pending_real_machine",
+        "job_id": "job_17872f279b194640",
+        "raw_api_receipt": "{\"changeset_id\": \"cs_70cc4a273cba4958\", \"idempotency_key\": \"idem_chain_1\"}",
+        "seq": 0,
+        "stage": "ACCEPTED",
+        "state": "QUEUED",
+        "timestamp": "2026-11-09T15:33:40.808822+00:00"
+      },
+      {
+        "evidence_level": "offline",
+        "job_id": "job_17872f279b194640",
+        "raw_api_receipt": "{\"static_gate\": \"passed\"}",
+        "seq": 1,
+        "stage": "PRECONDITION",
+        "state": "DRAFT",
+        "timestamp": "2026-11-09T15:33:40.815368+00:00"
+      },
+      {
+        "evidence_level": "offline",
+        "job_id": "job_17872f279b194640",
+        "raw_api_receipt": "{\"static_gate\": \"passed\"}",
+        "seq": 2,
+        "stage": "PRECONDITION",
+        "state": "SPEC_FROZEN",
+        "timestamp": "2026-11-09T15:33:40.817286+00:00"
+      },
+      {
+        "evidence_level": "offline",
+        "job_id": "job_17872f279b194640",
+        "raw_api_receipt": "{\"static_gate\": \"passed\"}",
+        "seq": 3,
+        "stage": "PRECONDITION",
+        "state": "SOURCE_READY",
+        "timestamp": "2026-11-09T15:33:40.818492+00:00"
+      },
+      {
+        "evidence_level": "V19_real",
+        "job_id": "job_17872f279b194640",
+        "raw_api_receipt": "{\"create\": {\"ok\": true, \"projectPath\": \"C:\\\\Users\\\\vboxuser\\\\Desktop\\\\Project\\\\Code\\\\PLC_chat\\\\plc_project\\\\evidence\\\\v2\\\\qa\\\\_pytest_tmp\\\\test_real_receipt_chain_publis0\\\\ws\\\\tia_project\\\\Demo.ap19\"}, \"ok\": true}",
+        "seq": 4,
+        "stage": "CREATE",
+        "state": "TIA_IMPORTED",
+        "timestamp": "2026-11-09T15:33:40.819865+00:00"
+      },
+      {
+        "evidence_level": "V19_real",
+        "job_id": "job_17872f279b194640",
+        "raw_api_receipt": "{\"device\": {\"typeId\": \"6ES7511-1AK02-0AB0/V2.9\"}, \"ok\": true}",
+        "seq": 5,
+        "stage": "CREATE_DEVICE",
+        "state": "TIA_IMPORTED",
+        "timestamp": "2026-11-09T15:33:40.820586+00:00"
+      },
+      {
+        "evidence_level": "V19_real",
+        "job_id": "job_17872f279b194640",
+        "raw_api_receipt": "{\"import_order\": [], \"ok\": true, \"receipts\": []}",
+        "seq": 6,
+        "stage": "IMPORT",
+        "state": "TIA_IMPORTED",
+        "timestamp": "2026-11-09T15:33:40.821447+00:00"
+      },
+      {
+        "evidence_level": "V19_real",
+        "job_id": "job_17872f279b194640",
+        "raw_api_receipt": "{\"compile\": {\"errorCount\": 0, \"state\": \"Success\", \"warningCount\": 2}, \"ok\": true}",
+        "seq": 7,
+        "stage": "COMPILE",
+        "state": "TIA_COMPILED",
+        "timestamp": "2026-11-09T15:33:40.822904+00:00"
+      },
+      {
+        "evidence_level": "V19_real",
+        "job_id": "job_17872f279b194640",
+        "raw_api_receipt": "{\"ok\": true, \"save\": {\"ok\": true}}",
+        "seq": 8,
+        "stage": "SAVE",
+        "state": "TIA_COMPILED",
+        "timestamp": "2026-11-09T15:33:40.823652+00:00"
+      },
+      {
+        "evidence_level": "V19_real",
+        "job_id": "job_17872f279b194640",
+        "raw_api_receipt": "{\"archive\": {\"archivePath\": \"C:\\\\Users\\\\vboxuser\\\\Desktop\\\\Project\\\\Code\\\\PLC_chat\\\\plc_project\\\\evidence\\\\v2\\\\qa\\\\_pytest_tmp\\\\test_real_receipt_chain_publis0\\\\ws\\\\archive\\\\Demo.zap19\", \"archiveSha256\": \"\", \"ok\": true, \"sizeBytes\": 34}, \"ok\": true}",
+        "seq": 9,
+        "stage": "ARCHIVE",
+        "state": "TIA_COMPILED",
+        "timestamp": "2026-11-09T15:33:40.824456+00:00"
+      },
+      {
+        "evidence_level": "V19_real",
+        "job_id": "job_17872f279b194640",
+        "raw_api_receipt": "{\"archive_sha256\": \"sha256:4a9d9718c225e1583f85184092f2e9b08abc514d16faac5a335c2ab27ba0bac0\", \"size_bytes\": 34}",
+        "seq": 10,
+        "stage": "HASH",
+        "state": "TIA_COMPILED",
+        "timestamp": "2026-11-09T15:33:40.827811+00:00"
+      },
+      {
+        "evidence_level": "V19_real",
+        "job_id": "job_17872f279b194640",
+        "raw_api_receipt": "{\"ok\": true, \"reopenOk\": true, \"retrieve\": {\"ok\": true, \"projectPath\": \"C:\\\\Users\\\\vboxuser\\\\Desktop\\\\Project\\\\Code\\\\PLC_chat\\\\plc_project\\\\evidence\\\\v2\\\\qa\\\\_pytest_tmp\\\\test_real_receipt_chain_publis0\\\\ws\\\\reopen\\\\Demo.ap19\", \"reopenOk\": true}}",
+        "seq": 11,
+        "stage": "RETRIEVE_REOPEN",
+        "state": "TIA_COMPILED",
+        "timestamp": "2026-11-09T15:33:40.829034+00:00"
+      }
+    ],
+    "job_id": "job_17872f279b194640",
+    "notice": "V19 real full-chain receipt",
+    "project_id": "prj_demo",
+    "raw_evidence_path": "evidence/v2/T02/job_job_17872f279b194640.json",
+    "real_tia_v19_tested": true,
+    "source_map": null
+  }
+}

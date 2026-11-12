@@ -1,0 +1,12 @@
+### QA read-only preflight regression (offline only, no TIA)
+### DATE: 2026-11-10T18:28:09+08:00
+--- engineered targeted suite ---
+........................................................................ [ 33%]
+........................................................................ [ 67%]
+....................................................................     [100%]
+212 passed in 11.19s
+ENGINEER_EXIT=0
+--- QA defect probes from previous round ---
+......                                                                   [100%]
+6 passed in 1.38s
+QA_DEFECT_EXIT=0

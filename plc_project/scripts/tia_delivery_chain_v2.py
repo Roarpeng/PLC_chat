@@ -59,6 +59,36 @@ def main() -> None:
     if not args.job_id:
         raise SystemExit("--job-id is required (create a delivery job through the v2 API first)")
 
+    # U-02: the lead-appointed skeleton is selected_by_lead, NOT approved.
+    # A real CreateWithItem probe on a TEMPORARY project copy is MANDATORY
+    # before the delivery chain. Failure / TIA unavailable = fail-closed,
+    # never auto-switch to another model, never guess.
+    from gateway.app.services.plc.cpu_verification_v2 import (
+        persist_verification_receipt,
+        verification_gate,
+        verify_create_with_item,
+    )
+
+    probe_adapter = TiaOpennessCliAdapter(real_machine=True, evidence_level=EvidenceLevel.V19_REAL)
+    verification = verify_create_with_item(
+        probe_adapter,
+        cpu_type_identifier=args.cpu_type_id,
+        workspace_dir=args.workspace_dir,
+    )
+    probe_path = persist_verification_receipt(verification)
+    allowed, gate_error = verification_gate(verification)
+    if not allowed:
+        _emit({
+            "mode": "cpu_verification_failed",
+            "cpu_type_identifier": args.cpu_type_id,
+            "error": gate_error,
+            "verification_receipt": verification.to_dict(),
+            "raw_evidence_path": probe_path,
+            "real_tia_v19_tested": False,
+            "notice": "fail-closed: no delivery chain started; no automatic fallback to another CPU model",
+        }, args.output)
+        raise SystemExit(2)
+
     manifest = ArtifactManifest()
     if args.manifest_json:
         manifest = ArtifactManifest.from_dict(json.loads(Path(args.manifest_json).read_text(encoding="utf-8")))
@@ -77,6 +107,12 @@ def main() -> None:
     payload = {
         "mode": "real_chain_probe",
         "real_tia_v19_tested": bool(adapter.real_machine),
+        "cpu_selection": {
+            "type_identifier": args.cpu_type_id,
+            "selection_status": "approved",
+            "verified_create_with_item": True,
+            "raw_evidence_path": probe_path,
+        },
         "raw_evidence_path": result.get("raw_evidence_path", ""),
         "result": result,
         "notice": (
