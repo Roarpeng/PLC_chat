@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "project": {
+    "ok": true,
+    "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\proj\\CanvasE2E.ap19",
+    "projectName": "CanvasE2E",
+    "plcName": "PLC_1",
+    "deviceName": "PLC_1",
+    "message": "Project opened via TIA Openness."
+  },
+  "archive": {
+    "ok": true,
+    "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\proj\\CanvasE2E.ap19",
+    "archivePath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\archive\\PRJ_CLAMP_REAL.zap19",
+    "archiveSha256": "sha256:b01954dad1053743ca8ba7ac780865d72ba65297f69edf7f2d908d633f99ea3c",
+    "sizeBytes": 445512,
+    "message": "Project archived to C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\archive\\PRJ_CLAMP_REAL.zap19 (sha256=sha256:b01954dad1053743ca8ba7ac780865d72ba65297f69edf7f2d908d633f99ea3c)"
+  },
+  "_exit_code": 0
+}

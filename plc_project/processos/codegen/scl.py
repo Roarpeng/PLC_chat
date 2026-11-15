@@ -196,6 +196,40 @@ def _gen_driver(block: dict) -> _Builder:
     return b
 
 
+def _gen_unit(block: dict) -> _Builder:
+    """Unit coordination shell FB (must exist: its instance DB is generated).
+
+    Deterministic pass-through shell — no invented coordination logic. EM
+    sequencing/faults live in the FB_EM_* blocks (called from OB_Main); this
+    shell only carries mode/state so the unit instance DB has a real FB.
+    """
+    name = block["name"]
+    iface = block["interface"]
+    b = _Builder(name + ".scl")
+    b.emit(f'FUNCTION_BLOCK "{name}"')
+    b.emit("{ S7_Optimized_Access := 'TRUE' }")
+    b.emit("VAR_INPUT")
+    if iface.get("mode") == "Int":
+        b.emit("    Mode : Int;")
+    if iface.get("permit") == "Bool":
+        b.emit("    Permit : Bool;")
+    b.emit("END_VAR")
+    b.emit("VAR_OUTPUT")
+    if iface.get("state") == "Int":
+        b.emit("    State : Int;")
+    if iface.get("fault_summary") == "Bool":
+        b.emit("    FaultSummary : Bool;")
+    b.emit("END_VAR")
+    b.emit("BEGIN")
+    b.emit("    // shell aggregation: EM faults surface via FB_EM_*.Error (see OB_Main)")
+    if iface.get("state") == "Int":
+        b.emit("    #State := #Mode;")
+    if iface.get("fault_summary") == "Bool":
+        b.emit("    #FaultSummary := FALSE;")
+    b.emit("END_FUNCTION_BLOCK")
+    return b
+
+
 def _gen_main(project: AfProject, blocks_by_role: dict) -> _Builder:
     b = _Builder("OB_Main.scl")
     seqs = blocks_by_role.get("em_sequence", [])
@@ -262,6 +296,10 @@ class SclGenerator:
             b = _gen_sequence(seq, counter)
             files[b.filename] = b.text()
             source_map.extend(b.source_map)
+
+        for unit in blocks_by_role.get("unit", []):
+            b = _gen_unit(unit)
+            files[b.filename] = b.text()
 
         for drv in blocks_by_role.get("cm_driver", []):
             b = _gen_driver(drv)

@@ -4,7 +4,7 @@ import type { Contract } from "./types";
 
 export interface Conversation { id: string; title: string; contractId: string; created: string; }
 export interface Project { id: string; name: string; kind: "new" | "import"; created: string; scale: string; conversations: Conversation[]; }
-export type View = "launcher" | "wizard" | "import" | "workspace";
+export type View = "launcher" | "wizard" | "import" | "workspace" | "field" | "machine" | "station" | "trace" | "commissioning" | "baselines" | "gateway" | "orch";
 
 const KEY = "processos.projects.v1";
 const uid = (p: string) => p + "_" + Math.random().toString(36).slice(2, 9);

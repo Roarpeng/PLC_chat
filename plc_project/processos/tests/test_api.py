@@ -1,4 +1,8 @@
-"""WS4 API integration tests — full HTTP flow with human-gated delivery."""
+"""WS4 API integration tests — full HTTP flow with human-gated delivery.
+
+Approval and delivery endpoints are RBAC-gated (PLAN §7): tests send the
+X-Actor-Id / X-Actor-Role headers — this is the intended contract tightening.
+"""
 from __future__ import annotations
 
 import pytest
@@ -7,10 +11,14 @@ from fastapi.testclient import TestClient
 from processos.api import ProjectStore, create_app
 from processos.contract import clamp_contract
 
+REVIEWER = {"X-Actor-Id": "reviewer_wang", "X-Actor-Role": "Reviewer"}
+BUILDER = {"X-Actor-Id": "builder_li", "X-Actor-Role": "Builder"}
+
 
 @pytest.fixture()
-def client():
-    return TestClient(create_app(ProjectStore()))
+def client(tmp_path):
+    # tmp db: the audit ledger / baselines never touch the default store path
+    return TestClient(create_app(ProjectStore(), db=tmp_path / "api.sqlite3"))
 
 
 def _create(client):
@@ -75,14 +83,36 @@ def test_delivery_blocked_without_approval(client):
     pid = _create(client)
     gate = client.get(f"/api/processos/projects/{pid}/delivery-gate").json()
     assert not gate["ready"]
-    r = client.post(f"/api/processos/projects/{pid}/deliveries")
+    r = client.post(f"/api/processos/projects/{pid}/deliveries", headers=BUILDER)
     assert r.status_code == 403
+
+
+def test_delivery_requires_builder_role(client):
+    pid = _create(client)
+    r = client.post(f"/api/processos/projects/{pid}/deliveries")  # no actor headers
+    assert r.status_code == 403
+    assert r.json()["code"] == "ROLE_FORBIDDEN"
+
+
+def test_approve_requires_reviewer_role_and_separation(client):
+    pid = _create(client)
+    cs = client.post(f"/api/processos/projects/{pid}/changesets").json()
+    url = f"/api/processos/projects/{pid}/changesets/{cs['id']}/approve"
+    r = client.post(url, json={"by": "工程师张三"})  # no actor headers -> Viewer
+    assert r.status_code == 403
+    assert r.json()["code"] == "ROLE_FORBIDDEN"
+    # approver identity (header) must differ from the modifier (body.by)
+    same = client.post(url, headers=REVIEWER | {"X-Actor-Id": "eng_zhao"},
+                       json={"by": "eng_zhao"})
+    assert same.status_code == 403
+    assert same.json()["code"] == "APPROVER_SEPARATION"
 
 
 def test_blocking_question_blocks_delivery(client):
     pid = _create(client)
     cs = client.post(f"/api/processos/projects/{pid}/changesets").json()
-    client.post(f"/api/processos/projects/{pid}/changesets/{cs['id']}/approve", json={"by": "工程师"})
+    client.post(f"/api/processos/projects/{pid}/changesets/{cs['id']}/approve",
+                headers=REVIEWER, json={"by": "工程师"})
     gate = client.get(f"/api/processos/projects/{pid}/delivery-gate").json()
     assert not gate["checks"]["no_blocking_questions"]
     assert not gate["ready"]
@@ -93,11 +123,12 @@ def test_full_approval_flow_unblocks_delivery(client):
     client.post(f"/api/processos/projects/{pid}/questions/Q_SAFETY_STOP/resolve",
                 json={"resolution": "许可撤销时保持原位", "by": "工程师张三"})
     cs = client.post(f"/api/processos/projects/{pid}/changesets").json()
-    ap = client.post(f"/api/processos/projects/{pid}/changesets/{cs['id']}/approve", json={"by": "工程师张三"})
+    ap = client.post(f"/api/processos/projects/{pid}/changesets/{cs['id']}/approve",
+                     headers=REVIEWER, json={"by": "工程师张三"})
     assert ap.status_code == 200
     gate = client.get(f"/api/processos/projects/{pid}/delivery-gate").json()
     assert gate["ready"], gate
-    job = client.post(f"/api/processos/projects/{pid}/deliveries")
+    job = client.post(f"/api/processos/projects/{pid}/deliveries", headers=BUILDER)
     assert job.status_code == 200
     assert job.json()["status"] == "QUEUED"
 
@@ -110,7 +141,8 @@ def test_approval_stale_after_patch(client):
     client.post(f"/api/processos/projects/{pid}/patches", json={
         "base_revision": 1, "ops": [{"op": "set", "path": "/operations/OP_CLAMP/steps/S_HOLD/duration_ms", "value": 5000}],
     })
-    r = client.post(f"/api/processos/projects/{pid}/changesets/{cs['id']}/approve", json={"by": "工程师"})
+    r = client.post(f"/api/processos/projects/{pid}/changesets/{cs['id']}/approve",
+                    headers=REVIEWER, json={"by": "工程师"})
     assert r.status_code == 403
 
 

@@ -1,0 +1,9 @@
+DATE=2026-11-15
+SCRIPT=uv run ... python scripts/processos_real_compile_skeleton.py --ob-mode ladxml
+SKELETON=tmp_validate/skeleton_canvas_20261112/proj (pristine baseline; canvas_baseline_compile 0 errors)
+RESULT=V19_real: compile 0 errors / 2 warnings; archive sha256:b01954dad1053743ca8ba7ac780865d72ba65297f69edf7f2d908d633f99ea3c; RETRIEVE_REOPEN OK; delivery_complete=true
+IMPORTED=7 files (SCL: FB_U_ASSEMBLY_UNIT, FB_EM_CLAMP_SEQ, FB_CM_CLAMP_CYL_DRV + 3 instance DBs; XML: OB_Main)
+OB=LAD XML via import-xml Blocks.Import(Override): Name=Main Number=1 SecondaryType=ProgramCycle, 3 FlgNet CALL networks (EN-only, params default; full SCL OB wiring retained for fresh-project delivery)
+KNOWN_ISSUE=SCL ORGANIZATION_BLOCK via ExternalSources lands inconsistent on this TIA V19 build even when empty (3 variants proven: wired/minimal/empty, each exactly 1 error); FB/DB ExternalSources generation works fine
+DEBUG_HISTORY=10 attempts under tmp_validate/processos_real_skel_20261115_*; found+fixed real codegen gap (unit role FB had no SCL emitter; processos/codegen/scl.py _gen_unit); SimaticML duplicate-ID fix in driver
+FIRST_ERROR_TEXT_VIA=direct openness_cli('import-xml') invocation (chain adapter discards underlying import error detail)

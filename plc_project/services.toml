@@ -55,3 +55,17 @@ idle_timeout = 3600
 start = "uv run --no-project --with pytest --with fastapi --with pydantic-settings --with python-multipart --with httpx --with uvicorn -- python -m pytest tests/unit -q"
 cwd = "."
 once = true
+
+# ProcessOS：现场变更与交接闭环（FC-00~FC-18）单体服务，前端 vite 代理到 :8010
+[services.processos]
+start = "uv run --no-project --with fastapi --with uvicorn --with httpx --with pydantic -- python -m uvicorn processos.api.app:app --host 127.0.0.1 --port 8010 --log-level warning"
+cwd = "."
+health = "http://127.0.0.1:8010/api/processos/health"
+health_timeout = 120
+idle_timeout = 3600
+
+[services.processos.env]
+# 持久化开关：设置后 TraceabilityService/基线/账本/审计落 SQLite（重启存活）；
+# 测试永不使用该默认路径（一律 tmp_path 显式传入）
+PROCESSOS_DB = ".processos/store.sqlite3"
+UV_OFFLINE = "1"

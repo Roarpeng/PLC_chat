@@ -325,6 +325,11 @@ class ProcessContract:
     open_questions: list[OpenQuestion] = field(default_factory=list)
     scenarios: list[Scenario] = field(default_factory=list)
     provenance: Provenance = field(default_factory=Provenance)
+    #: Unit-level orchestration declaration (需求 c, written only by the
+    #: ``set_operation_schedule`` patch op): execution order / occupied
+    #: resources / parallel groups of the EMs. Plain validated dicts; optional
+    #: so legacy contracts without a schedule stay valid (roundtrip-lossless).
+    schedule: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         assert_stable_id(self.id, "contract")
@@ -386,4 +391,5 @@ class ProcessContract:
             open_questions=[OpenQuestion.from_dict(q) for q in data.get("open_questions", [])],
             scenarios=[Scenario.from_dict(s) for s in data.get("scenarios", [])],
             provenance=Provenance.from_dict(data.get("provenance", {})),
+            schedule=list(data.get("schedule", [])),
         )

@@ -1,0 +1,49 @@
+{
+  "ok": true,
+  "receipts": [
+    {
+      "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\FB_CM_CLAMP_CYL_DRV.scl",
+      "sha256": "sha256:251a2028fbc5ae01a1920047833d9655336138a5f5ed1ce216c76386c72b4d07",
+      "ok": true
+    },
+    {
+      "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\FB_EM_CLAMP_SEQ.scl",
+      "sha256": "sha256:a19ebbc99cd84fb9660d14c781ce872a63856cb052a9bb2735f1db1fbcd5f81a",
+      "ok": true
+    },
+    {
+      "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\FB_U_ASSEMBLY_UNIT.scl",
+      "sha256": "sha256:d7957b6ac70d635ff27ca382d4519c577e722e7b94506d8633a5e098330ec63a",
+      "ok": true
+    },
+    {
+      "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\iFB_CM_CLAMP_CYL_DRV.scl",
+      "sha256": "sha256:7f2b48e2a978016d1827e0037ddbb6c7a28778aa299aca460e028e393fc6d42c",
+      "ok": true
+    },
+    {
+      "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\iFB_EM_CLAMP_SEQ.scl",
+      "sha256": "sha256:05a264ae44f66792664bec8af1bc72a5605822955bf1012dbcad9855f58baad4",
+      "ok": true
+    },
+    {
+      "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\iFB_U_ASSEMBLY_UNIT.scl",
+      "sha256": "sha256:a3a067d7440841c27840f92751c6c7447f8d381dfffbc132bab259896d832c61",
+      "ok": true
+    },
+    {
+      "file": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\OB_Main.xml",
+      "sha256": "sha256:30a9a5f399a4efc8afa974d9345dfa7a76e1b9faf0e448be4702ac977395d39e",
+      "ok": true
+    }
+  ],
+  "import_order": [
+    "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\FB_CM_CLAMP_CYL_DRV.scl",
+    "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\FB_EM_CLAMP_SEQ.scl",
+    "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\FB_U_ASSEMBLY_UNIT.scl",
+    "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\iFB_CM_CLAMP_CYL_DRV.scl",
+    "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\iFB_EM_CLAMP_SEQ.scl",
+    "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\iFB_U_ASSEMBLY_UNIT.scl",
+    "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\sources\\OB_Main.xml"
+  ]
+}

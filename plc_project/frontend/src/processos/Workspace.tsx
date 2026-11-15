@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, processosApi } from "./api";
+import { DiagnosticsPanel } from "./DiagnosticsPanel";
 import { buildContract, ensureContract, type Conversation, type Project } from "./store";
 import type { Changeset, ComplianceReport, Contract, DeliveryGate, DeliveryJob, ScenarioResult } from "./types";
+import { ActorRoleWidget } from "./fieldui";
 import { CodeView, DeviceView, Icon, Sfc, TraceView } from "./views";
 
 const P = {
@@ -57,6 +59,7 @@ export function Workspace({ project, conversation, onBack, onNewConversation, on
   const [gate, setGate] = useState<DeliveryGate | null>(null);
   const [job, setJob] = useState<DeliveryJob | null>(null);
   const [drawer, setDrawer] = useState(false);
+  const [lastOps, setLastOps] = useState<unknown[]>([]);
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
   const toastTimer = useRef<number>(0);
   const pid = contract?.id ?? "";
@@ -77,7 +80,7 @@ export function Workspace({ project, conversation, onBack, onNewConversation, on
 
   useEffect(() => {
     let live = true;
-    setContract(null); setTurns([]); setChangeset(null); setApproved(false); setJob(null);
+    setContract(null); setTurns([]); setChangeset(null); setApproved(false); setJob(null); setLastOps([]);
     (async () => {
       try {
         const { contract: c, revision: r } = await ensureContract(conversation.contractId);
@@ -93,6 +96,7 @@ export function Workspace({ project, conversation, onBack, onNewConversation, on
     try {
       const r = await processosApi.patch(pid, revision, ops, "ui-" + Date.now());
       setContract(r.contract); setRevision(r.revision); setChangeset(null); setApproved(false);
+      setLastOps(ops); // 编译范围建议（DiagnosticsPanel）按最近一次 patch ops 分析
       await Promise.all([refreshDerived(pid), refreshGate(pid)]);
       flash(note); return r.revision;
     } catch (e) { flash(e instanceof ApiError ? `${e.status}: ${e.message}` : String(e), true); return revision; }
@@ -167,6 +171,7 @@ export function Workspace({ project, conversation, onBack, onNewConversation, on
           <span className="serif" style={{ fontSize: "var(--step-lead)", fontWeight: 600 }}>{conversation.title}</span>
           <div className="sp" />
           <span className={`evidence ${errCount === 0 && simPassed ? "ok" : ""}`}><span className="led" />{job?.status === "SUCCEEDED" ? job.evidence_level : "offline_verified"} · G0 待真机</span>
+          <ActorRoleWidget />
           <button className="btn stamp sm" onClick={() => { setDrawer(true); refreshGate(pid); }}>审核与交付</button>
         </div>
 
@@ -271,6 +276,8 @@ export function Workspace({ project, conversation, onBack, onNewConversation, on
             <button className="btn stamp" disabled={!gate?.ready} onClick={deliver}>创建交付 Job</button>
             {job && <><div className="stagelist">{job.events.map((e, i) => <div key={i} className={`stageitem ${e.ok ? "done" : "fail"}`}><span className="ic">{e.ok ? <Icon name="check" size={12} /> : <Icon name="cross" size={12} />}</span><span className="mono">{e.stage}</span></div>)}</div>
               {job.artifact && <div className="hash" style={{ marginTop: 10 }}>归档 {job.artifact.archive_sha256}</div>}</>}</div>
+          {pid && <div className="dsec"><h4>编译诊断 · 修复提案 · 编译范围</h4>
+            <DiagnosticsPanel projectId={pid} job={job} pendingOps={lastOps} /></div>}
         </div>
       </div>
       <div className={`toast ${toast ? "show" : ""} ${toast?.err ? "err" : ""}`}>{toast?.msg}</div>

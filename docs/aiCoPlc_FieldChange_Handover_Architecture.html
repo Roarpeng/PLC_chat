@@ -1,0 +1,432 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>aiCoPlc | 现场变更与工程师交接闭环</title><style>
+:root{--ink:#14243c;--ink2:#506178;--line:#dce6f0;--bg:#f6f9fd;--card:#fff;--navy:#10233d;--blue:#2668de;--pale:#e9f2ff;--warn:#9e5a12}*{box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:Inter,'Noto Sans SC','Microsoft YaHei',system-ui,-apple-system, sans-serif;margin:0;background:var(--bg);color:var(--ink);line-height:1.75}a{color:var(--blue)}.hero{background:linear-gradient(117deg,#102542,#183860 62%,#225a92);padding:58px 6vw 46px;color:#fff}.hero-inner{max-width:1280px;margin:auto}.hero small{letter-spacing:.17em;text-transform:uppercase;color:#b8d5fa;font-weight:650}.hero h1{font-size:clamp(26px,3.2vw,42px);line-height:1.27;margin:13px 0 18px;font-weight:750}.hero p{margin:0;color:#d5e4f6;max-width:810px}.pills{display:flex;flex-wrap:wrap;gap:9px;margin-top:24px}.pill{border:1px solid #7594b9;border-radius:50px;padding:5px 11px;font-size:12px;color:#dbe9ff}.page{max-width:1460px;margin:0 auto;display:grid;grid-template-columns:258px minmax(0,1fr);gap:26px;padding:30px 26px 80px}.sidebar{position:sticky;top:20px;max-height:calc(100vh - 42px);overflow:auto;align-self:start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 17px;box-shadow:0 8px 32px #152c4c09}.sidebar h2{font-size:13px;letter-spacing:.07em;margin:0 0 12px;color:#60738b}.sidebar a{display:block;color:#2d4660;text-decoration:none;font-size:13px;line-height:1.4;padding:8px 9px;border-radius:7px}.sidebar a:hover{background:var(--pale)}.sidebar a.sub{padding-left:19px;color:#61728a}.shell{min-width:0}.overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 22px}.focus{border:1px solid #d9e4f0;background:#fff;border-radius:13px;padding:19px;box-shadow:0 5px 19px #22374b08}.focus strong{font-size:15px;display:block;margin:2px 0 6px}.focus span{font-size:12px;color:#5f7085;display:block}.focus b{font-size:11px;color:#2462bc;letter-spacing:.1em}.flowstrip{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:0 0 22px;padding:18px;background:#eaf2fe;border:1px solid #d3e3f9;border-radius:12px}.stage{padding:9px 11px;border-radius:8px;font-size:12px;font-weight:650;background:white;color:#1b4a83;white-space:nowrap}.arr{font-weight:900;color:#6790be}.document{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px clamp(20px,4vw,58px);box-shadow:0 11px 32px #233c5809}.document>h1:first-child{display:none}.document h2{font-size:25px;letter-spacing:-.03em;line-height:1.35;margin:45px 0 16px;padding:0 0 11px;border-bottom:2px solid #e4edf7;scroll-margin-top:25px}.document h2:first-of-type{margin-top:12px}.document h3{font-size:18px;margin:32px 0 14px;scroll-margin-top:25px}.document h4{font-size:16px;margin:24px 0 10px}.document p,.document li{font-size:14px;line-height:1.85}.document p{margin:13px 0}.document blockquote{margin:20px 0;padding:10px 20px;background:#edf4fe;border-left:4px solid #347be8;color:#244765;border-radius:0 9px 9px 0}.document blockquote p{margin:5px 0}.document code{background:#edf3f9;color:#2a507b;padding:2px 5px;border-radius:5px;font-size:12px}.document pre{background:#11243d;color:#dceaff;padding:19px;border-radius:12px;overflow-x:auto;font-size:12px;line-height:1.7;border:1px solid #263b55}.document pre code{background:none;color:inherit;padding:0}.document table{border-collapse:collapse;width:100%;margin:18px 0 26px;display:block;overflow-x:auto;font-size:12.5px}.document th,.document td{border-bottom:1px solid #e2e9f2;padding:12px 13px;text-align:left;vertical-align:top;min-width:110px;line-height:1.6}.document th{background:#eef4fb;color:#2b466a;font-size:12px}.document tr:hover td{background:#f9fbff}.document hr{border:0;border-top:1px solid #e0e8f0;margin:25px 0}.document ul,.document ol{padding-left:24px}.document li+li{margin-top:6px}.toolrow{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.toolrow a,.toolrow button{display:inline-block;color:#fff;border:0;background:#2a73df;border-radius:7px;padding:9px 15px;cursor:pointer;text-decoration:none;font:600 13px system-ui}.toolrow button{background:#335069}.search{width:100%;border:1px solid #d3e0ed;border-radius:8px;padding:9px;font-size:13px;margin:0 0 13px}.footer{color:#76859a;font-size:12px;text-align:center;margin:30px}.skip{position:absolute;left:-999px}.skip:focus{left:12px;top:12px;z-index:10;background:#fff;padding:8px}.noresults{display:none;color:#a45615;font-size:13px}@media(max-width:940px){.page{grid-template-columns:1fr;padding:15px}.sidebar{position:static;max-height:320px}.overview{grid-template-columns:1fr}.hero{padding:35px 19px}.document{padding:20px}.flowstrip{gap:5px}}@media print{body{background:white}.hero{background:#fff!important;color:#14243c;padding:0 0 16px}.hero small,.hero p{color:#14243c}.pills,.sidebar,.toolrow,.flowstrip,.overview{display:none!important}.page{display:block;padding:0}.document{border:0;box-shadow:none;padding:0}.document pre{white-space:pre-wrap;word-break:break-word;color:#111;background:#eee}.document h2{break-after:avoid}.document table{display:table}.document tr{break-inside:avoid}}
+</style></head><body><a class="skip" href="#read">跳转正文</a><header class="hero"><div class="hero-inner"><small>aiCoPlc / FIELD ENGINEERING BLUEPRINT</small><h1>现场调试、PLC 变更与跨工程师交接闭环</h1><p>从现场报警定位到 Canvas 工艺修改，再到 AF 合规、TIA 原生工程编译下载、现场投产记录与跨人员的工程知识传承。</p><div class="pills"><span class="pill">Framework First</span><span class="pill">三基线管理</span><span class="pill">语义变更</span><span class="pill">SourceMap</span><span class="pill">Evidence First</span><span class="pill">安全部署边界</span></div><div class="toolrow"><a href="aiCoPlc_FieldChange_Handover_PLAN.md" download>下载 Markdown</a><button type="button" onclick="window.print()">打印 / 导出 PDF</button></div></div></header><div class="page"><aside class="sidebar"><h2>CHAPTERS · 章节导航</h2><input aria-label="搜索章节" class="search" id="filter" placeholder="搜索章节名称..."/><div id="nav"><a class="" href="#section-1">0. 先修正产品假设</a><a class="" href="#section-2">1. 全链路总图</a><a class="sub" href="#section-3">三条不可混淆的链路</a><a class="" href="#section-4">2. 统一对象身份与四张关联图</a><a class="sub" href="#section-5">2.1 分开建模，统一引用</a><a class="sub" href="#section-6">2.2 关联索引</a><a class="sub" href="#section-7">2.3 最小对象数据契约</a><a class="" href="#section-8">3. Web：现场问题驱动的工作台</a><a class="sub" href="#section-9">3.1 主要页面</a><a class="sub" href="#section-10">3.2 现场修改的两种模式</a><a class="sub" href="#section-11">3.3 每次变更必须生成 Impact Report</a><a class="" href="#section-12">4. 变更管理：三份基线 + 两次比对</a><a class="" href="#section-13">5. TIA Openness：真实原生工程构建</a><a class="sub" href="#section-14">5.1 Build 状态机</a><a class="sub" href="#section-15">5.2 自动修复边界</a><a class="sub" href="#section-16">5.3 下载与现场部署必须分开</a><a class="" href="#section-17">6. 工程师交接：从报警到定位逻辑的证据链</a><a class="sub" href="#section-18">6.1 标准 Incident（问题单）模型</a><a class="sub" href="#section-19">6.2 SourceMap 结构</a><a class="sub" href="#section-20">6.3 新工程师的排查路径</a><a class="sub" href="#section-21">6.4 现场数据采集要求</a><a class="" href="#section-22">7. 多角色管理与工程交接协议</a><a class="" href="#section-23">8. API 与模块建议（从零设计）</a><a class="" href="#section-24">9. P0→P3 分阶段实施</a><a class="" href="#section-25">10. 最小端到端验收：电池更换站夹紧气缸</a><a class="" href="#section-26">11. 错误与安全边界（必须阻断）</a><a class="" href="#section-27">12. 对开发 Agent 的执行约束</a><a class="sub" href="#section-28">必须提交的 PR 工件</a></div><p id="none" class="noresults">没有匹配章节</p></aside><main class="shell" id="read"><section class="overview"><div class="focus"><b>DESIGN</b><strong>工艺与逻辑是一份真值</strong><span>稳定对象 ID、AF 语义、工艺版本、确定性生成</span></div><div class="focus"><b>BUILD</b><strong>真实编译≠现场投产</strong><span>版本锁定、独立工程副本、归档、哈希、重新打开</span></div><div class="focus"><b>HANDOVER</b><strong>问题脱离个人聊天记录</strong><span>报警、证据、版本、SourceMap、修改依据全部可追溯</span></div></section><div class="flowstrip"><span class="stage">现场报警</span><span class="arr">→</span><span class="stage">设备定位</span><span class="arr">→</span><span class="stage">现场基线对比</span><span class="arr">→</span><span class="stage">Canvas 修改</span><span class="arr">→</span><span class="stage">AF 验证</span><span class="arr">→</span><span class="stage">TIA 构建</span><span class="arr">→</span><span class="stage">工程归档</span><span class="arr">→</span><span class="stage">部署及交接</span></div><article class="document"><h1>aiCoPlc · 现场变更与跨工程师交接闭环（开发补充 PLAN）</h1>
+<blockquote>
+<p>版本：1.0 · 设计建议稿 · 2026-11-15<br/>
+范围：现场调试、工程变更、AF 一致性、TIA Openness 原生工程交付、工程师交接及诊断追踪。<br/>
+目标：无论现场由谁接手，都能从一个报警、组件或问题单，定位其工位、控制逻辑、原生 PLC 块、修改历史与验证证据。<br/>
+边界：<strong>下载 TIA 工程 ≠ 将程序下载到现场 PLC</strong>。在线部署必须经过独立授权、现场安全检查与人工控制。</p>
+</blockquote>
+<h2 id="section-1">0. 先修正产品假设</h2>
+<ol>
+<li><strong>现场 PLC 是运行事实，Web 工艺模型是设计事实，TIA 归档是交付事实。</strong> 三者可能分叉，不能假定任何一份永远代表现场最新版；每次修改必须执行基线对比。</li>
+<li><strong>一个工位不必严格等于一个 AF EM。</strong> 物理设备结构与 AF 逻辑组织关联但独立，允许一个物理工位映射多个 EM，反之须经架构规则约束。</li>
+<li><strong>标准化的是 CM 的外部控制与诊断契约，不是所有驱动的内部算法。</strong> 不更改官方 AF/LBC 块本体；特殊设备用经验证的适配层。</li>
+<li><strong>编译通过不等于可以上线。</strong> 工艺功能、模式/状态、异常路径、设备兼容、保留数据风险、HMI/报警、现场安全步骤均需单独验收。</li>
+<li><strong>报警定位不是根因证明。</strong> 所有诊断区分观测事实、来源关联、候选原因和已验证的真实根因。</li>
+<li><strong>现场直接在 TIA 中修改的代码不能被默默覆盖。</strong> 检测漂移、冻结变更、比对并人工合并；不可可靠反向解析的代码应作为受控黑盒保留。</li>
+</ol>
+<h2 id="section-2">1. 全链路总图</h2>
+<pre><code class="language-mermaid">flowchart TD
+  A[发现异常 / 报警 / 现场改善] --&gt; B[定位 Unit · 工位 · EM · CM · Step]
+  B --&gt; C[问题单 Incident + 证据包]
+  C --&gt; D{现场在线版本 / TIA 基线 / 工艺模型一致?}
+  D --&gt;|否| E[只读上传 / 比对 / 差异审查 / 基线锁定]
+  D --&gt;|是| F[独立变更分支 ChangeSet]
+  E --&gt; F
+  F --&gt; G[Web 对话 + Canvas / 受控代码编辑]
+  G --&gt; H[工艺契约 Patch + 影响分析]
+  H --&gt; I[AF 合规 / 静态检查 / 行为仿真 / 回归]
+  I --&gt;|失败| G
+  I --&gt;|通过| J[人工审查 + 审批]
+  J --&gt; K[TIA Worker: 副本导入 / 完整编译]
+  K --&gt;|失败| L[诊断 → SourceMap → 节点并提出补丁]
+  L --&gt; G
+  K --&gt;|通过| M[Save / Archive / Hash / Reopen]
+  M --&gt; N[下载 TIA 原生工程 + 证据包]
+  N --&gt; O[授权工程师现场部署 / 调试]
+  O --&gt; P[记录已部署版本 + 运行验证 + 交接记录]
+  P --&gt; Q[下一位工程师从 Incident / 对象 ID 复原上下文]
+</code></pre>
+<h3 id="section-3">三条不可混淆的链路</h3>
+<table>
+<thead>
+<tr>
+<th>链路</th>
+<th>目的</th>
+<th>完成状态</th>
+<th>权限</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Design → Build</td>
+<td>工艺编辑、AF 编译、生成并下载 <code>.zapXX</code></td>
+<td>BUILD_VERIFIED</td>
+<td>开发 + 审查</td>
+</tr>
+<tr>
+<td>Build → Commission</td>
+<td>在实际设备上下载/调试/确认运行</td>
+<td>COMMISSIONED</td>
+<td>现场授权人员；独立安全审批</td>
+</tr>
+<tr>
+<td>Runtime → Incident</td>
+<td>报警、事件、状态证据、责任与交接</td>
+<td>INCIDENT_RESOLVED / OPEN</td>
+<td>工程师和维护人员</td>
+</tr>
+</tbody>
+</table>
+<p><strong>原则：</strong> 只有第二条链路有真实设备接触；不能因为第一条链路成功而声称现场已经更新。</p>
+<h2 id="section-4">2. 统一对象身份与四张关联图</h2>
+<h3 id="section-5">2.1 分开建模，统一引用</h3>
+<table>
+<thead>
+<tr>
+<th>图</th>
+<th>主要对象</th>
+<th>解决问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PhysicalGraph</td>
+<td>Site / Machine / Station / Cabinet / Assembly / Component</td>
+<td>设备实际位置是什么</td>
+</tr>
+<tr>
+<td>AfGraph</td>
+<td>Unit / EM / CM / Job / ControlNodes / Sequence / Library Ref</td>
+<td>PLC 软件如何组织</td>
+</tr>
+<tr>
+<td>BehaviorGraph</td>
+<td>Step / Transition / Guard / Action / Interlock / Timeout / Recovery</td>
+<td>何时做什么、谁在等待谁</td>
+</tr>
+<tr>
+<td>EvidenceGraph</td>
+<td>Incident / Alarm / ChangeSet / Test / Build / Deployment / SourceMap</td>
+<td>为什么修改、改了什么、谁批准、有何证据</td>
+</tr>
+</tbody>
+</table>
+<p><strong>不得用路径字符串作为永久身份</strong>。所有对象分配不可复用的 <code>object_id</code>。中文名称、工位顺序、画布坐标、TIA 块名和设备位置都允许变化，变更保留历史路径和别名。示例：<code>cmp_01HZ...</code>（非真实 ID）。</p>
+<h3 id="section-6">2.2 关联索引</h3>
+<pre><code class="language-text">Physical Component ID ──maps_to──&gt; AF CM ID
+AF CM ID ──participates_in──&gt; Behavior Step IDs
+Behavior Step ID ──compiles_to──&gt; TIA Block / Network / SCL Span
+Alarm Definition ID ──originates_from──&gt; AF CM ID / EM ID
+Runtime Alarm Event ──raised_at──&gt; Deployed Build ID + Timestamp
+ChangeSet ID ──modifies──&gt; Semantic IDs + SourceMap IDs
+</code></pre>
+<p>迁移、重命名或生成块编号变化时，只更新映射版本；历史报警仍以<strong>发生时的部署版本</strong>解析，不用当前版本错误回溯。</p>
+<h3 id="section-7">2.3 最小对象数据契约</h3>
+<pre><code class="language-json">{
+  "object_id": "cm_clamp_a_001",
+  "display_name": "夹紧气缸 A",
+  "physical_parent_id": "station_battery_change",
+  "af_role": "CM",
+  "af_owner_em_id": "em_battery_clamp",
+  "driver_contract_id": "two_way_cylinder/v1",
+  "io_bindings": {"extend_feedback": "symbolic_only"},
+  "behavior_refs": ["step_clamp_extend"],
+  "source_map_refs": ["src_0009"],
+  "alarm_definition_refs": ["alarm_clamp_timeout"],
+  "status": "DESIGNED"
+}
+</code></pre>
+<h2 id="section-8">3. Web：现场问题驱动的工作台</h2>
+<p>建议工作台不再只有“工程列表”，而是包含三个入口：<strong>按工位找设备</strong>、<strong>按报警找逻辑</strong>、<strong>按变更单找工程</strong>。操作员扫描设备二维码或输入报警代码可直接进入该对象（二维码只是入口，不是授权凭证）。</p>
+<h3 id="section-9">3.1 主要页面</h3>
+<table>
+<thead>
+<tr>
+<th>页面</th>
+<th>必须支持</th>
+<th>禁止行为</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>整机 Canvas</td>
+<td>工位、依赖、资源、状态汇总、位置跳转</td>
+<td>直接操作下层任意物理输出</td>
+</tr>
+<tr>
+<td>工位 Canvas</td>
+<td>CM、逻辑步骤、互锁、状态、报警、测试</td>
+<td>任意连线生成不确定控制流</td>
+</tr>
+<tr>
+<td>组件详情</td>
+<td>类型、驱动契约、命令/反馈、逻辑引用、源码位置、历史报警</td>
+<td>修改官方库块内部实现</td>
+</tr>
+<tr>
+<td>问题单 / 调试</td>
+<td>复现条件、事实快照、时间线、修改提案、验收结果</td>
+<td>把 AI 推测直接标为已确认根因</td>
+</tr>
+<tr>
+<td>Diff / 审核</td>
+<td>语义差异、代码差异、影响对象、风险、审批</td>
+<td>无审核静默覆盖工程</td>
+</tr>
+<tr>
+<td>Build / 发布</td>
+<td>TIA 编译诊断、证据、工程文件下载、部署前检查</td>
+<td>用 Build 成功冒充现场部署成功</td>
+</tr>
+<tr>
+<td>交接视图</td>
+<td>最新基线、未结问题、当前已部署版本、风险与回退</td>
+<td>依赖聊天历史作为唯一资料</td>
+</tr>
+</tbody>
+</table>
+<h3 id="section-10">3.2 现场修改的两种模式</h3>
+<p><strong>A. 首选：语义修改。</strong> 工程师说“伸出超时由 3s 改为 5s”，系统定位 <code>cm</code> / <code>step</code>，显示当前值、依据、受影响的步骤和测试，生成 <strong>结构化 Patch</strong>；审核后经 AF 生成器修改工程副本。</p>
+<p><strong>B. 专家模式：受控 SCL 修改。</strong> 允许工程师提出代码变更，但必须保留精确 diff、原生块身份、变更原因和人工审核。能解析为语义契约的代码变更回写 IR；不能解析或不允许 AI 重生成的部分以 <code>MANAGED_NATIVE_OVERRIDE</code> 隔离，<strong>由显式所有权规则保护</strong>，不得称其已被 Canvas 语义理解。官方库 / F-Safety / 保护块禁止这种自动写入。</p>
+<h3 id="section-11">3.3 每次变更必须生成 Impact Report</h3>
+<p>包含受影响 Unit/EM/CM/Step、关联调用者、报警定义、I/O/DB 接口、HMI 消息、状态保持/复位风险、在线加载影响、回归测试与部署注意事项。未知项显示 <code>UNKNOWN</code> 并阻断相应高风险交付。</p>
+<h2 id="section-12">4. 变更管理：三份基线 + 两次比对</h2>
+<p><strong>B1 Design Baseline：</strong> 审核冻结的工艺 IR，含 AF Profile、节点稳定 ID、契约、测试。</p>
+<p><strong>B2 Native Baseline：</strong> 从 B1 构建的 TIA 工程归档、原生块/标签/DB 源码清单及 SHA256。</p>
+<p><strong>B3 Deployed Baseline：</strong> 现场 PLC 实际程序的已确认标识/校验和、下载记录、设备身份、验收结果，以及可以获取时的只读在线比较结果。</p>
+<p>B3 不能仅凭 <code>Build ID</code> 自报，必须有现场验证；无法连接 PLC 时标记 <code>UNVERIFIED_ONLINE</code>。</p>
+<p><strong>第一次比对（开工前）：</strong> B2 ↔ B3。若现场漂移，停止修改、从现场只读采集/上传可用信息、生成三方差异（工艺模型、工程副本、设备实际运行软件）。</p>
+<p><strong>第二次比对（交付前/部署前）：</strong> 审核时的项目 hash ↔ Build 输入；部署前 B3 ↔ 目标 PLC。任何变化使旧审批失效或进入再审批。</p>
+<p><strong>并发与锁：</strong> 每个项目/PLC 目标有受控写锁，带租约与故障恢复；多个工程师可并行阅读，但同一语义对象的并发修改要求显示冲突并合并，不接受最后写入者覆盖。</p>
+<h2 id="section-13">5. TIA Openness：真实原生工程构建</h2>
+<pre><code class="language-text">[Approved ChangeSet + locked design hash]
+         ↓
+[Isolated Windows TIA Worker + pinned TIA/AF library]
+         ↓
+[Open known project COPY / baseline skeleton]
+         ↓
+[AF semantic lowering -&gt; valid FB/DB/OB/XML / library instances]
+         ↓
+[Import and bind instances, type-check, compile full software]
+         ↓
+[Parse diagnostics -&gt; SourceMap -&gt; semantic objects]
+         ↓
+[Save -&gt; Archive -&gt; SHA256 -&gt; Retrieve/Reopen]
+         ↓
+[Artifact manifest + signed-off release candidate]
+</code></pre>
+<p><strong>工艺模型不是直接执行代码。</strong> LLM 只生成候选 Patch；AF 编译器依据经过批准的行为语义与锁定库接口确定性地产生工程元素。任何不能映射的动作阻断 Build，不能仅输出注释桩。</p>
+<h3 id="section-14">5.1 Build 状态机</h3>
+<p><code>DRAFT → VALIDATING → REVIEW_REQUIRED → APPROVED → BUILDING → COMPILE_PASSED → ARCHIVED → REOPEN_VERIFIED → BUILD_VERIFIED</code></p>
+<p>失败进入 <code>FAILED</code>，保留日志。<code>COMPILE_PASSED</code> 不代表 <code>BUILD_VERIFIED</code>；后者要求完整归档/重开/工件关联通过。真实在线部署不属于该状态机。</p>
+<h3 id="section-15">5.2 自动修复边界</h3>
+<p>允许自动提议：块/实例 DB 名称冲突、缺少显式调用、库接口不匹配、类型不一致、合法 XML 等确定性编译问题。所有修复都以<strong>候选变更</strong>回到审查/验证链路。</p>
+<p>禁止自动：删除互锁、绕过安全许可、将超时变大以消除故障、改变动作优先级、忽略故障位、静默重置 DB、修改 F-Safety 逻辑。编译失败时不得只屏蔽报错而宣称修好。</p>
+<h3 id="section-16">5.3 下载与现场部署必须分开</h3>
+<ol>
+<li><code>ExportNativeProject</code>：浏览器下载 <code>.zapXX</code>、变更报告、完整证据包。</li>
+<li><code>CommissioningRecord</code>：工程师使用 TIA 现场下载/调试后登记设备、程序校验结果、时间、操作员、现场测试。</li>
+<li>将来可扩展独立 <code>SiteDeploymentGateway</code>，使用 TIA Openness <code>DownloadProvider</code>，但必须具备现场授权、生产停机窗口、在线比较、关键配置审查、数据保持评估、双人复核、人工明确确认、回退可行性与结果核验。不得设计网页上的普通“一键自动上线”按钮。</li>
+</ol>
+<p>Siemens 官方参考：</p>
+<ul>
+<li>在线 PLC 程序比较：<a href="https://docs.tia.siemens.cloud/r/en-us/v21/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-accessing-the-data-of-a-plc-device/functions-for-downloading-data-to-plc-device/comparing-plc-software" rel="noopener noreferrer" target="_blank">https://docs.tia.siemens.cloud/r/en-us/v21/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-accessing-the-data-of-a-plc-device/functions-for-downloading-data-to-plc-device/comparing-plc-software</a></li>
+<li>设备上传：<a href="https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-accessing-the-data-of-a-plc-device/functions-for-downloading-data-to-plc-device/uploading-plc-device" rel="noopener noreferrer" target="_blank">https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-accessing-the-data-of-a-plc-device/functions-for-downloading-data-to-plc-device/uploading-plc-device</a></li>
+<li>下载至 PLC：<a href="https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-accessing-the-data-of-a-plc-device/functions-for-downloading-data-to-plc-device/downloading-to-plc-devices" rel="noopener noreferrer" target="_blank">https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-accessing-the-data-of-a-plc-device/functions-for-downloading-data-to-plc-device/downloading-to-plc-devices</a></li>
+<li>原生归档：<a href="https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-projects-and-project-data/archiving-and-retrieving-a-project" rel="noopener noreferrer" target="_blank">https://docs.tia.siemens.cloud/r/en-us/v20/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-projects-and-project-data/archiving-and-retrieving-a-project</a></li>
+</ul>
+<h2 id="section-17">6. 工程师交接：从报警到定位逻辑的证据链</h2>
+<p>必须由系统自动维护五份资料：<strong>设备身份证、工艺契约、原生源码映射、现场事件快照、变更/发布历史</strong>。</p>
+<h3 id="section-18">6.1 标准 Incident（问题单）模型</h3>
+<pre><code class="language-json">{
+  "incident_id": "INC-2026-0042",
+  "asset_id": "machine_001",
+  "physical_path_at_event": "设备1/电池更换站/夹紧机构/气缸A",
+  "object_id": "cm_clamp_a_001",
+  "af_refs": {"unit_id": "unit_main", "em_id": "em_battery_clamp", "cm_id": "cm_clamp_a_001"},
+  "alarm": {"definition_id": "alarm_clamp_timeout", "event_time": "2026-11-15T09:17:08+08:00", "sequence": 876, "quality": "OBSERVED"},
+  "behavior": {"step_id": "step_clamp_extend", "expected": "extended=true within 3000ms", "observed": "extended=false at 3000ms"},
+  "software": {"deployed_build_id": "build_219", "native_archive_sha256": "sha256:&lt;recorded-at-release&gt;"},
+  "references": {"source_map_id": "src_0009", "change_set_ids": ["chg_019"]},
+  "triage": {"fact": "伸出反馈未按时出现", "hypotheses": ["气压不足", "线圈未动作", "传感器故障"], "root_cause": null},
+  "handover": {"owner": "engineer_on_duty", "status": "INVESTIGATING", "next_action": "检查线圈输出及现场传感器"}
+}
+</code></pre>
+<p>上述字段是设计示例而非现场实测；若没有实际反馈、时间戳、在线构建 ID 或部署映射，须显式 <code>UNKNOWN</code>，不能伪造。</p>
+<h3 id="section-19">6.2 SourceMap 结构</h3>
+<p><code>{semantic_object_id, behavior_step_id, release_build_id, tia_project_id, tia_plc_id, block_name, block_kind, instance_db, network_id?, scl_line_range?, symbol_refs[], alarm_refs[], compiler_mapping_version, ownership}</code>。</p>
+<p>注意：某些 XML/块或实际编译诊断不提供精确行号。遇到这种情况最低保证块级定位，不应虚构行号。</p>
+<h3 id="section-20">6.3 新工程师的排查路径</h3>
+<p><strong>输入</strong>：报警代码 <code>CM_MOTION_TIMEOUT</code> 或现场扫描该组件二维码。</p>
+<p><strong>平台自动展示（按发生时的版本）：</strong></p>
+<p><code>位置：电池更换站 → 夹紧机构 → 气缸A</code></p>
+<p><code>AF：Unit_Main → EM_BatteryClamp → CM_ClampA</code></p>
+<p><code>行为：STEP_030 → ExtendCmd → ExtendedFb</code></p>
+<p><code>源码：FB_ClampSequence / CM_ClampA 实例 / 关联符号</code></p>
+<p><code>诊断：实际超时、最近动作序列、信号快照（若采集）</code></p>
+<p><code>历史：最近 3 次相关变更、已验证测试、已部署版本</code></p>
+<p><code>行动：待执行检查、责任人、风险、下一步、最终复测记录</code></p>
+<p><strong>解释层约束：</strong> “延迟 3 秒无到位”是观测；“传感器损坏”只是候选原因，直到人工/仪器验证后才升级为确认根因。</p>
+<h3 id="section-21">6.4 现场数据采集要求</h3>
+<p>提供轻量 <code>TelemetryAdapter</code>：可在获批条件下通过现有现场 OT 数据通道或工程站读取诊断，不强制在控制 PLC 上增加复杂通信栈。优先事件驱动、限量采集、只读、带时间戳/质量位/采样源；故障时可选保存最后 N 次步骤转换/信号变化，N 由设备资源与现场策略决定。高频数据另存外部时序库。无实时连接时提供人工上传报警截图、TIA 诊断、日志和人工描述，标记证据等级。</p>
+<h2 id="section-22">7. 多角色管理与工程交接协议</h2>
+<p>角色：<code>Viewer</code> 阅读；<code>FieldEngineer</code> 建单/提交变更；<code>Reviewer</code> 复核工艺与影响；<code>Builder</code> 触发受控原生构建；<code>ReleaseApprover</code> 批准交付；<code>CommissioningEngineer</code> 现场下载与验收；<code>Admin</code> 管理模板与权限。审批者与修改者应在高风险修改时分离。</p>
+<p>交接完成条件：当前已部署版本明确；未关闭故障和未完成变更有负责人；已知现场偏差、临时旁路与风险标明；回退工程与现场前置条件已归档；最新调试结论可追溯到对象和时间。任何手动强制/旁路的现场情况必须由受控现场记录处理，不能由浏览器默认允许远程强制。</p>
+<p>工程师离职或更换不影响稳定对象 ID、审查记录和问题单访问；版本和事件归项目，不归个人聊天窗口。</p>
+<h2 id="section-23">8. API 与模块建议（从零设计）</h2>
+<pre><code class="language-text">Web Workbench
+  ├─ Asset/Station Canvas
+  ├─ Behavior/Sequence Canvas
+  ├─ Incident Console + Diagnostic Timeline
+  ├─ Change/Impact Review
+  ├─ Build &amp; Artifact Center
+  └─ Deployment/Handover Ledger
+
+Gateway (auth/RBAC/audit)
+  ├─ ObjectRegistry + RelationshipGraph
+  ├─ ProcessContractService
+  ├─ IncidentService + EvidenceStore
+  ├─ ChangeSetService + SemanticDiff + LockManager
+  ├─ AFComplianceService + BehavioralVerifier
+  ├─ NativeBuildOrchestrator -&gt; Isolated Windows TIA Worker
+  ├─ SourceMapRegistry + BuildArtifactStore
+  ├─ BaselineCompareService + DriftGate
+  └─ ReadOnlyTelemetryAdapter / SiteDeploymentGateway (future)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>端点建议</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /incidents</code>、<code>GET /incidents/{id}</code></td>
+<td>保存结构化问题和调查证据</td>
+</tr>
+<tr>
+<td><code>GET /objects/{id}/context?build_id=...</code></td>
+<td>聚合物理 / AF / 行为 / 源码 / 报警上下文</td>
+</tr>
+<tr>
+<td><code>POST /projects/{id}/baselines/compare</code></td>
+<td>项目/在线版本差异；无连接则明确未知</td>
+</tr>
+<tr>
+<td><code>POST /projects/{id}/changesets</code></td>
+<td>建立与基线绑定的变更事务</td>
+</tr>
+<tr>
+<td><code>POST /changesets/{id}/preview</code></td>
+<td>返回语义 diff、影响面、测试计划</td>
+</tr>
+<tr>
+<td><code>POST /changesets/{id}/approve</code></td>
+<td>审核，强制 base hash / role 检查</td>
+</tr>
+<tr>
+<td><code>POST /changesets/{id}/builds</code></td>
+<td>异步请求隔离 Worker 编译（非在线部署）</td>
+</tr>
+<tr>
+<td><code>GET /builds/{id}</code></td>
+<td>阶段、编译诊断、检查证据</td>
+</tr>
+<tr>
+<td><code>GET /builds/{id}/artifacts/{artifact_id}</code></td>
+<td>精确绑定 project/build/sha256 的下载</td>
+</tr>
+<tr>
+<td><code>POST /deployments/records</code></td>
+<td>登记授权工程师现场部署及复测结果</td>
+</tr>
+<tr>
+<td><code>GET /incidents/{id}/handover</code></td>
+<td>构造可转交的新工程师上下文包</td>
+</tr>
+</tbody>
+</table>
+<p>接口均需幂等键、乐观并发版本、鉴权、服务器端审计日志。对于 TIA Worker，按可用许可/会话和项目隔离排队，禁止两个任务同时修改同一个工程副本。</p>
+<h2 id="section-24">9. P0→P3 分阶段实施</h2>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>任务包</th>
+<th>可交付物</th>
+<th>强制验收</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P0 · 身份与追溯</td>
+<td>FC-00 注册四张图、稳定 ID；FC-01 SourceMap；FC-02 Incident/AlarmMap</td>
+<td>从任一 CM/报警追溯至工位、EM、步骤、原生块</td>
+<td>重命名/移动/跨版本报警仍定位正确；未知映射显示 UNKNOWN</td>
+</tr>
+<tr>
+<td>P0 · 变更事务</td>
+<td>FC-03 Baseline/Drift；FC-04 语义 Patch 与审核；FC-05 影响分析</td>
+<td>隔离修改、差异审查、变更单</td>
+<td>基线漂移/并发冲突/非法权限全部 fail-closed</td>
+</tr>
+<tr>
+<td>P0 · 工艺正确性</td>
+<td>FC-06 AF 合规；FC-07 状态机验证；FC-08 回归与错误映射</td>
+<td>工艺仿真与可执行 AF 逻辑</td>
+<td>停止、复位、超时、模式冲突、资源竞争测试均有结果</td>
+</tr>
+<tr>
+<td>P1 · 原生交付</td>
+<td>FC-09 隔离 TIA Worker；FC-10 archive/reopen；FC-11 Artifact/Evidence</td>
+<td>真实 <code>.zapXX</code> 工程下载</td>
+<td>编译零错误、归档、哈希、重开及下载回执同一 Build ID</td>
+</tr>
+<tr>
+<td>P1 · 调试交接</td>
+<td>FC-12 Incident Console；FC-13 Handover Context；FC-14 Commissioning Ledger</td>
+<td>换工程师仍可从问题单复原完整上下文</td>
+<td>交接人员无需聊天历史，能定位并解释修改原因</td>
+</tr>
+<tr>
+<td>P2 · 现场增强</td>
+<td>FC-15 只读遥测；FC-16 在线差异采集；FC-17 现场 TIA 修改回收</td>
+<td>更准确的运行时证据与现场漂移检测</td>
+<td>无法采集时退化为手工证据；原件只读不覆盖</td>
+</tr>
+<tr>
+<td>P3 · 部署自动化</td>
+<td>FC-18 独立站点部署网关（可选）</td>
+<td>受控在线加载</td>
+<td>工艺风险评估、权限、下载选项、在线比较、现场授权与复测齐全</td>
+</tr>
+</tbody>
+</table>
+<h2 id="section-25">10. 最小端到端验收：电池更换站夹紧气缸</h2>
+<p><strong>初始版本：</strong> 伸出超时 3000 ms。PLC 现场曾记录“伸出到位信号未出现”。工程师建议改为 5000 ms。</p>
+<p><strong>系统不得直接把 3000 改成 5000 并宣称修复。</strong> 需先检查实际动作时间、气源/机械/传感器和工艺允许时间；修改超时属于运行行为变化，必须获得工艺依据并经审核。</p>
+<p>验收演练分八个关卡：</p>
+<ol>
+<li>根据报警记录定位 <code>machine/station/CM/Step</code>，显示证据而不是猜测根因。</li>
+<li>确认告警所对应的实际部署版本；若版本未知，阻止自动变更部署。</li>
+<li>工程师明确提出变更理由和验收标准，AI 生成候选 Patch。</li>
+<li>自动识别状态/超时和跨工位等待影响，生成 Impact Report。</li>
+<li>模拟正常反馈、慢反馈、失反馈、停止、复位、断电重启等情形。</li>
+<li>经人工审核后在独立 TIA 工程副本编译，实际错误回到映射节点且不隐式修改行为。</li>
+<li>Archive、hash、reopen，下载工程和证据包；此时只宣布 <code>BUILD_VERIFIED</code>。</li>
+<li>由现场人员在允许窗口部署，记录在线对比和功能复测；新工程师通过该报警直接看到前因后果、工程差异与最终结果。</li>
+</ol>
+<h2 id="section-26">11. 错误与安全边界（必须阻断）</h2>
+<ul>
+<li><code>DRIFT_DETECTED</code>：在线实际程序与批准工程不一致，冻结变更。</li>
+<li><code>UNMAPPED_NATIVE_CODE</code>：某逻辑无法映射至工艺 IR；不得自动覆盖。</li>
+<li><code>AF_PROFILE_MISMATCH</code>：标准库接口/版本不符合锁定 Profile。</li>
+<li><code>BEHAVIOR_REGRESSION</code>：动作、互锁、模式、恢复逻辑回归失败。</li>
+<li><code>UNKNOWN_PLC_STATE</code>：现场状态未知；禁止自动宣称可安全下载。</li>
+<li><code>UNAPPROVED_NATIVE_EDIT</code>：未经审核直接修改源码。</li>
+<li><code>SAFETY_SCOPE_BLOCKED</code>：F/Safety、保护块或安全相关范围需要独立流程，默认不可 AI 修改。</li>
+<li><code>RETAIN_DATA_RISK</code>：DB 布局、重新初始化或保持值风险，阻断自动上线。</li>
+<li><code>BUILD_ARTIFACT_MISMATCH</code>：工件 ID、校验和与审核记录不一致。</li>
+<li><code>REOPEN_FAILED</code>：原生工程归档后重新打开失败，不能发布。</li>
+</ul>
+<h2 id="section-27">12. 对开发 Agent 的执行约束</h2>
+<blockquote>
+<p>你是 aiCoPlc 主 Agent。先锁定 AF 工程基线及对象身份模型，再实现单个真实闭环。你可以安排独立子 Agent 分工，但必须统一架构审查和验收。每次输出：改动文件、接口契约、测试结果、失败列表、工件与证据 ID、是否有实际 TIA 真机运行。不得将 mock 标作真实编译。严禁直接修改官方 AF/LBC 基线、静默覆盖现场 TIA 变更、跳过审批或自动加载现场 PLC。P0 不通过，不继续 P1。</p>
+</blockquote>
+<h3 id="section-28">必须提交的 PR 工件</h3>
+<p><code>design_change.md</code>、<code>semantic_diff.json</code>、<code>impact_report.json</code>、<code>af_compliance.json</code>、<code>behavior_test_report.json</code>、<code>compile_receipt.json</code>、<code>source_map.json</code>、<code>native_artifact_manifest.json</code>、<code>handover_snapshot.json</code>。</p>
+<p>以上均是计划中的<strong>要求和建议结构</strong>，不是当前已有可运行能力或真实验证结果。</p>
+</article><div class="footer">aiCoPlc · 设计建议稿 · 2026-11-15 · 未代表已经完成实机验证</div></main></div><script>const s=document.getElementById('filter'),ls=[...document.querySelectorAll('#nav a')];s.addEventListener('input',()=>{const q=s.value.trim().toLowerCase();let n=0;for(const l of ls){const ok=l.textContent.toLowerCase().includes(q);l.hidden=!ok;if(ok)n++}document.getElementById('none').style.display=n?'none':'block'});</script></body></html>

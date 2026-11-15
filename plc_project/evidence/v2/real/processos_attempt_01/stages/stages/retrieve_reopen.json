@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "retrieve": {
+    "ok": true,
+    "archivePath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\archive\\PRJ_CLAMP_REAL.zap19",
+    "targetDirectory": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\reopen",
+    "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\reopen\\CanvasE2E\\CanvasE2E.ap19",
+    "projectName": "CanvasE2E",
+    "plcName": "PLC_1",
+    "api": "Projects.Retrieve(FileInfo, DirectoryInfo)",
+    "reopenOk": true,
+    "message": "Retrieved via Projects.Retrieve(FileInfo, DirectoryInfo) → C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\reopen\\CanvasE2E\\CanvasE2E.ap19"
+  },
+  "reopenOk": true,
+  "archiveSha256": "sha256:b01954dad1053743ca8ba7ac780865d72ba65297f69edf7f2d908d633f99ea3c",
+  "_exit_code": 0
+}

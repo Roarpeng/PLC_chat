@@ -1,16 +1,19 @@
 import type { Project } from "./store";
+import { ActorRoleWidget } from "./fieldui";
 import { ClampDrawing, Icon, MiniTopo } from "./views";
 
-export function Launcher({ projects, onNew, onImport, onOpen, onDelete }: {
+export function Launcher({ projects, onNew, onImport, onOpen, onDelete, onField }: {
   projects: Project[]; onNew: () => void; onImport: () => void;
-  onOpen: (pid: string, cid: string) => void; onDelete: (pid: string) => void;
+  onOpen: (pid: string, cid: string) => void; onDelete: (pid: string) => void; onField: () => void;
 }) {
   return (
     <div className="launch">
       <div className="launch-top">
         <div className="wordmark"><span className="mk">A</span>aiCoPlc · ProcessOS</div>
         <div className="sp" />
+        <button className="btn sm" onClick={onField}><Icon name="topo" size={13} /> 现场工作台</button>
         <span className="meta">工艺编译平台 · Siemens AF · TIA V19</span>
+        <ActorRoleWidget />
       </div>
 
       <div className="launch-hero">
@@ -20,6 +23,7 @@ export function Launcher({ projects, onNew, onImport, onOpen, onDelete }: {
           <div className="hero-actions">
             <button className="btn primary lg" onClick={onNew}><Icon name="plus" /> 新建项目</button>
             <button className="btn lg" onClick={onImport}><Icon name="import" /> 导入旧项目</button>
+            <button className="btn ghost lg" onClick={onField}><Icon name="topo" /> 现场工作台 · 按报警/工位追溯</button>
           </div>
         </div>
         <div className="hero-fig">

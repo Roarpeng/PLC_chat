@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "project": {
+    "ok": true,
+    "projectPath": "C:\\Users\\vboxuser\\Desktop\\Project\\Code\\PLC_chat\\plc_project\\tmp_validate\\processos_real_skel_20261115_215132\\proj\\CanvasE2E.ap19",
+    "projectName": "CanvasE2E",
+    "plcName": "PLC_1",
+    "deviceName": "PLC_1",
+    "message": "Project opened via TIA Openness."
+  },
+  "compile": {
+    "ok": true,
+    "apiAvailable": true,
+    "state": "Warning",
+    "errorCount": 0,
+    "warningCount": 2,
+    "inconsistentBlocks": [
+      "Compiling finished (errors: 0; warnings: 2)"
+    ],
+    "message": "Compile State=Warning errors=0 warnings=2"
+  },
+  "_exit_code": 0
+}
