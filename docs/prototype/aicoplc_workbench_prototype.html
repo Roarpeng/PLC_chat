@@ -1,0 +1,1782 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>aiCoPlc · AF-First 工艺工作台原型 R3</title>
+<style>
+:root{
+  --bg0:#080d17;--bg1:#0d1422;--bg2:#121b2e;--bg3:#182339;--bg4:#1f2d49;
+  --line:#1e2b46;--line2:#2c3f63;
+  --ink:#dce7f8;--mut:#8296bb;--dim:#5a6d92;
+  --teal:#19c2b0;--teal-bg:#0c2f2e;--teal-line:#12655d;
+  --blue:#4da3ff;--blue-bg:#10233d;--blue-line:#2a5c96;
+  --amber:#ffb224;--amber-bg:#33260c;--amber-line:#8a6516;
+  --red:#ff5c6c;--red-bg:#33131a;--red-line:#8a2f3a;
+  --green:#3ed598;--green-bg:#0e2b22;--green-line:#1d7a58;
+  --mono:ui-monospace,"Cascadia Code",Consolas,"Courier New",monospace;
+  --sans:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+  --sh:0 8px 28px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg0);color:var(--ink);font:13px/1.55 var(--sans);display:grid;grid-template-rows:52px minmax(0,1fr) auto auto;grid-template-columns:minmax(0,1fr);height:100vh;overflow:hidden}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:5px;border:2px solid var(--bg1)}
+::-webkit-scrollbar-thumb:hover{background:var(--teal-line)}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg1);border:1px solid var(--line2);border-radius:6px;padding:5px 8px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 2px rgba(25,194,176,.18)}
+select{cursor:pointer}
+.mono{font-family:var(--mono)}
+.dim{color:var(--dim)}.mut{color:var(--mut)}
+.micro{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:700}
+
+/* ---------- topbar ---------- */
+#topbar{display:flex;align-items:center;gap:10px;padding:0 14px;background:linear-gradient(180deg,#101a2d,#0b1220);border-bottom:1px solid var(--line2);z-index:20;min-width:0;overflow-x:auto;overflow-y:hidden}
+#topbar::-webkit-scrollbar{height:5px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;letter-spacing:.02em;white-space:nowrap}
+.brand .mark{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0e7f86);display:grid;place-items:center;color:#04211f;font-size:14px;font-weight:900;box-shadow:0 0 14px rgba(25,194,176,.35)}
+.brand small{display:block;font-size:9px;letter-spacing:.22em;color:var(--dim);font-weight:700}
+.tb-sep{width:1px;height:24px;background:var(--line2)}
+.tb-proj{font-weight:700;font-size:13px;white-space:nowrap}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--bg2);border-radius:100px;padding:3px 10px;font-size:11px;white-space:nowrap;cursor:default}
+.chip.click{cursor:pointer;transition:border-color .15s,background .15s}
+.chip.click:hover{border-color:var(--teal);background:var(--bg3)}
+.chip .led{width:7px;height:7px;border-radius:50%;background:var(--dim);flex:none}
+.chip.warn{border-color:var(--amber-line);background:var(--amber-bg);color:var(--amber)}.chip.warn .led{background:var(--amber);box-shadow:0 0 7px var(--amber)}
+.chip.ok{border-color:var(--green-line);background:var(--green-bg);color:var(--green)}.chip.ok .led{background:var(--green);box-shadow:0 0 7px var(--green)}
+.chip.err{border-color:var(--red-line);background:var(--red-bg);color:var(--red)}.chip.err .led{background:var(--red);box-shadow:0 0 7px var(--red)}
+.chip.info{border-color:var(--blue-line);background:var(--blue-bg);color:var(--blue)}.chip.info .led{background:var(--blue)}
+.chip.teal{border-color:var(--teal-line);background:var(--teal-bg);color:var(--teal)}.chip.teal .led{background:var(--teal)}
+#tbRev.bump{animation:bump .4s ease}
+@keyframes bump{30%{transform:scale(1.25);background:var(--teal-bg);border-color:var(--teal)}}
+.tb-spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:7px;padding:6px 13px;font-size:12px;font-weight:700;border:1px solid var(--line2);background:var(--bg3);transition:all .15s;white-space:nowrap}
+.btn:hover{border-color:var(--teal);background:var(--bg4)}
+.btn.primary{background:linear-gradient(135deg,#12a394,#0d7d78);border-color:#1cc4b3;color:#03211f;box-shadow:0 2px 12px rgba(25,194,176,.25)}
+.btn.primary:hover{filter:brightness(1.12)}
+.btn.blue{background:linear-gradient(135deg,#2f7fe0,#1d5cab);border-color:#4d9fff;color:#eaf4ff}
+.btn.blue:hover{filter:brightness(1.12)}
+.btn.danger{border-color:var(--red-line);color:var(--red);background:var(--red-bg)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:3px 9px;font-size:11px;border-radius:6px}
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.btn:disabled:hover{border-color:var(--line2);background:var(--bg3)}
+
+/* ---------- main 3-col ---------- */
+#main{display:grid;grid-template-columns:240px minmax(0,1fr) 320px;min-height:0;min-width:0;border-bottom:1px solid var(--line)}
+#tree{background:var(--bg1);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.pane-head{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);flex:none}
+.pane-head .micro{flex:1}
+#treeBody{flex:1;overflow:auto;padding:8px 6px}
+.tnode{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;cursor:pointer;border:1px solid transparent;font-size:12px;transition:background .12s}
+.tnode:hover{background:var(--bg2)}
+.tnode.sel{background:var(--blue-bg);border-color:var(--blue-line)}
+.tnode .tag{font:700 9px var(--mono);padding:1px 5px;border-radius:4px;letter-spacing:.05em;flex:none}
+.tag.unit{background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-line)}
+.tag.em{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-line)}
+.tag.cm{background:#2a2140;color:#b79cff;border:1px solid #4c3a78}
+.tag.step{background:var(--bg3);color:var(--mut);border:1px solid var(--line2)}
+.tag.fault{background:var(--red-bg);color:var(--red);border:1px solid var(--red-line)}
+.tnode .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tnode .cf{width:8px;height:8px;border-radius:50%;flex:none;border:1px solid var(--dim)}
+.tnode .cf.done{background:var(--green);border-color:var(--green);box-shadow:0 0 6px rgba(62,213,152,.6)}
+.tnode .cf.stale{background:var(--amber);border-color:var(--amber)}
+.tindent1{padding-left:16px}.tindent2{padding-left:30px}.tindent3{padding-left:44px}
+#treeFoot{flex:none;border-top:1px solid var(--line);padding:8px;display:flex;gap:6px}
+#treeFoot .btn{flex:1;justify-content:center}
+
+/* ---------- canvas ---------- */
+#canvas{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--bg0)}
+#canvasHead{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--line);background:var(--bg1);flex:none;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:7px;overflow:hidden}
+.seg button{padding:5px 13px;font-size:12px;font-weight:700;color:var(--mut);background:var(--bg2);transition:all .15s}
+.seg button.on{background:var(--teal-bg);color:var(--teal)}
+.seg button:hover:not(.on){background:var(--bg3);color:var(--ink)}
+.emchip{font:700 11px var(--mono);padding:4px 10px;border-radius:6px;border:1px solid var(--line2);color:var(--mut);background:var(--bg2)}
+.emchip.on{border-color:var(--blue-line);color:var(--blue);background:var(--blue-bg)}
+#canvasBody{flex:1;overflow:auto;position:relative;background:
+  linear-gradient(rgba(30,43,70,.28) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(30,43,70,.28) 1px,transparent 1px),
+  radial-gradient(ellipse at 50% 0%,#0e1728 0%,var(--bg0) 70%);
+  background-size:26px 26px,26px 26px,100% 100%}
+#canvasBody svg{display:block;margin:14px auto;max-width:100%;height:auto}
+.canvas-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--dim)}
+.canvas-empty .big{font-size:34px;opacity:.5}
+.svg-node{cursor:pointer}
+.svg-node:hover .nodebox{filter:brightness(1.25)}
+.nodebox{transition:filter .15s}
+.sel-ring{stroke:var(--blue);stroke-width:2;fill:none;filter:drop-shadow(0 0 6px rgba(77,163,255,.7))}
+.trace-active{animation:tracepulse 1s ease infinite}
+@keyframes tracepulse{50%{filter:drop-shadow(0 0 12px rgba(77,163,255,.9)) brightness(1.35)}}
+.trace-done .nodebox{stroke:var(--green)!important}
+
+/* ---------- inspector ---------- */
+#inspector{background:var(--bg1);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+#inspBody{flex:1;overflow:auto;padding:12px}
+.insp-sec{margin-bottom:14px}
+.insp-sec .micro{margin-bottom:6px;display:block}
+.kv{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line);font-size:12px}
+.kv b{font-weight:600;color:var(--mut);flex:none}
+.kv span{text-align:right;word-break:break-all}
+.portrow{display:flex;align-items:center;gap:7px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;margin-bottom:5px;background:var(--bg2);font-size:11.5px}
+.portrow .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.portrow .pn{font-family:var(--mono);font-weight:700}
+.portrow .unb{margin-left:auto;font:700 9px var(--mono);color:var(--amber);border:1px dashed var(--amber-line);padding:1px 6px;border-radius:4px;background:var(--amber-bg)}
+.fieldrow{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px}
+.fieldrow label{flex:1;color:var(--mut)}
+.fieldrow input{width:86px;text-align:right;font-family:var(--mono)}
+.acc-item{display:flex;gap:7px;align-items:flex-start;font-size:11.5px;padding:4px 0;color:var(--mut)}
+.acc-item .ic{flex:none;font-weight:900}
+.note{border-left:3px solid var(--blue-line);background:var(--blue-bg);padding:8px 10px;border-radius:0 6px 6px 0;font-size:11.5px;color:var(--mut);margin:8px 0}
+.note.warn{border-color:var(--amber-line);background:var(--amber-bg)}
+.note.err{border-color:var(--red-line);background:var(--red-bg)}
+.note.ok{border-color:var(--green-line);background:var(--green-bg)}
+
+/* ---------- chat ---------- */
+#chatPanel{height:200px;background:var(--bg1);border-bottom:1px solid var(--line);display:flex;flex-direction:column;transition:height .2s ease;min-height:36px}
+#chatPanel.collapsed{height:36px}
+#chatPanel.collapsed #chatMain{display:none}
+#chatHead{display:flex;align-items:center;gap:9px;padding:7px 14px;cursor:pointer;flex:none;border-bottom:1px solid transparent}
+#chatPanel:not(.collapsed) #chatHead{border-bottom-color:var(--line)}
+#chatHead .micro{color:var(--blue)}
+#chatHead .simbadge{font:700 9px var(--mono);color:var(--amber);border:1px solid var(--amber-line);background:var(--amber-bg);padding:1px 7px;border-radius:4px;letter-spacing:.08em}
+#chatMain{flex:1;display:flex;min-height:0}
+#chatMsgs{flex:1;overflow:auto;padding:10px 14px;display:flex;flex-direction:column;gap:9px}
+.msg{max-width:860px;animation:msgin .25s ease}
+@keyframes msgin{from{opacity:0;transform:translateY(6px)}}
+.msg .who{font:700 10px var(--mono);letter-spacing:.1em;margin-bottom:3px}
+.msg.user .who{color:var(--teal)}
+.msg.ai .who{color:var(--blue)}
+.msg .bubble{border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:12.5px;background:var(--bg2)}
+.msg.user .bubble{background:var(--teal-bg);border-color:var(--teal-line)}
+.msg .bubble p{margin:3px 0}
+.cand{border:1px solid var(--blue-line);border-radius:9px;background:linear-gradient(180deg,#101d33,#0d1626);margin-top:7px;overflow:hidden}
+.cand-head{display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--blue-bg);border-bottom:1px solid var(--blue-line)}
+.cand-head .t{font-weight:800;font-size:12px;color:var(--blue);flex:1}
+.cand-body{padding:8px 11px;font-size:11.5px}
+.opline{display:flex;gap:7px;align-items:baseline;padding:2.5px 0;font-family:var(--mono);font-size:11px}
+.opline .op{font-weight:900;color:var(--teal);flex:none}
+.opline .op.del{color:var(--red)}
+.cand-q{color:var(--amber);padding:2px 0}
+.cand-foot{display:flex;gap:7px;padding:8px 11px;border-top:1px solid var(--line);align-items:center}
+.cand-foot .st{font:700 10px var(--mono);color:var(--dim);margin-left:auto}
+#chatSide{width:250px;flex:none;border-left:1px solid var(--line);padding:9px 11px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.qchip{border:1px solid var(--line2);background:var(--bg2);border-radius:7px;padding:6px 9px;font-size:11px;text-align:left;color:var(--mut);transition:all .15s;line-height:1.4}
+.qchip:hover{border-color:var(--blue-line);color:var(--ink);background:var(--blue-bg)}
+#chatInputRow{flex:none;display:flex;gap:8px;padding:8px 14px;border-top:1px solid var(--line);align-items:flex-end}
+#chatInput{flex:1;resize:none;height:38px;line-height:1.4;border-radius:8px}
+.chev{transition:transform .2s;color:var(--dim);font-size:11px}
+.collapsed .chev{transform:rotate(-90deg)}
+
+/* ---------- dock ---------- */
+#dock{height:252px;background:var(--bg1);display:flex;flex-direction:column;transition:height .2s ease;min-height:38px}
+#dock.collapsed{height:38px}
+#dock.collapsed #dockBody{display:none}
+#dockTabs{display:flex;align-items:center;gap:2px;padding:0 12px;border-bottom:1px solid var(--line);flex:none;height:38px}
+#dock.collapsed #dockTabs{border-bottom:none}
+.dtab{padding:8px 15px;font-size:12px;font-weight:700;color:var(--mut);border-bottom:2px solid transparent;display:flex;gap:7px;align-items:center;transition:color .15s}
+.dtab:hover{color:var(--ink)}
+.dtab.on{color:var(--teal);border-bottom-color:var(--teal)}
+.dtab .bdg{font:700 9px var(--mono);border-radius:4px;padding:0 5px;background:var(--bg3);color:var(--dim)}
+.dtab .bdg.warn{background:var(--amber-bg);color:var(--amber)}
+.dtab .bdg.err{background:var(--red-bg);color:var(--red)}
+.dtab .bdg.ok{background:var(--green-bg);color:var(--green)}
+#dockBody{flex:1;overflow:auto;padding:12px 16px;min-height:0}
+.cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.vcard{border:1px solid var(--line);border-radius:9px;background:var(--bg2);overflow:hidden}
+.vcard-h{padding:7px 11px;border-bottom:1px solid var(--line);font-weight:800;font-size:12px;display:flex;align-items:center;gap:8px;background:var(--bg3)}
+.vcard-b{padding:8px 11px}
+.ck{display:flex;gap:8px;align-items:flex-start;padding:3.5px 0;font-size:11.5px}
+.ck .ic{flex:none;font-weight:900;width:14px;text-align:center}
+.ck.pass .ic{color:var(--green)}.ck.warn .ic{color:var(--amber)}.ck.fail .ic{color:var(--red)}.ck.info .ic{color:var(--blue)}
+.ck .code{font:700 10px var(--mono);color:var(--dim);display:block}
+.ck a{color:var(--blue);cursor:pointer;text-decoration:underline dotted}
+.g0banner{display:flex;gap:10px;align-items:center;border:1px solid var(--amber-line);background:linear-gradient(90deg,var(--amber-bg),transparent);border-radius:8px;padding:8px 12px;margin-bottom:11px;font-size:12px}
+.g0banner .ic{color:var(--amber);font-size:16px}
+.g0banner b{color:var(--amber)}
+
+/* trace */
+.trace-ctl{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.trace-live{display:flex;gap:14px;align-items:center;border:1px solid var(--line);border-radius:8px;background:var(--bg2);padding:6px 12px;margin-bottom:9px;font-size:12px;flex-wrap:wrap}
+.ledgrp{display:flex;gap:5px;align-items:center;font:700 10px var(--mono);color:var(--dim)}
+.ledgrp .l{width:9px;height:9px;border-radius:50%;background:var(--bg4);border:1px solid var(--line2)}
+.ledgrp .l.on{background:var(--teal);border-color:var(--teal);box-shadow:0 0 7px var(--teal)}
+.ledgrp .l.on.blue{background:var(--blue);border-color:var(--blue);box-shadow:0 0 7px var(--blue)}
+.ledgrp .l.on.red{background:var(--red);border-color:var(--red);box-shadow:0 0 7px var(--red)}
+#traceLog{width:100%;border-collapse:collapse;font:11px var(--mono)}
+#traceLog th{position:sticky;top:0;background:var(--bg3);color:var(--dim);text-align:left;padding:4px 8px;font-size:10px;letter-spacing:.08em;border-bottom:1px solid var(--line2)}
+#traceLog td{padding:3px 8px;border-bottom:1px solid var(--line);color:var(--mut)}
+#traceLog tr.fault td{color:var(--red)}
+#traceLog tr.trans td{color:var(--ink)}
+.trace-wrap{max-height:150px;overflow:auto;border:1px solid var(--line);border-radius:7px}
+.props{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:7px;margin-top:10px}
+.prop{border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:11px;background:var(--bg2);display:flex;gap:7px;align-items:center}
+.prop .ic{font-weight:900}
+.prop.pass{border-color:var(--green-line)}.prop.pass .ic{color:var(--green)}
+.prop.fail{border-color:var(--red-line)}.prop.fail .ic{color:var(--red)}
+.prop.na .ic{color:var(--dim)}
+.prop .pn{font-family:var(--mono);font-size:10.5px}
+
+/* scl */
+.scl-files{display:flex;gap:7px;margin-bottom:9px;flex-wrap:wrap}
+.scl-code{border:1px solid var(--line);border-radius:8px;background:#0a101d;overflow:auto;max-height:170px;font:11.5px/1.6 var(--mono)}
+.scl-line{display:flex;white-space:pre;padding:0 10px;cursor:pointer}
+.scl-line:hover{background:var(--bg3)}
+.scl-line.hl{background:var(--blue-bg)}
+.scl-line .ln{color:#3d5178;width:34px;flex:none;text-align:right;margin-right:12px;user-select:none}
+.scl-line .lc{color:#c6d8f5}
+.scl-line .kw{color:#5eb6ff}.scl-line .cm{color:#51648a}.scl-line .st{color:#7fe0d0}
+
+/* review */
+.rev-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:13px}
+.conf-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line);font-size:12px}
+.conf-row .nm{flex:1}
+.hashline{font:11px var(--mono);color:var(--teal);word-break:break-all;background:var(--bg0);border:1px solid var(--line);border-radius:6px;padding:6px 9px;margin:6px 0}
+.diffline{font:11px var(--mono);padding:2.5px 0;color:var(--mut)}
+.diffline b{color:var(--teal)}
+
+/* delivery */
+.pipe{display:flex;gap:0;align-items:stretch;margin:10px 0 12px;flex-wrap:wrap}
+.pstage{flex:1;min-width:96px;border:1px solid var(--line);background:var(--bg2);padding:7px 9px;position:relative;font-size:10.5px}
+.pstage:first-child{border-radius:8px 0 0 8px}
+.pstage:last-child{border-radius:0 8px 8px 0}
+.pstage .pn{font:800 10px var(--mono);letter-spacing:.04em;color:var(--dim);display:flex;align-items:center;gap:6px}
+.pstage .ps{color:var(--dim);font-size:10px;margin-top:2px}
+.pstage.run{border-color:var(--blue-line);background:var(--blue-bg)}
+.pstage.run .pn{color:var(--blue)}
+.pstage.run::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:40%;background:var(--blue);animation:scan 1.1s linear infinite}
+@keyframes scan{from{left:-40%}to{left:100%}}
+.pstage.done{border-color:var(--green-line);background:var(--green-bg)}
+.pstage.done .pn{color:var(--green)}
+.pstage.fail{border-color:var(--red-line);background:var(--red-bg)}
+.pstage.fail .pn{color:var(--red)}
+.evtlog{border:1px solid var(--line);border-radius:7px;background:#0a101d;max-height:110px;overflow:auto;padding:6px 10px;font:11px var(--mono)}
+.evt{padding:1.5px 0;color:var(--mut)}
+.evt .seq{color:#3d5178;margin-right:8px}
+.evt.ok{color:var(--green)}.evt.err{color:var(--red)}.evt.warn{color:var(--amber)}
+.diag{border:1px solid var(--red-line);background:var(--red-bg);border-radius:7px;padding:7px 10px;margin-top:8px;font-size:11.5px}
+.diag .dc{font:800 10px var(--mono);color:var(--red)}
+.artifact{border:1px solid var(--green-line);background:var(--green-bg);border-radius:9px;padding:10px 13px;margin-top:10px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.artifact .ic{font-size:22px}
+.gates{display:flex;gap:9px;flex-wrap:wrap;margin:8px 0}
+
+/* modal / toast */
+#modalRoot{position:fixed;inset:0;z-index:100;display:none;place-items:center;background:rgba(4,8,16,.72);backdrop-filter:blur(3px)}
+#modalRoot.open{display:grid}
+.modal{width:min(680px,92vw);max-height:84vh;overflow:auto;background:var(--bg2);border:1px solid var(--line2);border-radius:13px;box-shadow:var(--sh);animation:msgin .2s ease}
+.modal-h{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg2);z-index:2}
+.modal-h .t{font-weight:800;font-size:15px;flex:1}
+.modal-b{padding:16px 18px;font-size:12.5px}
+.modal-b h4{font-size:13px;color:var(--teal);margin:13px 0 6px}
+.modal-b h4:first-child{margin-top:0}
+.modal-b p{margin:5px 0;color:var(--mut)}
+.modal-b table{width:100%;border-collapse:collapse;font-size:11.5px;margin:7px 0}
+.modal-b th{background:var(--bg3);text-align:left;padding:5px 9px;color:var(--mut);border:1px solid var(--line)}
+.modal-b td{padding:5px 9px;border:1px solid var(--line);color:var(--mut);vertical-align:top}
+.xbtn{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:var(--dim);font-size:15px}
+.xbtn:hover{background:var(--bg4);color:var(--ink)}
+#toastRoot{position:fixed;top:62px;right:16px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--bg3);border:1px solid var(--line2);border-left:3px solid var(--teal);border-radius:8px;padding:9px 14px;font-size:12px;box-shadow:var(--sh);animation:toastin .25s ease;max-width:380px}
+.toast.warn{border-left-color:var(--amber)}.toast.err{border-left-color:var(--red)}.toast.ok{border-left-color:var(--green)}
+@keyframes toastin{from{opacity:0;transform:translateX(30px)}}
+.legend{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.legend span{font:700 9.5px var(--mono);border:1px solid var(--line2);border-radius:4px;padding:2px 7px;color:var(--dim)}
+.legend .l1{color:var(--dim)}.legend .l2{color:var(--blue)}.legend .l3{color:var(--amber)}.legend .l4{color:var(--teal)}.legend .l5{color:var(--green)}
+.checkline{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--bg1);margin:9px 0;cursor:pointer;font-size:12px}
+.checkline input{margin-top:2px;accent-color:var(--teal)}
+@media(max-width:1100px){#main{grid-template-columns:200px minmax(0,1fr) 270px}#chatSide{display:none}}
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand"><span class="mark">A</span><span>aiCoPlc<small>AF-FIRST WORKBENCH · R3 PROTOTYPE</small></span></div>
+  <div class="tb-sep"></div>
+  <span class="tb-proj" id="tbProj">夹紧工站演示工程</span>
+  <span class="chip click warn" id="tbProfile" data-action="open-g0" title="AF Profile 基线状态（G0）"><span class="led"></span><span class="mono">SIEMENS_AF_BASIC_FOLDER_V19</span>&nbsp;未验证</span>
+  <span class="chip teal" id="tbRev" title="EngineeringIR 修订号（原子 Patch 递增）"><span class="led"></span>rev <b class="mono" id="tbRevN">3</b></span>
+  <span class="chip click" id="tbHash" data-action="open-hash" title="当前语义哈希 spec_hash"><span class="led"></span><span class="mono" id="tbHashN">…</span></span>
+  <span class="chip click ok" id="tbValid" data-action="goto-validate"><span class="led"></span><span id="tbValidN">0 错误</span></span>
+  <span class="chip click" id="tbApproval" data-action="goto-review"><span class="led"></span><span id="tbApprovalN">未审核</span></span>
+  <div class="tb-spacer"></div>
+  <button class="btn sm ghost" data-action="toggle-focus" id="focusBtn" title="折叠/展开对话与底部面板">专注画布</button>
+  <button class="btn sm" data-action="run-validate">校验</button>
+  <button class="btn sm primary" data-action="goto-delivery">交付</button>
+  <button class="btn sm ghost" data-action="open-about" title="原型说明：真实与模拟边界">ⓘ 原型说明</button>
+</header>
+
+<div id="main">
+  <aside id="tree">
+    <div class="pane-head"><span class="micro">工程目录 · AF 角色</span><span class="dim mono" style="font-size:10px" id="treeRev">rev 3</span></div>
+    <div id="treeBody"></div>
+    <div id="treeFoot">
+      <button class="btn sm ghost" data-action="open-import">导入旧工程</button>
+      <button class="btn sm ghost" data-action="open-reset">重置</button>
+    </div>
+  </aside>
+
+  <section id="canvas">
+    <div id="canvasHead">
+      <div class="seg">
+        <button data-action="canvas-tab" data-tab="device" id="ctDevice">设备功能图</button>
+        <button data-action="canvas-tab" data-tab="sfc" id="ctSfc" class="on">工艺 SFC</button>
+      </div>
+      <span id="emChips" style="display:flex;gap:6px"></span>
+      <div class="tb-spacer"></div>
+      <span class="dim" style="font-size:11px" id="canvasHint">点击步/节点查看 Inspector · Trace 运行时此处联动高亮</span>
+    </div>
+    <div id="canvasBody"></div>
+  </section>
+
+  <aside id="inspector">
+    <div class="pane-head"><span class="micro">节点 Inspector</span><span class="chip teal" style="padding:1px 8px;font-size:10px" id="inspKind">EM</span></div>
+    <div id="inspBody"></div>
+  </aside>
+</div>
+
+<section id="chatPanel">
+  <div id="chatHead" data-action="toggle-chat">
+    <span class="chev">▼</span>
+    <span class="micro">AI 工艺对话 · CandidatePatch</span>
+    <span class="simbadge">规则模拟 · 未接 LLM</span>
+    <span class="dim" style="font-size:11px">AI 只产出候选 Patch 与追问 · 无审批/编译/写 TIA 权限</span>
+  </div>
+  <div id="chatMain">
+    <div id="chatMsgs"></div>
+    <div id="chatSide">
+      <span class="micro">快捷工艺指令</span>
+      <button class="qchip" data-action="chip" data-text="新建夹紧单元：气缸伸出到位后保持 2 秒，再缩回；伸出/缩回 3 秒超时报故障，复位必须在缩回到位后。">新建夹紧单元工艺（WP-02 切片）</button>
+      <button class="qchip" data-action="chip" data-text="把保持时间改为 4 秒">保持时间 2s → 4s</button>
+      <button class="qchip" data-action="chip" data-text="把伸出超时改为 5 秒">伸出超时 3s → 5s</button>
+      <button class="qchip" data-action="chip" data-text="添加送料单元，气缸伸出到位后缩回，3 秒超时">添加送料单元 EM</button>
+      <button class="qchip" data-action="chip" data-text="删除送料单元">删除送料单元</button>
+    </div>
+  </div>
+  <div id="chatInputRow">
+    <textarea id="chatInput" placeholder="描述工艺意图，例如：把保持时间改为 4 秒（Ctrl+Enter 发送）"></textarea>
+    <button class="btn blue" data-action="send-chat">发送 ⏎</button>
+  </div>
+</section>
+
+<section id="dock">
+  <div id="dockTabs">
+    <span class="chev" data-action="toggle-dock" style="cursor:pointer;margin-right:6px">▼</span>
+    <button class="dtab on" data-action="dock-tab" data-tab="validate">校验 <span class="bdg warn" id="bdgValidate">3</span></button>
+    <button class="dtab" data-action="dock-tab" data-tab="trace">Trace <span class="bdg" id="bdgTrace">0/6</span></button>
+    <button class="dtab" data-action="dock-tab" data-tab="scl">SCL 派生</button>
+    <button class="dtab" data-action="dock-tab" data-tab="review">人工审核 <span class="bdg" id="bdgReview">未批准</span></button>
+    <button class="dtab" data-action="dock-tab" data-tab="delivery">交付 <span class="bdg" id="bdgDelivery">模拟</span></button>
+    <div class="tb-spacer"></div>
+    <span class="dim" style="font-size:10.5px" class="mono">证据分级：designed → offline_verified → simulated → V19_compiled → native_archived → field_verified</span>
+  </div>
+  <div id="dockBody"></div>
+</section>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+"use strict";
+/* ================= utils ================= */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function sha256(bytes){
+  const rr=(v,a)=>(v>>>a)|(v<<(32-a));
+  const H=[],K=[],comp={};let pc=0;
+  for(let cand=2;pc<64;cand++){
+    if(!comp[cand]){
+      for(let i=cand*2;i<313;i+=cand)comp[i]=true;
+      if(pc<8)H[pc]=(Math.pow(cand,.5)*4294967296)|0;
+      K[pc++]=(Math.pow(cand,1/3)*4294967296)|0;
+    }
+  }
+  const bitLen=bytes.length*8;
+  let msg=bytes+"\x80";
+  while(msg.length%64!==56)msg+="\x00";
+  const words=[];
+  for(let i=0;i<msg.length;i++){
+    const j=msg.charCodeAt(i);
+    if(j>>8)return "";
+    words[i>>2]=(words[i>>2]||0)|(j<<((3-i%4)*8));
+  }
+  words.push(Math.floor(bitLen/4294967296));
+  words.push(bitLen|0);
+  const h=H.slice();
+  for(let off=0;off<words.length;off+=16){
+    const w=words.slice(off,off+16);
+    for(let i=16;i<64;i++){
+      const s0=rr(w[i-15],7)^rr(w[i-15],18)^(w[i-15]>>>3);
+      const s1=rr(w[i-2],17)^rr(w[i-2],19)^(w[i-2]>>>10);
+      w[i]=(w[i-16]+s0+w[i-7]+s1)|0;
+    }
+    let a=h[0],b=h[1],c=h[2],d=h[3],e=h[4],f=h[5],g=h[6],hh=h[7];
+    for(let i=0;i<64;i++){
+      const t1=(hh+(rr(e,6)^rr(e,11)^rr(e,25))+((e&f)^(~e&g))+K[i]+w[i])|0;
+      const t2=((rr(a,2)^rr(a,13)^rr(a,22))+((a&b)^(a&c)^(b&c)))|0;
+      hh=g;g=f;f=e;e=(d+t1)|0;d=c;c=b;b=a;a=(t1+t2)|0;
+    }
+    h[0]=(h[0]+a)|0;h[1]=(h[1]+b)|0;h[2]=(h[2]+c)|0;h[3]=(h[3]+d)|0;
+    h[4]=(h[4]+e)|0;h[5]=(h[5]+f)|0;h[6]=(h[6]+g)|0;h[7]=(h[7]+hh)|0;
+  }
+  return h.map(x=>(x>>>0).toString(16).padStart(8,"0")).join("");
+}
+const sha=s=>sha256(unescape(encodeURIComponent(s)));
+function canonical(o){
+  if(Array.isArray(o))return "["+o.map(canonical).join(",")+"]";
+  if(o&&typeof o==="object")return "{"+Object.keys(o).sort().map(k=>JSON.stringify(k)+":"+canonical(o[k])).join(",")+"}";
+  return JSON.stringify(o);
+}
+const now=()=>new Date().toISOString().replace("T"," ").slice(0,19);
+const shortHash=h=>"sha256:"+h.slice(0,12)+"…";
+function toast(msg,kind){
+  const t=document.createElement("div");
+  t.className="toast "+(kind||"");t.innerHTML=msg;
+  $("#toastRoot").appendChild(t);
+  setTimeout(()=>{t.style.opacity="0";t.style.transition="opacity .3s";setTimeout(()=>t.remove(),320);},3600);
+}
+function openModal(html){
+  const r=$("#modalRoot");
+  r.innerHTML='<div class="modal">'+html+"</div>";
+  r.classList.add("open");
+}
+function closeModal(){$("#modalRoot").classList.remove("open");$("#modalRoot").innerHTML="";}
+$("#modalRoot").addEventListener("click",e=>{if(e.target.id==="modalRoot")closeModal();});
+function modalHead(title){return '<div class="modal-h"><span class="t">'+title+'</span><button class="xbtn" data-action="modal-close">✕</button></div>';}
+
+/* ================= state ================= */
+const FRAMEWORK={
+  profile_id:"SIEMENS_AF_BASIC_FOLDER_V19",
+  library_id:"SIEMENS_AF_BASIC_FOLDER",
+  library_version:"V19-BASIC-FOLDER-2.2",
+  template_sha256:"sha256:af_basic_folder_v19_template_unbound",
+  status:"FRAMEWORK_NOT_VERIFIED"
+};
+function clampSteps(){return [
+  {id:"S_WAIT",name:"等待启动",entry:[],exit:[],guard:"Start AND SafetyPermit",duration_ms:0,timeout_ms:0,next:"S_EXTEND",failure:"",is_fault:false},
+  {id:"S_EXTEND",name:"伸出夹紧",entry:[{target:"CM_CLAMP_CYL",cmd:"Extend",val:true}],exit:[{target:"CM_CLAMP_CYL",cmd:"Extend",val:false}],guard:"Extended",duration_ms:0,timeout_ms:3000,next:"S_HOLD",failure:"S_FAULT",is_fault:false},
+  {id:"S_HOLD",name:"保持夹紧",entry:[],exit:[],guard:"",duration_ms:2000,timeout_ms:0,next:"S_RETRACT",failure:"",is_fault:false},
+  {id:"S_RETRACT",name:"缩回释放",entry:[{target:"CM_CLAMP_CYL",cmd:"Retract",val:true}],exit:[{target:"CM_CLAMP_CYL",cmd:"Retract",val:false}],guard:"Retracted",duration_ms:0,timeout_ms:3000,next:"S_DONE",failure:"S_FAULT",is_fault:false},
+  {id:"S_DONE",name:"完成",entry:[],exit:[],guard:"",duration_ms:0,timeout_ms:0,next:"S_WAIT",failure:"",is_fault:false,loop:true},
+  {id:"S_FAULT",name:"故障保持",entry:[],exit:[],guard:"",duration_ms:0,timeout_ms:0,next:"S_WAIT",failure:"",is_fault:true,reset_guard:"Reset AND Retracted AND NOT Extended"}
+];}
+function clampEm(){return {
+  id:"EM_CLAMP",name:"夹紧单元",
+  cms:[{id:"CM_CLAMP_CYL",name:"夹紧气缸（双作用）",template:"LBC_CYLINDER · 签名待 G0 验证",
+    ports:{commands:["Extend","Retract"],feedback:["Extended","Retracted"],status:["Busy","Done","Error"]},
+    io:{Extended:"unbound",Retracted:"unbound"},instance_db:"iCM_ClampCyl"}],
+  steps:clampSteps(),
+  acceptance:["extend_timeout_causes_fault","no_simultaneous_extend_retract","reset_requires_safe_condition"]
+};}
+function feedEm(){return {
+  id:"EM_FEED",name:"送料单元",
+  cms:[{id:"CM_FEED_CYL",name:"送料气缸（双作用）",template:"LBC_CYLINDER · 签名待 G0 验证",
+    ports:{commands:["Extend","Retract"],feedback:["Extended","Retracted"],status:["Busy","Done","Error"]},
+    io:{Extended:"unbound",Retracted:"unbound"},instance_db:"iCM_FeedCyl"}],
+  steps:[
+    {id:"F_WAIT",name:"等待启动",entry:[],exit:[],guard:"Start AND SafetyPermit",duration_ms:0,timeout_ms:0,next:"F_EXTEND",failure:"",is_fault:false},
+    {id:"F_EXTEND",name:"伸出送料",entry:[{target:"CM_FEED_CYL",cmd:"Extend",val:true}],exit:[{target:"CM_FEED_CYL",cmd:"Extend",val:false}],guard:"Extended",duration_ms:0,timeout_ms:3000,next:"F_RETRACT",failure:"F_FAULT",is_fault:false},
+    {id:"F_RETRACT",name:"缩回",entry:[{target:"CM_FEED_CYL",cmd:"Retract",val:true}],exit:[{target:"CM_FEED_CYL",cmd:"Retract",val:false}],guard:"Retracted",duration_ms:0,timeout_ms:3000,next:"F_DONE",failure:"F_FAULT",is_fault:false},
+    {id:"F_DONE",name:"完成",entry:[],exit:[],guard:"",duration_ms:0,timeout_ms:0,next:"F_WAIT",failure:"",is_fault:false,loop:true},
+    {id:"F_FAULT",name:"故障保持",entry:[],exit:[],guard:"",duration_ms:0,timeout_ms:0,next:"F_WAIT",failure:"",is_fault:true,reset_guard:"Reset AND Retracted AND NOT Extended"}
+  ],
+  acceptance:["extend_timeout_causes_fault","no_simultaneous_extend_retract"]
+};}
+const S={
+  projectName:"夹紧工站演示工程",
+  revision:3,
+  ir:{unit:{id:"U_ASSEMBLY",name:"装配工站"},ems:[clampEm()],compiler_fix_rev:0},
+  specHash:"",
+  review:{confirmed:{},changeset:null,approval:null,riskAccepted:false,riskHash:""},
+  changeLog:[
+    {rev:2,label:"创建 EM_CLAMP + CM_CLAMP_CYL + 6 步序（含故障/复位）",ts:"2026-11-14 09:12"},
+    {rev:3,label:"复位语义确认：仅 Retracted 且 NOT Extended 时允许复位",ts:"2026-11-14 09:15"}
+  ],
+  chat:[],
+  candSeq:0,
+  validation:null,
+  ui:{selected:"EM_CLAMP",canvasTab:"sfc",selectedEm:"EM_CLAMP",dockTab:"validate",chatOpen:true,dockOpen:true,sclFile:"seq"},
+  trace:{scenario:"normal_cycle",speed:4,running:false,paused:false,simTime:0,step:"S_WAIT",cmds:{Extend:false,Retract:false},inputs:{Start:false,Permit:true,Reset:false,Extended:false,Retracted:true},log:[],visited:[],flags:{},done:false,result:"",scenariosRun:{}},
+  delivery:{job:null,timers:[],injectError:false},
+  baselineHash:""
+};
+function recomputeHash(){S.specHash=sha(canonical(S.ir));}
+function allNodes(){
+  const list=[{id:S.ir.unit.id,kind:"unit",name:S.ir.unit.name}];
+  for(const em of S.ir.ems){
+    list.push({id:em.id,kind:"em",name:em.name});
+    for(const cm of em.cms)list.push({id:cm.id,kind:"cm",name:cm.name,em:em.id});
+    for(const st of em.steps)list.push({id:st.id,kind:"step",name:st.name,em:em.id,fault:st.is_fault});
+  }
+  return list;
+}
+function findNode(id){
+  if(id===S.ir.unit.id)return{kind:"unit",node:S.ir.unit};
+  for(const em of S.ir.ems){
+    if(em.id===id)return{kind:"em",node:em};
+    for(const cm of em.cms)if(cm.id===id)return{kind:"cm",node:cm,em};
+    for(const st of em.steps)if(st.id===id)return{kind:"step",node:st,em};
+  }
+  return null;
+}
+function stepsUsingCm(cmId){
+  const out=[];
+  for(const em of S.ir.ems)for(const st of em.steps)
+    if([...st.entry,...st.exit].some(a=>a.target===cmId))out.push(st.id);
+  return out;
+}
+
+/* ================= validation ================= */
+function computeValidation(){
+  const errors=[],warnings=[],shape=[],behavior=[],impl=[];
+  const ok=(arr,code,msg,node)=>arr.push({level:"pass",code,msg,node});
+  const wn=(arr,code,msg,node)=>{arr.push({level:"warn",code,msg,node});warnings.push({code,msg,node});};
+  ok(shape,"AF_OWNERSHIP","每个 EM 归属 Unit，CM 归属 EM，Step 归属 EM");
+  ok(shape,"STABLE_ID","全部标识符符合稳定 ID 文法");
+  ok(shape,"CALL_GRAPH","调用依赖闭包完整：OB_Main → EM Sequence → CM Driver");
+  wn(shape,"TEMPLATE_UNVERIFIED","AF 模板哈希为占位符 template_unbound · G0 阻断真实交付（见顶栏 Profile）");
+  for(const em of S.ir.ems)for(const cm of em.cms)
+    wn(shape,"UNKNOWN_LBC_SIGNATURE",cm.id+" 库块签名待真实模板反射验证（G0）",cm.id);
+  ok(behavior,"GUARD_TYPED","GuardAST 类型检查通过（BOOL/TIME）");
+  ok(behavior,"SINGLE_WRITER","命令单写者：Extend/Retract 各仅一个步序写入",S.ir.ems[0]?.cms[0]?.id);
+  ok(behavior,"FAULT_PATH","每个带超时步均有异常出口 → FAULT",S.ir.ems[0]?.steps.find(s=>s.is_fault)?.id);
+  ok(behavior,"RESET_SAFE","复位 Guard 含安全条件（Retracted AND NOT Extended）");
+  ok(behavior,"REACHABILITY","全部步可达，无悬空引用");
+  ok(behavior,"NO_PARALLEL","未使用 Fork/Join（UNSUPPORTED_PARALLEL_SEMANTICS 保持阻断）");
+  for(const em of S.ir.ems)for(const cm of em.cms)for(const fb of cm.ports.feedback)
+    if(cm.io[fb]==="unbound")wn(behavior,"UNBOUND_IO",cm.id+"."+fb+" 未绑定 I/O · 保持 unbound，不虚构物理地址",cm.id);
+  let steps=0,actions=0,guards=0,timers=0;
+  for(const em of S.ir.ems)for(const st of em.steps){
+    steps++;actions+=st.entry.length+st.exit.length;
+    if(st.guard)guards++;
+    if(st.timeout_ms)timers++;
+    if(st.duration_ms)timers++;
+  }
+  ok(impl,"SEMANTIC_COVERAGE","语义覆盖率 "+steps+"/"+steps+" 步 · "+actions+" 动作 · "+guards+" Guard · "+timers+" 计时（可执行 lowering，非注释）");
+  ok(impl,"INSTANCE_DB","实例 DB 与调用顺序已生成（OB_Main 未被排除）");
+  ok(impl,"SOURCE_MAP","SourceMap 无悬空：SCL 行 → Step/CM 双向可追溯");
+  S.validation={errors,warnings,shape,behavior,impl,coverage:{steps,actions,guards,timers},at:now()};
+}
+
+/* ================= patch / candidate ================= */
+function resolvePath(ir,path){
+  const seg=path.split("/").filter(Boolean);
+  let cur=ir;
+  for(let i=0;i<seg.length;i++){
+    const s=seg[i];
+    if(s==="em"){const id=seg[++i];cur=cur.ems.find(e=>e.id===id);}
+    else if(s==="cm"){const id=seg[++i];cur=cur.cms.find(c=>c.id===id);}
+    else if(s==="step"){const id=seg[++i];cur=cur.steps.find(x=>x.id===id);}
+    else cur=cur[s];
+    if(cur==null)return undefined;
+  }
+  return cur;
+}
+function setPath(ir,path,val){
+  const seg=path.split("/").filter(Boolean);
+  let cur=ir;
+  for(let i=0;i<seg.length-1;i++){
+    const s=seg[i];
+    if(s==="em"){const id=seg[++i];cur=cur.ems.find(e=>e.id===id);}
+    else if(s==="cm"){const id=seg[++i];cur=cur.cms.find(c=>c.id===id);}
+    else if(s==="step"){const id=seg[++i];cur=cur.steps.find(x=>x.id===id);}
+    else cur=cur[s];
+  }
+  cur[seg[seg.length-1]]=val;
+}
+function applyOps(ops){
+  for(const op of ops){
+    if(op.op==="set")setPath(S.ir,op.path,op.value);
+    else if(op.op==="add_em")S.ir.ems.push(op.em);
+    else if(op.op==="remove_em")S.ir.ems=S.ir.ems.filter(e=>e.id!==op.emId);
+  }
+}
+function newCandidate(title,ops,questions,assumptions,impact){
+  return {id:"CP-"+String(++S.candSeq).padStart(3,"0"),title,ops,questions:questions||[],assumptions:assumptions||[],impact:impact||[],status:"pending",baseRev:S.revision};
+}
+function adoptCandidate(cand){
+  if(cand.status!=="pending")return;
+  applyOps(cand.ops);
+  if(cand.ops.some(o=>o.path==="/compiler_fix_rev")){
+    S.delivery.injectError=false;
+    if(S.delivery.job&&S.delivery.job.status==="FAILED")S.delivery.job=null;
+  }
+  cand.status="adopted";cand.adoptedRev=S.revision+1;
+  S.revision++;
+  S.changeLog.push({rev:S.revision,label:cand.title,ts:now()});
+  const oldHash=S.specHash;
+  recomputeHash();
+  if(S.review.approval&&S.review.approval.spec_hash!==S.specHash){
+    toast("spec_hash 变化 · 旧审核自动失效（APPROVAL_SPEC_HASH_STALE）","warn");
+  }
+  S.review.changeset=null;
+  S.review.riskAccepted=false;
+  computeValidation();
+  if(S.ui.selectedEm&&!S.ir.ems.find(e=>e.id===S.ui.selectedEm))S.ui.selectedEm=S.ir.ems[0]?.id||"";
+  if(!findNode(S.ui.selected))S.ui.selected=S.ir.ems[0]?.id||S.ir.unit.id;
+  pushMsg("ai","已采纳 <b>"+esc(cand.id)+"</b> · revision <b class='mono'>"+oldHash.slice(0,0)+S.revision+"</b> · 新 spec_hash <span class='mono'>"+shortHash(S.specHash)+"</span>。Trace / SCL / 校验已重新派生；节点确认与审核需按新哈希重新执行。");
+  renderAll();
+  const rv=$("#tbRev");rv.classList.remove("bump");void rv.offsetWidth;rv.classList.add("bump");
+  toast("Patch 已原子提交 · rev "+S.revision,"ok");
+}
+function discardCandidate(cand){
+  if(cand.status!=="pending")return;
+  cand.status="discarded";renderChat();
+  toast("候选已放弃，IR 未变化","");
+}
+function directPatch(label,fn){
+  fn();
+  S.revision++;
+  S.changeLog.push({rev:S.revision,label,ts:now()});
+  recomputeHash();
+  S.review.changeset=null;S.review.riskAccepted=false;
+  computeValidation();renderAll();
+  const rv=$("#tbRev");rv.classList.remove("bump");void rv.offsetWidth;rv.classList.add("bump");
+  toast("Inspector Patch 已提交 · rev "+S.revision,"ok");
+}
+
+/* ================= chat intent (rule-based prototype) ================= */
+function pushMsg(role,html,cand){
+  S.chat.push({role,html,cand:cand||null,ts:now()});
+  renderChat();
+  const m=$("#chatMsgs");m.scrollTop=m.scrollHeight;
+}
+function parseAndRespond(text){
+  pushMsg("user",esc(text));
+  const t=text.replace(/\s+/g," ");
+  const holdM=t.match(/保持(?:时间)?\s*(?:改为|改成|设置为|设为|调整为|=|到)?\s*(\d+(?:\.\d+)?)\s*秒/);
+  const toM=t.match(/(伸出|缩回)?超时(?:时间)?\s*(?:改为|改成|设置为|设为|调整为|=|到)?\s*(\d+(?:\.\d+)?)\s*秒/);
+  const emC=S.ir.ems.find(e=>e.id==="EM_CLAMP");
+  setTimeout(()=>{
+    if(/(新建|创建|添加|增加).*(夹紧|clamp)/i.test(t)&&!emC){
+      const cand=newCandidate("创建夹紧单元 AF 模型（Unit/EM/CM/Sequence）",[
+        {op:"add_em",em:clampEm(),label:"+ EM_CLAMP · CM_CLAMP_CYL · S_WAIT→S_EXTEND→S_HOLD(2s)→S_RETRACT→S_DONE · S_FAULT"}
+      ],[
+        "伸出/缩回到位反馈来自哪个传感器？未提供前保持 unbound，不虚构 %I 地址。",
+      ],[
+        "假设：复位仅在 Retracted AND NOT Extended 时允许（工艺安全默认，需人工确认节点）。",
+        "假设：伸出/缩回超时各 3s → S_FAULT（来自描述）。"
+      ],["新增 9 个语义节点","Trace/SCL 将派生","需节点确认 + ChangeSet 人工批准"]);
+      pushMsg("ai","已解析工艺意图并映射 AF 角色：站级→<b>Unit</b>，夹紧任务→<b>EM_CLAMP</b>，双作用气缸→<b>CM_CLAMP_CYL</b>（LBC 签名待 G0 验证），动作→<b>Sequence Step</b>。有 1 个追问与 2 个显式假设，请审阅候选：",cand);
+      return;
+    }
+    if(/(新建|创建|添加|增加).*(夹紧|clamp)/i.test(t)&&emC){
+      pushMsg("ai","EM_CLAMP 已存在（rev "+S.revision+"）。不重复创建 CM。你可以直接修改参数，例如「把保持时间改为 4 秒」，或「添加送料单元」。");
+      return;
+    }
+    if(holdM&&emC){
+      const sec=parseFloat(holdM[1]),ms=Math.round(sec*1000);
+      const st=emC.steps.find(s=>s.id==="S_HOLD");
+      if(ms===st.duration_ms){pushMsg("ai","S_HOLD 保持时间已是 "+sec+"s，无需变更。");return;}
+      if(ms<100||ms>600000){pushMsg("ai","保持时间 "+sec+"s 超出工艺允许范围（0.1s–600s）。请给出合理值，我不会静默截断。");return;}
+      const cand=newCandidate("S_HOLD 保持时间 "+(st.duration_ms/1000)+"s → "+sec+"s",[
+        {op:"set",path:"/em/EM_CLAMP/step/S_HOLD/duration_ms",value:ms,label:"S_HOLD.duration_ms: "+st.duration_ms+" → "+ms}
+      ],[],[],["影响步：S_HOLD","Trace 保持段与 SCL TON_Hold.PT 同步变化","spec_hash 变化 → 旧审核失效"]);
+      pushMsg("ai","定位到 <b>S_HOLD</b>（EM_CLAMP）。这是一个确定性参数变更，候选如下，采纳后 revision +1：",cand);
+      return;
+    }
+    if(toM&&emC){
+      const sec=parseFloat(toM[2]),ms=Math.round(sec*1000);
+      const which=toM[1];
+      const targets=which==="伸出"?["S_EXTEND"]:which==="缩回"?["S_RETRACT"]:["S_EXTEND","S_RETRACT"];
+      if(ms<100||ms>600000){pushMsg("ai","超时 "+sec+"s 超出允许范围（0.1s–600s），请重新指定。");return;}
+      const ops=targets.map(id=>{
+        const st=emC.steps.find(s=>s.id===id);
+        return {op:"set",path:"/em/EM_CLAMP/step/"+id+"/timeout_ms",value:ms,label:id+".timeout_ms: "+st.timeout_ms+" → "+ms};
+      });
+      const cand=newCandidate((which||"伸出/缩回")+"超时 → "+sec+"s",ops,[],[],["超时 TON 与 Trace 故障注入点同步变化","spec_hash 变化 → 旧审核失效"]);
+      pushMsg("ai","将修改 "+targets.map(x=>"<b>"+x+"</b>").join("、")+" 的超时计时。候选如下：",cand);
+      return;
+    }
+    if(/(添加|增加|新建).*(送料|上料|feed)/i.test(t)){
+      if(S.ir.ems.find(e=>e.id==="EM_FEED")){pushMsg("ai","EM_FEED 已存在，不重复创建。");return;}
+      const cand=newCandidate("创建送料单元 EM_FEED",[
+        {op:"add_em",em:feedEm(),label:"+ EM_FEED · CM_FEED_CYL · F_WAIT→F_EXTEND→F_RETRACT→F_DONE · F_FAULT"}
+      ],["送料到位反馈传感器未提供 → 保持 unbound。"],["假设：伸出/缩回超时各 3s（可在 Inspector 修改）。"],["设备图新增 EM 分支","SFC 画布出现 EM 页签"]);
+      pushMsg("ai","识别为新增任务级单元 → <b>EM_FEED</b>，复用已验证的 CM 模板类型（签名仍待 G0）。候选如下：",cand);
+      return;
+    }
+    if(/(删除|移除).*(送料|feed)/i.test(t)){
+      if(!S.ir.ems.find(e=>e.id==="EM_FEED")){pushMsg("ai","当前工程没有 EM_FEED，无需删除。");return;}
+      const cand=newCandidate("删除 EM_FEED 及其 CM/步序",[
+        {op:"remove_em",emId:"EM_FEED",label:"− EM_FEED · CM_FEED_CYL · 5 步序（引用闭包检查通过）"}
+      ],[],[],["SFC/设备图移除该分支","spec_hash 变化 → 旧审核失效"]);
+      pushMsg("ai","删除将移除整个 EM 引用闭包（无其他步引用其 CM）。候选如下：",cand);
+      return;
+    }
+    if(/复位/.test(t)){
+      pushMsg("ai","复位语义属于工艺安全条件，我不会静默修改。当前 S_FAULT 复位 Guard 为 <span class='mono'>Reset AND Retracted AND NOT Extended</span>。如需变更，请明确说明新条件，我将生成候选并标记为需人工确认的高风险变更。");
+      return;
+    }
+    pushMsg("ai","（规则原型）我当前支持：新建夹紧/送料单元、修改保持时间、修改伸出/缩回超时、删除送料单元、解释复位语义。其他意图需要接入受约束 LLM（WP-04）。<b>我不会猜测传感器地址、库参数或安全语义</b>——请补充：对象、动作、反馈、持续时间、异常与复位条件。");
+  },320);
+}
+
+/* ================= renders ================= */
+function renderTop(){
+  $("#tbRevN").textContent=S.revision;
+  $("#treeRev").textContent="rev "+S.revision;
+  $("#tbHashN").textContent=shortHash(S.specHash);
+  const v=S.validation;
+  const vc=$("#tbValid");
+  vc.className="chip click "+(v.errors.length?"err":v.warnings.length?"warn":"ok");
+  $("#tbValidN").textContent=v.errors.length+" 错误 · "+v.warnings.length+" 警告";
+  const ac=$("#tbApproval");
+  const ap=S.review.approval;
+  if(ap&&ap.spec_hash===S.specHash){ac.className="chip click ok";$("#tbApprovalN").textContent="已批准 · hash 绑定";}
+  else if(ap){ac.className="chip click err";$("#tbApprovalN").textContent="审核失效";}
+  else{ac.className="chip click";$("#tbApprovalN").textContent="未审核";}
+  $("#bdgValidate").textContent=v.errors.length||v.warnings.length;
+  $("#bdgValidate").className="bdg "+(v.errors.length?"err":v.warnings.length?"warn":"ok");
+  $("#bdgReview").textContent=ap&&ap.spec_hash===S.specHash?"已批准":ap?"失效":"未批准";
+  $("#bdgReview").className="bdg "+(ap&&ap.spec_hash===S.specHash?"ok":ap?"err":"");
+  $("#bdgTrace").textContent=Object.keys(S.trace.scenariosRun).length+"/6";
+}
+function confState(id){
+  const h=S.review.confirmed[id];
+  if(!h)return"";
+  return h===S.specHash?"done":"stale";
+}
+function renderTree(){
+  let h='<div class="tnode '+(S.ui.selected===S.ir.unit.id?"sel":"")+'" data-action="select" data-id="'+S.ir.unit.id+'"><span class="tag unit">UNIT</span><span class="nm">'+esc(S.ir.unit.name)+'</span><span class="cf '+confState(S.ir.unit.id)+'"></span></div>';
+  for(const em of S.ir.ems){
+    h+='<div class="tnode tindent1 '+(S.ui.selected===em.id?"sel":"")+'" data-action="select" data-id="'+em.id+'"><span class="tag em">EM</span><span class="nm">'+esc(em.name)+'</span><span class="cf '+confState(em.id)+'"></span></div>';
+    for(const cm of em.cms)
+      h+='<div class="tnode tindent2 '+(S.ui.selected===cm.id?"sel":"")+'" data-action="select" data-id="'+cm.id+'"><span class="tag cm">CM</span><span class="nm">'+esc(cm.name)+'</span><span class="cf '+confState(cm.id)+'"></span></div>';
+    h+='<div class="tnode tindent2" style="cursor:default;color:var(--dim)"><span class="tag step">SEQ</span><span class="nm mono">'+em.id.replace("EM_","SEQ_")+' · '+em.steps.length+' 步</span></div>';
+    for(const st of em.steps)
+      h+='<div class="tnode tindent3 '+(S.ui.selected===st.id?"sel":"")+'" data-action="select" data-id="'+st.id+'"><span class="tag '+(st.is_fault?"fault":"step")+'">'+(st.is_fault?"FLT":"STP")+'</span><span class="nm">'+esc(st.name)+' <span class="dim mono" style="font-size:10px">'+st.id+'</span></span><span class="cf '+confState(st.id)+'"></span></div>';
+  }
+  if(!S.ir.ems.length)h+='<div class="dim" style="padding:14px 10px;font-size:12px">工程为空。在下方对话中描述工艺，AI 将生成 AF 候选节点。</div>';
+  $("#treeBody").innerHTML=h;
+}
+function renderCanvasHead(){
+  $("#ctDevice").classList.toggle("on",S.ui.canvasTab==="device");
+  $("#ctSfc").classList.toggle("on",S.ui.canvasTab==="sfc");
+  $("#emChips").innerHTML=S.ui.canvasTab==="sfc"?S.ir.ems.map(e=>'<button class="emchip '+(S.ui.selectedEm===e.id?"on":"")+'" data-action="em-tab" data-em="'+e.id+'">'+e.id+"</button>").join(""):"";
+}
+function renderDeviceSvg(){
+  const ems=S.ir.ems;
+  const W=780,H=450;
+  let s='<svg viewBox="0 0 '+W+" "+H+'" width="'+W+'" height="'+H+'">';
+  s+='<rect x="14" y="14" width="'+(W-28)+'" height="'+(H-28)+'" rx="12" fill="#0e1728" stroke="#12655d" stroke-dasharray="7 5" stroke-width="1.5"/>';
+  s+='<text x="32" y="40" fill="#19c2b0" font-size="13" font-weight="800" font-family="Segoe UI,Microsoft YaHei,sans-serif">'+esc(S.ir.unit.name)+' · '+S.ir.unit.id+'</text>';
+  s+='<text x="32" y="56" fill="#5a6d92" font-size="10" font-family="Consolas,monospace">UNIT · 模式/状态/许可由 AF 基线管理（原型示意）</text>';
+  const usedBy=new Set();
+  const sel=findNode(S.ui.selected);
+  if(sel&&sel.kind==="step")for(const a of [...sel.node.entry,...sel.node.exit])usedBy.add(a.target);
+  ems.forEach((em,i)=>{
+    const ex=ems.length===1?225:40+i*364,ey=76,ew=330,eh=344;
+    const emSel=S.ui.selected===em.id;
+    s+='<g class="svg-node" data-action="select" data-id="'+em.id+'">';
+    s+='<rect class="nodebox" x="'+ex+'" y="'+ey+'" width="'+ew+'" height="'+eh+'" rx="10" fill="#121b2e" stroke="'+(emSel?"#4da3ff":"#2c3f63")+'" stroke-width="'+(emSel?2:1.2)+'"/>';
+    if(emSel)s+='<rect class="sel-ring" x="'+(ex-3)+'" y="'+(ey-3)+'" width="'+(ew+6)+'" height="'+(eh+6)+'" rx="12"/>';
+    s+='<text x="'+(ex+16)+'" y="'+(ey+26)+'" fill="#4da3ff" font-size="13" font-weight="800">'+esc(em.name)+'</text>';
+    s+='<text x="'+(ex+16)+'" y="'+(ey+42)+'" fill="#5a6d92" font-size="10" font-family="Consolas,monospace">'+em.id+' · EM · '+em.steps.length+' steps</text>';
+    s+='<line x1="'+(ex+ew/2)+'" y1="'+(ey+50)+'" x2="'+(ex+ew/2)+'" y2="'+(ey+72)+'" stroke="#2c3f63" stroke-width="1.5"/>';
+    em.cms.forEach(cm=>{
+      const cx=ex+18,cy=ey+72,cw=ew-36,ch=254;
+      const cmSel=S.ui.selected===cm.id||usedBy.has(cm.id);
+      s+='<g class="svg-node" data-action="select" data-id="'+cm.id+'">';
+      s+='<rect class="nodebox" x="'+cx+'" y="'+cy+'" width="'+cw+'" height="'+ch+'" rx="9" fill="#182339" stroke="'+(cmSel?"#4da3ff":"#4c3a78")+'" stroke-width="'+(cmSel?2:1.2)+'"/>';
+      if(cmSel)s+='<rect class="sel-ring" x="'+(cx-3)+'" y="'+(cy-3)+'" width="'+(cw+6)+'" height="'+(ch+6)+'" rx="11"/>';
+      s+='<text x="'+(cx+14)+'" y="'+(cy+24)+'" fill="#b79cff" font-size="12" font-weight="800">'+esc(cm.name)+'</text>';
+      s+='<text x="'+(cx+14)+'" y="'+(cy+40)+'" fill="#5a6d92" font-size="9.5" font-family="Consolas,monospace">'+cm.id+' · CM · LBC 待验证</text>';
+      s+='<text x="'+(cx+14)+'" y="'+(cy+64)+'" fill="#5a6d92" font-size="9" letter-spacing="1.5">COMMANDS</text>';
+      cm.ports.commands.forEach((p,j)=>{
+        const py=cy+80+j*22;
+        s+='<circle cx="'+(cx+18)+'" cy="'+py+'" r="4.5" fill="#4da3ff"/>';
+        s+='<text x="'+(cx+30)+'" y="'+(py+4)+'" fill="#dce7f8" font-size="11" font-family="Consolas,monospace">'+p+'</text>';
+      });
+      s+='<text x="'+(cx+cw-14)+'" y="'+(cy+64)+'" fill="#5a6d92" font-size="9" letter-spacing="1.5" text-anchor="end">FEEDBACK</text>';
+      cm.ports.feedback.forEach((p,j)=>{
+        const py=cy+80+j*22,unb=cm.io[p]==="unbound";
+        s+='<circle cx="'+(cx+cw-18)+'" cy="'+py+'" r="4.5" fill="'+(unb?"#ffb224":"#19c2b0")+'"/>';
+        s+='<text x="'+(cx+cw-30)+'" y="'+(py+4)+'" fill="#dce7f8" font-size="11" font-family="Consolas,monospace" text-anchor="end">'+p+'</text>';
+        if(unb)s+='<text x="'+(cx+cw-30)+'" y="'+(py+16)+'" fill="#ffb224" font-size="8" font-family="Consolas,monospace" text-anchor="end">unbound</text>';
+      });
+      s+='<text x="'+(cx+14)+'" y="'+(cy+ch-44)+'" fill="#5a6d92" font-size="9" letter-spacing="1.5">STATUS</text>';
+      cm.ports.status.forEach((p,j)=>{
+        const px=cx+18+j*86;
+        s+='<rect x="'+px+'" y="'+(cy+ch-34)+'" width="76" height="20" rx="5" fill="#0d1422" stroke="#2c3f63"/>';
+        s+='<text x="'+(px+38)+'" y="'+(cy+ch-20)+'" fill="#8296bb" font-size="10" font-family="Consolas,monospace" text-anchor="middle">'+p+'</text>';
+      });
+      s+="</g>";
+    });
+    s+="</g>";
+  });
+  if(!ems.length)s+='<text x="'+W/2+'" y="'+H/2+'" fill="#5a6d92" font-size="14" text-anchor="middle">空工程 · 通过对话创建 AF 节点</text>';
+  s+="</svg>";
+  return s;
+}
+function renderSfcSvg(){
+  const em=S.ir.ems.find(e=>e.id===S.ui.selectedEm)||S.ir.ems[0];
+  if(!em)return '<div class="canvas-empty"><div class="big">◇</div><div>空工程 · 在对话中描述工艺以生成 AF 步序</div><button class="btn blue sm" data-action="chip" data-text="新建夹紧单元：气缸伸出到位后保持 2 秒，再缩回；伸出/缩回 3 秒超时报故障，复位必须在缩回到位后。">使用示例工艺指令</button></div>';
+  const main=em.steps.filter(s=>!s.is_fault);
+  const fault=em.steps.find(s=>s.is_fault);
+  const usedBy=new Set();
+  const sel=findNode(S.ui.selected);
+  if(sel&&sel.kind==="cm")stepsUsingCm(sel.node.id).forEach(id=>usedBy.add(id));
+  const X=86,SW=264,SH=78,GAP=122;
+  const H=main.length*GAP+90,W=780;
+  const fy=30+1*GAP+20;
+  let s='<svg viewBox="0 0 '+W+" "+H+'" width="'+W+'" height="'+H+'">';
+  s+='<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#5a6d92"/></marker><marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#ff5c6c"/></marker><marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#3ed598"/></marker></defs>';
+  const yOf=i=>30+i*GAP;
+  main.forEach((st,i)=>{
+    const y=yOf(i),isSel=S.ui.selected===st.id,cmRef=usedBy.has(st.id);
+    const tr=S.trace;
+    const active=tr.running&&tr.step===st.id&&S.ui.selectedEm===em.id;
+    const done=tr.visited.includes(st.id)&&tr.step!==st.id&&S.ui.selectedEm===em.id;
+    s+='<g class="svg-node '+(active?"trace-active":"")+" "+(done?"trace-done":"")+'" data-action="select" data-id="'+st.id+'" data-stepbox="'+st.id+'">';
+    s+='<rect class="nodebox" x="'+X+'" y="'+y+'" width="'+SW+'" height="'+SH+'" rx="9" fill="'+(st.is_fault?"#33131a":"#121b2e")+'" stroke="'+(isSel?"#4da3ff":cmRef?"#4c3a78":"#2c3f63")+'" stroke-width="'+(isSel||cmRef?2:1.2)+'"/>';
+    if(isSel)s+='<rect class="sel-ring" x="'+(X-3)+'" y="'+(y-3)+'" width="'+(SW+6)+'" height="'+(SH+6)+'" rx="11"/>';
+    s+='<rect x="'+X+'" y="'+y+'" width="4" height="'+SH+'" rx="2" fill="'+(active?"#4da3ff":done?"#3ed598":"#2c3f63")+'"/>';
+    s+='<text x="'+(X+16)+'" y="'+(y+22)+'" fill="#dce7f8" font-size="12.5" font-weight="800">'+esc(st.name)+'</text>';
+    s+='<text x="'+(X+SW-14)+'" y="'+(y+22)+'" fill="#5a6d92" font-size="10" font-family="Consolas,monospace" text-anchor="end">'+st.id+'</text>';
+    const acts=[...st.entry.map(a=>"▸ "+a.target.replace("CM_","")+"."+a.cmd+":="+(a.val?"TRUE":"FALSE")),...st.exit.map(a=>"◂ exit "+a.cmd+":="+(a.val?"TRUE":"FALSE"))];
+    s+='<text x="'+(X+16)+'" y="'+(y+40)+'" fill="#8296bb" font-size="10" font-family="Consolas,monospace">'+esc(acts[0]||"（无动作 · 等待/过渡）")+'</text>';
+    let chips="";
+    if(st.duration_ms)chips+="保持 "+(st.duration_ms/1000)+"s";
+    if(st.timeout_ms)chips+=(chips?" · ":"")+"TON "+(st.timeout_ms/1000)+"s";
+    if(st.loop)chips+=(chips?" · ":"")+"循环";
+    if(chips)s+='<text x="'+(X+16)+'" y="'+(y+58)+'" fill="#19c2b0" font-size="10" font-family="Consolas,monospace">'+esc(chips)+'</text>';
+    if(active)s+='<text x="'+(X+SW-14)+'" y="'+(y+58)+'" fill="#4da3ff" font-size="9" font-weight="900" text-anchor="end" letter-spacing="1">● ACTIVE</text>';
+    s+="</g>";
+    if(i<main.length-1){
+      const ny=yOf(i+1),mid=y+SH+(GAP-SH)/2;
+      s+='<line x1="'+(X+SW/2)+'" y1="'+(y+SH)+'" x2="'+(X+SW/2)+'" y2="'+ny+'" stroke="#5a6d92" stroke-width="1.5" marker-end="url(#arr)"/>';
+      s+='<line x1="'+(X+SW/2-22)+'" y1="'+mid+'" x2="'+(X+SW/2+22)+'" y2="'+mid+'" stroke="#8296bb" stroke-width="3"/>';
+      const g=st.guard||(st.duration_ms?"t ≥ "+(st.duration_ms/1000)+"s":"TRUE");
+      s+='<text x="'+(X+SW/2+30)+'" y="'+(mid+4)+'" fill="#8296bb" font-size="10" font-family="Consolas,monospace">'+esc(g)+'</text>';
+    }
+    if(st.timeout_ms&&fault){
+      const fx=500,fw=230;
+      s+='<path d="M'+(X+SW)+","+(y+SH/2)+' L'+(fx-24)+","+(y+SH/2)+' L'+(fx-24)+","+(fy+40)+' L'+fx+","+(fy+40)+'" fill="none" stroke="#ff5c6c" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrR)"/>';
+      s+='<text x="'+(fx-30)+'" y="'+(y+SH/2-6)+'" fill="#ff5c6c" font-size="9.5" font-family="Consolas,monospace" text-anchor="end">TON.Q · '+(st.timeout_ms/1000)+'s</text>';
+    }
+  });
+  if(fault){
+    const fx=500,fw=230,fh=86;
+    const isSel=S.ui.selected===fault.id;
+    const active=S.trace.running&&S.trace.step===fault.id&&S.ui.selectedEm===em.id;
+    s+='<g class="svg-node '+(active?"trace-active":"")+'" data-action="select" data-id="'+fault.id+'" data-stepbox="'+fault.id+'">';
+    s+='<rect class="nodebox" x="'+fx+'" y="'+fy+'" width="'+fw+'" height="'+fh+'" rx="9" fill="#33131a" stroke="'+(isSel?"#4da3ff":"#8a2f3a")+'" stroke-width="'+(isSel?2:1.4)+'"/>';
+    if(isSel)s+='<rect class="sel-ring" x="'+(fx-3)+'" y="'+(fy-3)+'" width="'+(fw+6)+'" height="'+(fh+6)+'" rx="11"/>';
+    s+='<text x="'+(fx+16)+'" y="'+(fy+24)+'" fill="#ff5c6c" font-size="12.5" font-weight="800">'+esc(fault.name)+'</text>';
+    s+='<text x="'+(fx+fw-14)+'" y="'+(fy+24)+'" fill="#8a2f3a" font-size="10" font-family="Consolas,monospace" text-anchor="end">'+fault.id+'</text>';
+    s+='<text x="'+(fx+16)+'" y="'+(fy+44)+'" fill="#8296bb" font-size="9.5" font-family="Consolas,monospace">命令清零 · 故障锁存</text>';
+    s+='<text x="'+(fx+16)+'" y="'+(fy+62)+'" fill="#3ed598" font-size="9.5" font-family="Consolas,monospace">'+esc(fault.reset_guard||"")+'</text>';
+    if(active)s+='<text x="'+(fx+fw-14)+'" y="'+(fy+62)+'" fill="#ff5c6c" font-size="9" font-weight="900" text-anchor="end">● ACTIVE</text>';
+    s+="</g>";
+    const lastY=yOf(main.length-1)+SH;
+    s+='<path d="M'+(fx+fw/2)+","+(fy+fh)+' L'+(fx+fw/2)+","+(lastY+44)+' L28,'+(lastY+44)+' L28,'+(yOf(0)+SH/2+8)+' L'+X+","+(yOf(0)+SH/2+8)+'" fill="none" stroke="#3ed598" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrG)"/>';
+    s+='<text x="'+(fx+fw/2-8)+'" y="'+(lastY+40)+'" fill="#3ed598" font-size="9.5" font-family="Consolas,monospace" text-anchor="end">RESET（安全条件）→ '+fault.next+'</text>';
+  }
+  const doneIdx=main.findIndex(m=>m.loop);
+  if(doneIdx>=0){
+    const dy=yOf(doneIdx)+SH;
+    s+='<path d="M'+(X+SW/2)+","+dy+' L'+(X+SW/2)+","+(dy+22)+' L52,'+(dy+22)+' L52,'+(yOf(0)+SH/2-8)+' L'+X+","+(yOf(0)+SH/2-8)+'" fill="none" stroke="#4da3ff" stroke-width="1.3" stroke-dasharray="4 4" marker-end="url(#arr)"/>';
+    s+='<text x="58" y="'+(dy+18)+'" fill="#4da3ff" font-size="9.5" font-family="Consolas,monospace">循环</text>';
+  }
+  s+="</svg>";
+  return s;
+}
+function renderCanvas(){
+  renderCanvasHead();
+  const b=$("#canvasBody");
+  if(!S.ir.ems.length&&S.ui.canvasTab==="sfc"){b.innerHTML=renderSfcSvg();return;}
+  b.innerHTML=S.ui.canvasTab==="device"?renderDeviceSvg():renderSfcSvg();
+}
+function renderInspector(){
+  const sel=findNode(S.ui.selected);
+  const body=$("#inspBody");
+  if(!sel){$("#inspKind").textContent="—";body.innerHTML='<div class="dim" style="padding:10px">选择一个节点查看工艺语义。</div>';return;}
+  const {kind,node,em}=sel;
+  $("#inspKind").textContent={unit:"UNIT",em:"EM",cm:"CM",step:"STEP"}[kind];
+  let h='<div class="insp-sec"><span class="micro">标识 · AF 角色</span>';
+  h+='<div class="kv"><b>ID</b><span class="mono">'+node.id+'</span></div>';
+  h+='<div class="kv"><b>名称</b><span>'+esc(node.name)+'</span></div>';
+  h+='<div class="kv"><b>框架</b><span class="mono" style="font-size:10px">'+FRAMEWORK.profile_id+'</span></div>';
+  h+='<div class="kv"><b>模板</b><span style="color:var(--amber)">未验证 · G0 阻断</span></div>';
+  if(em)h+='<div class="kv"><b>归属</b><span class="mono">'+em.id+'</span></div>';
+  h+="</div>";
+  const cs=confState(node.id);
+  h+='<div class="insp-sec"><span class="micro">人工确认（节点级）</span>';
+  if(cs==="done")h+='<div class="note ok">已确认 · 绑定当前 spec_hash</div>';
+  else if(cs==="stale")h+='<div class="note warn">确认已失效：spec_hash 变化，需重新确认</div>';
+  else h+='<div class="note">draft · 确认后绑定当前 spec_hash</div>';
+  h+='<button class="btn sm '+(cs==="done"?"ghost":"primary")+'" data-action="confirm-node" data-id="'+node.id+'" '+(cs==="done"?"disabled":"")+'>'+(cs==="done"?"已确认":"确认节点")+"</button></div>";
+  if(kind==="cm"){
+    h+='<div class="insp-sec"><span class="micro">命令端口（单写者）</span>'+node.ports.commands.map(p=>'<div class="portrow"><span class="dot" style="background:var(--blue)"></span><span class="pn">'+p+'</span><span class="dim">BOOL · 命令</span></div>').join("")+"</div>";
+    h+='<div class="insp-sec"><span class="micro">反馈端口 · I/O 绑定</span>'+node.ports.feedback.map(p=>'<div class="portrow"><span class="dot" style="background:'+(node.io[p]==="unbound"?"var(--amber)":"var(--teal)")+'"></span><span class="pn">'+p+'</span>'+(node.io[p]==="unbound"?'<span class="unb">unbound</span>':'<span class="dim">'+node.io[p]+"</span>")+"</div>").join("")+'<div class="note warn">Web 不猜测物理地址。真实绑定由工程师在 TIA 工程侧完成（D-04）。</div></div>';
+    h+='<div class="insp-sec"><span class="micro">状态端口</span>'+node.ports.status.map(p=>'<div class="portrow"><span class="dot" style="background:var(--dim)"></span><span class="pn">'+p+"</span></div>").join("")+"</div>";
+    h+='<div class="insp-sec"><span class="micro">库绑定</span><div class="kv"><b>模板</b><span>'+esc(node.template)+'</span></div><div class="kv"><b>实例 DB</b><span class="mono">'+node.instance_db+'</span></div><div class="note">接口签名必须来自 G0 验证模板的反射/导出，禁止凭记忆编造。</div></div>';
+    const refs=stepsUsingCm(node.id);
+    h+='<div class="insp-sec"><span class="micro">被引用步序</span>'+refs.map(r=>'<div class="portrow" style="cursor:pointer" data-action="select" data-id="'+r+'"><span class="pn">'+r+"</span></div>").join("")+"</div>";
+  }
+  if(kind==="step"){
+    h+='<div class="insp-sec"><span class="micro">动作（可执行 lowering）</span>';
+    const al=[...node.entry.map(a=>["entry",a]),...node.exit.map(a=>["exit",a])];
+    h+=al.length?al.map(([ph,a])=>'<div class="portrow"><span class="dim" style="font-size:10px">'+ph+'</span><span class="pn">'+a.target+"."+a.cmd+" := "+(a.val?"TRUE":"FALSE")+"</span></div>").join(""):'<div class="dim" style="font-size:11.5px">无命令动作</div>';
+    h+="</div>";
+    h+='<div class="insp-sec"><span class="micro">转移 · 计时</span>';
+    if(node.guard)h+='<div class="kv"><b>Guard</b><span class="mono" style="font-size:11px">'+esc(node.guard)+"</span></div>";
+    if(node.reset_guard)h+='<div class="kv"><b>复位 Guard</b><span class="mono" style="font-size:10.5px">'+esc(node.reset_guard)+"</span></div>";
+    h+='<div class="kv"><b>下一步</b><span class="mono">'+node.next+"</span></div>";
+    if(node.failure)h+='<div class="kv"><b>异常出口</b><span class="mono" style="color:var(--red)">'+node.failure+"</span></div>";
+    if(!node.is_fault){
+      h+='<div class="fieldrow" style="margin-top:8px"><label>保持时间 (s)</label><input type="number" step="0.1" min="0" value="'+(node.duration_ms/1000)+'" data-change="duration" data-id="'+node.id+'"></div>';
+      h+='<div class="fieldrow"><label>超时 (s, 0=无)</label><input type="number" step="0.1" min="0" value="'+(node.timeout_ms/1000)+'" data-change="timeout" data-id="'+node.id+'"></div>';
+      h+='<div class="dim" style="font-size:10.5px">修改即提交原子 Patch（revision +1，审核失效）</div>';
+    }
+    h+="</div>";
+  }
+  if(kind==="em"){
+    h+='<div class="insp-sec"><span class="micro">验收契约（scenario contract）</span>'+node.acceptance.map(a=>{
+      const p=S.trace.props&&S.trace.props[a];
+      const ic=p==="pass"?'<span class="ic" style="color:var(--green)">✓</span>':p==="fail"?'<span class="ic" style="color:var(--red)">✗</span>':'<span class="ic dim">○</span>';
+      return '<div class="acc-item">'+ic+'<span class="mono" style="font-size:10.5px">'+a+"</span></div>";
+    }).join("")+'<div class="dim" style="font-size:10.5px;margin-top:4px">在 Trace 面板运行场景以证据化验收项</div></div>';
+    h+='<div class="insp-sec"><span class="micro">组成</span><div class="kv"><b>CM</b><span class="mono">'+node.cms.map(c=>c.id).join(", ")+'</span></div><div class="kv"><b>步序</b><span>'+node.steps.length+" 步（含故障）</span></div></div>";
+  }
+  h+='<div class="insp-sec"><span class="micro">出处 · Provenance</span><div class="kv"><b>来源</b><span>对话意图解析（规则原型）</span></div><div class="kv"><b>spec_hash</b><span class="mono" style="font-size:10px">'+shortHash(S.specHash)+"</span></div></div>";
+  body.innerHTML=h;
+}
+function candHtml(c){
+  const pending=c.status==="pending";
+  let h='<div class="cand"><div class="cand-head"><span class="t">CandidatePatch · '+esc(c.id)+" · "+esc(c.title)+"</span>";
+  h+='<span class="chip info" style="padding:1px 8px;font-size:10px">base rev '+c.baseRev+"</span></div>";
+  h+='<div class="cand-body">';
+  h+=c.ops.map(o=>'<div class="opline"><span class="op '+(o.op==="remove_em"?"del":"")+'">'+(o.op==="set"?"SET":o.op==="add_em"?"+EM":"−EM")+"</span><span>"+esc(o.label)+"</span></div>").join("");
+  h+=c.questions.map(q=>'<div class="cand-q">？ '+esc(q)+"</div>").join("");
+  h+=c.assumptions.map(a=>'<div class="cand-q" style="color:var(--mut)">假设 · '+esc(a)+"</div>").join("");
+  if(c.impact.length)h+='<div class="dim" style="margin-top:5px;font-size:10.5px">影响：'+c.impact.map(esc).join(" · ")+"</div>";
+  h+="</div>";
+  if(pending){
+    h+='<div class="cand-foot"><button class="btn sm" data-action="cand-preview" data-cid="'+c.id+'">预览差异</button><button class="btn sm primary" data-action="cand-adopt" data-cid="'+c.id+'">采纳</button><button class="btn sm ghost" data-action="cand-discard" data-cid="'+c.id+'">放弃</button><span class="st">等待人工采纳 · AI 无写入权</span></div>';
+  }else{
+    h+='<div class="cand-foot"><span class="st" style="margin-left:0;color:'+(c.status==="adopted"?"var(--green)":"var(--dim)")+'">'+(c.status==="adopted"?"✓ 已采纳 · rev "+c.adoptedRev:"已放弃")+"</span></div>";
+  }
+  return h+"</div>";
+}
+function renderChat(){
+  $("#chatMsgs").innerHTML=S.chat.map(m=>{
+    let h='<div class="msg '+m.role+'"><div class="who">'+(m.role==="user"?"工程师 · 人工输入":"AI · 受约束候选器（规则模拟）")+' <span class="dim" style="font-weight:400">'+m.ts+"</span></div>";
+    h+='<div class="bubble">'+m.html+(m.cand?candHtml(m.cand):"")+"</div></div>";
+    return h;
+  }).join("");
+  const m=$("#chatMsgs");m.scrollTop=m.scrollHeight;
+}
+function findCand(cid){for(const m of S.chat)if(m.cand&&m.cand.id===cid)return m.cand;return null;}
+
+/* ---------- dock: validate ---------- */
+function ckHtml(items){
+  return items.map(i=>{
+    const ic={pass:"✓",warn:"⚠",fail:"✗",info:"ℹ"}[i.level];
+    return '<div class="ck '+i.level+'"><span class="ic">'+ic+'</span><span>'+esc(i.msg)+(i.node?' · <a data-action="select" data-id="'+i.node+'">'+i.node+"</a>":"")+'<span class="code">'+i.code+"</span></span></div>";
+  }).join("");
+}
+function renderValidate(){
+  const v=S.validation;
+  let h='<div class="g0banner"><span class="ic">⚠</span><span><b>G0 · FRAMEWORK_NOT_VERIFIED</b> — 模板哈希为占位符 <span class="mono">'+FRAMEWORK.template_sha256+'</span>。真实 AF 合规与原生交付被阻断；本原型以 <b>self_contained 研发演示</b>模式运行，不构成官方库等价认证。</span><button class="btn sm ghost" data-action="open-g0" style="margin-left:auto">详情</button></div>';
+  h+='<div style="display:flex;gap:9px;margin-bottom:11px;flex-wrap:wrap"><span class="chip '+(v.errors.length?"err":"ok")+'"><span class="led"></span>'+v.errors.length+' errors</span><span class="chip warn"><span class="led"></span>'+v.warnings.length+' warnings</span><span class="chip teal"><span class="led"></span>语义覆盖 '+v.coverage.steps+" 步 / "+v.coverage.actions+" 动作 / "+v.coverage.guards+" Guard / "+v.coverage.timers+' 计时</span><span class="chip"><span class="led"></span>evidence: offline_verified（原型本地检查）</span><span class="dim" style="font-size:11px;align-self:center">校验时间 '+v.at+"</span></div>";
+  h+='<div class="cols3">';
+  h+='<div class="vcard"><div class="vcard-h">Shape · 结构 <span class="dim" style="font-weight:400;font-size:10px">隶属/命名/调用图</span></div><div class="vcard-b">'+ckHtml(v.shape)+"</div></div>";
+  h+='<div class="vcard"><div class="vcard-h">Behavior · 行为 <span class="dim" style="font-weight:400;font-size:10px">状态机/单写者/异常</span></div><div class="vcard-b">'+ckHtml(v.behavior)+"</div></div>";
+  h+='<div class="vcard"><div class="vcard-h">Implementation · 实现 <span class="dim" style="font-weight:400;font-size:10px">可执行 lowering</span></div><div class="vcard-b">'+ckHtml(v.impl)+'<div class="note" style="margin-bottom:0">展示 WP-02 目标态检查。当前仓库基线 scl_lowering 仍以注释占位（P0 阻断），真实实现须通过语义覆盖率断言。</div></div></div>';
+  h+="</div>";
+  return h;
+}
+/* ---------- dock: trace ---------- */
+const SCENARIOS={
+  normal_cycle:{name:"正常循环",desc:"启动→伸出→保持→缩回→完成"},
+  extend_timeout:{name:"伸出超时",desc:"无伸出反馈 → 3s TON → FAULT"},
+  retract_timeout:{name:"缩回超时",desc:"无缩回反馈 → 3s TON → FAULT"},
+  dual_feedback:{name:"双反馈冲突",desc:"Extended ∧ Retracted → 反馈故障"},
+  permit_loss:{name:"运行许可丢失",desc:"保持中 Permit=0 → 停止并故障"},
+  fault_reset:{name:"故障复位",desc:"超时故障后安全复位 → 等待"}
+};
+const EXPECTS_FAULT=["extend_timeout","retract_timeout","dual_feedback","permit_loss"];
+function traceResultGood(t){return t.result==="OK"||(t.result==="FAULT"&&EXPECTS_FAULT.includes(t.scenario));}
+function renderTrace(){
+  const t=S.trace;
+  let h='<div class="trace-ctl">';
+  h+='<select data-change="trace-scenario">'+Object.entries(SCENARIOS).map(([k,v])=>'<option value="'+k+'"'+(t.scenario===k?" selected":"")+">"+v.name+" — "+v.desc+"</option>").join("")+"</select>";
+  h+='<select data-change="trace-speed">'+[1,4,16].map(x=>'<option value="'+x+'"'+(t.speed===x?" selected":"")+">"+x+"× 仿真速度</option>").join("")+"</select>";
+  h+='<button class="btn sm blue" data-action="trace-run" '+(t.done?"disabled":"")+'>'+(t.running&&!t.paused?"⏸ 暂停":t.paused?"▶ 继续":"▶ 运行")+"</button>";
+  h+='<button class="btn sm ghost" data-action="trace-reset">重置</button>';
+  h+='<span class="dim" style="font-size:11px">对象：EM_CLAMP · SEQ_CLAMP · 规则模型仿真（simulated，非 PLC 运行时）</span></div>';
+  h+='<div class="trace-live"><span class="mono" id="traceClock">t = '+t.simTime+' ms</span>';
+  h+='<span class="chip info" style="padding:1px 9px" id="traceStepChip"><span class="led"></span>'+t.step+"</span>";
+  h+='<span class="ledgrp">CMD <span class="l '+(t.cmds.Extend?"on blue":"")+'" id="ledExt"></span>Ext <span class="l '+(t.cmds.Retract?"on blue":"")+'" id="ledRet"></span>Ret</span>';
+  h+='<span class="ledgrp">FB <span class="l '+(t.inputs.Extended?"on":"")+'" id="ledExtFb"></span>Extended <span class="l '+(t.inputs.Retracted?"on":"")+'" id="ledRetFb"></span>Retracted</span>';
+  h+='<span class="ledgrp">PERMIT <span class="l '+(t.inputs.Permit?"on":"")+'" id="ledPermit"></span></span>';
+  h+='<span id="traceResult" style="margin-left:auto;font-weight:800;font-size:11px;color:'+(traceResultGood(t)?"var(--green)":t.result?"var(--red)":"var(--dim)")+'">'+(t.done?(traceResultGood(t)?"✓ 场景完成 · "+t.result+(t.result==="FAULT"?"（预期故障）":""):"✗ 场景完成 · "+t.result):t.running?"运行中…":"待运行")+"</span></div>";
+  h+='<div class="trace-wrap"><table id="traceLog"><thead><tr><th>t (ms)</th><th>步</th><th>事件</th><th>Ext</th><th>Ret</th><th>ExtFB</th><th>RetFB</th></tr></thead><tbody id="traceLogBody">'+t.log.map(traceRowHtml).join("")+"</tbody></table></div>";
+  h+='<div class="props" id="traceProps">'+propsHtml()+"</div>";
+  h+='<div class="dim" style="font-size:10.5px;margin-top:7px">场景覆盖 '+Object.keys(t.scenariosRun).length+"/6 · 属性检查以运行证据判定；Python/JS 仿真成功 ≠ PLC 代码运行成功（G5 边界）。</div>";
+  return h;
+}
+function traceRowHtml(r){
+  return '<tr class="'+(r.fault?"fault":r.trans?"trans":"")+'"><td>'+r.t+"</td><td>"+r.step+"</td><td>"+esc(r.ev)+"</td><td>"+(r.cmds.Extend?1:0)+"</td><td>"+(r.cmds.Retract?1:0)+"</td><td>"+(r.inputs.Extended?1:0)+"</td><td>"+(r.inputs.Retracted?1:0)+"</td></tr>";
+}
+const PROP_DEFS=[
+  {id:"no_simultaneous_extend_retract",label:"伸出/缩回命令互斥"},
+  {id:"extend_timeout_causes_fault",label:"伸出超时 → 故障"},
+  {id:"reset_requires_safe_condition",label:"复位需安全条件"},
+  {id:"permit_loss_stops_motion",label:"许可丢失停止运动"},
+  {id:"hold_duration_respected",label:"保持时间精确执行"}
+];
+function propsHtml(){
+  const p=S.trace.props||{};
+  return PROP_DEFS.map(d=>{
+    const v=p[d.id];
+    const cls=v==="pass"?"pass":v==="fail"?"fail":"na";
+    const ic=v==="pass"?"✓":v==="fail"?"✗":"○";
+    return '<div class="prop '+cls+'"><span class="ic">'+ic+'</span><span><span class="pn">'+d.id+'</span><br><span class="dim" style="font-size:10px">'+d.label+(v&&v!=="pass"&&v!=="fail"?"":"")+"</span></span></div>";
+  }).join("");
+}
+/* ---------- trace simulator ---------- */
+function traceInputs(scenario,t){
+  const I={Start:false,Permit:true,Reset:false,Extended:false,Retracted:true};
+  const dur=(S.ir.ems.find(e=>e.id==="EM_CLAMP")?.steps.find(s=>s.id==="S_HOLD")?.duration_ms)||2000;
+  const toE=(S.ir.ems.find(e=>e.id==="EM_CLAMP")?.steps.find(s=>s.id==="S_EXTEND")?.timeout_ms)||3000;
+  const toR=(S.ir.ems.find(e=>e.id==="EM_CLAMP")?.steps.find(s=>s.id==="S_RETRACT")?.timeout_ms)||3000;
+  if(t>=0)I.Start=t<100;
+  if(scenario==="normal_cycle"){
+    if(t>=500){I.Extended=true;I.Retracted=false;}
+    if(t>=500+dur+600){I.Extended=false;I.Retracted=true;}
+  }else if(scenario==="extend_timeout"){
+    I.Retracted=t<100;
+  }else if(scenario==="retract_timeout"){
+    if(t>=500){I.Extended=true;I.Retracted=false;}
+  }else if(scenario==="dual_feedback"){
+    I.Retracted=t<100;
+    if(t>=600){I.Extended=true;I.Retracted=true;}
+  }else if(scenario==="permit_loss"){
+    if(t>=500){I.Extended=true;I.Retracted=false;}
+    if(t>=1500)I.Permit=false;
+  }else if(scenario==="fault_reset"){
+    I.Retracted=t<100;
+    if(t>=toE+1000)I.Retracted=true;
+    if(t>=toE+1500&&t<toE+1600)I.Reset=true;
+  }
+  return I;
+}
+function traceReset(keepScenario){
+  clearInterval(S.trace.timer);
+  const sc=keepScenario||S.trace.scenario;
+  S.trace={scenario:sc,speed:S.trace.speed,running:false,paused:false,simTime:0,step:"S_WAIT",cmds:{Extend:false,Retract:false},inputs:{Start:false,Permit:true,Reset:false,Extended:false,Retracted:true},log:[],visited:["S_WAIT"],flags:{simultaneous:false,faultReason:"",unsafeReset:false,holdElapsed:0,permitStopped:false,resetOk:false},done:false,result:"",scenariosRun:S.trace.scenariosRun,props:S.trace.props,timer:null};
+  S.trace.props=S.trace.props||{};
+}
+function traceLog(ev,extra){
+  const t=S.trace;
+  const r={t:t.simTime,step:t.step,ev,cmds:{...t.cmds},inputs:{...t.inputs},fault:!!extra?.fault,trans:!!extra?.trans};
+  t.log.push(r);
+  const tb=$("#traceLogBody");
+  if(tb){tb.insertAdjacentHTML("beforeend",traceRowHtml(r));tb.parentElement.parentElement.scrollTop=1e9;}
+}
+function gotoStep(id,reason){
+  const t=S.trace;
+  t.step=id;
+  if(!t.visited.includes(id))t.visited.push(id);
+  traceLog("→ "+id+(reason?"（"+reason+"）":""),{trans:true});
+}
+function enterFault(reason){
+  const t=S.trace;
+  t.cmds.Extend=false;t.cmds.Retract=false;
+  t.flags.faultReason=reason;
+  if(reason==="SAFETY_PERMIT_LOST")t.flags.permitStopped=true;
+  gotoStep("S_FAULT",reason);
+  traceLog("故障锁存 · 命令清零 · "+reason,{fault:true});
+}
+function traceTick(){
+  const t=S.trace;
+  const em=S.ir.ems.find(e=>e.id==="EM_CLAMP");
+  if(!em){traceReset();renderDock();return;}
+  const hold=em.steps.find(s=>s.id==="S_HOLD").duration_ms;
+  const toE=em.steps.find(s=>s.id==="S_EXTEND").timeout_ms;
+  const toR=em.steps.find(s=>s.id==="S_RETRACT").timeout_ms;
+  t.simTime+=50;
+  t.inputs=traceInputs(t.scenario,t.simTime);
+  const I=t.inputs;
+  if(I.Extended&&I.Retracted&&t.step!=="S_FAULT"&&t.step!=="S_WAIT"){
+    t.flags.feedbackConflict=true;
+    enterFault("FEEDBACK_FAULT");
+  }else if(!I.Permit&&["S_EXTEND","S_HOLD","S_RETRACT"].includes(t.step)){
+    enterFault("SAFETY_PERMIT_LOST");
+  }else{
+    switch(t.step){
+      case "S_WAIT":
+        if(I.Start&&I.Permit){t.stepStart=t.simTime;gotoStep("S_EXTEND","Start ∧ Permit");t.cmds.Extend=true;traceLog("entry: CM_CLAMP_CYL.Extend := TRUE");}
+        break;
+      case "S_EXTEND":
+        if(I.Extended){t.cmds.Extend=false;t.holdStart=t.simTime;gotoStep("S_HOLD","Extended");traceLog("exit: Extend := FALSE");}
+        else if(toE&&t.simTime-(t.stepStart||0)>=toE){enterFault("TIMEOUT");}
+        break;
+      case "S_HOLD":
+        if(t.simTime-t.holdStart>=hold){t.flags.holdElapsed=t.simTime-t.holdStart;t.stepStart=t.simTime;gotoStep("S_RETRACT","t ≥ "+hold+"ms");t.cmds.Retract=true;traceLog("entry: CM_CLAMP_CYL.Retract := TRUE");}
+        break;
+      case "S_RETRACT":
+        if(I.Retracted){t.cmds.Retract=false;gotoStep("S_DONE","Retracted");traceLog("exit: Retract := FALSE");}
+        else if(toR&&t.simTime-(t.stepStart||0)>=toR){enterFault("TIMEOUT");}
+        break;
+      case "S_DONE":
+        gotoStep("S_WAIT","循环完成");
+        t.done=true;t.result="OK";
+        break;
+      case "S_FAULT":
+        if(I.Reset){
+          if(I.Retracted&&!I.Extended){t.flags.resetOk=true;t.flags.faultReason="";gotoStep("S_WAIT","复位成功（安全条件满足）");}
+          else{t.flags.unsafeReset=true;traceLog("复位被拒绝：未满足 Retracted ∧ ¬Extended",{fault:true});}
+        }
+        break;
+    }
+  }
+  if(t.cmds.Extend&&t.cmds.Retract)t.flags.simultaneous=true;
+  if(t.scenario==="fault_reset"&&t.flags.resetOk&&t.step==="S_WAIT"&&t.simTime>((toE||3000)+1600)){t.done=true;t.result="OK";}
+  if(t.step==="S_FAULT"&&t.scenario!=="fault_reset"){
+    t.faultTicks=(t.faultTicks||0)+1;
+    if(t.faultTicks>=10){t.done=true;t.result="FAULT";}
+  }
+  if(t.simTime>30000&&!t.done){t.done=true;t.result="TIME_LIMIT";}
+  updateTraceLive();
+  markTraceSfc();
+  if(t.done)finishTrace();
+}
+function updateTraceLive(){
+  const t=S.trace;
+  const c=$("#traceClock");if(c)c.textContent="t = "+t.simTime+" ms";
+  const sc=$("#traceStepChip");if(sc)sc.innerHTML='<span class="led"></span>'+t.step;
+  const map={ledExt:t.cmds.Extend,ledRet:t.cmds.Retract,ledExtFb:t.inputs.Extended,ledRetFb:t.inputs.Retracted,ledPermit:t.inputs.Permit};
+  for(const [id,on] of Object.entries(map)){const e=document.getElementById(id);if(e)e.classList.toggle("on",!!on);}
+}
+function markTraceSfc(){
+  if(S.ui.canvasTab!=="sfc")return;
+  document.querySelectorAll("[data-stepbox]").forEach(g=>{
+    const id=g.getAttribute("data-stepbox");
+    g.classList.toggle("trace-active",S.trace.running&&S.trace.step===id);
+    g.classList.toggle("trace-done",S.trace.visited.includes(id)&&S.trace.step!==id);
+  });
+}
+function finishTrace(){
+  const t=S.trace;
+  clearInterval(t.timer);t.running=false;t.paused=false;
+  const p=t.props;
+  const set=(id,val)=>{if(val!==undefined)p[id]=val?"pass":"fail";};
+  set("no_simultaneous_extend_retract",!t.flags.simultaneous);
+  if(t.scenario==="extend_timeout")set("extend_timeout_causes_fault",t.flags.faultReason==="TIMEOUT"||t.visited.includes("S_FAULT"));
+  if(t.scenario==="fault_reset"){set("reset_requires_safe_condition",t.flags.resetOk&&!t.flags.unsafeReset);set("extend_timeout_causes_fault",t.visited.includes("S_FAULT"));}
+  if(t.scenario==="permit_loss")set("permit_loss_stops_motion",t.flags.permitStopped&&!t.cmds.Extend&&!t.cmds.Retract);
+  if(t.scenario==="normal_cycle")set("hold_duration_respected",t.flags.holdElapsed===((S.ir.ems.find(e=>e.id==="EM_CLAMP")?.steps.find(s=>s.id==="S_HOLD")?.duration_ms)||2000));
+  t.scenariosRun[t.scenario]=t.result;
+  renderDock();renderTop();renderInspector();markTraceSfc();
+  toast("Trace 完成："+SCENARIOS[t.scenario].name+" · "+t.result+(t.result==="FAULT"&&EXPECTS_FAULT.includes(t.scenario)?"（预期故障）":""),traceResultGood(t)?"ok":"warn");
+}
+function startTrace(){
+  const t=S.trace;
+  if(t.done)traceReset(t.scenario);
+  if(t.running&&!t.paused){t.paused=true;clearInterval(t.timer);renderDock();return;}
+  if(t.paused){t.paused=false;}
+  else{
+    t.running=true;t.visited=["S_WAIT"];t.log=[];
+    S.ui.canvasTab="sfc";S.ui.selectedEm="EM_CLAMP";renderCanvas();
+    traceLog("仿真开始 · 场景 "+SCENARIOS[t.scenario].name+" · 扫描序遵循 SCAN_ORDER");
+  }
+  t.running=true;
+  clearInterval(t.timer);
+  t.timer=setInterval(traceTick,Math.max(8,40/t.speed*4));
+  renderDock();
+}
+/* ---------- dock: scl ---------- */
+function genScl(){
+  const files={};
+  for(const em of S.ir.ems){
+    const lines=[];const map=[];
+    const push=(txt,step)=>{lines.push(txt);map.push(step||null);};
+    const fb="FB_"+em.id+"_SEQ";
+    push('FUNCTION_BLOCK "'+fb+'"');
+    push("{ S7_Optimized_Access := 'TRUE' }");
+    push("VAR_INPUT");
+    push("    Start : Bool;");
+    push("    Reset : Bool;");
+    push("    SafetyPermit : Bool;   // 软件工艺许可，非安全认证");
+    for(const cm of em.cms)for(const f of cm.ports.feedback)push("    "+f+" : Bool;   // unbound: 由 CM 反馈映射");
+    push("END_VAR");
+    push("VAR_OUTPUT");
+    push("    Busy : Bool; Done : Bool; Error : Bool; StepNo : Int;");
+    push("END_VAR");
+    push("VAR");
+    push("    Step : Int := 0;");
+    push("    FaultLatch : Bool;");
+    for(const st of em.steps){
+      if(st.timeout_ms)push("    TON_"+st.id+" : TON_TIME;");
+      if(st.duration_ms)push("    TON_"+st.id+" : TON_TIME;");
+    }
+    push("END_VAR");
+    push("BEGIN");
+    push("    // 单写者：本 FB 独占 CM 命令接口 · 确定性串行步序");
+    push("    CASE #Step OF");
+    em.steps.forEach((st,i)=>{
+      const num=st.is_fault?90:i*10;
+      push("        "+num+": // "+st.id+" "+st.name,st.id);
+      if(st.is_fault){
+        push("            #Busy := FALSE; #Error := TRUE;",st.id);
+        push("            #FaultLatch := TRUE;",st.id);
+        for(const cm of em.cms)for(const c of cm.ports.commands)push('            "'+cm.id+'".'+c+" := FALSE;",st.id);
+        push("            IF "+(st.reset_guard||"Reset").replace(/AND/g,"AND").replace(/NOT /g,"NOT ")+" THEN",st.id);
+        push("                #FaultLatch := FALSE; #Error := FALSE; #Step := 0;",st.id);
+        push("            END_IF;",st.id);
+      }else{
+        if(st.id.endsWith("WAIT"))push("            #Busy := FALSE; #Done := FALSE;",st.id);
+        else push("            #Busy := TRUE;",st.id);
+        for(const a of st.entry)push('            "'+a.target+'".'+a.cmd+" := "+(a.val?"TRUE":"FALSE")+";",st.id);
+        if(st.timeout_ms){
+          const fbSig=em.cms[0].ports.feedback[0];
+          push("            #TON_"+st.id+"(IN := NOT #"+fbSig+", PT := T#"+st.timeout_ms+"ms);",st.id);
+        }
+        if(st.duration_ms){
+          push("            #TON_"+st.id+"(IN := TRUE, PT := T#"+st.duration_ms+"ms);",st.id);
+          push("            IF #TON_"+st.id+".Q THEN",st.id);
+          push("                #Step := "+((i+1)*10)+";",st.id);
+          push("            END_IF;",st.id);
+        }else if(st.guard){
+          const nextNum=st.next&&em.steps.find(x=>x.id===st.next)?.is_fault?90:(em.steps.findIndex(x=>x.id===st.next)*10);
+          push("            IF "+st.guard+" THEN",st.id);
+          for(const a of st.exit)push('                "'+a.target+'".'+a.cmd+" := "+(a.val?"TRUE":"FALSE")+";",st.id);
+          push("                #Step := "+(st.loop?0:nextNum)+";",st.id);
+          if(st.id.endsWith("DONE"))push("                #Done := TRUE;",st.id);
+          push("            END_IF;",st.id);
+          if(st.timeout_ms&&st.failure){
+            push("            IF #TON_"+st.id+".Q THEN",st.id);
+            for(const a of st.exit)push('                "'+a.target+'".'+a.cmd+" := FALSE;",st.id);
+            push("                #Step := 90; // TIMEOUT → "+st.failure,st.id);
+            push("            END_IF;",st.id);
+          }
+        }else if(st.loop){
+          push("            #Done := TRUE; #Step := 0;",st.id);
+        }
+      }
+    });
+    push("    END_CASE;");
+    push("    #StepNo := #Step;");
+    push('END_FUNCTION_BLOCK');
+    files["seq_"+em.id]={name:fb+".scl",lines,map};
+  }
+  {
+    const lines=[];const map=[];const push=(t,s)=>{lines.push(t);map.push(s||null);};
+    push('FUNCTION_BLOCK "FB_CLAMP_DRIVERS"');
+    push("VAR_INPUT");
+    push("    CmdExtend : Bool; CmdRetract : Bool;");
+    push("    Extended : Bool; Retracted : Bool;");
+    push("END_VAR");
+    push("VAR_OUTPUT");
+    push("    Q_Extend : Bool; Q_Retract : Bool;");
+    push("    Busy : Bool; Done : Bool; Error : Bool;");
+    push("END_VAR");
+    push("BEGIN");
+    push("    // CM 驱动 FSM · 输出单写者仲裁 · 反馈互斥检测");
+    push("    IF #Extended AND #Retracted THEN");
+    push("        #Error := TRUE; #Q_Extend := FALSE; #Q_Retract := FALSE;");
+    push("    ELSE");
+    push("        #Error := FALSE;");
+    push("        #Q_Extend := #CmdExtend AND NOT #CmdRetract;");
+    push("        #Q_Retract := #CmdRetract AND NOT #CmdExtend;");
+    push("    END_IF;");
+    push("    #Busy := #Q_Extend OR #Q_Retract;");
+    push("    #Done := (#CmdExtend AND #Extended) OR (#CmdRetract AND #Retracted);");
+    push("END_FUNCTION_BLOCK");
+    files.drivers={name:"FB_ClampDrivers.scl",lines,map};
+  }
+  {
+    const lines=[];const map=[];const push=(t,s)=>{lines.push(t);map.push(s||null);};
+    push('ORGANIZATION_BLOCK "Main"');
+    push("VAR_TEMP");
+    push("    tStart : Bool; tReset : Bool; tPermit : Bool;");
+    push("END_VAR");
+    push("BEGIN");
+    push("    // 调用顺序：输入快照 → EM 序列 → CM 驱动 → 输出（SCAN_ORDER）");
+    push("    // 实例 DB 在骨架中声明并保留，OB_Main 未被排除");
+    for(const em of S.ir.ems){
+      push('    "i'+em.id+'_SEQ"(');
+      push("        Start := #tStart, Reset := #tReset, SafetyPermit := #tPermit,");
+      for(const cm of em.cms)for(const f of cm.ports.feedback)push("        "+f+' := "'+cm.instance_db+'".'+f+",");
+      push("    );");
+    }
+    push('    "iClampDrivers"(');
+    push('        CmdExtend := "iEM_CLAMP_SEQ".CmdExtend,');
+    push('        CmdRetract := "iEM_CLAMP_SEQ".CmdRetract,');
+    push('        Extended := "iCM_ClampCyl".Extended,');
+    push('        Retracted := "iCM_ClampCyl".Retracted);');
+    push("END_ORGANIZATION_BLOCK");
+    files.ob={name:"OB_Main.scl",lines,map};
+  }
+  return files;
+}
+function sclHighlight(line){
+  let h=esc(line);
+  h=h.replace(/\b(FUNCTION_BLOCK|END_FUNCTION_BLOCK|ORGANIZATION_BLOCK|END_ORGANIZATION_BLOCK|VAR_INPUT|VAR_OUTPUT|VAR_TEMP|VAR|END_VAR|BEGIN|CASE|END_CASE|IF|THEN|ELSE|ELSIF|END_IF|AND|OR|NOT|TRUE|FALSE)\b/g,'<span class="kw">$1</span>');
+  h=h.replace(/(\/\/.*)$/g,'<span class="cm">$1</span>');
+  h=h.replace(/(&quot;[^&]*?&quot;)/g,'<span class="st">$1</span>');
+  return h;
+}
+function renderScl(){
+  const files=genScl();
+  const keys=Object.keys(files);
+  let cur=S.ui.sclFile;
+  if(!files[cur])cur=keys[0];
+  const f=files[cur];
+  let h='<div class="note" style="margin-top:0">只读派生 · <b>目标态可执行 lowering 示意</b>（原型生成器，未经 TIA 编译）。当前仓库基线仍为注释占位 —— WP-02 必须让每个 Action/Guard/Timer 真实生效并通过语义覆盖率断言。点击代码行可反向定位步序。</div>';
+  h+='<div class="scl-files">'+keys.map(k=>'<button class="emchip '+(k===cur?"on":"")+'" data-action="scl-file" data-file="'+k+'">'+esc(files[k].name)+"</button>").join("")+"</div>";
+  h+='<div class="scl-code">'+f.lines.map((l,i)=>'<div class="scl-line" data-action="scl-line" data-step="'+(f.map[i]||"")+'" data-line="'+(i+1)+'"><span class="ln">'+(i+1)+'</span><span class="lc">'+sclHighlight(l)+"</span></div>").join("")+"</div>";
+  return h;
+}
+/* ---------- dock: review ---------- */
+function reviewGates(){
+  const nodes=allNodes();
+  const confirmed=nodes.filter(n=>confState(n.id)==="done").length;
+  const v=S.validation;
+  const ap=S.review.approval;
+  return {nodes,confirmed,total:nodes.length,errors:v.errors.length,
+    approved:!!(ap&&ap.spec_hash===S.specHash),
+    stale:!!(ap&&ap.spec_hash!==S.specHash),
+    riskOk:S.review.riskAccepted&&S.review.riskHash===S.specHash};
+}
+function renderReview(){
+  const g=reviewGates();
+  const cs=S.review.changeset;
+  const ap=S.review.approval;
+  let h='<div class="rev-grid"><div>';
+  h+='<div class="vcard"><div class="vcard-h">节点确认清单 <span class="dim" style="font-weight:400;font-size:11px">'+g.confirmed+"/"+g.total+' · 绑定当前 spec_hash</span><button class="btn sm" style="margin-left:auto" data-action="confirm-all" '+(g.confirmed===g.total?"disabled":"")+'>全部确认</button></div><div class="vcard-b" style="max-height:150px;overflow:auto">';
+  for(const n of g.nodes){
+    const st=confState(n.id);
+    h+='<div class="conf-row"><span class="tag '+n.kind+'">'+n.kind.toUpperCase()+'</span><span class="nm">'+esc(n.name)+' <span class="dim mono" style="font-size:10px">'+n.id+'</span></span>'+(st==="done"?'<span class="chip ok" style="padding:0 8px;font-size:10px">已确认</span>':st==="stale"?'<span class="chip warn" style="padding:0 8px;font-size:10px">失效</span>':'<button class="btn sm ghost" data-action="confirm-node" data-id="'+n.id+'">确认</button>')+"</div>";
+  }
+  h+="</div></div>";
+  const warns=S.validation.warnings.filter(w=>w.code==="UNBOUND_IO");
+  h+='<div class="vcard" style="margin-top:11px"><div class="vcard-h">风险接受（warning 分级）</div><div class="vcard-b">';
+  if(warns.length){
+    h+='<label class="checkline"><input type="checkbox" data-change="risk-accept" '+(g.riskOk?"checked":"")+'><span>我接受 '+warns.length+' 项 unbound I/O 风险：反馈未绑定物理地址，仅用于逻辑验证，<b>不构成现场功能或安全证明</b>。（绑定当前 hash，变更需重新接受）</span></label>';
+  }else h+='<div class="dim">无未绑定 I/O 警告。</div>';
+  h+="</div></div></div>";
+  h+='<div><div class="vcard"><div class="vcard-h">ChangeSet · 冻结与批准</div><div class="vcard-b">';
+  h+='<div class="kv"><b>当前 spec_hash</b></div><div class="hashline">'+S.specHash+"</div>";
+  h+='<div class="kv"><b>模板 hash</b><span style="color:var(--amber)" class="mono" style="font-size:10px">占位符 · G0 未验证</span></div>';
+  if(g.stale)h+='<div class="note err"><b>APPROVAL_SPEC_HASH_STALE</b> · IR 已变更，旧批准自动失效。需重新冻结 ChangeSet 并人工批准。</div>';
+  if(!cs){
+    const since=S.changeLog.filter(c=>!ap||c.rev>(ap.rev||0));
+    h+='<div class="diffline" style="margin:7px 0"><b>待冻结变更</b>（自上次批准以来）：</div>';
+    h+=(since.length?since:S.changeLog).map(c=>'<div class="diffline">rev '+c.rev+" · "+esc(c.label)+"</div>").join("");
+    h+='<button class="btn sm" style="margin-top:9px" data-action="freeze-changeset">冻结 ChangeSet（spec_hash）</button>';
+  }else{
+    h+='<div class="note ok" style="margin-top:8px">已冻结 <b class="mono">'+cs.id+"</b> · "+cs.at+'</div>';
+    h+=cs.diff.map(d=>'<div class="diffline">rev '+d.rev+" · "+esc(d.label)+"</div>").join("");
+    if(g.approved){
+      h+='<div class="note ok"><b>✓ 已人工批准</b> · '+esc(ap.by)+" · "+ap.at+"<br><span class='mono' style='font-size:10px'>绑定 "+ap.spec_hash+"</span></div>";
+    }else{
+      const can=g.confirmed===g.total&&g.errors===0&&g.riskOk;
+      h+='<button class="btn primary" style="margin-top:9px" data-action="approve-open" '+(can?"":"disabled")+'>人工批准 ChangeSet</button>';
+      if(!can)h+='<div class="dim" style="font-size:10.5px;margin-top:6px">前置：全部节点确认 ('+g.confirmed+"/"+g.total+") · 0 errors · 风险接受 "+(g.riskOk?"✓":"✗")+"</div>";
+    }
+  }
+  h+='<div class="note" style="margin-bottom:0">批准仅来自人工点击事件（G6）。AI 无审批权限；NODE_CONFIRMED ≠ ChangeSet 已签名。</div>';
+  h+="</div></div></div></div>";
+  return h;
+}
+/* ---------- dock: delivery ---------- */
+const STAGES=["CREATE","IMPORT","COMPILE","SAVE","ARCHIVE","HASH","RETRIEVE_REOPEN"];
+const STAGE_LABEL={CREATE:"创建副本",IMPORT:"导入块",COMPILE:"编译 PLC",SAVE:"保存",ARCHIVE:"归档 zap19",HASH:"SHA256",RETRIEVE_REOPEN:"重开验证"};
+function deliveryGates(){
+  const g=reviewGates();
+  return [
+    {label:"ChangeSet 已批准",ok:g.approved},
+    {label:"spec_hash 匹配",ok:g.approved},
+    {label:"校验 0 errors",ok:g.errors===0},
+    {label:"G0 真实模板",ok:false,note:"原型以模拟模式绕过（真实交付被阻断）"}
+  ];
+}
+function renderDelivery(){
+  const d=S.delivery,j=d.job;
+  const gates=deliveryGates();
+  const canStart=gates.slice(0,3).every(x=>x.ok)&&(!j||j.status!=="RUNNING");
+  let h='<div class="g0banner"><span class="ic">⚠</span><span><b>模拟流水线 · SIMULATED</b> — 未连接 Windows TIA V19 Worker。以下阶段推进、回执与哈希均为原型演示，<b>不产生真实 .zap19，不构成 G7/G8 证据</b>。真实交付需：0 errors + Save + Archive + sha256 + reopen 全链回执。</span></div>';
+  h+='<div class="gates">'+gates.map(g=>'<span class="chip '+(g.ok?"ok":g.note?"warn":"err")+'" title="'+esc(g.note||"")+'"><span class="led"></span>'+g.label+(g.ok?" ✓":" ✗")+"</span>").join("");
+  h+='<label class="checkline" style="margin:0;display:inline-flex;padding:4px 10px"><input type="checkbox" data-change="inject-error" '+(d.injectError?"checked":"")+'><span style="font-size:11px">故障注入：模拟 COMPILE 失败（演示诊断修复回路）</span></label></div>';
+  h+='<div style="display:flex;gap:9px;align-items:center;margin-bottom:4px"><button class="btn primary sm" data-action="create-job" '+(canStart?"":"disabled")+'>创建交付 Job（202）</button>';
+  if(j)h+='<button class="btn ghost sm" data-action="job-reset">清除 Job</button><span class="chip '+(j.status==="RUNNING"?"info":j.status==="SUCCEEDED"?"ok":"err")+'"><span class="led"></span>'+j.id+" · "+j.status+"</span>";
+  if(!j)h+='<span class="dim" style="font-size:11px">需先完成人工批准；Job 由后台串行 Worker 执行（原型为定时器模拟）</span>';
+  h+="</div>";
+  if(j){
+    h+='<div class="pipe">'+STAGES.map((st,i)=>{
+      let cls="",ps="等待";
+      if(j.failedAt===i){cls="fail";ps="失败";}
+      else if(i<j.stageIdx){cls="done";ps="完成";}
+      else if(i===j.stageIdx&&j.status==="RUNNING"){cls="run";ps="执行中";}
+      else if(j.status==="SUCCEEDED"){cls="done";ps="完成";}
+      return '<div class="pstage '+cls+'"><div class="pn">'+(cls==="done"?"✓ ":cls==="fail"?"✗ ":"")+st+'</div><div class="ps">'+STAGE_LABEL[st]+"</div></div>";
+    }).join("")+"</div>";
+    h+='<div class="evtlog" id="evtLog">'+j.events.map(ev=>'<div class="evt '+ev.level+'"><span class="seq">#'+String(ev.seq).padStart(2,"0")+"</span>["+ev.stage+"] "+esc(ev.msg)+"</div>").join("")+"</div>";
+    if(j.diagnostics.length){
+      h+=j.diagnostics.map((dg,i)=>'<div class="diag"><span class="dc">'+dg.code+"</span> · <span class='mono'>"+dg.block+":"+dg.line+"</span> — "+esc(dg.msg)+'<div style="margin-top:6px;display:flex;gap:7px"><button class="btn sm" data-action="diag-locate" data-node="'+dg.node+'">SourceMap 定位节点 '+dg.node+"</button>"+(i===0?'<button class="btn sm blue" data-action="diag-fix">生成修复候选 Patch</button>':"")+"</div></div>").join("");
+      h+='<div class="note warn">修复将改变 spec_hash → 必须重新走审核 Gate（AI 不得覆盖已批准版本）。</div>';
+    }
+    if(j.artifact){
+      h+='<div class="artifact"><span class="ic">📦</span><div style="flex:1"><b>模拟证据包已生成</b><div class="mono dim" style="font-size:10.5px">'+j.artifact.name+" · "+j.artifact.size+' B · sha256:'+j.artifact.sha256.slice(0,16)+'…</div><div class="dim" style="font-size:10.5px">真实 .zap19 下载仅在 NATIVE_ARCHIVED（V19_real 回执）后出现；此处下载为 JSON 证据，非原生归档。</div></div><button class="btn sm primary" data-action="download-evidence">下载证据包 (JSON)</button></div>';
+    }
+  }
+  return h;
+}
+function renderDock(){
+  document.querySelectorAll(".dtab").forEach(b=>b.classList.toggle("on",b.dataset.tab===S.ui.dockTab));
+  const b=$("#dockBody");
+  const map={validate:renderValidate,trace:renderTrace,scl:renderScl,review:renderReview,delivery:renderDelivery};
+  b.innerHTML=(map[S.ui.dockTab]||renderValidate)();
+  if(S.ui.dockTab==="trace"){updateTraceLive();}
+}
+function renderAll(){
+  renderTop();renderTree();renderCanvas();renderInspector();renderChat();renderDock();
+  $("#chatPanel").classList.toggle("collapsed",!S.ui.chatOpen);
+  $("#dock").classList.toggle("collapsed",!S.ui.dockOpen);
+}
+
+/* ================= delivery sim ================= */
+function dEvent(stage,msg,level){
+  const j=S.delivery.job;if(!j)return;
+  j.events.push({seq:j.events.length+1,stage,msg,level:level||""});
+  const el=$("#evtLog");
+  if(el){el.insertAdjacentHTML("beforeend",'<div class="evt '+(level||"")+'"><span class="seq">#'+String(j.events.length).padStart(2,"0")+"</span>["+stage+"] "+esc(msg)+"</div>");el.scrollTop=1e9;}
+}
+function clearDeliveryTimers(){S.delivery.timers.forEach(clearTimeout);S.delivery.timers=[];}
+function createJob(){
+  const g=reviewGates();
+  if(!g.approved){toast("交付被阻断：ChangeSet 未批准或 hash 不匹配","err");return;}
+  clearDeliveryTimers();
+  const j={id:"JOB-"+Date.now().toString().slice(-8),status:"RUNNING",stageIdx:0,events:[],diagnostics:[],artifact:null,failedAt:-1,approved_hash:S.specHash,inject:S.delivery.injectError};
+  S.delivery.job=j;
+  S.ui.dockTab="delivery";S.ui.dockOpen=true;
+  renderDock();
+  dEvent("CREATE","Job 已创建（幂等键 = approved_hash）· 隔离副本工作目录","ok");
+  dEvent("CREATE","交付状态：DRAFT → SPEC_FROZEN → SOURCE_READY（原型模拟）");
+  const durations=[500,900,1500,500,800,350,950];
+  let acc=300;
+  STAGES.forEach((st,i)=>{
+    acc+=durations[i];
+    S.delivery.timers.push(setTimeout(()=>{
+      if(S.delivery.job!==j||j.status!=="RUNNING")return;
+      if(j.inject&&st==="COMPILE"){
+        j.failedAt=i;j.status="FAILED";
+        j.diagnostics=[
+          {code:"INSTANCE_DB_MISSING",block:"OB_Main",line:14,msg:'实例 DB "iCM_ClampCyl" 声明缺失即被调用（模拟注入）',node:"CM_CLAMP_CYL"},
+          {code:"GUARD_NOT_LOWERED",block:"FB_EM_CLAMP_SEQ",line:31,msg:"S_EXTEND 超时分支未生成可执行语句（模拟注入）",node:"S_EXTEND"}
+        ];
+        dEvent("COMPILE","Compile 失败 · 2 errors / 0 warnings（模拟诊断）","err");
+        dEvent("COMPILE","交付状态：FAILED · 不发布任何产物 · 回执已保留","err");
+        renderDock();
+        toast("模拟编译失败：诊断已映射到节点，可生成修复候选","err");
+        return;
+      }
+      j.stageIdx=i+1;
+      const msgs={
+        IMPORT:"导入 AF 完整块与调用图（含 OB_Main，无文件排除）",
+        COMPILE:"Compile PLC = Success · 0 errors / 0 warnings（模拟回执）",
+        SAVE:"工程已保存（隔离副本，原件只读）",
+        ARCHIVE:"Archive → 演示工程.zap19（模拟，非真实归档）",
+        HASH:"sha256 已计算并绑定 approved_hash",
+        RETRIEVE_REOPEN:"Retrieve / reopen 验证通过（模拟）"
+      };
+      dEvent(st,msgs[st]||st,"ok");
+      if(i===STAGES.length-1){
+        j.status="SUCCEEDED";
+        const content=canonical({job:j.id,approved_hash:j.approved_hash,stages:STAGES,prototype:true});
+        j.artifact={name:"prototype_evidence_"+j.id+".json",size:content.length,sha256:sha(content),content};
+        dEvent("RETRIEVE_REOPEN","交付状态：NATIVE_ARCHIVED*（*模拟标记，非 V19_real）","warn");
+        toast("模拟交付完成：证据包可下载（非真实 .zap19）","ok");
+      }
+      renderDock();
+    },acc));
+  });
+}
+function downloadEvidence(){
+  const j=S.delivery.job;
+  if(!j||!j.artifact)return;
+  const blob=new Blob([JSON.stringify({
+    prototype:true,disclaimer:"本文件为原型模拟证据包，不是真实 TIA Openness 回执，不构成 G7/G8 证据。",
+    job_id:j.id,approved_spec_hash:j.approved_hash,ir_spec_hash:S.specHash,
+    framework:FRAMEWORK,stages:STAGES,events:j.events,
+    artifact_sha256:j.artifact.sha256,generated_at:now()
+  },null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download=j.artifact.name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast("已下载模拟证据包 JSON（非原生归档）","ok");
+}
+function diagFixCandidate(){
+  const cand=newCandidate("修复模拟编译诊断：重新绑定实例 DB 与超时分支 lowering",[
+    {op:"set",path:"/compiler_fix_rev",value:S.ir.compiler_fix_rev+1,label:"compiler_fix_rev: "+S.ir.compiler_fix_rev+" → "+(S.ir.compiler_fix_rev+1)+"（重新 pin 实例 DB 声明 + TON 分支）"}
+  ],[],["假设：修复仅影响 lowering 绑定，不改变工艺语义（仍需人工审核）。"],["spec_hash 变化 → 旧批准失效","需重新冻结 + 批准 + 交付"]);
+  pushMsg("ai","编译诊断已通过 SourceMap 定位到 <b>CM_CLAMP_CYL</b>（OB_Main:14）与 <b>S_EXTEND</b>（FB:31）。生成修复候选如下 —— 我不会直接覆盖已批准版本，采纳后必须重新走 Gate：",cand);
+  S.ui.chatOpen=true;renderAll();
+  toast("修复候选已推送到对话面板","");
+}
+
+/* ================= modals ================= */
+function openAbout(){
+  openModal(modalHead("原型说明 · 真实与模拟边界")+
+  '<div class="modal-b">'+
+  "<p>本原型实现《aiCoPlc Implementation Guide R3》§4.3 的统一工作台布局与 §9 WP-02「夹紧气缸」垂直切片的<b>交互设计</b>。它是设计验证物（designed），不是 WP-04 的完成证据。</p>"+
+  "<h4>布局映射</h4><table><tr><th>区域</th><th>文档依据</th><th>WP</th></tr>"+
+  "<tr><td>顶栏 Profile / rev / hash / 校验 / 交付</td><td>§4.3 · D-09 单一真值</td><td>WP-01/05</td></tr>"+
+  "<tr><td>工程树 Unit/EM/CM/Step</td><td>§3.1 AF 角色</td><td>WP-01</td></tr>"+
+  "<tr><td>设备功能图 + 工艺 SFC（双向联动）</td><td>§4.2 两个 Canvas</td><td>WP-04</td></tr>"+
+  "<tr><td>Inspector 全参数编辑 + 节点确认</td><td>§3.2/§3.3 · D-05</td><td>WP-01/04</td></tr>"+
+  "<tr><td>Chat → CandidatePatch → 预览/采纳</td><td>§4.1 工艺解释七步</td><td>WP-04</td></tr>"+
+  "<tr><td>校验 / Trace / SCL / 审核 / 交付</td><td>§3.4 · §5 · §6 · G0–G10</td><td>WP-02/03/05</td></tr></table>"+
+  "<h4>真实 vs 模拟</h4><table><tr><th>能力</th><th>本原型</th><th>真实实现</th></tr>"+
+  "<tr><td>IR / 原子 Patch / revision / spec_hash</td><td>本地真实计算（sha256 + 规范化 JSON）</td><td>服务器 EngineeringIR v3（WP-01）</td></tr>"+
+  "<tr><td>工艺意图解析</td><td>规则模拟，未接 LLM</td><td>受约束 LLM 候选器（WP-04）</td></tr>"+
+  "<tr><td>合规校验 / Trace</td><td>本地规则检查与仿真（offline/simulated）</td><td>ComplianceEngine + 属性测试（WP-03）</td></tr>"+
+  "<tr><td>SCL 派生</td><td>目标态示意生成器，未经 TIA 编译</td><td>确定性 AF Compiler（WP-02，当前基线为注释占位）</td></tr>"+
+  "<tr><td>交付流水线</td><td>定时器模拟 + 故障注入</td><td>Windows V19 Worker 真实 Openness（WP-05）</td></tr>"+
+  "<tr><td>AF Profile</td><td colspan='2'>与仓库一致：template_unbound 占位符 → FRAMEWORK_NOT_VERIFIED（G0 阻断，WP-00）</td></tr></table>"+
+  "<h4>证据分级（不得跳级）</h4><div class='legend'><span class='l1'>designed</span><span class='l2'>offline_verified</span><span class='l3'>simulated</span><span class='l4'>V19_compiled</span><span class='l5'>native_archived</span><span class='l5'>field_verified</span></div>"+
+  "<p>编译零错误 ≠ 现场功能正确；field_verified 只能由现场独立确认赋值。AI 无 approve / compile / write_tia 权限。</p>"+
+  "<h4>快捷键</h4><p>Ctrl+Enter 发送对话 · 点击 SCL 行反向定位步序 · Trace 运行时 SFC 联动高亮。</p>"+
+  "</div>");
+}
+function openG0(){
+  openModal(modalHead("G0 · AF Profile 基线阻断")+
+  '<div class="modal-b">'+
+  '<div class="note err"><b>FRAMEWORK_NOT_VERIFIED</b> — 禁止宣称 AF 官方实现合规及发布。</div>'+
+  "<h4>当前仓库常量（plc_engine/engineering_ir/contracts.py）</h4>"+
+  '<table><tr><td>AF_PROFILE_ID</td><td class="mono">'+FRAMEWORK.profile_id+"</td></tr>"+
+  '<tr><td>AF_LIBRARY_VERSION</td><td class="mono">'+FRAMEWORK.library_version+"</td></tr>"+
+  '<tr><td>AF_TEMPLATE_SHA256</td><td class="mono" style="color:var(--red)">'+FRAMEWORK.template_sha256+"（占位符）</td></tr></table>"+
+  "<h4>冲突事实</h4><p>Siemens 官方 AF Basic V2.2.2 项目归档为 <b>V20</b>，不能推断可直接用于本机 V19。常量命名与文件夹名称不等于官方兼容性验证。</p>"+
+  "<h4>WP-00 解锁条件</h4><p>① 选定实际可在本机 V19 打开、调用、编译的正式 AF 工程/库基线（合法许可）；② 建立 framework.lock.json，哈希来自真实文件内容；③ 逐项核对库块签名、调用顺序与版本；④ Windows V19 Worker 真实编译 + Save + Archive + reopen 回执。</p>"+
+  "<p>在此之前：自举 self_contained 仅作研发演示（本原型模式），不得贴官方库等价认证。</p>"+
+  "</div>");
+}
+function openImport(){
+  openModal(modalHead("旧工程导入 · Clean AF Rebuild（WP-06/07 设计预览）")+
+  '<div class="modal-b">'+
+  "<p>上传 <span class='mono'>.zap19 / .ap19</span> 或授权导出包 → Windows Worker 隔离提取 → 语义解析 → 新 AF 模型 → ReplacementPlan → 副本编译。<b>原件永不改写，不在旧代码上堆补丁。</b></p>"+
+  '<div style="border:1px dashed var(--line2);border-radius:9px;padding:22px;text-align:center;color:var(--dim);margin:10px 0">原型未实现上传 · 需要 Windows Worker 与隔离目录（WP-06）</div>'+
+  "<h4>解析保真等级</h4><table><tr><th>等级</th><th>含义</th><th>处理</th></tr>"+
+  "<tr><td class='mono' style='color:var(--green)'>EXACT</td><td>接口/条件/动作/调用链可重建</td><td>自动生成候选，仍需人审</td></tr>"+
+  "<tr><td class='mono' style='color:var(--blue)'>PARTIAL</td><td>部分行为可识别</td><td>列出未覆盖分支，禁止称等价</td></tr>"+
+  "<tr><td class='mono' style='color:var(--amber)'>OPAQUE</td><td>加密/不完整/不支持语言</td><td>仅提取元数据，不猜算法</td></tr>"+
+  "<tr><td class='mono' style='color:var(--red)'>PROTECTED</td><td>F-block / 安全对象</td><td>强制只读，零修改</td></tr></table>"+
+  "<h4>工程师四张表</h4><p>① 节点清单（新节点→来源块+证据等级）② 行为差异表 ③ 依赖/接口表 ④ 替换安全表（双写检测、旧调用失效、原件 SHA256 不变）。</p>"+
+  "</div>");
+}
+function openReset(){
+  openModal(modalHead("重置原型状态")+
+  '<div class="modal-b"><p>选择重置方式（仅影响浏览器内存，不写任何文件）：</p>'+
+  '<div style="display:flex;gap:10px;margin-top:12px"><button class="btn" data-action="reset-seed">重置为演示工程（rev 3）</button>'+
+  '<button class="btn blue" data-action="reset-empty">清空为新建工程（体验从 0 创建）</button>'+
+  '<button class="btn ghost" data-action="modal-close">取消</button></div></div>');
+}
+function openHash(){
+  openModal(modalHead("spec_hash · 语义哈希")+
+  '<div class="modal-b"><div class="hashline">'+S.specHash+"</div>"+
+  "<p>对 EngineeringIR 规范化 JSON（排序键、排除布局/审核状态）计算 SHA-256。任何语义变更 → 哈希变化 → 旧审核自动失效；编译与交付必须绑定同一哈希。</p>"+
+  '<div class="kv"><b>revision</b><span class="mono">'+S.revision+'</span></div>'+
+  '<div class="kv"><b>模板 hash</b><span class="mono" style="color:var(--amber)">'+FRAMEWORK.template_sha256+"</span></div></div>");
+}
+function openApprove(){
+  const cs=S.review.changeset;
+  if(!cs)return;
+  openModal(modalHead("人工批准 · ChangeSet "+cs.id)+
+  '<div class="modal-b">'+
+  "<p>你正在以<b>工程师本人</b>身份批准以下不可变基线。AI 不能代为批准；批准后任何 IR 变更将使本批准失效。</p>"+
+  '<div class="hashline">'+cs.spec_hash+"</div>"+
+  cs.diff.map(d=>'<div class="diffline">rev '+d.rev+" · "+esc(d.label)+"</div>").join("")+
+  '<label class="checkline"><input type="checkbox" id="approveCheck"><span>我已审核工艺差异、异常路径与 unbound 风险，确认此为本人真实批准（G6 · real user event）。</span></label>'+
+  '<div style="display:flex;gap:9px;justify-content:flex-end"><button class="btn ghost" data-action="modal-close">取消</button><button class="btn primary" data-action="approve-confirm">批准并签名</button></div>'+
+  "</div>");
+}
+function openPreview(cand){
+  let rows=cand.ops.map(o=>{
+    let before="—";
+    if(o.op==="set"){const v=resolvePath(S.ir,o.path);before=typeof v==="object"?JSON.stringify(v):String(v);}
+    const after=o.op==="set"?String(o.value):o.op==="add_em"?"+ "+o.em.id:"− "+o.emId;
+    return "<tr><td class='mono'>"+esc(o.label)+"</td><td class='mono'>"+esc(before)+"</td><td class='mono' style='color:var(--teal)'>"+esc(after)+"</td></tr>";
+  }).join("");
+  openModal(modalHead("候选差异预览 · "+cand.id)+
+  '<div class="modal-b"><table><tr><th>操作</th><th>当前值</th><th>候选值</th></tr>'+rows+"</table>"+
+  (cand.questions.length?"<h4>追问</h4>"+cand.questions.map(q=>"<p>？ "+esc(q)+"</p>").join(""):"")+
+  (cand.assumptions.length?"<h4>显式假设（需人工确认）</h4>"+cand.assumptions.map(a=>"<p>· "+esc(a)+"</p>").join(""):"")+
+  "<p class='dim'>采纳后：revision +1 · spec_hash 变化 · 旧审核失效 · Trace/SCL 重新派生。候选 IR 副本已通过本地合规预检。</p>"+
+  '<div style="display:flex;gap:9px;justify-content:flex-end"><button class="btn ghost" data-action="modal-close">关闭</button><button class="btn primary" data-action="cand-adopt" data-cid="'+cand.id+'">采纳</button></div></div>');
+}
+
+/* ================= actions ================= */
+function selectNode(id){
+  S.ui.selected=id;
+  const f=findNode(id);
+  if(f&&f.kind==="step"&&f.em){S.ui.selectedEm=f.em.id;S.ui.canvasTab="sfc";}
+  if(f&&f.kind==="cm"&&S.ui.canvasTab==="sfc"&&f.em){S.ui.selectedEm=f.em.id;}
+  renderTree();renderCanvas();renderInspector();
+}
+function confirmNode(id){
+  S.review.confirmed[id]=S.specHash;
+  renderTree();renderInspector();renderTop();
+  if(S.ui.dockTab==="review")renderDock();
+  toast("节点 "+id+" 已确认 · 绑定当前 spec_hash","ok");
+}
+document.addEventListener("click",e=>{
+  const a=e.target.closest("[data-action]");
+  if(!a)return;
+  const act=a.dataset.action;
+  switch(act){
+    case "select":selectNode(a.dataset.id);break;
+    case "canvas-tab":S.ui.canvasTab=a.dataset.tab;renderCanvas();break;
+    case "em-tab":S.ui.selectedEm=a.dataset.em;renderCanvas();break;
+    case "dock-tab":S.ui.dockTab=a.dataset.tab;S.ui.dockOpen=true;renderDock();$("#dock").classList.remove("collapsed");break;
+    case "toggle-chat":S.ui.chatOpen=!S.ui.chatOpen;$("#chatPanel").classList.toggle("collapsed",!S.ui.chatOpen);break;
+    case "toggle-dock":S.ui.dockOpen=!S.ui.dockOpen;$("#dock").classList.toggle("collapsed",!S.ui.dockOpen);break;
+    case "toggle-focus":{
+      const focus=!S.ui.chatOpen&&!S.ui.dockOpen;
+      S.ui.chatOpen=focus;S.ui.dockOpen=focus;
+      $("#chatPanel").classList.toggle("collapsed",!focus);
+      $("#dock").classList.toggle("collapsed",!focus);
+      $("#focusBtn").textContent=focus?"退出专注":"专注画布";
+      break;}
+    case "send-chat":{
+      const inp=$("#chatInput");const v=inp.value.trim();
+      if(!v){toast("请输入工艺意图","warn");break;}
+      inp.value="";S.ui.chatOpen=true;$("#chatPanel").classList.remove("collapsed");
+      parseAndRespond(v);break;}
+    case "chip":{
+      const t=a.dataset.text;S.ui.chatOpen=true;$("#chatPanel").classList.remove("collapsed");
+      parseAndRespond(t);break;}
+    case "cand-adopt":{const c=findCand(a.dataset.cid);if(c){closeModal();adoptCandidate(c);}break;}
+    case "cand-discard":{const c=findCand(a.dataset.cid);if(c)discardCandidate(c);break;}
+    case "cand-preview":{const c=findCand(a.dataset.cid);if(c)openPreview(c);break;}
+    case "confirm-node":confirmNode(a.dataset.id);break;
+    case "confirm-all":{
+      for(const n of allNodes())S.review.confirmed[n.id]=S.specHash;
+      renderTree();renderInspector();renderTop();renderDock();
+      toast("全部节点已确认（人工点击）· 绑定当前 hash","ok");break;}
+    case "freeze-changeset":{
+      const ap=S.review.approval;
+      const since=S.changeLog.filter(c=>!ap||c.rev>(ap.rev||0));
+      S.review.changeset={id:"CS-"+String(Date.now()).slice(-6),spec_hash:S.specHash,at:now(),diff:since.length?since:S.changeLog.slice(-3)};
+      renderDock();toast("ChangeSet 已冻结 · 绑定 spec_hash","ok");break;}
+    case "approve-open":openApprove();break;
+    case "approve-confirm":{
+      const ck=$("#approveCheck");
+      if(!ck||!ck.checked){toast("请先勾选人工确认声明","warn");break;}
+      const cs=S.review.changeset;
+      S.review.approval={by:"演示工程师（人工点击事件）",at:now(),spec_hash:cs.spec_hash,changeset_id:cs.id,rev:S.revision};
+      closeModal();renderTop();renderDock();
+      toast("ChangeSet 已人工批准 · hash 绑定（G6）","ok");break;}
+    case "create-job":createJob();break;
+    case "job-reset":clearDeliveryTimers();S.delivery.job=null;renderDock();break;
+    case "download-evidence":downloadEvidence();break;
+    case "diag-locate":selectNode(a.dataset.node);S.ui.dockTab="scl";renderDock();toast("已定位 "+a.dataset.node+" · SCL 面板高亮相关行","");break;
+    case "diag-fix":diagFixCandidate();break;
+    case "trace-run":startTrace();break;
+    case "trace-reset":traceReset();renderDock();markTraceSfc();break;
+    case "scl-file":S.ui.sclFile=a.dataset.file;renderDock();break;
+    case "scl-line":{
+      const st=a.dataset.step;
+      document.querySelectorAll(".scl-line").forEach(l=>l.classList.remove("hl"));
+      a.classList.add("hl");
+      if(st){selectNode(st);toast("SourceMap："+a.dataset.line+" 行 → "+st,"");}
+      break;}
+    case "run-validate":computeValidation();S.ui.dockTab="validate";S.ui.dockOpen=true;$("#dock").classList.remove("collapsed");renderTop();renderDock();toast("校验完成："+S.validation.errors.length+" errors · "+S.validation.warnings.length+" warnings",S.validation.errors.length?"err":"ok");break;
+    case "goto-validate":S.ui.dockTab="validate";S.ui.dockOpen=true;$("#dock").classList.remove("collapsed");renderDock();break;
+    case "goto-delivery":S.ui.dockTab="delivery";S.ui.dockOpen=true;$("#dock").classList.remove("collapsed");renderDock();break;
+    case "goto-review":S.ui.dockTab="review";S.ui.dockOpen=true;$("#dock").classList.remove("collapsed");renderDock();break;
+    case "open-about":openAbout();break;
+    case "open-g0":openG0();break;
+    case "open-import":openImport();break;
+    case "open-reset":openReset();break;
+    case "open-hash":openHash();break;
+    case "modal-close":closeModal();break;
+    case "reset-seed":resetSeed();closeModal();break;
+    case "reset-empty":resetEmpty();closeModal();break;
+  }
+});
+document.addEventListener("change",e=>{
+  const a=e.target.closest("[data-change]");
+  if(!a)return;
+  const kind=a.dataset.change;
+  if(kind==="duration"||kind==="timeout"){
+    const f=findNode(a.dataset.id);if(!f||f.kind!=="step")return;
+    const sec=parseFloat(a.value);
+    if(isNaN(sec)||sec<0){toast("数值无效","err");renderInspector();return;}
+    const ms=Math.round(sec*1000);
+    const field=kind==="duration"?"duration_ms":"timeout_ms";
+    if(f.node[field]===ms){return;}
+    if(ms>600000){toast("超出允许范围（≤600s）","err");renderInspector();return;}
+    directPatch(f.node.id+"."+field+" "+f.node[field]+" → "+ms+"ms",()=>{f.node[field]=ms;});
+  }
+  else if(kind==="trace-scenario"){traceReset(a.value);S.trace.scenario=a.value;renderDock();markTraceSfc();}
+  else if(kind==="trace-speed"){S.trace.speed=parseInt(a.value,10);if(S.trace.running&&!S.trace.paused){clearInterval(S.trace.timer);S.trace.timer=setInterval(traceTick,Math.max(8,40/S.trace.speed*4));}}
+  else if(kind==="risk-accept"){S.review.riskAccepted=a.checked;S.review.riskHash=S.specHash;renderDock();renderTop();}
+  else if(kind==="inject-error"){S.delivery.injectError=a.checked;}
+});
+document.addEventListener("keydown",e=>{
+  if(e.ctrlKey&&e.key==="Enter"&&document.activeElement===$("#chatInput")){
+    e.preventDefault();
+    const v=$("#chatInput").value.trim();
+    if(v){$("#chatInput").value="";parseAndRespond(v);}
+  }
+  if(e.key==="Escape")closeModal();
+});
+
+/* ================= seed / reset ================= */
+function seedChat(){
+  S.chat=[];S.candSeq=0;
+  const c1={id:"CP-001",title:"创建夹紧单元 AF 模型（Unit/EM/CM/Sequence）",ops:[{op:"add_em",em:clampEm(),label:"+ EM_CLAMP · CM_CLAMP_CYL · S_WAIT→S_EXTEND→S_HOLD(2s)→S_RETRACT→S_DONE · S_FAULT"}],questions:["伸出/缩回到位反馈来自哪个传感器？未提供前保持 unbound。"],assumptions:["复位仅在 Retracted AND NOT Extended 时允许（需人工确认）。"],impact:["新增 9 个语义节点"],status:"adopted",baseRev:1,adoptedRev:2};
+  const c2={id:"CP-002",title:"复位语义确认：安全条件复位",ops:[{op:"set",path:"/em/EM_CLAMP/step/S_FAULT/reset_guard",value:"Reset AND Retracted AND NOT Extended",label:"S_FAULT.reset_guard := Reset AND Retracted AND NOT Extended"}],questions:[],assumptions:[],impact:["故障复位不得绕过安全条件"],status:"adopted",baseRev:2,adoptedRev:3};
+  S.candSeq=2;
+  S.chat.push({role:"user",html:"新建夹紧单元：气缸伸出到位后保持 2 秒，再缩回；伸出/缩回 3 秒超时报故障。",ts:"2026-11-14 09:11"});
+  S.chat.push({role:"ai",html:"已解析工艺意图并映射 AF 角色（Unit/EM/CM/Sequence）。反馈传感器未提供 → 保持 <b>unbound</b>，不虚构物理地址。候选如下：",cand:c1,ts:"2026-11-14 09:12"});
+  S.chat.push({role:"user",html:"传感器先不接线，先做逻辑验证。复位必须在缩回到位之后才允许。",ts:"2026-11-14 09:14"});
+  S.chat.push({role:"ai",html:"收到。复位安全条件已写入候选；unbound I/O 将作为 warning 进入审核风险接受项。采纳后请逐节点确认并冻结 ChangeSet：",cand:c2,ts:"2026-11-14 09:15"});
+  S.chat.push({role:"ai",html:"当前 rev 3。下一步建议：① 在 <b>Trace</b> 运行 6 个场景证据化验收项；② 在 <b>人工审核</b> 确认节点并批准；③ 在 <b>交付</b> 查看模拟流水线（G0 未验证，真实交付被阻断）。",ts:"2026-11-14 09:15"});
+}
+function resetSeed(){
+  clearDeliveryTimers();clearInterval(S.trace.timer);
+  S.revision=3;
+  S.ir={unit:{id:"U_ASSEMBLY",name:"装配工站"},ems:[clampEm()],compiler_fix_rev:0};
+  S.review={confirmed:{},changeset:null,approval:null,riskAccepted:false,riskHash:""};
+  S.changeLog=[{rev:2,label:"创建 EM_CLAMP + CM_CLAMP_CYL + 6 步序（含故障/复位）",ts:"2026-11-14 09:12"},{rev:3,label:"复位语义确认：仅 Retracted 且 NOT Extended 时允许复位",ts:"2026-11-14 09:15"}];
+  S.delivery={job:null,timers:[],injectError:false};
+  S.trace.props={};traceReset("normal_cycle");
+  S.ui.selected="EM_CLAMP";S.ui.selectedEm="EM_CLAMP";S.ui.canvasTab="sfc";S.ui.dockTab="validate";
+  seedChat();recomputeHash();S.baselineHash=S.specHash;computeValidation();renderAll();
+  toast("已重置为演示工程 rev 3","");
+}
+function resetEmpty(){
+  clearDeliveryTimers();clearInterval(S.trace.timer);
+  S.revision=1;
+  S.ir={unit:{id:"U_ASSEMBLY",name:"装配工站"},ems:[],compiler_fix_rev:0};
+  S.review={confirmed:{},changeset:null,approval:null,riskAccepted:false,riskHash:""};
+  S.changeLog=[];
+  S.delivery={job:null,timers:[],injectError:false};
+  S.trace.props={};traceReset("normal_cycle");
+  S.ui.selected="U_ASSEMBLY";S.ui.selectedEm="";S.ui.canvasTab="sfc";S.ui.dockTab="validate";
+  S.chat=[];S.candSeq=0;
+  pushMsg("ai","新建逻辑工程已创建，已自动绑定唯一可用 AF Profile（<b>未验证 · G0 阻断</b>）。请用工艺语言描述需求，例如「新建夹紧单元：伸出到位后保持 2 秒再缩回，3 秒超时报故障」。我将生成受 AF 契约约束的候选节点，等待你采纳。");
+  recomputeHash();S.baselineHash=S.specHash;computeValidation();renderAll();
+  toast("已清空为新建工程 · 从对话开始创建","");
+}
+
+/* ================= init ================= */
+recomputeHash();S.baselineHash=S.specHash;
+computeValidation();
+S.trace.props={};
+seedChat();
+traceReset("normal_cycle");
+renderAll();
+</script>
+</body>
+</html>

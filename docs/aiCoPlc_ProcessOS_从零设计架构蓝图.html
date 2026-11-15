@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>aiCoPlc ProcessOS｜从零设计的工业工艺编译平台蓝图</title>
+<style>
+:root{--bg:#090f1c;--panel:#101a2c;--panel2:#15213a;--line:#293b55;--muted:#a5b6cf;--text:#ebf3ff;--blue:#6ca7ff;--mint:#5be4b4;--amber:#ffd285;--coral:#ff9b91;--violet:#c19bff;--radius:15px;--shadow:0 13px 35px #0004}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.75 system-ui,-apple-system,"Microsoft YaHei","PingFang SC",Arial,sans-serif}a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+header{background:radial-gradient(circle at 80% -20%,#325da966,transparent 42%),linear-gradient(135deg,#101f3b,#0b1427 65%);border-bottom:1px solid var(--line);padding:42px max(25px,calc((100vw - 1320px)/2)) 42px}header h1{font-size:clamp(30px,4vw,52px);letter-spacing:-1.8px;line-height:1.18;margin:12px 0 14px}header p{max-width:850px;color:#c4d2e5;font-size:17px}.eyebrow{font-size:12px;font-weight:800;letter-spacing:.18em;color:var(--mint);text-transform:uppercase}.pill{display:inline-block;border:1px solid #446488;border-radius:100px;padding:4px 11px;color:#c7ddf8;background:#13213a;font-size:12px;margin-right:8px;margin-bottom:8px}
+.layout{display:grid;grid-template-columns:225px minmax(0,1fr);max-width:1400px;margin:0 auto;gap:30px;padding:30px 26px}.sidebar{position:sticky;top:15px;height:calc(100vh - 30px);overflow:auto;border:1px solid var(--line);background:#0e1729;border-radius:var(--radius);padding:22px 15px}.sidebar .label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#809ab9;padding:0 10px}.sidebar a{display:block;padding:8px 11px;color:#bbcae1;border-radius:8px;font-size:13px}.sidebar a:hover,.sidebar a.active{color:#fff;background:#20314c;text-decoration:none}.sidebar hr{border:0;border-top:1px solid var(--line);margin:14px 10px}
+main{min-width:0}section{padding:28px 0 22px;border-bottom:1px solid #22334a;scroll-margin-top:20px}h2{font-size:27px;line-height:1.4;margin:0 0 18px;letter-spacing:-.4px}h3{font-size:19px;margin:25px 0 12px}h4{font-size:15px;color:#d5e8ff;margin:0 0 8px}p{margin:12px 0;color:#cbd7e9}.lead{font-size:18px;color:#deebfb}.grid{display:grid;gap:13px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;min-width:0}.card.accent{border-color:#33679c;background:linear-gradient(135deg,#142845,#111b2f)}.card strong{color:white}.small{font-size:12px;color:var(--muted)}.meta{color:#b1c4de;font-size:13px}.metric{font-size:28px;font-weight:800;color:var(--mint);line-height:1.1}.danger{color:var(--coral)}.warn{color:var(--amber)}.good{color:var(--mint)}.bright{color:white}
+.bigline{background:#0f233a;border:1px solid #2d6b91;padding:17px 20px;border-radius:var(--radius);font-size:18px;color:#ebf6ff;font-weight:700}.diagram{padding:20px;background:#0b1527;border:1px solid #2e415c;border-radius:var(--radius);overflow:hidden}.flow-step{background:linear-gradient(130deg,#132844,#111e35);border:1px solid #3a5d89;border-radius:12px;padding:15px 17px;min-width:0}.flow-step .num{color:var(--mint);font-size:12px;font-weight:800;letter-spacing:.1em}.flow-step .desc{font-size:12px;color:#aec0da}.flow-arrow{text-align:center;color:#719aca;font-size:21px;line-height:1.3;padding:4px}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}.diagram-band{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}.diagram-band>*{flex:1 1 190px}.branch{border:1px solid #2b4c72;background:#142138;border-radius:12px;padding:16px}.branch h4{margin-bottom:5px}.branch .small{line-height:1.7}.center{text-align:center}.tree{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;word-break:break-word;background:#070f1e;border:1px solid #274260;border-radius:11px;color:#c1dcf7;padding:18px;font-size:13px;line-height:1.7}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}table{border-collapse:collapse;width:100%;font-size:13px;min-width:630px}th,td{border-bottom:1px solid #2b3b54;padding:11px 11px;text-align:left;vertical-align:top}th{background:#1d2f49;color:#e4f2ff}tbody tr:hover{background:#122137}.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}ul,ol{padding-left:20px;color:#cbd7e9}li{margin:7px 0}li::marker{color:var(--blue)}.key{display:inline-block;padding:1px 7px;background:#263b57;border-radius:5px;color:#d7eeff;font-size:12px}.blockquote{padding:12px 18px;border-left:3px solid var(--mint);background:#12263a;border-radius:0 9px 9px 0;color:#d9e7f5}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tab{border:1px solid #3d5875;padding:9px 12px;border-radius:8px;background:#172944;color:#c8d9ee;cursor:pointer;font:inherit;font-size:13px}.tab[aria-selected="true"]{border-color:var(--blue);background:#245080;color:#fff}.tabpanel[hidden]{display:none}.rail{display:flex;flex-direction:column;gap:10px}.rail-item{display:grid;grid-template-columns:95px minmax(0,1fr);gap:14px}.rail-no{color:#7fe7c7;font-weight:900}.verdict{border-left:4px solid #eead6a;padding:8px 13px;background:#30271f;border-radius:0 9px 9px 0;margin:13px 0}.demo{background:#0b1b30;border:1px solid #355579;border-radius:var(--radius);padding:20px}.demo-header{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.demo input[type=checkbox]{accent-color:#54cda9;transform:scale(1.15)}.demo label{display:flex;align-items:center;gap:9px;font-size:13px;color:#d6e7f7}.checkgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:15px 0}.demo .result{background:#12223a;padding:14px;border:1px solid #36506c;border-radius:8px;color:#f5dbb6;font-weight:650}.btn{background:#285aa0;color:#fff;border:1px solid #4b83ca;border-radius:8px;padding:9px 12px;cursor:pointer}.btn:hover{background:#3775c4}.phase{border-left:3px solid #5284a9;padding:12px 16px;margin:12px 0;background:#101b2f;border-radius:0 9px 9px 0}.phase h4{color:var(--mint)}.source li{font-size:13px;line-height:1.7}.footer{padding:25px 0 50px;color:#91a8c7;font-size:12px}
+@media(max-width:980px){.layout{grid-template-columns:1fr;padding:20px}.sidebar{position:static;height:auto;display:flex;flex-wrap:wrap;gap:5px}.sidebar .label,.sidebar hr{display:none}.sidebar a{display:inline-block;padding:6px 9px}.g4{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){header{padding:35px 22px}.g2,.g3,.g4,.two-col,.checkgrid{grid-template-columns:1fr}.layout{padding:14px}.card{padding:15px}section{padding:25px 0}table{min-width:580px}.rail-item{grid-template-columns:65px 1fr}}
+@media print{*{box-shadow:none!important}body{background:#fff;color:#111;font:11px/1.5 Arial,"Microsoft YaHei"}header{background:#fff;color:#111;padding:12px 25px}header h1,header p,.eyebrow{color:#111}.layout{display:block;padding:0 25px}.sidebar,.tabs,.demo .btn{display:none}section{break-inside:avoid;padding:12px 0;border-color:#aaa}h2,h3,h4,.card strong{color:#111}.card,.diagram,.flow-step,.branch,.tree,.demo,.bigline{background:#fff;color:#111;border-color:#999}.small,.meta,.desc,p,li,.tree,.flow-step .desc,td{color:#222!important}th{background:#eee;color:#111}.tabpanel[hidden]{display:block}.tablewrap{overflow:visible}a{color:#111;text-decoration:underline}}
+</style>
+</head>
+<body>
+<header>
+<div class="eyebrow">AI × INDUSTRIAL ENGINEERING · CLEAN-SHEET DESIGN · 2026.11</div>
+<h1>aiCoPlc <span style="color:#79b5ff">ProcessOS</span><br>从工艺语言到可验证的控制工程</h1>
+<p>不是复制一套“AI 版博途”，而是建立<strong style="color:white">工艺契约 → 框架语义 → 控制逻辑 → 行为验证 → 原生工程</strong>的全新编译链。先解释哪些前提必须推翻，再提出可执行的产品和技术蓝图。</p>
+<div><span class="pill">从零设计</span><span class="pill">Framework First</span><span class="pill">AF 为首个正式目标</span><span class="pill">Nexeed 独立适配</span><span class="pill">不生成未经验证的控制动作</span></div>
+</header>
+<div class="layout">
+<nav class="sidebar" aria-label="文档目录"><div class="label">Architecture Blueprint</div>
+<a href="#decision">01 · 核心定位</a><a href="#rebuttal">02 · 必须反驳的假设</a><a href="#newarch">03 · 新架构全景</a><a href="#contract">04 · 工艺契约模型</a><a href="#af">05 · AF 目标架构</a><a href="#workflow">06 · 工程师工作流</a><a href="#brownfield">07 · 旧工程逆向重构</a><a href="#delivery">08 · 原生编译与交付</a><a href="#safety">09 · 安全与验证等级</a><a href="#innovations">10 · 差异化技术壁垒</a><a href="#modules">11 · 从零代码结构</a><a href="#roadmap">12 · 产品开发顺序</a><a href="#gate">13 · 成功标准与门禁</a><a href="#sources">14 · 官方技术依据</a><hr><a href="#summary">最终结论</a></nav>
+<main>
+<section id="decision"><div class="eyebrow">01 / PRODUCT THESIS</div><h2>aiCoPlc 不需要替代 TIA Portal</h2><div class="bigline">让工艺专家定义设备应该如何工作，让工业编译器负责如何正确实现。</div>
+<div class="grid g3" style="margin-top:15px"><div class="card"><div class="metric">WHAT</div><h4>工艺工程师</h4><p>描述步骤、动作、反馈、联锁、超时、异常、复位和验收条件。</p></div><div class="card"><div class="metric">HOW</div><h4>ProcessOS</h4><p>将描述变成可执行契约，再映射到 AF/Nexeed 框架，生成与验证控制软件。</p></div><div class="card"><div class="metric">WHERE</div><h4>原生工具链</h4><p>TIA/Openness 完成真实工程、硬件上下文、编译与归档。现场验证和部署保留人工控制。</p></div></div>
+<p><strong>最应改变的产品语言：</strong>少说“生成一个 FB”，多说“建立一份夹紧工艺契约”。FB 是某个框架、某个 PLC 平台上的实现结果，不应该是工程师第一次描述需求时的核心认知。</p>
+</section>
+<section id="rebuttal"><div class="eyebrow">02 / FIVE HARD REBUTTALS</div><h2>我会反驳你的五个地方</h2>
+<div class="tablewrap"><table><thead><tr><th>你的设想</th><th>我反驳或修正的点</th><th>新原则</th></tr></thead><tbody>
+<tr><td>必须遵守 AF / Nexeed</td><td>不能把 AF / Nexeed 本身当成唯一工艺模型；它们是不同的工程体系，甚至交付工具链也不同。</td><td><strong>通用 Process Contract + 早期框架类型检查 + 独立目标编译器</strong></td></tr>
+<tr><td>工程师描述工艺，AI 负责全部逻辑</td><td>自然语言天然有缺失和歧义。AI 不能默认故障复位、断电重启、互锁优先级或危险动作许可。</td><td><strong>未知项显式提问；未闭合契约不得生成可交付控制工程</strong></td></tr>
+<tr><td>不提供硬件信息</td><td>Web 无需管理货号，但原生 PLC 编译依赖有 PLC 软件对象的工程上下文；部署更依赖真实硬件。</td><td><strong>逻辑包无硬件绑定；原生工程在真实/受控模板中编译</strong></td></tr>
+<tr><td>导入任何旧项目都能变节点</td><td>旧代码未必保留原设计意图。反推出“原工艺”往往不存在唯一解；保护块、动态逻辑和隐式耦合无法保证自动还原。</td><td><strong>证据驱动的工艺重建；不确定处只读/待确认；新工程清洁重建</strong></td></tr>
+<tr><td>人工确认 + 编译无误 = 正确</td><td>语法正确不能证明工艺正确，仿真正确也不能证明物理设备安全。</td><td><strong>多层验证证据，不用一个“绿色成功”掩盖不同等级</strong></td></tr>
+</tbody></table></div>
+<div class="verdict"><strong>额外挑战：</strong>第一版同时支持 Siemens AF 和 Nexeed，会把产品最难的编译器问题翻倍。我会只选一个真实可交付的 AF 基线完成垂直切片，再扩展 Nexeed 后端。</div>
+</section>
+<section id="newarch"><div class="eyebrow">03 / SYSTEM ARCHITECTURE</div><h2>一个语义核心，两个世界，多个编译目标</h2>
+<div class="diagram">
+<div class="flow-step center"><span class="num">WORLD A · PROCESS ENGINEERING</span><br><strong>Web Workbench · 对话 + 工艺拓扑 + 节点属性 + 测试视图</strong><div class="desc">工程师只编辑“要发生什么”，不直接编辑任意自由 SCL</div></div><div class="flow-arrow">↓ 工艺增量修改 / 结构化补全</div>
+<div class="flow-step center"><span class="num">INTELLIGENCE EDGE · AI IS NOT THE COMPILER</span><br><strong>Intent Interpreter + Contract Negotiator</strong><div class="desc">LLM 提议候选工艺合同；规则引擎检验约束；关键歧义返回问题</div></div><div class="flow-arrow">↓</div>
+<div class="flow-step center" style="border-color:#4dbea5;background:#163b41"><span class="num">SINGLE SOURCE OF TRUTH</span><br><strong>Process Contract IR（工艺契约中间表示）</strong><div class="desc">Units / Operations / Resources / Guards / Temporal Rules / Faults / Tests / Provenance</div></div>
+<div class="flow-arrow">↕ 同一语义被复用；修改后证据失效并重新验证</div>
+<div class="diagram-band"><div class="branch"><h4>语义和行为验证</h4><div class="small">类型检查 · 并发冲突 · 单写者 · 超时 · 竞态 · 场景仿真 · 反例</div></div><div class="branch"><h4>证据和版本管理</h4><div class="small">人审签名 · 契约哈希 · 依赖锁定 · Trace · Spec Diff · 验证报告</div></div></div>
+<div class="flow-arrow">↓ 生成前强制 Framework Profile 检查</div><div class="diagram-band"><div class="branch" style="border-color:#559bd4"><h4>Target A · Siemens AF</h4><div class="small">Unit / EM / CM / ControlNodes · LBC · mode/state · SCL/SimaticML · TIA Openness</div></div><div class="branch"><h4>Target B · Nexeed Control plus</h4><div class="small">Control plus Objects / Framework · 合法工程与工具接口 · 独立 build worker</div></div></div>
+<div class="flow-arrow">↓</div><div class="flow-step center"><span class="num">WORLD B · NATIVE ENGINEERING</span><br><strong>Windows Native Build Worker / 真实工程服务</strong><div class="desc">模板或既有项目副本 → 导入 → 真实编译 → 归档 → reopen → 下载</div></div><div class="flow-arrow">↓</div><div class="flow-step center"><span class="num">HUMAN-CONTROLLED COMMISSIONING</span><br><strong>工厂环境验证 / I/O 绑定 / FAT · SAT / 授权部署</strong><div class="desc">不把自动下载、在线修改、安全认证作为 MVP 的默认动作</div></div>
+</div>
+<h3>为什么必须分成这两种世界？</h3><div class="two-col"><div class="card"><h4>工艺世界：稳定、可移植</h4><p>不依赖某个 PLC 型号。用工艺语义描述“夹紧到位前不能送料”，能进行逻辑验证和差异比较。</p></div><div class="card"><h4>工程世界：版本锁定、有副作用</h4><p>TIA Portal、官方库、CPU 工程基线及其依赖由独立 Windows Worker 管理。每次交付可追踪、可回滚。</p></div></div>
+</section>
+<section id="contract"><div class="eyebrow">04 / PROCESS CONTRACT IR</div><h2>工艺节点不是 FB，而是行为契约</h2><p>每一个功能节点都必须回答七个问题，缺少关键答案就不能冻结为“可编译的工艺”。</p>
+<div class="grid g4"><div class="card"><h4>意图</h4><p class="small">目的、工艺结果、边界</p></div><div class="card"><h4>资源</h4><p class="small">气缸、传感器、轴、夹爪等逻辑资源</p></div><div class="card"><h4>命令</h4><p class="small">启动、停止、保持、取消</p></div><div class="card"><h4>完成条件</h4><p class="small">哪个反馈、什么时序代表成功</p></div><div class="card"><h4>约束</h4><p class="small">互锁、资源互斥、模式限制</p></div><div class="card"><h4>异常策略</h4><p class="small">超时、反馈矛盾、复位条件</p></div><div class="card"><h4>时间语义</h4><p class="small">超时、保持时间、扫描周期假设</p></div><div class="card"><h4>可验收性</h4><p class="small">通过/失败的测试场景</p></div></div>
+<h3>示例：一个“夹紧”契约</h3>
+<div class="tabs" role="tablist" aria-label="契约展示方式"><button class="tab" role="tab" data-tab="contract-visual" aria-selected="true">可读契约</button><button class="tab" role="tab" data-tab="contract-json" aria-selected="false">结构化 IR</button><button class="tab" role="tab" data-tab="contract-evidence" aria-selected="false">验收场景</button></div>
+<div class="tabpanel" data-panel="contract-visual"><div class="card accent"><h4>EM · ClampStation / 夹紧单元</h4><p><strong>自动运行：</strong>在 Unit 允许自动、气压许可、门关闭且资源空闲时接收夹紧作业。命令气缸伸出，确认伸出位；保持 2 秒后缩回，确认缩回位，返回完成。</p><p><strong>禁止动作：</strong>伸出和缩回命令不能同时成立。丢失全局许可时执行已定义的停机响应，不猜测安全动作。</p><p><strong>异常：</strong>任一方向 3 秒未到位 → 锁存故障、撤销自动作业许可、等待人工处理。复位前需确认故障已消除，且设备处于允许复位的状态。</p></div></div>
+<div class="tabpanel" data-panel="contract-json" hidden><pre class="tree">{
+  "schema": "process-contract/1.0",
+  "id": "operation.clamp_cycle",
+  "framework_target": "siemens-af-basic@approved-profile",
+  "unit": "assembly_unit",
+  "equipment_module": "clamp_station",
+  "resource": "clamp_cylinder",
+  "preconditions": ["unit.auto_permit", "air.ok", "guard.closed"],
+  "steps": [
+    {"id":"extend", "command":"clamp.extend", "until":"clamp.extended", "timeout_ms":3000},
+    {"id":"hold", "duration_ms":2000},
+    {"id":"retract", "command":"clamp.retract", "until":"clamp.retracted", "timeout_ms":3000}
+  ],
+  "invariants": ["not (clamp.extend_cmd and clamp.retract_cmd)"],
+  "fault_policy": "latch_and_block_auto",
+  "open_questions": ["安全许可撤销时气缸应保持还是退回？须现场工程决策"],
+  "proof_refs": ["test.normal", "test.extend_timeout", "test.conflicting_feedback"]
+}</pre><p class="small">简化示例，非现成的可执行接口或真实官方库映射。未解决的安全停机问题会阻止最终投运审批。</p></div>
+<div class="tabpanel" data-panel="contract-evidence" hidden><div class="tablewrap"><table><thead><tr><th>场景</th><th>给定条件</th><th>期望结果</th></tr></thead><tbody><tr><td>正常循环</td><td>所有许可满足，反馈依序到位</td><td>伸出 → 保持 2 秒 → 缩回 → 完成</td></tr><tr><td>伸出超时</td><td>3 秒未收到伸出反馈</td><td>故障锁存，禁止继续自动作业</td></tr><tr><td>矛盾反馈</td><td>伸出/缩回反馈同时有效</td><td>诊断异常；不得判定动作成功</td></tr><tr><td>跨模式启动</td><td>手动模式发自动作业命令</td><td>拒绝启动；无未授权输出</td></tr><tr><td>复位前置</td><td>故障未消除即发复位</td><td>不清除故障锁存</td></tr><tr><td>重启恢复</td><td>上电后有未完成工艺</td><td>遵循经审核的启动策略；不无条件恢复动作</td></tr></tbody></table></div></div>
+</section>
+<section id="af"><div class="eyebrow">05 / FRAMEWORK TARGETS</div><h2>AF 是强制目标架构，但不是用户交互语言</h2><p>这里区分两个层次：工艺需求不直接依赖 AF 类名；<strong>一旦选择 Siemens AF 目标，所有可交付的逻辑必须满足 AF Profile 的类型规则、接口和调用约束。</strong></p>
+<div class="diagram"><div class="flow-step"><strong>Unit · AssemblyUnit</strong><div class="desc">模式 / 状态 / 系统许可 / 故障汇总 / 与上层接口</div></div><div class="flow-arrow">↓ 标准 Unit–EM 接口</div><div class="flow-step"><strong>EM · ClampStation</strong><div class="desc">Job / Sequence / CallEquipment / 报警 / ControlNodes</div><div class="grid g3" style="margin-top:13px"><div class="branch"><h4>Sequence</h4><div class="small">步序、Guard、Time Budget</div></div><div class="branch"><h4>ControlNodes</h4><div class="small">工艺命令、状态与监控</div></div><div class="branch"><h4>CallEquipment</h4><div class="small">CM 调用与联锁仲裁</div></div></div></div><div class="flow-arrow">↓ 经已验证的 CM 接口</div><div class="flow-step"><strong>CM · ClampCylinder</strong><div class="desc">批准的 LBC 或兼容 CM 模板：驱动命令、监测反馈、处理超时</div></div></div>
+<h3>六项不可让 AI 绕开的结构规则</h3><ol><li>Unit 管理设备级模式和状态，EM 承载工艺功能，CM 执行和监控设备动作。</li><li>Sequence 的生产动作经 ControlNodes/标准接口进入 CM，不绕开 CM 直接写物理输出。</li><li>传感器反馈和执行器调用顺序服从已锁定 AF 模板；不能仅凭代码名字推定兼容。</li><li>同一输出拥有明确写入者，互斥命令有确定仲裁顺序。</li><li>实例 DB、库块、UDT、命名、OB 调用和初始化来自已验证模板，不从自然语言凭空生成。</li><li>库版本、PLC 版本、工艺模型和代码映射一起锁定；库升级等同于工程变更。</li></ol>
+<div class="verdict"><strong>现实版本边界：</strong>官方 AF Basic V2.2.2 提供 V20 工程，并要求 V20 或以上。若坚持 V19，必须先证明有合法、可复现、真实编译的 V19 框架基线；不能把 V20 官方工程宣称为 V19 兼容。后续 Nexeed 需自己的正式库、映射和工具链，不复用 Siemens AF 的 SCL 生成器冒充合规。</div>
+</section>
+<section id="workflow"><div class="eyebrow">06 / UX</div><h2>工程师实际看到什么？</h2><div class="grid g3"><div class="card"><h4>左 · 工艺协商</h4><p>对话不是“生成代码”。当工程师说“夹紧后送料”，系统识别不明确条件，提出少量必答问题。</p></div><div class="card"><h4>中 · 工艺地图</h4><p>以设备功能、步骤、条件、并行资源和异常分支展示逻辑，自动区分 Unit、EM 与 CM。</p></div><div class="card"><h4>右 · 合同与证据</h4><p>显示当前节点的条件、反馈、定时、联锁、错误处理、审批和行为测试结果。</p></div></div>
+<h3>一项变更的交互流程</h3><div class="rail"><div class="rail-item"><div class="rail-no">01</div><div class="card"><strong>描述：</strong>“增加气缸保持 2 秒，并且送料不能和夹紧冲突。”</div></div><div class="rail-item"><div class="rail-no">02</div><div class="card"><strong>解析：</strong>AI 提议工艺变更，显示涉及的 EM、资源、过渡条件和缺失信息。</div></div><div class="rail-item"><div class="rail-no">03</div><div class="card"><strong>预览：</strong>画布呈现新步序，同时给出合同差异（新增定时、互斥规则）。</div></div><div class="rail-item"><div class="rail-no">04</div><div class="card"><strong>验证：</strong>规则检查 + 场景模拟。如果发现冲突，返回最小失败轨迹，而不是只给红色报错。</div></div><div class="rail-item"><div class="rail-no">05</div><div class="card"><strong>审核：</strong>工程师确认行为契约和验证结果。确认的是可解释的工艺变化，不是几百行 SCL。</div></div><div class="rail-item"><div class="rail-no">06</div><div class="card"><strong>构建：</strong>锁定框架模板、生成、Openness 编译、归档、校验和下载。</div></div></div>
+</section>
+<section id="brownfield"><div class="eyebrow">07 / BROWNFIELD RETHINK</div><h2>旧项目不是“代码转换”，而是“工艺考古 + 清洁重建”</h2>
+<div class="two-col"><div class="card"><h4>旧工程侧 · 证据采集</h4><ol><li>以只读方式打开原件，并创建冻结的工程基线。</li><li>获取块、调用图、接口、交叉引用、标签和可访问的源代码。</li><li>识别设备、动作、状态机、报警、异常路径。</li><li>将每项推断关联到实际源块、行或调用边。</li><li>对未知和受保护模块给出“不确定/无法转换”。</li></ol></div><div class="card"><h4>新工程侧 · 规范化实现</h4><ol><li>形成工艺候选图，按信心水平分区。</li><li>工程师确认真正的工艺行为，而非接受所有旧写法。</li><li>生成新的 Process Contract。</li><li>使用批准的 AF Unit/EM/CM 模板重新生成。</li><li>能执行的情况下，对新旧版本做差分场景测试。</li></ol></div></div>
+<div class="verdict"><strong>关键原则：</strong>不对旧工程做“AI 随手修复”。原件只读保全。不能证明行为等价的部分不能自动替换；旧项目不具备可重放工况时，不得声称“行为等价”。</div>
+</section>
+<section id="delivery"><div class="eyebrow">08 / BUILD PIPELINE</div><h2>两类产物，两个交付等级</h2><div class="grid g2"><div class="card accent"><h4>产物 A · 工艺逻辑包</h4><p>包含 Process Contract、AF 映射、SCL/SimaticML、接口契约、测试场景、哈希、报告。</p><p class="small"><strong>特点：</strong>可不提供硬件货号，但不声称已经在用户现场的真实 PLC 上编译或验证。</p></div><div class="card accent"><h4>产物 B · 原生 TIA 工程</h4><p>依赖一个可用的 PLC 工程上下文：经批准的 CPU 模板，或者用户导入的真实 TIA 工程副本。由 Windows Worker 调用 Openness。</p><p class="small"><strong>特点：</strong>可验证真实编译、归档、重开；与用户现场硬件组态是否一致需要单独核验。</p></div></div>
+<h3>原生工程编译状态机</h3><div class="tree">SPEC_APPROVED
+  → FRAMEWORK_PROFILE_LOCKED
+  → BEHAVIOR_VERIFIED
+  → SOURCE_GENERATED
+  → PROJECT_COPY_OPENED
+  → AF_LIBRARIES_RESOLVED
+  → BLOCKS_IMPORTED
+  → NATIVE_COMPILE_SUCCESS
+  → SAVE_SUCCESS
+  → ARCHIVE_HASHED
+  → REOPEN_VERIFIED
+  → DOWNLOAD_READY
+
+任一失败 → FAILED + 诊断回执 + 可重试任务
+禁止：测试未通过却发布；未经人审覆盖原工程；仅有源码包就显示“原生工程已完成”</div>
+<p><strong>构建工程安全：</strong>Windows Worker 与 Web/API 隔离；一次任务只操作一个沙箱工程副本；多任务通过队列串行或按隔离实例调度；固定依赖版本；生成可核验的证据清单。下载令牌绑定项目、构建任务、工件哈希和授权用户。</p>
+</section>
+<section id="safety"><div class="eyebrow">09 / VERIFICATION & SAFETY</div><h2>验证等级不能混为“测试成功”</h2>
+<div class="tablewrap"><table><thead><tr><th>等级</th><th>证明什么</th><th>不能证明什么</th><th>所需证据</th></tr></thead><tbody><tr><td>V0 静态合规</td><td>IR 有效、框架映射合法、单写者、接口完整</td><td>工艺动态行为</td><td>校验报告与规则版本</td></tr><tr><td>V1 行为仿真</td><td>所设计场景下命令、步骤、超时符合契约</td><td>真实 PLC 编译、所有现场工况</td><td>轨迹/覆盖度/反例</td></tr><tr><td>V2 原生编译</td><td>在锁定环境中真实 TIA 编译、归档可重开</td><td>机器运行正确、FAT/SAT</td><td>TIA 原始诊断和工件哈希</td></tr><tr><td>V3 PLC 仿真</td><td>目标 PLC 逻辑在批准的仿真环境运行</td><td>真实执行机构物理行为</td><td>PLCSIM 记录与版本</td></tr><tr><td>V4 FAT</td><td>工厂集成测试满足合同与测试计划</td><td>现场安装后所有结果</td><td>人工签署的 FAT 报告</td></tr><tr><td>V5 SAT</td><td>现场安装与运行场景通过验收</td><td>超出验收范围的工况</td><td>现场签署的 SAT 报告</td></tr></tbody></table></div>
+<div class="demo" style="margin-top:18px"><div class="demo-header"><h4 style="margin:0">交付门禁模拟 · 哪些条件缺失会阻止原生交付？</h4><button class="btn" id="reset-check">恢复演示状态</button></div><div class="checkgrid"><label><input type="checkbox" data-req="contract" checked> 工艺契约冻结 + 人工批准</label><label><input type="checkbox" data-req="framework" checked> AF Profile 与正式模板锁定</label><label><input type="checkbox" data-req="behavior" checked> 强制行为场景全部通过</label><label><input type="checkbox" data-req="native" checked> TIA 真实编译、归档、重开</label></div><div class="result" id="gate-result">正在计算交付条件</div><p class="small">这只是前端交互示意，不执行 PLC 逻辑，也不代表真实工程测试。</p></div>
+<div class="verdict"><strong>安全红线：</strong>Safety/F-PLC、急停功能、保护门安全链和安全停止类别必须由具备资质的工程流程与工具验证。AI 不自行覆盖、改写、旁路或宣称认证这些安全功能。普通工艺 interlock 不能被当作功能安全替代品。</div>
+</section>
+<section id="innovations"><div class="eyebrow">10 / COMPETITIVE MOAT</div><h2>我会押注四项真正难以复制的能力</h2>
+<div class="grid g2"><div class="card"><div class="metric">01</div><h4>Process Contract Compiler</h4><p>将不严谨的自然语言转成确定、可版本化、可测试的工业工艺契约，并在框架层强制合规。</p></div><div class="card"><div class="metric">02</div><h4>Counterexample-driven Interview</h4><p>AI 不以“不确定但照做”处理疑问。模拟引擎发现反例后，回问工程师最少的关键问题，把工艺规格补完整。</p></div><div class="card"><div class="metric">03</div><h4>Legacy Behavior Archaeology</h4><p>旧程序逆向得到“带证据的工艺地图”，按真实来源、推断信心和不可解析边界区分；可做差分场景验证。</p></div><div class="card"><div class="metric">04</div><h4>Build Evidence Passport</h4><p>每个下载工件绑定需求、审批、框架版本、测试轨迹、编译诊断、归档 SHA256 和重开记录；无需相信 AI 的口头“已完成”。</p></div></div>
+<p>附加方向：把成功的 EM/CM 工艺契约抽象为<strong>经验证可复用的参数化工艺单元</strong>。以后对话是“复用夹紧模块并更换保压时间”，而不是从零生成一个新的 FB。这将显著降低生成错误和重复成本。</p>
+</section>
+<section id="modules"><div class="eyebrow">11 / GREENFIELD CODEBASE</div><h2>从零实现：模块化单体 + Windows 原生 Worker</h2><p>第一版坚决不拆成十几个微服务。把业务逻辑做成可独立测试的模块，只有 TIA/Nexeed 真实工程服务采用独立 Worker。</p>
+<pre class="tree">aicoplc/
+├─ apps/
+│  └─ web/                         # React + TypeScript，工艺图/合同/测试/审核
+├─ services/
+│  ├─ api/                         # Python FastAPI：项目、身份、审批、构建任务
+│  └─ native-build-worker/         # Windows C#，Openness 版本适配、沙箱构建
+├─ core/
+│  ├─ process-contract/            # 领域 IR、事件和时序语义；无 TIA 依赖
+│  ├─ semantic-validator/          # 类型、单写者、互锁、状态机、时序规则
+│  ├─ scenario-runner/             # 可重放 scan-cycle 轨迹与反例引擎
+│  ├─ framework-profiles/          # 已批准官方框架模板的版本、接口与哈希
+│  ├─ backend-siemens-af/          # IR → AF Unit/EM/CM + Library bindings
+│  ├─ backend-nexeed/              # 独立目标，首个版本仅预留接口
+│  └─ source-generator/            # 确定性生成 SCL/SimaticML + SourceMap
+├─ adapters/
+│  ├─ tia-import/                  # 导入、调用图、标签、源代码可解释性
+│  └─ legacy-reconstruction/       # 证据关联、信心、人工补全
+├─ agents/
+│  └─ process-interpreter/         # 仅建议 IR Patch，不能直接写最终 PLC
+├─ packages/
+│  └─ contracts/                   # OpenAPI/JSON Schema/事件版本
+├─ fixtures/
+│  ├─ golden-af-project/           # 已批准且可重现的真实 AF 工程基线
+│  ├─ behavior-scenarios/          # 典型工艺正反例
+│  └─ legacy-projects/            # 脱敏旧工程与期望工艺映射
+└─ evidence/                       # 工件清单 / 测试报告 / 编译证据</pre>
+<p><strong>持久化：</strong>PostgreSQL 管理工程版本、事务、审查和构建记录；对象存储管理归档和证据；本地开发可使用文件或 SQLite 适配，避免第一天就必须部署复杂基础设施。</p>
+</section>
+<section id="roadmap"><div class="eyebrow">12 / DELIVERY STRATEGY</div><h2>不采用功能清单式开发：先突破最小真实闭环</h2>
+<div class="phase"><h4>P0 · 工程事实验证</h4><p>选定实际可用的 TIA + AF 版本；取得合法工程模板与库；验证 Openness 导入、实例、编译、保存、归档、重开链路。版本不通，后续不扩大功能。</p><div class="small">退出标准：真实 AF 示例包含 Unit + EM + CM + Sequence，并在指定版本真实编译及归档。</div></div>
+<div class="phase"><h4>P1 · 工艺契约最小模型</h4><p>实现命令、反馈、状态、Guard、超时、资源互锁、异常与版本化 Patch。实现离线模拟器及人工审核。LLM 只负责意图候选。</p><div class="small">退出标准：标准“夹紧”契约的正常与异常场景可重放、可反例解释。</div></div>
+<div class="phase"><h4>P2 · AF 垂直切片</h4><p>把夹紧契约生成真实 AF Unit/EM/CM/ControlNodes/Sequence。Web 一键提交任务，Windows Worker 实际导入、编译、归档，下载可核验工件。</p><div class="small">退出标准：首次完整「对话 → 契约 → 审核 → 行为验证 → AF 构建 → 下载」验收通过。</div></div>
+<div class="phase"><h4>P3 · 工艺系统规模化</h4><p>实现多个 EM、资源争用、并行/汇合、参数化模板、故障恢复、版本差异和复用工艺组件库。</p><div class="small">退出标准：多模块测试与合法变更可重复编译；跨模块写冲突可被静态拒绝。</div></div>
+<div class="phase"><h4>P4 · Brownfield 逆向重构</h4><p>导入原始工程副本，建立调用图与证据链，输出待确认工艺地图，重建为 AF 契约并生成清洁工程。允许未知/保护块保持不可转换。</p><div class="small">退出标准：真实旧工程能分类标注；可解释的改造在副本中成功编译并记录差异。</div></div>
+<div class="phase"><h4>P5 · 工程扩展与现场协作</h4><p>加入硬件绑定检查、PLCSIM/FAT 测试接入、审查权限与部署审批。仅在具备正式库、授权与真实工具链后建立 Nexeed 后端。</p><div class="small">退出标准：不同验证等级、角色和审批责任有明确证据，不以“编译完成”冒充投运批准。</div></div>
+</section>
+<section id="gate"><div class="eyebrow">13 / ACCEPTANCE</div><h2>真正的成功标准是“减少工程师对实现细节的依赖”</h2>
+<div class="tablewrap"><table><thead><tr><th>验收目标</th><th>最小通过标准</th><th>禁止的伪成功</th></tr></thead><tbody>
+<tr><td>工艺理解</td><td>关键未知条件被询问；人审后契约可复现</td><td>AI 自行补齐安全与复位策略</td></tr>
+<tr><td>AF 合规</td><td>真实官方/批准模板接口、版本与调用一致</td><td>仅创建 AF 目录就声称合规</td></tr>
+<tr><td>执行逻辑</td><td>所有关键 Action/Guard/Timeout 在代码中有真实作用</td><td>输出注释型占位 SCL</td></tr>
+<tr><td>行为测试</td><td>至少覆盖正常、超时、矛盾反馈、模式、复位、重启</td><td>只有“happy path”</td></tr>
+<tr><td>真实编译</td><td>有 TIA 原始日志、产物哈希与重新打开证据</td><td>把 mock/test fixture 标成真实工件</td></tr>
+<tr><td>旧工程转换</td><td>已识别行为有来源，未识别行为有显式记录</td><td>强行承诺语义等价</td></tr>
+<tr><td>现场安全</td><td>安全功能由合规流程独立测试和批准</td><td>AI 合成故障或旁路安全逻辑</td></tr>
+</tbody></table></div></section>
+<section id="sources"><div class="eyebrow">14 / OFFICIAL CONTEXT</div><h2>蓝图依据与边界</h2><ul class="source">
+<li><a target="_blank" rel="noopener noreferrer" href="https://docs.tia.siemens.cloud/r/en-us/v2.2/automation-framework-basic/automation-framework-basic-v2.2/10.-equipment-modules/10.1.-general-structure?contentId=E7DS~eKC1XaNnD0NR2rq~w">Siemens AF Basic V2.2：Equipment Module General Structure</a>：EM 执行顺序、ControlNodes、CM 的接口约定。</li>
+<li><a target="_blank" rel="noopener noreferrer" href="https://docs.tia.siemens.cloud/r/en-us/v2.2/automation-framework-basic/automation-framework-basic-v2.2/9.-units/9.1.-general-structure">Siemens AF Basic V2.2：Unit General Structure</a>：Unit 模式、状态与命令汇总。</li>
+<li><a target="_blank" rel="noopener noreferrer" href="https://docs.tia.siemens.cloud/r/en-us/v2.2/automation-framework-basic/automation-framework-basic-v2.2/2.-introduction/2.2.-scope-of-delivery">Siemens AF Basic V2.2.2 Scope of Delivery</a>：V20 模板工程信息。</li>
+<li><a target="_blank" rel="noopener noreferrer" href="https://docs.tia.siemens.cloud/r/en-us/v21/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api/functions-for-projects-and-project-data/compiling-a-project?contentId=Lh19wmmzQOEBZSyi3sS~RQ">Siemens TIA Openness：Compiling a Project</a>：真实编译对象和要求；使用时应查目标安装版本的文档。</li>
+<li><a target="_blank" rel="noopener noreferrer" href="https://community.boschrexroth.com/ctrlx-os-store-apps-oc2pqqwn/post/bosch-manufacturing-solutions---nexeed-control-plus-X4VAgGQETfWgXdH">Bosch Nexeed Control plus</a>：对象化组态、标准块、代码/HMI 生成及相应工程生态。</li>
+</ul><p class="small">此文件是从零设计的产品与工程方案，不代表当前仓库已实现其中任一新增能力。框架约束以将来选定且有使用权的真实模板和目标工具链验收为准。2026-11-14。</p></section>
+<section id="summary"><div class="eyebrow">CONCLUSION</div><h2>我最终会坚持的三条原则</h2><div class="grid g3"><div class="card accent"><h4>工艺是产品核心</h4><p>用户创作工艺契约，不写自由 PLC 代码。</p></div><div class="card accent"><h4>框架是不可绕开的目标</h4><p>编译后的代码必须真实符合 AF/Nexeed 对应版本的结构和接口。</p></div><div class="card accent"><h4>证据是交付凭证</h4><p>永不把“AI 说对了”“模拟过了”和“真机验收过了”混为一谈。</p></div></div><p class="lead"><strong>如果只能先做一件事：</strong>先把“夹紧工艺”从自然语言正确编译成一个完整、可测试、真实符合 AF 的 EM。不要先做一套庞大的 Agent 生态，也不要先追求支持所有工业设备。</p></section>
+<div class="footer">aiCoPlc ProcessOS · Zero-based architecture concept · 独立 HTML / 无外部 JS 与 CSS 依赖 / 可打印</div>
+</main></div>
+<script>
+(function(){
+const tabs=[...document.querySelectorAll('[data-tab]')];const panels=[...document.querySelectorAll('[data-panel]')];tabs.forEach(b=>b.addEventListener('click',()=>{tabs.forEach(x=>x.setAttribute('aria-selected',String(x===b)));panels.forEach(p=>p.hidden=p.dataset.panel!==b.dataset.tab)}));
+const cb=[...document.querySelectorAll('[data-req]')];const out=document.getElementById('gate-result');function update(){const failed=cb.filter(x=>!x.checked);if(!failed.length){out.textContent='✓ 原生工件交付门禁满足。注意：本演示不能证明现场安全或实际验收。';out.style.color='#71eac1'}else{out.textContent='✕ BLOCKED：缺少 '+failed.map(x=>x.parentNode.textContent.trim()).join('；')+'。禁止发布为“原生工程交付完成”。';out.style.color='#ffb7ae'}}cb.forEach(x=>x.addEventListener('change',update));document.getElementById('reset-check').addEventListener('click',()=>{cb.forEach(x=>x.checked=true);update()});update();
+const links=[...document.querySelectorAll('.sidebar a[href^="#"]')];links.forEach(a=>a.addEventListener('click',()=>{links.forEach(x=>x.classList.remove('active'));a.classList.add('active')}));
+})();
+</script>
+</body></html>
