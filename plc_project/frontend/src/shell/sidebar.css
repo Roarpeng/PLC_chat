@@ -68,7 +68,7 @@
 }
 
 .sb-iconbtn:hover {
-  background: var(--surface, #ffffff);
+  background: var(--surface);
   border-color: var(--line, #e3e4de);
   color: var(--ink);
 }
@@ -82,7 +82,7 @@
   margin: 2px 10px 10px;
   padding: 7px 10px;
   flex-shrink: 0;
-  background: var(--surface, #ffffff);
+  background: var(--surface);
   border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: 0;
   font-family: var(--sans);
@@ -156,7 +156,7 @@
 }
 
 .sb-item-main:hover {
-  background: var(--surface, #ffffff);
+  background: var(--surface);
 }
 
 .sb-item-title {

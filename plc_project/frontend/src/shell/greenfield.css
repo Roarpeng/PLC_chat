@@ -1,37 +1,24 @@
-/* ============================================================================
- * Greenfield 工作台 · 设计系统 v2（design-taste: one-motif / seed 1417026031）
- *
- * 构思句：逻辑图的步序块（SFC 节点 + 连接桩）成为整个界面的通用模块。
- *  - 消息是节点、阶段是节点、交付流水线是竖向步序、门禁进度是梯级条纹带
- *  - 纸色随阶段整体换底（DRAFT 蓝图纸 → LINKABLE 鼠尾草 → VALIDATING 砂 → FROZEN 冰蓝）
- *  - 表面靠色阶分层，不用边框；静止无阴影；无渐变；方角；两种字号做主要工作
- *  - Albert Sans（自托管 @fontsource），正文 ≥16px，小字 ≥13px
- * ==========================================================================*/
-
+/* Four-step workbench: process blocks use the same paper and ink as V2. */
 .gf-root {
-  /* —— 令牌 —— */
-  --paper-1: #eef0f7; /* 卡片纸 */
-  --paper-2: #f6f7fb; /* 抬升纸 */
-  --paper-3: #f0f1ee; /* 中性纸（源码/表格区） */
-  --ink: #141414;
-  --ink-2: #4a5068;
-  --ink-3: #7b8095;
-  --accent: #0f5257; /* 深青：主动作 */
-  --accent-deep: #0b3e42;
-  --accent-ink: #ffffff;
-  --danger: #a03123; /* 破坏级：确认/生成 */
-  --danger-deep: #7c2419;
-  --ok: #2e6b46;
-  --field-sand: #e6dccd;
-  --field-sage: #cfd3cb;
-  --field-pink: #efd3da;
-  --field-peach: #f9cdbd;
-  --paper-step: #dfe2ee; /* 纸上分层（hover/条带底） */
-
-  /* 阶段纸底：随 stage 换底（swapping pastels → 工程纸） */
-  --ground: #c3cbe5; /* DRAFT 蓝图纸 */
-
-  --font-ui: "Albert Sans", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --paper-1: var(--bg-card);
+  --paper-2: var(--bg-card);
+  --paper-3: var(--bg-subtle);
+  --ink: var(--ink-primary);
+  --ink-2: var(--ink-secondary);
+  --ink-3: var(--ink-secondary);
+  --accent: var(--accent-slate-ink);
+  --accent-deep: color-mix(in srgb, var(--accent-slate-ink) 82%, var(--ink-primary));
+  --accent-ink: var(--ink-inverse);
+  --danger: var(--accent-clay-ink);
+  --danger-deep: color-mix(in srgb, var(--accent-clay-ink) 82%, var(--ink-primary));
+  --ok: var(--accent-sage-ink);
+  --field-sand: var(--bg-ochre);
+  --field-sage: color-mix(in srgb, var(--accent-sage) 12%, var(--bg-paper));
+  --field-pink: color-mix(in srgb, var(--accent-clay) 10%, var(--bg-paper));
+  --field-peach: color-mix(in srgb, var(--accent-ochre) 12%, var(--bg-paper));
+  --paper-step: var(--bg-warm);
+  --ground: var(--bg-paper);
+  --font-ui: var(--font-sans);
   --fs-small: 0.8125rem;  /* 13px */
   --fs-body: 1rem;        /* 16px */
   --fs-lead: 1.25rem;     /* 20px */
@@ -54,10 +41,10 @@
   line-height: 1.5;
 }
 
-.gf-root[data-stage="LINKABLE"]   { --ground: #cfd3cb; }
-.gf-root[data-stage="VALIDATING"] { --ground: #e6dccd; }
-.gf-root[data-stage="FROZEN"]     { --ground: #bcc7e0; }
-.gf-root[data-stage="LOCKED"]     { --ground: #c9cbcf; }
+.gf-root[data-stage="LINKABLE"]   { --ground: var(--field-sage); }
+.gf-root[data-stage="VALIDATING"] { --ground: var(--bg-warm); }
+.gf-root[data-stage="FROZEN"]     { --ground: var(--bg-ochre); }
+.gf-root[data-stage="LOCKED"]     { --ground: var(--bg-subtle); }
 
 .gf-root ::selection { background: var(--ink); color: var(--paper-2); }
 .gf-root :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -94,8 +81,8 @@
 .gf-block--ink::before, .gf-block--ink::after { background: var(--paper-2); }
 .gf-block--accent { background: var(--accent); color: var(--accent-ink); }
 .gf-block--accent::before, .gf-block--accent::after { background: var(--accent-ink); }
-.gf-block--danger { background: var(--danger); color: #fff; }
-.gf-block--danger::before, .gf-block--danger::after { background: #fff; }
+.gf-block--danger { background: var(--danger); color: var(--ink-inverse); }
+.gf-block--danger::before, .gf-block--danger::after { background: var(--bg-card); }
 .gf-block--sand  { background: var(--field-sand); }
 .gf-block--sage  { background: var(--field-sage); }
 .gf-block--pink  { background: var(--field-pink); }
@@ -276,7 +263,7 @@
 
 .gf-btn--primary { background: var(--accent); color: var(--accent-ink); }
 .gf-btn--primary:hover { background: var(--accent-deep); }
-.gf-btn--danger { background: var(--danger); color: #fff; }
+.gf-btn--danger { background: var(--danger); color: var(--ink-inverse); }
 .gf-btn--danger:hover { background: var(--danger-deep); }
 .gf-btn--success { background: var(--accent); color: var(--accent-ink); }
 .gf-btn--success:hover { background: var(--accent-deep); }
@@ -319,7 +306,7 @@
 .gf-error {
   padding: 10px 14px;
   background: var(--danger);
-  color: #fff;
+  color: var(--ink-inverse);
   font-size: var(--fs-body);
 }
 .gf-busy {
@@ -514,7 +501,7 @@
   border: none;
   outline: none;
 }
-.gf-chat-input:focus { background: #fff; }
+.gf-chat-input:focus { background: var(--bg-card); }
 .gf-chat-input:disabled { opacity: 0.6; }
 .gf-chat-input::placeholder { color: var(--ink-3); }
 
@@ -632,7 +619,7 @@
   border: none;
   outline: none;
 }
-.gf-prompt-input:focus { background: #fff; }
+.gf-prompt-input:focus { background: var(--bg-card); }
 
 .gf-tabs {
   display: flex;
@@ -737,7 +724,7 @@
   outline: none;
   color: var(--ink);
 }
-.gf-step-editor__field input:focus { background: #fff; }
+.gf-step-editor__field input:focus { background: var(--bg-card); }
 
 .gf-mermaid-drawer {
   width: 340px;
@@ -814,7 +801,7 @@
   background: var(--paper-2);
   transition: background-color 140ms ease;
 }
-.gf-var-row:hover { background: #fff; }
+.gf-var-row:hover { background: var(--bg-card); }
 .gf-var-row__main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .gf-var-row__sub { font-size: var(--fs-small); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gf-var-row__actions { display: flex; gap: 6px; flex: none; }
@@ -884,7 +871,7 @@
   padding: 22px 24px;
   background: var(--paper-1);
   /* taste-skill-ignore: 弹窗是真正的浮层，规则允许浮层投影 */
-  box-shadow: 0 18px 48px rgba(20, 20, 20, 0.3);
+  box-shadow: var(--elev-3);
 }
 .gf-modal__title { font-size: var(--fs-lead); font-weight: 600; letter-spacing: -0.02em; }
 .gf-modal__json {
@@ -993,7 +980,7 @@
   flex-direction: column;
   gap: var(--gap);
   padding: 20px 22px;
-  box-shadow: 0 18px 48px rgba(20, 20, 20, 0.3);
+  box-shadow: var(--elev-3);
 }
 .gf-wizard__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .gf-wizard__title { font-size: var(--fs-lead); font-weight: 600; letter-spacing: -0.02em; }

@@ -449,7 +449,7 @@ export const ChatDock: React.FC<ChatDockProps> = ({
   max-width: 100%;
   overflow-x: auto;
   padding: 8px;
-  background: var(--surface, #ffffff);
+  background: var(--surface);
   border: 1px solid var(--line, #e3e4de);
 }
 .dock-mermaid-svg svg {
@@ -484,7 +484,7 @@ export const ChatDock: React.FC<ChatDockProps> = ({
 .dock-mermaid-copy.is-copied {
   color: var(--accent, #1d5a90);
   border-color: var(--accent, #1d5a90);
-  background: var(--surface, #ffffff);
+  background: var(--surface);
 }
 .dock-mermaid-copy.is-copied {
   font-weight: 600;

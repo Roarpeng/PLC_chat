@@ -1,16 +1,8 @@
-/* ============================================================================
- * 4 步主链 · 工业蓝图 / 制图室（Blueprint Atelier）
- *
- * 记忆点：纸随 4 步换底。整张图既是导航，也是工作内容。
- * 本文件只追加覆盖规则，绝不改写 greenfield.css 的全局变量令牌。
- * 前缀：.gf-wiz-* / .gf-step-* / .gf-eng-* / .gf-stamp
- * ========================================================================== */
-
-/* ---------- 换底：特异性 0,3,0 > 原 .gf-root[data-stage] 的 0,2,0 ---------- */
-.gf-root.gf-wiz[data-step="1"] { --ground: #c3cbe5; }
-.gf-root.gf-wiz[data-step="2"] { --ground: #cfd3cb; }
-.gf-root.gf-wiz[data-step="3"] { --ground: #e6dccd; }
-.gf-root.gf-wiz[data-step="4"] { --ground: #bcc7e0; }
+/* Four-step engineering wizard, with paper stock changing by stage. */
+.gf-root.gf-wiz[data-step="1"] { --ground: var(--bg-paper); }
+.gf-root.gf-wiz[data-step="2"] { --ground: var(--field-sage); }
+.gf-root.gf-wiz[data-step="3"] { --ground: var(--bg-warm); }
+.gf-root.gf-wiz[data-step="4"] { --ground: var(--bg-ochre); }
 
 /* ---------- 骨架：左 220px 工位带 + 右主工作区（非对称，大留白） ---------- */
 .gf-root.gf-wiz {
@@ -25,9 +17,11 @@
   align-items: center;
   gap: var(--gap);
   flex-wrap: wrap;
-  padding: 4px 2px;
+  padding: var(--space-2) var(--space-3);
   min-height: 44px;
   flex: 0 0 auto;
+  border-top: var(--line-seal) solid var(--accent-clay);
+  background: var(--bg-ochre);
 }
 
 .gf-wiz__brand {
@@ -84,26 +78,27 @@
 .gf-wiz__node:nth-child(3) { animation-delay: 160ms; }
 .gf-wiz__node:nth-child(4) { animation-delay: 220ms; }
 
-/* hover 反相为墨块（沿用 .gf-block--ink 的母题） */
 .gf-wiz__node:hover {
-  background: var(--ink);
-  color: var(--paper-2);
+  background: var(--bg-subtle);
+  color: var(--ink-primary);
 }
-.gf-wiz__node:hover::before,
-.gf-wiz__node:hover::after { background: var(--paper-2); }
 
-.gf-wiz__node--active {
-  background: var(--accent);
-  color: var(--accent-ink);
+.gf-wiz__node--active,
+.gf-wiz__node--active:hover {
+  background: var(--bg-warm);
+  color: var(--ink-primary);
+  box-shadow: var(--elev-1);
 }
 .gf-wiz__node--active::before,
-.gf-wiz__node--active::after { background: var(--accent-ink); }
+.gf-wiz__node--active::after { background: var(--accent-clay); }
 
 .gf-wiz__node--done { background: var(--paper-3); }
 .gf-wiz__node--done .gf-wiz__node-index { color: var(--ok); }
 
 .gf-wiz__node-index {
   display: block;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: clamp(28px, 3vw, 44px);
   font-weight: 600;
   letter-spacing: -0.04em;
@@ -132,7 +127,7 @@
   color: var(--ok);
 }
 
-.gf-wiz__node--active .gf-wiz__node-flag { color: var(--accent-ink); }
+.gf-wiz__node--active .gf-wiz__node-flag { color: var(--accent-clay-ink); }
 
 .gf-wiz__rail-note {
   margin-top: auto;
@@ -183,8 +178,9 @@
 }
 
 .gf-wiz__title {
+  font-family: var(--font-serif);
   font-size: var(--fs-head);
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.02em;
   line-height: 1.15;
   margin: 0 0 14px;

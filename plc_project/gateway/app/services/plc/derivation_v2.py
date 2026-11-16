@@ -29,9 +29,9 @@ class DerivationServiceV2:
         """Static gate result (9 check families + manifest import order)."""
         return ValidationServiceV2.static_gate(self.store.get_ir(project_id))
 
-    def simulate(self, project_id: str, scenario: str = "normal_cycle") -> dict[str, Any]:
+    def simulate(self, project_id: str, scenario: str = "normal_cycle", *, station_id: str = "") -> dict[str, Any]:
         """One deterministic offline Trace scenario."""
-        return EngineeringServiceV2.simulate(self.store, project_id, scenario)
+        return EngineeringServiceV2.simulate(self.store, project_id, scenario, station_id=station_id)
 
     def preview(self, project_id: str, *, include_scl: bool = True) -> dict[str, Any]:
         """IR preview: manifest, SourceMap, SCL files, Mermaid, validation."""

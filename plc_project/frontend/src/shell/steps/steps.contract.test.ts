@@ -3,7 +3,7 @@
  *  - AC-1 四个阶段页 + 主链容器零内部契约术语；
  *  - AC-8 全流程仅 1 处工艺描述输入；
  *  - AC-9 主链无原始报文弹窗、错误全中文；
- *  - AC-10 Albert Sans 主字体 / 四步换底 / reduced-motion 降级齐备。
+ *  - AC-10 KRONOS 字体 / 四步换底 / reduced-motion 降级齐备。
  */
 import { describe, expect, it } from "vitest";
 // @ts-ignore vitest 运行在 Node 环境；本仓库未安装 @types/node，CSS 由 Vitest 默认 stub 为空串，故直接读盘。
@@ -134,7 +134,9 @@ describe("AC-9 · 主链中文文案、无原始报文弹窗", () => {
 });
 
 describe("AC-10 · 设计规范落地", () => {
-  it("沿用自托管 Albert Sans 变量令牌，不引入通用字体", () => {
+  it("界面字体沿用令牌，标题和工位编号采用各自的 KRONOS 字体", () => {
+    expect(cssSource).toContain("var(--font-serif)");
+    expect(cssSource).toContain("var(--font-mono)");
     expect(cssSource).toContain("var(--font-ui)");
     expect(cssSource).not.toContain("font-family: Inter");
     expect(cssSource).not.toContain("font-family: Roboto");
@@ -143,10 +145,10 @@ describe("AC-10 · 设计规范落地", () => {
   });
 
   it("四步换底用更高特异性覆盖 --ground，步 4 叠 --ok 盖章", () => {
-    expect(cssSource).toContain('.gf-root.gf-wiz[data-step="1"] { --ground: #c3cbe5; }');
-    expect(cssSource).toContain('.gf-root.gf-wiz[data-step="2"] { --ground: #cfd3cb; }');
-    expect(cssSource).toContain('.gf-root.gf-wiz[data-step="3"] { --ground: #e6dccd; }');
-    expect(cssSource).toContain('.gf-root.gf-wiz[data-step="4"] { --ground: #bcc7e0; }');
+    expect(cssSource).toContain('.gf-root.gf-wiz[data-step="1"] { --ground: var(--bg-paper); }');
+    expect(cssSource).toContain('.gf-root.gf-wiz[data-step="2"] { --ground: var(--field-sage); }');
+    expect(cssSource).toContain('.gf-root.gf-wiz[data-step="3"] { --ground: var(--bg-warm); }');
+    expect(cssSource).toContain('.gf-root.gf-wiz[data-step="4"] { --ground: var(--bg-ochre); }');
     expect(cssSource).toContain("var(--ok)");
     expect(cssSource).toContain("gf-stamp");
     expect(cssSource).toContain("background-color 620ms");

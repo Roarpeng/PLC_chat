@@ -26,6 +26,8 @@ import {
   DeliveryView, DeviceView, DiffView, OverviewView, SequenceView, TraceView,
   type DerivedData, type ViewProps,
 } from "./views";
+import { StationWorkspace } from "./StationWorkspace";
+import type { StationDesign } from "./stationDesign";
 import "./workbench.css";
 
 export interface WorkbenchShellProps {
@@ -37,9 +39,14 @@ const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
 export const WorkbenchShell: React.FC<WorkbenchShellProps> = ({ projectId, onSwitch }) => {
-  const pid = projectId || "prj_v2_workbench";
+  const requestedProject = projectId || (typeof window === "undefined"
+    ? undefined
+    : new URLSearchParams(window.location.search).get("project_id")?.trim());
+  const pid = requestedProject || "prj_v2_workbench";
   const [state, dispatch] = useReducer(reduceViewState, initialViewState(pid));
+  const [projectStatus, setProjectStatus] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [derived, setDerived] = useState<DerivedData | null>(null);
+  const [approved, setApproved] = useState<{ id: string; revision: number } | null>(null);
   const [job, setJob] = useState<JobView | null>(null);
   const revisionRef = useRef(state.baseRevision);
   revisionRef.current = state.baseRevision;
@@ -79,10 +86,18 @@ export const WorkbenchShell: React.FC<WorkbenchShellProps> = ({ projectId, onSwi
         evidenceLevel: reply.evidence_level,
         ir,
       });
+      const previousRelease = reply.data?.last_approved;
+      setApproved(previousRelease ? { id: previousRelease.id, revision: previousRelease.base_revision } : null);
+      setProjectStatus("ready");
       revisionRef.current = Number(data.revision ?? 0);
-      await loadDerived(revisionRef.current);
+      if (!ir.station_design) await loadDerived(revisionRef.current);
     } catch (err) {
-      dispatch({ type: "PATCH_TRANSPORT_ERROR", message: err instanceof GFRequestError ? err.message : "无法读取服务端 IR" });
+      if (err instanceof GFRequestError && err.status === 404) {
+        setProjectStatus("missing");
+      } else {
+        setProjectStatus("error");
+        dispatch({ type: "PATCH_TRANSPORT_ERROR", message: err instanceof GFRequestError ? err.message : "无法读取服务端 IR" });
+      }
     }
     const jobId = new URLSearchParams(window.location.search).get("job_id");
     if (jobId) {
@@ -178,6 +193,10 @@ export const WorkbenchShell: React.FC<WorkbenchShellProps> = ({ projectId, onSwi
     window.location.assign(`${GF_BASE}${V2_API}/projects/${encodeURIComponent(pid)}/source-package`);
   }, [pid]);
 
+  if (irRef.current.station_design && projectStatus === "ready") {
+    return <StationWorkspace initial={irRef.current.station_design as StationDesign} previousRelease={approved} state={state} onSwitch={onSwitch} />;
+  }
+
   const viewProps: ViewProps = {
     ir: irRef.current, state, derived, job, onEdit, onSelectNode, onUndo, onRedo, onRunScenario, onSourcePackage,
   };
@@ -189,16 +208,43 @@ export const WorkbenchShell: React.FC<WorkbenchShellProps> = ({ projectId, onSwi
       case "trace": return <TraceView {...viewProps} />;
       case "diff": return <DiffView {...viewProps} />;
       case "delivery": return <DeliveryView {...viewProps} />;
-      default: return <OverviewView {...viewProps} />;
+      default: return (
+        <OverviewView
+          {...viewProps}
+          projectStatus={projectStatus}
+          requestedProject={requestedProject}
+          onOpenSequence={() => dispatch({ type: "SELECT_VIEW", view: "sequence" })}
+          onStartDesign={() => {
+            void (async () => {
+              try {
+                await v2Api.patch({
+                  project_id: pid, base_revision: revisionRef.current, request_id: newRequestId(),
+                  ops: [{ op: "set_station_design", design: { name: "新建 AF 工程" } }],
+                });
+                await loadAll();
+              } catch (error) {
+                dispatch({ type: "PATCH_TRANSPORT_ERROR", message: error instanceof Error ? error.message : "无法打开 AF 建模向导" });
+              }
+            })();
+          }}
+          onRetry={() => { setProjectStatus("loading"); void loadAll(); }}
+        />
+      );
     }
   };
 
   return (
     <div className="wb-shell" data-ui="workbench-shell">
-      <TopIdentityBar state={state} onSwitch={onSwitch} />
+      <TopIdentityBar state={state} projectLoaded={projectStatus === "ready"} onSwitch={onSwitch} />
       <div className="wb-shell__body">
-        <ProjectTree state={state} onSelectView={(view) => dispatch({ type: "SELECT_VIEW", view })} />
-        <main className="wb-shell__main" data-ui="workbench-main">{renderView()}</main>
+        <ProjectTree
+          state={state}
+          projectLoaded={projectStatus === "ready"}
+          onSelectView={(view) => dispatch({ type: "SELECT_VIEW", view })}
+        />
+        <main id="workbench-main" className="wb-shell__main" data-ui="workbench-main" tabIndex={-1}>
+          <div className="wb-sheet k-crop-marks">{renderView()}</div>
+        </main>
         <Inspector state={state} />
       </div>
       <DiagnosticsPane

@@ -143,7 +143,7 @@
   max-width: 72%;
   padding: 8px 13px;
   background: var(--accent, #1f2de6);
-  color: #ffffff;
+  color: var(--ink-inverse);
   border-radius: 0;
   font-size: 13px;
   line-height: 1.55;
@@ -152,7 +152,7 @@
   user-select: text;
 }
 
-/* 机器应答：衬线工程文件面 —— 可读文档，非气泡 */
+/* 机器应答以文档形式显示。 */
 
 .dock-sysline {
   max-width: 92%;
@@ -160,7 +160,7 @@
   border-left: 3px solid var(--line-2, #bcc2cc); /* taste-skill-ignore: data-ui document spine */
   background: transparent;
   color: var(--ink);
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 14px;
   line-height: 1.6;
   white-space: pre-wrap;
@@ -178,16 +178,16 @@
 }
 
 .dock-welcome__title {
-  font-family: var(--sans);
+  font-family: var(--serif);
   font-size: clamp(26px, 3.4vw, 40px);
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.12;
   letter-spacing: -0.03em;
   color: var(--ink);
 }
 
 .dock-welcome__sub {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 16px;
   line-height: 1.7;
   color: var(--ink);
@@ -369,7 +369,7 @@
   padding: 0 18px;
   border: none;
   background: var(--accent, #1f2de6);
-  color: #ffffff;
+  color: var(--ink-inverse);
   font-family: var(--sans);
   font-size: 13px;
   font-weight: 600;
@@ -651,7 +651,7 @@
   border: none;
   border-radius: 0;
   background: var(--accent, #1f2de6);
-  color: #ffffff;
+  color: var(--ink-inverse);
   font-family: var(--sans);
   font-size: 13px;
   font-weight: 600;
@@ -727,14 +727,14 @@
   font-weight: 600;
 }
 
-/* 机器回答的 Markdown 文档面：衬线、窄栏适配 */
+/* 机器回答的 Markdown 文档面。 */
 .dock-md {
   max-width: 92%;
   padding: 2px 2px 2px 14px;
   border-left: 3px solid var(--line-2, #bcc2cc); /* taste-skill-ignore: data-ui document spine */
   background: transparent;
   color: var(--ink);
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 14px;
   line-height: 1.65;
   overflow-wrap: anywhere;

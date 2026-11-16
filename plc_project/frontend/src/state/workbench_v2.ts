@@ -55,6 +55,7 @@ export interface JobView {
   evidence_id: string;
   compile: { state: string; error_count: number; warning_count: number; compile_ok: boolean } | null;
   notice: string;
+  diagnostics?: Array<{ node_id?: string; reason: string }>;
 }
 
 export interface SequencePatchBody {
@@ -119,19 +120,51 @@ const jsonInit = (body: unknown): RequestInit => ({
 });
 
 export const v2Api = {
-  getIr: (projectId: string) =>
-    wbRequestEnvelope<{ ir: Record<string, unknown>; revision: number; ir_sha256: string; derived_dirty: boolean }>(
-      `/projects/${encodeURIComponent(projectId)}/ir`),
+  stationCatalog: () => wbRequest<import("../workbench/stationDesign").DeviceProfile[]>("/station-catalog"),
+  createProject: (name = "新建 AF 工程") =>
+    wbRequest<{ project_id: string }>("/projects", jsonInit({
+      request_id: newRequestId(), station_design: { name },
+    })),
+  intent: (projectId: string, baseRevision: number, message: string, context: Record<string, string>) =>
+    wbRequest<{ base_revision: number; explanation: string; mode: string; questions: string[]; ops: Array<Record<string, unknown>> }>(
+      `/projects/${encodeURIComponent(projectId)}/intent`,
+      jsonInit({ project_id: projectId, base_revision: baseRevision, request_id: newRequestId(), message, context_slice: context })),
+  freeze: (projectId: string, baseRevision: number) =>
+    wbRequest<{ changeset_id: string; before_hash: string; after_hash: string }>(
+      `/projects/${encodeURIComponent(projectId)}/changesets`,
+      jsonInit({ project_id: projectId, base_revision: baseRevision, request_id: newRequestId() })),
+  approve: (changesetId: string, reviewer: string, baseline: string) =>
+    wbRequest<{ approved_changeset_id: string }>(
+      `/changesets/${encodeURIComponent(changesetId)}/approve`,
+      jsonInit({ reviewer_id: reviewer, explicit: true, expected_baseline_hash: baseline, request_id: newRequestId() })),
+  compileStation: (projectId: string, changesetId: string) =>
+    wbRequest<{ job_id: string }>(
+      "/projects/" + encodeURIComponent(projectId) + "/station-deliveries",
+      jsonInit({ approved_changeset_id: changesetId, idempotency_key: newRequestId(), request_id: newRequestId() })),
+  importStation: (file: File, confirm: boolean) => {
+    const form = new FormData();
+    form.set("file", file);
+    return wbRequest<{ name: string; station_count: number; device_count: number | null; project_id?: string;
+      questions: Array<{ reason: string }>; af_profile: string; can_import: boolean; compatible?: boolean }>(
+      `/station-import?confirm=${confirm}`, { method: "POST", body: form });
+  },
+  getIr: (projectId: string, revision?: number) =>
+    wbRequestEnvelope<{ ir: Record<string, unknown>; revision: number; ir_sha256: string; derived_dirty: boolean;
+      last_approved?: { id: string; base_revision: number } | null }>(
+      `/projects/${encodeURIComponent(projectId)}/ir` + (revision === undefined ? "" : "?revision=" + revision)),
+  revisions: (projectId: string) =>
+    wbRequest<Array<{ revision: number; ir_hash: string; created_at: string }>>(
+      `/projects/${encodeURIComponent(projectId)}/revisions`),
   patch: (body: SequencePatchBody) =>
     wbRequestEnvelope<PatchResultV2>(`/projects/${encodeURIComponent(body.project_id)}/patches`, jsonInit(body)),
   preview: (projectId: string, baseRevision: number, requestId: string) =>
     wbRequestEnvelope<Record<string, unknown>>(
       `/projects/${encodeURIComponent(projectId)}/preview`,
       jsonInit({ project_id: projectId, base_revision: baseRevision, request_id: requestId, include_scl: true })),
-  simulate: (projectId: string, baseRevision: number, requestId: string, scenario = "normal_cycle") =>
+  simulate: (projectId: string, baseRevision: number, requestId: string, scenario = "normal_cycle", stationId = "") =>
     wbRequestEnvelope<Record<string, unknown>>(
       `/projects/${encodeURIComponent(projectId)}/simulate`,
-      jsonInit({ project_id: projectId, base_revision: baseRevision, request_id: requestId, scenario })),
+      jsonInit({ project_id: projectId, base_revision: baseRevision, request_id: requestId, scenario, station_id: stationId })),
   validate: (projectId: string, baseRevision: number, requestId: string) =>
     wbRequestEnvelope<Record<string, unknown>>(
       `/projects/${encodeURIComponent(projectId)}/validate`,
@@ -144,12 +177,12 @@ export const v2Api = {
 
 export type WorkbenchView = "overview" | "device" | "sequence" | "trace" | "diff" | "delivery";
 export const WORKBENCH_VIEWS: ReadonlyArray<{ id: WorkbenchView; label: string }> = [
-  { id: "overview", label: "① 项目总览" },
-  { id: "device", label: "② 元器件驱动" },
-  { id: "sequence", label: "③ 工艺步序" },
-  { id: "trace", label: "④ 时序预览" },
-  { id: "diff", label: "⑤ 变更审核" },
-  { id: "delivery", label: "⑥ TIA 交付" },
+  { id: "overview", label: "项目总览" },
+  { id: "device", label: "元器件驱动" },
+  { id: "sequence", label: "工艺步序" },
+  { id: "trace", label: "时序预览" },
+  { id: "diff", label: "变更审核" },
+  { id: "delivery", label: "TIA 交付" },
 ];
 
 export interface Diagnostic {

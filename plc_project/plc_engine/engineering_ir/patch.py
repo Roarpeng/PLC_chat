@@ -187,6 +187,20 @@ def _apply_op(candidate: EngineeringIRV2, op: ChangeOp) -> list[str]:
     if name not in PATCH_OPS:
         raise ValueError(f"unknown patch op: {name!r} (fail-closed)")
 
+    if name == "set_station_design":
+        from plc_engine.engineering_ir.station_design import StationDesign, design_issues, design_records
+
+        if candidate.station_design is None and (candidate.components or candidate.process.steps or candidate.source_bindings):
+            raise ValueError("此工程含有旧版逻辑，需经兼容性导入保留原始基线。")
+        design = StationDesign.model_validate(payload.get("design"))
+        issues = design_issues(design)
+        if issues:
+            raise SemanticValidationError(issues, candidate.ir_sha256)
+        previous = design_records(StationDesign.model_validate(candidate.station_design)) if candidate.station_design else {}
+        updated = design_records(design)
+        candidate.station_design = design.model_dump()
+        return ["station_design", *(key for key in previous.keys() | updated.keys() if previous.get(key) != updated.get(key))]
+
     if name == "set_step_parameter":
         step_id = str(payload.get("step_id") or op.ir_id)
         field_name = str(payload.get("field") or "")
@@ -424,7 +438,7 @@ def apply_patch_atomic(
 
     from plc_engine.engineering_ir.validation import ValidationEngine
 
-    report = ValidationEngine().validate(candidate)
+    report = ValidationEngine().validate(candidate, draft=True)
     if not report.passed:
         raise SemanticValidationError(report.issues, unchanged_hash)
 

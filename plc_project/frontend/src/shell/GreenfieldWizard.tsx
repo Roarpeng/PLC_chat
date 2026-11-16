@@ -1,3 +1,4 @@
+import { PaperAppearance } from "../styles/kronos/PaperAppearance";
 /**
  * 4 步主链容器：左 220px 工位步序带 + 右阶段工作区 + 右上角单一「工程视角」入口。
  *
@@ -265,6 +266,7 @@ export const GreenfieldWizard: React.FC<GreenfieldWizardProps> = ({
           <span className="gf-wiz__brand-sub">工业图纸 · {currentMeta.kicker}</span>
         </span>
         <span className="gf-wiz__topbar-spacer" />
+        <PaperAppearance />
         {onToggleMoreInputs && (
           <button type="button" className="gf-btn gf-btn--ghost" onClick={onToggleMoreInputs}>
             辅助输入

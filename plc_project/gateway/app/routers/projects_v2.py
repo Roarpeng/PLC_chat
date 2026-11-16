@@ -11,7 +11,7 @@ import json
 import uuid
 import zipfile
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, UploadFile
 from fastapi.responses import Response, StreamingResponse
 
 from gateway.app.schemas.v2_common import V2ErrorCodes, error_response, ok_response
@@ -81,10 +81,57 @@ def create_project(body: CreateProjectIn, store: WorkspaceStore = StoreDep):
             ir = V1ToV2Adapter.to_v2(body.legacy_ir or body.v1_fixture or {}, project_id=project_id)
         else:
             ir = new_project_ir(project_id)
+        if body.station_design is not None:
+            from plc_engine.engineering_ir.station_design import StationDesign, design_issues
+
+            design = StationDesign.model_validate(body.station_design)
+            issues = design_issues(design)
+            if issues:
+                return error_response(422, V2ErrorCodes.INVALID_REQUEST, issues[0]["reason"],
+                                      data={"issues": issues}, request_id=_rid(body.request_id))
+            ir.station_design = design.model_dump()
+            ir.refresh_hash()
         data = EngineeringServiceV2.create_project(store, project_id, ir=ir, origin=body.origin)
     except ValueError as exc:
         return error_response(422, V2ErrorCodes.INVALID_REQUEST, str(exc), request_id=_rid(body.request_id))
     return ok_response(data, request_id=_rid(body.request_id), evidence_level="offline", code=0, message="created")
+
+
+@router.post("/station-import")
+async def import_station_project(
+    file: UploadFile = File(...), confirm: bool = False, store: WorkspaceStore = StoreDep
+):
+    from gateway.app.services.plc.station_import import MAX_IMPORT_BYTES, inspect_native_archive, inspect_station_export
+
+    try:
+        native = (file.filename or "").lower().endswith(".zap19")
+        limit = MAX_IMPORT_BYTES
+        if native:
+            from gateway.app.config import get_settings
+
+            limit = get_settings().plc_upload_max_mb * 1024 * 1024
+        data = await file.read(limit + 1)
+        if native:
+            if confirm:
+                raise ValueError("请使用配套 AF 画布定义确认导入。")
+            from starlette.concurrency import run_in_threadpool
+
+            report = await run_in_threadpool(inspect_native_archive, file.filename or "", data)
+            return ok_response(report, evidence_level="offline")
+        design, report = inspect_station_export(data)
+        if not confirm:
+            return ok_response(report, evidence_level="offline")
+        project_id = f"prj_{uuid.uuid4().hex[:12]}"
+        ir = new_project_ir(project_id, origin="imported_af")
+        ir.station_design = design.model_dump()
+        ir.spec_meta["imported_baseline"] = report["source_ir_sha256"]
+        ir.refresh_hash()
+        project = EngineeringServiceV2.create_project(store, project_id, ir=ir, origin="imported_af")
+        return ok_response({**report, **project}, evidence_level="offline")
+    except ValueError as exc:
+        return error_response(422, V2ErrorCodes.INVALID_REQUEST, str(exc).splitlines()[0][:250])
+    finally:
+        await file.close()
 
 
 @router.get("/projects/{project_id}")
@@ -107,12 +154,15 @@ def get_project(project_id: str, store: WorkspaceStore = StoreDep):
 
 
 @router.get("/projects/{project_id}/ir")
-def get_ir(project_id: str, store: WorkspaceStore = StoreDep):
+def get_ir(project_id: str, revision: int | None = Query(None, ge=0), store: WorkspaceStore = StoreDep):
     """Read the authoritative EngineeringIR v2."""
     missing = _require_project(store, project_id)
     if missing:
         return missing
-    ir = store.get_ir(project_id)
+    try:
+        ir = store.get_ir(project_id, revision)
+    except LookupError:
+        return error_response(404, V2ErrorCodes.PROJECT_NOT_FOUND, "工程修订不存在。")
     report = ValidationServiceV2.validate_ir(ir)
     return ok_response(
         {
@@ -122,9 +172,18 @@ def get_ir(project_id: str, store: WorkspaceStore = StoreDep):
             "ir": ir.to_dict(),
             "derived_dirty": not report.passed,
             "schema_version": ir.schema_version,
+            "last_approved": store.latest_approved_changeset(project_id) if ir.station_design is not None else None,
         },
         evidence_level="offline",
     )
+
+
+@router.get("/projects/{project_id}/revisions")
+def get_revisions(project_id: str, store: WorkspaceStore = StoreDep):
+    missing = _require_project(store, project_id)
+    if missing:
+        return missing
+    return ok_response(store.list_revisions(project_id), evidence_level="offline")
 
 
 @router.get("/projects/{project_id}/blocks")
@@ -141,6 +200,13 @@ def get_blocks(project_id: str, store: WorkspaceStore = StoreDep):
 # --------------------------------------------------------------------------- #
 
 
+@router.get("/station-catalog")
+def get_station_catalog():
+    from plc_engine.engineering_ir.station_catalog import PROFILES
+
+    return ok_response(list(PROFILES.values()), evidence_level="offline")
+
+
 @router.post("/projects/{project_id}/intent")
 def post_intent(project_id: str, body: IntentIn, store: WorkspaceStore = StoreDep):
     """NL -> CandidatePatch only (no IR write, no TIA write, no free SCL)."""
@@ -148,6 +214,14 @@ def post_intent(project_id: str, body: IntentIn, store: WorkspaceStore = StoreDe
     if missing:
         return missing
     ir = store.get_ir(project_id)
+    if ir.station_design is not None:
+        from gateway.app.services.plc.station_intent import propose_station_edit
+
+        if body.base_revision != ir.revision:
+            return error_response(409, V2ErrorCodes.BASE_REVISION_CONFLICT, "草稿修订已变化，请重新读取画布。",
+                                  data={"current_revision": ir.revision}, request_id=_rid(body.request_id))
+        result = propose_station_edit(ir, body.message[:4000], body.context_slice)
+        return ok_response(result, request_id=_rid(body.request_id), evidence_level="offline")
     result = IntentServiceV2().parse(
         ir=ir, message=body.message, context_slice=body.context_slice,
         base_revision=body.base_revision, request_id=_rid(body.request_id),
@@ -228,7 +302,7 @@ def post_simulate(project_id: str, body: SimulateIn, store: WorkspaceStore = Sto
     if missing:
         return missing
     try:
-        payload = DerivationServiceV2(store).simulate(project_id, body.scenario)
+        payload = DerivationServiceV2(store).simulate(project_id, body.scenario, station_id=body.station_id)
     except KeyError as exc:
         return error_response(422, V2ErrorCodes.INVALID_REQUEST, str(exc),
                               request_id=_rid(body.request_id), evidence_level="offline")
@@ -256,6 +330,10 @@ def post_changeset(project_id: str, body: ChangesetIn, store: WorkspaceStore = S
     missing = _require_project(store, project_id)
     if missing:
         return missing
+    ir = store.get_ir(project_id)
+    if ir.station_design is not None and body.base_revision != ir.revision:
+        return error_response(409, V2ErrorCodes.BASE_REVISION_CONFLICT, "工程修订已变化。",
+                              data={"current_revision": ir.revision}, request_id=_rid(body.request_id))
     changeset = EngineeringServiceV2.freeze_changeset(
         store, project_id, base_revision=body.base_revision, ops=body.ops
     )
@@ -324,14 +402,54 @@ def post_delivery(project_id: str, body: DeliveryIn, store: WorkspaceStore = Sto
     )
 
 
+@router.post("/projects/{project_id}/station-deliveries")
+def start_station_delivery(
+    project_id: str, body: DeliveryIn, background_tasks: BackgroundTasks, store: WorkspaceStore = StoreDep,
+):
+    from gateway.app.services.plc.station_native import CPU_IDENTIFIER, compile_station_archive
+
+    missing = _require_project(store, project_id)
+    if missing:
+        return missing
+    ir = store.get_ir(project_id)
+    changeset = store.get_changeset(body.approved_changeset_id)
+    if not changeset or changeset.project_id != project_id or not changeset.review_approved:
+        return error_response(403, V2ErrorCodes.CHANGESET_NOT_APPROVED, "请确认当前工程修订后再启动编译。")
+    if ir.ir_sha256 != changeset.after_hash or ir.revision != changeset.base_revision:
+        return error_response(409, V2ErrorCodes.BASELINE_HASH_MISMATCH, "工程草稿已变化，请确认新修订。")
+    cpu = ir.station_design["hardware"]["cpu"].strip() if ir.station_design else ""
+    if not CPU_IDENTIFIER.fullmatch(cpu):
+        return error_response(422, V2ErrorCodes.INVALID_REQUEST, "原生编译需要硬件组态中完整的 V19 CPU 目录标识。")
+    coordinator = DeliveryCoordinator(store)
+    try:
+        payload = body.model_dump()
+        payload["project_id"] = project_id
+        payload["expected_baseline_hash"] = ir.ir_sha256
+        data, status = coordinator.start(payload)
+    except DeliveryStartError as exc:
+        return error_response(exc.status_code, exc.code, str(exc), data=exc.data)
+    if not data["idempotent_hit"]:
+        background_tasks.add_task(compile_station_archive, coordinator, data["job_id"], ir)
+    return Response(content=json.dumps(ok_response(data, evidence_level="pending_real_machine").model_dump()),
+                    status_code=status, media_type="application/json")
+
+
 @router.get("/delivery-jobs/{job_id}")
 def get_delivery_job(job_id: str, store: WorkspaceStore = StoreDep):
     """Persistent job state (frontend reads this; never marks success locally)."""
     try:
-        data = DeliveryCoordinator(store).get_job(job_id)
+        coordinator = DeliveryCoordinator(store)
+        data = coordinator.get_job(job_id)
     except ProjectNotFoundError:
         return error_response(404, V2ErrorCodes.PROJECT_NOT_FOUND, f"unknown job {job_id!r}",
                               evidence_level="pending_real_machine")
+    if data["state"] == "FAILED":
+        from gateway.app.services.plc.station_native import station_delivery_diagnostics
+
+        diagnostics = station_delivery_diagnostics(coordinator, job_id)
+        if diagnostics:
+            data["diagnostics"] = diagnostics
+            data["notice"] = diagnostics[-1]["reason"]
     return ok_response(data, evidence_level=data["evidence_level"])
 
 
@@ -386,21 +504,41 @@ def download_artifact(
 
 
 @router.get("/projects/{project_id}/source-package")
-def get_source_package(project_id: str, store: WorkspaceStore = StoreDep):
+def get_source_package(project_id: str, changeset_id: str = "", store: WorkspaceStore = StoreDep):
     """A-2: offline source import package ZIP — explicitly NOT a native project."""
     missing = _require_project(store, project_id)
     if missing:
         return missing
-    gate = DerivationServiceV2(store).validate(project_id)
+    from plc_engine.process.pipeline import derive_bundle
+
+    ir = store.get_ir(project_id)
+    if ir.station_design is not None:
+        approved = store.get_changeset(changeset_id) if changeset_id else None
+        if not approved or approved.project_id != project_id or not approved.review_approved:
+            return error_response(409, V2ErrorCodes.INVALID_REQUEST, "请先确认用于生成的工程版本。",
+                                  evidence_level="offline")
+        ir = store.get_ir(project_id, approved.base_revision)
+        if ir.ir_sha256 != approved.after_hash or ir.compute_spec_hash() != approved.signed_spec_hash:
+            return error_response(409, V2ErrorCodes.BASELINE_HASH_MISMATCH, "已确认版本的工程摘要不一致。",
+                                  evidence_level="offline")
+    gate = ValidationServiceV2.static_gate(ir)
     if not gate["passed"]:
         return error_response(
             409, V2ErrorCodes.SEMANTIC_VALIDATION_FAILED,
             "SOURCE_READY not reached (static gate failed)",
             data={"issues": gate["issues"]}, evidence_level="offline",
         )
-    bundle = DerivationServiceV2(store).derive_all(project_id)
+    bundle = derive_bundle(ir)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        if ir.station_design is not None:
+            archive.writestr("af-canvas.json", json.dumps({
+                "format": "af-station-canvas/1", "af_profile": ir.af_profile.to_dict(),
+                "source_ir_sha256": ir.ir_sha256, "revision": ir.revision,
+                "station_design": ir.station_design,
+            }, ensure_ascii=False, sort_keys=True))
+            archive.writestr("source-map.json", json.dumps(bundle.source_map.to_dict(), ensure_ascii=False))
+            archive.writestr("hardware.json", json.dumps(ir.station_design["hardware"], ensure_ascii=False))
         for path, content in sorted(bundle.scl_files.items()):
             archive.writestr(path, content)
         archive.writestr(

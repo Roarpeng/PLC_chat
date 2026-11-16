@@ -561,9 +561,9 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
           fontWeight: on ? 600 : 500,
         },
         labelShowBg: true,
-        labelBgStyle: { fill: "#ffffff" },
+        labelBgStyle: { fill: "var(--bg-card)" },
         labelBgPadding: [2, 4],
-        labelBgBorderRadius: 3,
+        labelBgBorderRadius: 1,
         style: { stroke: col, strokeWidth: on ? (touchesSel ? 2.5 : 2) : 1.5 },
         markerEnd: { type: MarkerType.ArrowClosed, color: col, width: 12, height: 12 },
       });
@@ -809,14 +809,14 @@ const GlobalGraphCanvas: FC<GlobalGraphProps> = ({
           variant={BackgroundVariant.Dots}
           gap={24}
           size={1.5}
-          color="rgba(27,30,28,0.10)"
+          color="var(--border-line)"
         />
         <MiniMap
           className="gg-minimap"
-          maskColor="rgba(27,30,28,0.08)"
+          maskColor="var(--hatch-color)"
           nodeStrokeWidth={2}
-          nodeBorderRadius={3}
-          nodeStrokeColor={() => "rgba(27,30,28,0.30)"}
+          nodeBorderRadius={1}
+          nodeStrokeColor={() => "var(--ink-faint)"}
           nodeColor={(n) => {
             const b = (n.data as { block?: CanvasBlockData }).block;
             return MINIMAP_STATUS[b?.status ?? ""] ?? "#C9CCC4";

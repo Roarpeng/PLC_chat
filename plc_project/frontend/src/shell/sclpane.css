@@ -10,7 +10,7 @@
   height: 100%;
   min-height: 0;
   min-width: 0;
-  background: var(--surface, #ffffff);
+  background: var(--surface);
   color: var(--ink, #1b1e1c);
   font-family: var(--sans, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
@@ -48,7 +48,7 @@
   padding: 0 4px;
   border: 1px solid var(--accent, #1e5f97); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: 0;
-  background: var(--surface, #ffffff);
+  background: var(--surface);
 font-family: var(--sans);
   font-variant-numeric: tabular-nums;
   font-size: 13px;
@@ -251,8 +251,8 @@ font-family: var(--sans);
   margin-top: 8px;
   padding: 8px 10px;
   border-left: 2px solid var(--accent, #1e5f97);
-  border-radius: 0 6px 6px 0;
-  background: var(--surface, #ffffff);
+  border-radius: var(--radius-0);
+  background: var(--surface);
   font-size: 13px;
   line-height: 1.65;
   color: var(--ink, #1b1e1c);
@@ -286,7 +286,7 @@ font-family: var(--sans);
   padding: 0 5px;
   border: 1px solid var(--accent, #1e5f97); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: 0;
-  background: var(--surface, #ffffff);
+  background: var(--surface);
 font-family: var(--sans);
   font-variant-numeric: tabular-nums;
   font-size: 13px;
@@ -530,7 +530,7 @@ font-family: var(--sans);
   padding: 10px;
   border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: 0;
-  background: var(--surface, #ffffff);
+  background: var(--surface);
 }
 
 .sp-form__row {
@@ -584,7 +584,7 @@ font-family: var(--sans);
 
 .sp-input:focus {
   border-color: var(--accent, #1e5f97);
-  background: var(--surface, #ffffff);
+  background: var(--surface);
 }
 
 .sp-textarea {
@@ -617,7 +617,7 @@ font-family: var(--sans);
   font-family: var(--sans, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
   font-weight: 500;
-  color: #ffffff;
+  color: var(--ink-inverse);
   cursor: pointer;
   transition: background-color 0.12s ease, border-color 0.12s ease;
 }

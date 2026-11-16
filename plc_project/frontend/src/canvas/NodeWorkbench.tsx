@@ -189,10 +189,10 @@ export function NodeWorkbench({
                   disabled={busy}
                   onClick={() => void onSmartHeal(node)}
                   style={{
-                    background: "#ef4444",
-                    color: "#fff",
+                    background: "var(--accent-clay-ink)",
+                    color: "var(--ink-inverse)",
                     border: "none",
-                    borderRadius: 4,
+                    borderRadius: "var(--radius-1)",
                     padding: "3px 8px",
                     fontSize: 11,
                     fontWeight: 600,

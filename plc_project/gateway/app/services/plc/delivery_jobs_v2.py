@@ -43,8 +43,7 @@ class DeliveryCoordinator:
         self.store = store
         # Keep the artifact store next to the workspace data directory, never
         # at the repository root (tests and multi-workspace setups stay isolated).
-        default_root = store.ir_store_root.parent / "artifact_store"
-        self.artifact_store = artifact_store or ArtifactStore(store, root=default_root)
+        self.artifact_store = artifact_store or ArtifactStore(store)
 
     def start(self, payload: dict[str, Any]) -> tuple[dict[str, Any], int]:
         """Accept a delivery request: returns ``(data, 202)`` or a structured error."""

@@ -1,28 +1,20 @@
-/* ==========================================================================
-   GlobalGraph — 全局块连线图（React Flow 版，前缀 gg-）
-   浅色工程风：点阵底 + 白底节点（顶部 3px 状态条）+ 计数着色贝塞尔连线。
-   设计令牌就地声明（与全局 index.css 同值），规则：无渐变装饰、无 emoji、
-   无阴影堆叠；focus-visible 2px accent；reduced-motion 禁动画。
-   ========================================================================== */
-
-/* —— 容器与设计令牌 —— */
-
+/* Global block graph. Canvas background, node surfaces and status inks follow the workbench. */
 .gg {
-  --surface: #ffffff;
-  --surface-2: #f1f2ed;
-  --ink: #1b1e1c;
-  --ink-2: #565d57;
-  --ink-3: #8a918b;
-  --line: #e3e4de;
-  --line-2: #c9ccc4;
-  --accent: #1e5f97;
-  --accent-soft: #e4edf5;
-  --run: #1f7a33;
-  --standby: #8f5e00;
-  --fault: #b3261e;
-  --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
-  --sans: "Barlow", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --cond: "Barlow Semi Condensed", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --surface: var(--bg-card);
+  --surface-2: var(--bg-paper);
+  --ink: var(--ink-primary);
+  --ink-2: var(--ink-secondary);
+  --ink-3: var(--ink-secondary);
+  --line: var(--border-line);
+  --line-2: var(--ink-faint);
+  --accent: var(--accent-slate-ink);
+  --accent-soft: color-mix(in srgb, var(--accent-slate) 10%, var(--bg-card));
+  --run: var(--accent-sage-ink);
+  --standby: var(--accent-ochre-ink);
+  --fault: var(--accent-clay-ink);
+  --mono: var(--font-mono);
+  --sans: var(--font-sans);
+  --cond: var(--font-sans);
 
   position: relative;
   width: 100%;
@@ -75,7 +67,7 @@
 }
 
 .gg .react-flow__edge-textbg {
-  fill: #ffffff;
+  fill: var(--bg-card);
 }
 
 .gg .react-flow__edge-path {
@@ -143,24 +135,17 @@
 .gg-node:hover {
   border-color: var(--ink-3);
 }
-
-/* 选中：加粗 accent 外框 + accent-soft 底 + 3px 外环（hover 不回落） */
+/* Raise the selected block. Linked blocks retain a single ink outline. */
 .gg-node--sel,
 .gg-node--sel:hover {
   border: 2px solid var(--accent);
   background: var(--accent-soft);
-  box-shadow: /* taste-skill-ignore: data-ui workbench interface */
-    0 0 0 3px rgba(30, 95, 151, 0.3),
-    0 6px 16px rgba(30, 95, 151, 0.22);
+  box-shadow: var(--elev-2);
 }
 
-/* 选中块的 1 跳关联（调用方/被调方）：钢蓝描边 + 淡外晕提亮 */
 .gg-node--rel,
 .gg-node--rel:hover {
-  border-color: rgba(30, 95, 151, 0.72);
-  box-shadow: /* taste-skill-ignore: data-ui workbench interface */
-    0 0 0 1.5px rgba(30, 95, 151, 0.2),
-    0 2px 8px rgba(30, 95, 151, 0.14);
+  border-color: var(--accent);
 }
 
 /* 已有选中块时的无关节点：轻度退后（保留全局上下文） */

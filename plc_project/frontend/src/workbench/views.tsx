@@ -3,6 +3,7 @@ import React from "react";
 import { DeviceCanvas } from "./canvas/DeviceCanvas";
 import { SequenceEditor } from "./canvas/SequenceEditor";
 import { EvidenceBadge } from "./components";
+import { CreateProjectButton, ImportStationProject, ProjectLookup } from "./ProjectAccess";
 import {
   SOURCE_PACKAGE_NOTICE,
   canShowNativeDownload,
@@ -37,43 +38,96 @@ const kv = (label: string, value: unknown) => (
   <div className="wb-kv" key={label}><span>{label}</span><b>{String(value ?? "—")}</b></div>
 );
 
-export const OverviewView: React.FC<ViewProps> = ({ ir, state, derived }) => (
-  <div className="wb-view" data-ui="view-overview">
-    <h3>① 项目总览</h3>
-    <div className="wb-cards">
-      <section className="wb-card">
-        <div className="wb-card__title">真实工程卡片</div>
-        {kv("project_id", state.projectId)}
-        {kv("revision", state.baseRevision)}
-        {kv("AFProfile", state.afProfile)}
-        {kv("TIA 版本", "V19")}
-        {kv("I/O 地址", "unbound（未绑定）")}
-        {kv("证据等级", state.evidenceLevel)}
-      </section>
-      <section className="wb-card">
-        <div className="wb-card__title">生成状态（服务端派生）</div>
-        {kv("组件数", Array.isArray(ir.components) ? ir.components.length : 0)}
-        {kv("步序数", (ir.process as { steps?: unknown[] } | undefined)?.steps?.length ?? 0)}
-        {kv("manifest sha256", derived?.manifest?.sha256 ?? "—")}
-        {kv("SCL 文件数", Object.keys(derived?.sclFiles ?? {}).length)}
-        {kv("SourceMap 条目", Array.isArray(derived?.sourceMap?.mappings) ? derived.sourceMap.mappings.length : 0)}
-      </section>
-      <section className="wb-card">
-        <div className="wb-card__title">下一步建议</div>
-        <ul>
-          <li>在「工艺步序」双击 S2 修改保持时间 → IR / Trace / SCL 三方同步</li>
-          <li>缺物理 IO 绑定时保持 unbound，不编造 %I/%Q</li>
-          <li>无 V19 真机结果时交付视图固定 pending_real_machine</li>
-        </ul>
-      </section>
-    </div>
-    <div className="wb-note">设计信息 ≠ TIA 实时状态；草稿持久化在服务端 revision，前端只持视图状态。</div>
-  </div>
-);
+function ControllerDrawing() {
+  return (
+    <figure className="wb-controller k-crop-marks">
+      <div className="wb-controller__drawing" aria-hidden="true">
+        <div className="wb-controller__signals"><span>I</span><i /><i /><i /></div>
+        <div className="wb-controller__unit">
+          <span>PLC</span>
+          <div className="wb-controller__slots"><i /><i /><i /></div>
+        </div>
+        <div className="wb-controller__signals"><span>Q</span><i /><i /><i /></div>
+      </div>
+      <figcaption>PLC 输入 / 输出示意</figcaption>
+    </figure>
+  );
+}
+
+export const OverviewView: React.FC<ViewProps & {
+  projectStatus: "loading" | "ready" | "missing" | "error";
+  requestedProject?: string | null;
+  onOpenSequence: () => void;
+  onStartDesign: () => void;
+  onRetry: () => void;
+}> = ({ ir, state, derived, projectStatus, requestedProject, onOpenSequence, onStartDesign, onRetry }) => {
+  const loaded = projectStatus === "ready";
+  const process = ir.process as { steps?: unknown[] } | undefined;
+  const empty = !process?.steps?.length && (!Array.isArray(ir.components) || !ir.components.length);
+
+  return (
+    <section className="wb-view" data-ui="view-overview">
+      <header className="wb-overview__head">
+        <div>
+          <p className="wb-overview__context">{loaded ? state.projectId : "PLC 工程工作台"}</p>
+          <h1 className="k-display">项目总览</h1>
+          <p className="wb-overview__description">
+            {loaded ? "查看设备、工艺步序与离线生成产物。" : "创建设计工程，从设备与工艺步序开始。"}
+          </p>
+          {loaded && (
+            <button type="button" className="k-btn k-btn--clay" onClick={empty ? onStartDesign : onOpenSequence}>
+              {empty ? "打开 AF 建模向导" : "打开工艺步序"} <span aria-hidden="true">↗</span>
+            </button>
+          )}
+          {projectStatus === "missing" && <CreateProjectButton />}
+        </div>
+        <ControllerDrawing />
+      </header>
+      <hr className="k-perforation k-perforation--on-card" />
+      {loaded ? (
+        <>
+          <dl className="wb-overview__metrics">
+            <div><dt>元器件</dt><dd>{Array.isArray(ir.components) ? ir.components.length : 0}</dd></div>
+            <div><dt>工艺步序</dt><dd>{process?.steps?.length ?? 0}</dd></div>
+            <div><dt>SCL 文件</dt><dd>{derived ? Object.keys(derived.sclFiles).length : "—"}</dd></div>
+            <div><dt>时序采样</dt><dd>{derived?.trace.length ?? "—"}</dd></div>
+          </dl>
+          <div className="wb-cards">
+            <section className="wb-card">
+              <h2 className="wb-card__title">工程基线</h2>
+              {kv("修订", state.baseRevision)}
+              {kv("TIA 版本", "V19")}
+              {kv("证据等级", state.evidenceLevel)}
+            </section>
+            <section className="wb-card">
+              <h2 className="wb-card__title">生成记录</h2>
+              {kv("SourceMap 条目", Array.isArray(derived?.sourceMap?.mappings) ? derived.sourceMap.mappings.length : "—")}
+              {kv("Manifest SHA256", derived?.manifest?.sha256 ?? "—")}
+            </section>
+          </div>
+        </>
+      ) : (
+        <section className="wb-overview__access">
+          <h2 className="k-title">打开已有工程</h2>
+          {projectStatus === "loading" && <p role="status">正在读取工程档案…</p>}
+          {projectStatus === "missing" && requestedProject && <p>未找到工程 <code>{requestedProject}</code>。</p>}
+          {projectStatus === "error" && (
+            <p role="status">
+              工程档案读取失败。
+              <button type="button" className="wb-text-button" onClick={onRetry}>重试</button>
+            </p>
+          )}
+          <ProjectLookup />
+          <ImportStationProject />
+        </section>
+      )}
+    </section>
+  );
+};
 
 export const DeviceView: React.FC<ViewProps> = ({ ir, state, onSelectNode }) => (
   <div className="wb-view" data-ui="view-device">
-    <h3>② 元器件驱动</h3>
+    <h1 className="k-display">元器件驱动</h1>
     <DeviceCanvas ir={ir} onSelectNode={onSelectNode} selectedNodeId={state.selectedNodeId} />
     <div className="wb-note">正式 LBC 与 self-contained 编译模式在 DriverSpec.compile_mode 中显式区分；SafetyPermit 仅软件联锁。</div>
   </div>
@@ -81,7 +135,7 @@ export const DeviceView: React.FC<ViewProps> = ({ ir, state, onSelectNode }) => 
 
 export const SequenceView: React.FC<ViewProps> = (props) => (
   <div className="wb-view" data-ui="view-sequence">
-    <h3>③ 工艺步序（双向编辑核心）</h3>
+    <h1 className="k-display">工艺步序</h1>
     <SequenceEditor
       ir={props.ir}
       baseRevision={props.state.baseRevision}
@@ -103,7 +157,7 @@ export const TraceView: React.FC<ViewProps> = ({ derived, onRunScenario }) => {
   const frames = derived?.trace ?? [];
   return (
     <div className="wb-view" data-ui="view-trace">
-      <h3>④ 时序预览（离线 Trace）</h3>
+    <h1 className="k-display">时序预览</h1>
       <div className="wb-trace__notice" role="note">
         预测模型 Trace · 非在线 PLC 波形 —— 预测，不是实机验证；data_source = offline_model
       </div>
@@ -128,14 +182,14 @@ export const TraceView: React.FC<ViewProps> = ({ derived, onRunScenario }) => {
         ))}
         {frames.length === 0 && <div className="wb-canvas__empty">暂无 Trace（请先加载服务端 simulate）。</div>}
       </div>
-      <div className="wb-note">点击 Trace 区间可经 SourceMap 定位到 Step 节点与 SCL 行；时间值来自驱动参数与确定性场景输入。</div>
+      <div className="wb-note">时间值来自驱动参数与所选离线场景。</div>
     </div>
   );
 };
 
 export const DiffView: React.FC<ViewProps> = ({ state, derived }) => (
   <div className="wb-view" data-ui="view-diff">
-    <h3>⑤ 变更审核</h3>
+    <h1 className="k-display">变更审核</h1>
     <div className="wb-cards">
       <section className="wb-card">
         <div className="wb-card__title">PROJECT BASELINE</div>
@@ -161,10 +215,10 @@ export const DiffView: React.FC<ViewProps> = ({ state, derived }) => (
 export const DeliveryView: React.FC<ViewProps> = ({ job, state, onSourcePackage }) => {
   const showNative = canShowNativeDownload(job);
   const steps = ["01 冻结规格", "02 生成 SCL", "03 TIA 导入", "04 Compile PLC", "05 Save Project", "06 Archive .zap19"];
-  const current = job?.state ?? "QUEUED";
+  const current = job?.state ?? "无交付任务";
   return (
     <div className="wb-view" data-ui="view-delivery">
-      <h3>⑥ TIA 交付（状态只读后端 Job）</h3>
+    <h1 className="k-display">TIA 交付</h1>
       <div className="wb-delivery__bar"><EvidenceBadge level={job?.evidence_level ?? state.evidenceLevel} /></div>
       <div className="wb-delivery__steps">
         {steps.map((step, idx) => (
@@ -176,7 +230,7 @@ export const DeliveryView: React.FC<ViewProps> = ({ job, state, onSourcePackage 
         <section className="wb-card">
           <div className="wb-card__title">离线源码包</div>
           <p>{SOURCE_PACKAGE_NOTICE}；SOURCE_READY ≠ NATIVE_ARCHIVED。</p>
-          <button type="button" className="wb-btn" onClick={onSourcePackage} data-ui="download-source-package">
+          <button type="button" className="wb-btn" disabled={!state.irSha256} onClick={onSourcePackage} data-ui="download-source-package">
             下载源码导入包（非原生工程）
           </button>
         </section>

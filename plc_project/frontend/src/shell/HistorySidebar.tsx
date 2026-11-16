@@ -34,10 +34,10 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
             viewBox="0 0 100 100"
             aria-hidden="true"
           >
-            <rect width="100" height="100" rx="18" fill="#1E5F97" />
-            <rect x="20" y="32" width="60" height="9" fill="#fff" />
-            <rect x="20" y="47" width="40" height="9" fill="#fff" />
-            <rect x="20" y="62" width="50" height="9" fill="#fff" />
+            <rect width="100" height="100" fill="var(--accent-clay-ink)" />
+            <rect x="20" y="32" width="60" height="9" fill="var(--ink-inverse)" />
+            <rect x="20" y="47" width="40" height="9" fill="var(--ink-inverse)" />
+            <rect x="20" y="62" width="50" height="9" fill="var(--ink-inverse)" />
           </svg>
           <span className="sb-brand-name">PLC Co-Pilot</span>
         </div>

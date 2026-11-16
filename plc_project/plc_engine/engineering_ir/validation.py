@@ -26,7 +26,7 @@ def _issue(source_id: str, reason: str, field_name: str = "") -> dict[str, Any]:
 class ValidationEngine:
     """Pure, deterministic static validation of an EngineeringIRV2."""
 
-    def validate(self, ir: EngineeringIRV2) -> ValidationReport:
+    def validate(self, ir: EngineeringIRV2, *, draft: bool = False) -> ValidationReport:
         """Return a full ValidationReport with node-level issues."""
         issues: list[dict[str, Any]] = []
         warnings: list[str] = []
@@ -87,15 +87,15 @@ class ValidationEngine:
         if ir.hardware.io_binding not in (None, "", "unbound"):
             issues.append(_issue("hardware", "greenfield hardware io_binding must stay unbound", "io_binding"))
 
-        issues.extend(
-            _issue("", reason, "process")
-            for reason in ir.process.validate_references()
-        )
+        if ir.station_design is None:
+            from plc_engine.process.graph_validation import validate_process
 
-        # Graph / Guard / resource / parallel-semantics checks (shared rules).
-        from plc_engine.process.graph_validation import validate_process
+            issues.extend(_issue("", reason, "process") for reason in ir.process.validate_references())
+            issues.extend(validate_process(ir))
+        else:
+            from plc_engine.engineering_ir.station_design import StationDesign, design_issues
 
-        issues.extend(validate_process(ir))
+            issues.extend(design_issues(StationDesign.model_validate(ir.station_design), release=not draft))
 
         return ValidationReport(
             passed=not issues,

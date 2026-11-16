@@ -8,7 +8,7 @@
  * The node list is a ONE-WAY projection of the server IR: this component never
  * keeps a writable copy of the engineering truth.
  */
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 
 interface StepView {
   id?: string; name?: string; min_duration_ms?: number; max_duration_ms?: number;
@@ -55,21 +55,28 @@ export const SequenceEditor: React.FC<SequenceEditorProps> = ({
   const [field, setField] = useState<string>("min_duration_ms");
   const [draft, setDraft] = useState<string>("2000");
 
-  const openEditor = (step: StepView) => {
+  const editorTrigger = useRef<HTMLElement | null>(null);
+  const openEditor = (step: StepView, trigger: HTMLElement) => {
     const id = String(step.id ?? "");
+    editorTrigger.current = trigger;
     setEditingId(id);
     setField("min_duration_ms");
     setDraft(String(step.min_duration_ms ?? 1000));
     onSelectNode(id, asRecord(step));
   };
 
+  const closeEditor = () => {
+    setEditingId(null);
+    editorTrigger.current?.focus();
+  };
+
   const submit = () => {
-    if (!editingId) return;
+    if (!editingId || busy) return;
     const meta = EDITABLE_FIELDS.find((f) => f.id === field);
     const value = meta?.kind === "number" ? Number(draft) : draft;
     if (meta?.kind === "number" && (!Number.isFinite(value as number) || (value as number) < 0)) return;
     onEdit(editingId, field, value);
-    setEditingId(null);
+    closeEditor();
   };
 
   return (
@@ -81,7 +88,7 @@ export const SequenceEditor: React.FC<SequenceEditorProps> = ({
       <div className="wb-sequence__toolbar">
         <button type="button" className="wb-btn" disabled={!canUndo || busy} onClick={onUndo} data-ui="undo">↶ Undo（重放 Patch）</button>
         <button type="button" className="wb-btn" disabled={!canRedo || busy} onClick={onRedo} data-ui="redo">↷ Redo（重放 Patch）</button>
-        <span className="wb-sequence__hint">双击 Step 编辑 · 每次修改发 SequencePatch(base_revision)，成功后刷新派生 SCL / Trace</span>
+        <span className="wb-sequence__hint">双击步序或按 Enter 编辑，保存后刷新 SCL 与时序。</span>
       </div>
       {parallel.length > 0 && (
         <div className="wb-sequence__blocked" role="alert">
@@ -97,7 +104,15 @@ export const SequenceEditor: React.FC<SequenceEditorProps> = ({
             <div
               key={id}
               className={`wb-node ${errors.length ? "has-error" : ""}`}
-              onDoubleClick={() => openEditor(step)}
+              role="button"
+              tabIndex={0}
+              onDoubleClick={(event) => openEditor(step, event.currentTarget)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openEditor(step, event.currentTarget);
+                }
+              }}
               onClick={() => onSelectNode(id, asRecord(step))}
               data-ui={`step-node-${id}`}
               title="双击编辑动作 / Guard / 超时 / 异常 / 模式"
@@ -128,25 +143,38 @@ export const SequenceEditor: React.FC<SequenceEditorProps> = ({
         ))}
       </div>
       {editingId && (
-        <div className="wb-editor" data-ui="step-editor" role="dialog" aria-label="编辑步序节点">
+        <form
+          key={editingId}
+          className="wb-editor"
+          data-ui="step-editor"
+          role="dialog"
+          aria-label="编辑步序节点"
+          onSubmit={(event) => { event.preventDefault(); submit(); }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.stopPropagation();
+              closeEditor();
+            }
+          }}
+        >
           <div className="wb-editor__title">编辑 {editingId} · 基于 rev {baseRevision}</div>
           <label className="wb-editor__field">
             字段
-            <select value={field} onChange={(e) => setField(e.target.value)} data-ui="edit-field">
+            <select autoFocus value={field} onChange={(e) => setField(e.target.value)} data-ui="edit-field">
               {EDITABLE_FIELDS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
           </label>
           <label className="wb-editor__field">
             值
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} data-ui="edit-value" />
+            <input className="k-ledger" value={draft} onChange={(e) => setDraft(e.target.value)} data-ui="edit-value" />
           </label>
           <div className="wb-editor__actions">
-            <button type="button" className="wb-btn wb-btn--primary" disabled={busy} onClick={submit} data-ui="edit-submit">
+            <button type="submit" className="wb-btn wb-btn--primary" disabled={busy} data-ui="edit-submit">
               提交 SequencePatch
             </button>
-            <button type="button" className="wb-btn" onClick={() => setEditingId(null)}>取消</button>
+            <button type="button" className="wb-btn" onClick={closeEditor}>取消</button>
           </div>
-        </div>
+        </form>
       )}
     </div>
   );

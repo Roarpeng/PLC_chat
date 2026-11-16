@@ -1,39 +1,24 @@
-/* ==========================================================================
-   PLC Co-Pilot — "产品当班"工作台设计系统（product-performs 方向 seed 1441354469）
-   冷灰车间地面 + 钴蓝制图墨水；界面即产品正在干活的碎片——对话是呼叫、
-   SCL 是应答、编译门禁是读数。用户以 sans 说话，机器以 serif 草拟工程文件；
-   mono 只属于真实代码。IEC 60204 信号色只做状态灯。方角模块，一个圆角值 0。
-   字体：Libre Franklin 单一无衬线(科技感/工业简约;机器回答同面),mono 只属于真实代码
-   + Noto Sans/Serif SC（中文同族）+ IBM Plex Mono（代码）。
-   ========================================================================== */
-
+/* Classic workbench aliases its original component tokens to the KRONOS palette. */
 :root {
-  /* 面层：灰白科技——机加工车间的 bare-metal 图纸灰白,四档:
-     地面(浅灰白) → 侧栏深轨(唯一深色场) → 面板(近白) → 内嵌槽(回浅灰) */
-  --bg: #f4f5f7;
-  --sidebar-bg: #e9ebef;
-  --surface: #fdfdfe;
-  --surface-2: #eef0f3;
+  --bg: var(--bg-paper);
+  --sidebar-bg: var(--bg-subtle);
+  --surface: var(--bg-card);
+  --surface-2: var(--bg-warm);
 
-  /* 墨水：石墨近黑；灰阶只给次要注记 */
-  --ink: #15181d;
-  --ink-2: #4a5058;
-  --ink-3: #6d747d;
+  --ink: var(--ink-primary);
+  --ink-2: var(--ink-secondary);
+  --ink-3: var(--ink-secondary);
+  --line: var(--border-line);
+  --line-2: var(--ink-faint);
 
-  /* 功能线：仅用于真实表格 / 表单 / 代码槽（data-ui 界面惯例） */
-  --line: #dce0e5;
-  --line-2: #c3c9d1;
+  --accent: var(--accent-clay-ink);
+  --accent-2: color-mix(in srgb, var(--accent-clay-ink) 85%, var(--ink-primary));
+  --accent-soft: color-mix(in srgb, var(--accent-clay) 12%, var(--bg-card));
 
-  /* 电光蓝制图墨水：唯一强调(科技感),落在主操作与选中态;工业克制用量 */
-  --accent: #1f2de6;
-  --accent-2: #1a25c4;
-  --accent-soft: #eaedfd;
-
-  /* IEC 60204 面板信号色：只做状态灯语义，不做装饰 */
-  --run: #1e7a33;
-  --standby: #8a5a00;
-  --fault: #b3261e;
-  --led-off: #b7bdc7;
+  --run: var(--accent-sage-ink);
+  --standby: var(--accent-ochre-ink);
+  --fault: var(--accent-clay-ink);
+  --led-off: var(--ink-faint);
 
   /* HMI 屏幕域（唯一深色场） */
   --scr: #0d1017;
@@ -44,21 +29,19 @@
   --scr-val: #9bd5b4;
   --scr-green: #6fcf97;
   --scr-red: #e2726b;
+  --sans: var(--font-sans);
+  --serif: var(--font-serif);
+  --mono: var(--font-mono);
 
-  /* 字体：界面 sans / 机器回答 serif / 代码 mono */
-  --sans: "Libre Franklin", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-  --serif: var(--sans); /* 科技感:机器回答统一无衬线(令牌保留别名,零下游改动) */
-  --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
 
   /* 方角模块：全应用一个圆角值 */
   --r-lg: 0px;
   --r-md: 0px;
   --r-sm: 0px;
+  --shadow-object: var(--elev-1);
+  --shadow-sheet: var(--elev-3);
+  --ease: var(--ease-paper);
 
-  /* 浮层才投影：对话框 / 菜单；静置表面一律平涂色阶 */
-  --shadow-object: 0 10px 28px -12px rgba(11, 12, 14, 0.38);
-  --shadow-sheet: 0 16px 40px -14px rgba(11, 12, 14, 0.34);
-  --ease: cubic-bezier(0.2, 0, 0, 1);
 
   /* 动效令牌：入场升起 16px / 90ms 交错（references/motion.md） */
   --rise: 16px;
@@ -106,7 +89,7 @@ body {
   border-radius: 0;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a9afba;
+  background: var(--ink-secondary);
 }
 
 :focus-visible {
@@ -222,6 +205,13 @@ body {
 }
 
 @media (max-width: 600px) {
+  .app > .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 46px;
+    padding-block: var(--space-1);
+  }
+  .app > .topbar .topbar__spacer { display: none; }
   .psb,
   .sb {
     display: none;
@@ -273,7 +263,8 @@ body {
   gap: 12px;
   height: 46px;
   padding: 0 14px;
-  background: var(--surface);
+  border-bottom: var(--line-hair) solid var(--border-line);
+  background: var(--bg-ochre);
 }
 
 .topbar__toggle {
@@ -298,6 +289,7 @@ body {
 }
 
 /* [画布] 开关是文字按钮，不套 28px 图标钮宽度 */
+.topbar__toggle--text,
 .topbar__toggle:has(.topbar__canvas-toggle) {
   width: auto;
   padding: 0 10px;
@@ -548,27 +540,19 @@ body {
 }
 .led--run {
   background: var(--run);
-  box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.25), 0 0 5px rgba(31, 122, 51, 0.55); /* taste-skill-ignore: data-ui workbench interface */
+
 }
 .led--standby {
   background: var(--standby);
-  box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.25), 0 0 5px rgba(143, 94, 0, 0.5); /* taste-skill-ignore: data-ui workbench interface */
+
 }
 .led--fault {
   background: var(--fault);
-  box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.25), 0 0 6px rgba(179, 38, 30, 0.65); /* taste-skill-ignore: data-ui workbench interface */
-  animation: led-pulse 1.4s ease-in-out infinite;
+
+
 }
 
-@keyframes led-pulse {
-  0%,
-  100% {
-    box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.25), 0 0 3px rgba(179, 38, 30, 0.4); /* taste-skill-ignore: data-ui workbench interface */
-  }
-  50% {
-    box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.25), 0 0 9px rgba(179, 38, 30, 0.85); /* taste-skill-ignore: data-ui workbench interface */
-  }
-}
+
 
 /* —— 按钮 —— */
 
@@ -601,7 +585,7 @@ body {
 
 .btn--primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--ink-inverse);
 }
 .btn--primary:hover:not(:disabled) {
   background: var(--accent-2);
@@ -609,10 +593,10 @@ body {
 
 .btn--danger {
   background: var(--fault);
-  color: #fff;
+  color: var(--ink-inverse);
 }
 .btn--danger:hover:not(:disabled) {
-  background: #98201a;
+  background: var(--accent-2);
 }
 
 .btn--ghost {
@@ -1568,7 +1552,7 @@ body {
   height: 6px;
   border-radius: 50%;
   background: var(--run);
-  box-shadow: 0 0 4px rgba(31, 122, 51, 0.7); /* taste-skill-ignore: data-ui workbench interface */
+
 }
 
 .hmi-frame {
@@ -1610,7 +1594,7 @@ body {
   height: 6px;
   border-radius: 50%;
   background: var(--scr-green);
-  box-shadow: 0 0 5px rgba(111, 207, 151, 0.8); /* taste-skill-ignore: data-ui workbench interface */
+
 }
 
 .hmi-glass {
@@ -1650,7 +1634,7 @@ body {
   justify-content: center;
   gap: 8px;
   transition: background 0.1s var(--ease), transform 0.08s var(--ease), box-shadow 0.1s var(--ease);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4); /* taste-skill-ignore: data-ui workbench interface */
+  box-shadow: var(--elev-1);
 }
 
 .hw-btn::before {
@@ -1677,11 +1661,11 @@ body {
   background: #262f3a;
 }
 .hw-btn.is-on::before {
-  box-shadow: 0 0 7px rgba(111, 207, 151, 0.9); /* taste-skill-ignore: data-ui workbench interface */
+
 }
 .hw-btn--red.is-on::before {
   background: #e2726b;
-  box-shadow: 0 0 7px rgba(226, 114, 107, 0.9); /* taste-skill-ignore: data-ui workbench interface */
+
 }
 
 .hw-panel {
@@ -1704,14 +1688,14 @@ body {
   border-radius: 50%;
   background: #262d36;
   border: 2px solid #3a424d;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6); /* taste-skill-ignore: data-ui workbench interface */
+  box-shadow: var(--deboss);
   transition: background 0.12s var(--ease), border-color 0.12s var(--ease), box-shadow 0.12s var(--ease), transform 0.12s var(--ease), color 0.12s var(--ease), opacity 0.12s var(--ease);
 }
 
 .hw-lamp.is-on {
   background: radial-gradient(circle at 40% 38%, #b9ecd0, #4cae7d 65%, #2e7d4f); /* taste-skill-ignore: data-ui workbench interface */
   border-color: #5fbb8d;
-  box-shadow: 0 0 14px rgba(111, 207, 151, 0.65), inset 0 0 5px rgba(220, 255, 235, 0.6); /* taste-skill-ignore: data-ui workbench interface */
+
 }
 
 .hw-panel__label {
@@ -1750,7 +1734,7 @@ body {
   font-size: 17px;
   font-weight: 600;
   color: var(--scr-val);
-  text-shadow: 0 0 8px rgba(155, 213, 180, 0.35); /* taste-skill-ignore: device screen glow */
+
 }
 
 .hw-gauge__unit {
@@ -1797,19 +1781,10 @@ body {
 
 .hw.hw--error .hw-panel,
 .hw.hw--error .hw-gauge {
-  border-color: #8a443f;
-  animation: hw-blink 1.2s ease-in-out infinite;
+  border-color: var(--scr-red);
 }
 
-@keyframes hw-blink {
-  0%,
-  100% {
-    box-shadow: none; /* taste-skill-ignore: data-ui workbench interface */
-  }
-  50% {
-    box-shadow: 0 0 10px rgba(226, 114, 107, 0.5); /* taste-skill-ignore: data-ui workbench interface */
-  }
-}
+
 
 /* ==========================================================================
    SCL 视图：打印程序清单

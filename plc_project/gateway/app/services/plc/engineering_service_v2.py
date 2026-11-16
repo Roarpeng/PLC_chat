@@ -74,9 +74,32 @@ class EngineeringServiceV2:
         return derive_bundle(store.get_ir(project_id))
 
     @staticmethod
-    def simulate(store: WorkspaceStore, project_id: str, scenario_name: str = "normal_cycle") -> dict[str, Any]:
+    def simulate(store: WorkspaceStore, project_id: str, scenario_name: str = "normal_cycle",
+                 *, station_id: str = "") -> dict[str, Any]:
         """Run one offline Trace scenario (explicitly labelled a prediction)."""
         ir = store.get_ir(project_id)
+        if ir.station_design is not None:
+            from plc_engine.engineering_ir.station_design import StationDesign, design_issues
+            from plc_engine.process.station_simulation import SCENARIOS, simulate_design
+
+            if scenario_name not in SCENARIOS:
+                raise KeyError(scenario_name)
+            from gateway.app.services.plc.validation_v2 import ValidationServiceV2
+
+            design = StationDesign.model_validate(ir.station_design)
+            if station_id:
+                station = next((item for item in design.stations if item.id == station_id), None)
+                if station is None:
+                    raise KeyError("找不到所选工位。")
+                scope = {item.id for item in [station, *station.flow.nodes, *station.flow.edges, *station.interlocks]}
+                issues = [item for item in design_issues(design, release=True) if item["node_id"] in scope]
+            else:
+                issues = ValidationServiceV2.validate_ir(ir).issues
+            frames = simulate_design(design, scenario_name, station_id=station_id) if not issues else []
+            return {"scenario": {"name": scenario_name}, "trace": frames, "issues": issues,
+                    "evidence_level": "offline", "notice": "离线流程仿真，反馈信号由场景提供。"}
+        if station_id:
+            raise KeyError("当前工程没有工位画布。")
         scenarios = build_standard_scenarios()
         scenario = scenarios.get(scenario_name)
         if scenario is None:
@@ -104,6 +127,8 @@ class EngineeringServiceV2:
         from gateway.app.services.plc.validation_v2 import ValidationServiceV2
 
         ir = store.get_ir(project_id)
+        if ir.station_design is not None:
+            ir = store.get_ir(project_id, int(base_revision))
         report: ValidationReport = ValidationServiceV2.validate_ir(ir)
         changeset = ChangeSet(
             id=f"cs_{uuid.uuid4().hex[:16]}",

@@ -245,10 +245,10 @@ export const CompileDrawer: React.FC<CompileDrawerProps> = ({
             onClick={onSmartHeal}
             style={{
               padding: "5px 12px",
-              background: healing ? "#475569" : "#2563eb",
-              color: "#ffffff",
+              background: healing ? "var(--bg-warm)" : "var(--accent-slate-ink)",
+              color: healing ? "var(--ink-primary)" : "var(--ink-inverse)",
               border: "none",
-              borderRadius: 4,
+              borderRadius: "var(--radius-1)",
               cursor: healing ? "not-allowed" : "pointer",
               fontWeight: 600,
               fontSize: 11,

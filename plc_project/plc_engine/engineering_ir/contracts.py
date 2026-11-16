@@ -95,6 +95,7 @@ PATCH_OPS: frozenset[str] = frozenset(
         "set_view_layout",
         "set_hardware_intent",
         "set_sequence_mode",
+        "set_station_design",
         "add_exception",
     }
 )

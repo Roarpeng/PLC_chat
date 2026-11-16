@@ -23,10 +23,10 @@
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
-  background: var(--surface, #ffffff);
+  background: var(--surface);
   border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: 0;
-  box-shadow: 0 24px 48px -16px rgba(27, 30, 28, 0.35); /* taste-skill-ignore: data-ui workbench interface */
+  box-shadow: var(--elev-3);
   animation: cbd-card-in 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 
@@ -141,7 +141,7 @@
 .cbd-input {
   height: 32px;
   padding: 0 11px;
-  background: var(--surface, #ffffff);
+  background: var(--surface);
   border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: 0;
   font-family: var(--sans);

@@ -243,7 +243,7 @@ export const RequirementCardDrawer: FC<RequirementCardDrawerProps> = ({
                     <button
                       type="button"
                       className="rcd-confirm"
-                      style={{ background: "var(--accent, #0066cc)", color: "#fff" }}
+                      style={{ background: "var(--accent, #0066cc)", color: "var(--ink-inverse)" }}
                       onClick={() => onGenerateAf(requirement)}
                       title="根据已确认的工艺意图自动生成标准工程块"
                     >

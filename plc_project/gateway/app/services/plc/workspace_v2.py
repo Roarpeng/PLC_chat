@@ -329,6 +329,15 @@ class WorkspaceStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def latest_approved_changeset(self, project_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT c.id, c.base_revision FROM changesets c JOIN approvals a ON a.changeset_id=c.id "
+                "WHERE c.project_id=? AND c.status='APPROVED' ORDER BY a.signed_at DESC, c.id DESC LIMIT 1",
+                (project_id,),
+            ).fetchone()
+        return dict(row) if row else None
+
     # --------------------------------------------------------------- patches --
     def commit_patch(self, project_id: str, patch: CandidatePatch) -> PatchResultV2:
         """Atomically validate and commit a patch (409/422 raised by kernel)."""
@@ -663,7 +672,9 @@ def get_store() -> WorkspaceStore:
     """Process-wide store singleton used by the FastAPI dependencies."""
     global _STORE
     if _STORE is None:
-        _STORE = WorkspaceStore()
+        data_dir = Path(__file__).resolve().parents[4] / ".devctl"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        _STORE = WorkspaceStore(db_path=os.getenv("PLC_V2_DB_PATH") or data_dir / "v2-workspace.sqlite3")
     return _STORE
 
 

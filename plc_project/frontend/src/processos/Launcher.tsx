@@ -1,5 +1,6 @@
 import type { Project } from "./store";
 import { ActorRoleWidget } from "./fieldui";
+import { PaperAppearance } from "../styles/kronos/PaperAppearance";
 import { ClampDrawing, Icon, MiniTopo } from "./views";
 
 export function Launcher({ projects, onNew, onImport, onOpen, onDelete, onField }: {
@@ -8,13 +9,14 @@ export function Launcher({ projects, onNew, onImport, onOpen, onDelete, onField 
 }) {
   return (
     <div className="launch">
-      <div className="launch-top">
+      <header className="launch-top k-ochre-head">
         <div className="wordmark"><span className="mk">A</span>aiCoPlc · ProcessOS</div>
         <div className="sp" />
         <button className="btn sm" onClick={onField}><Icon name="topo" size={13} /> 现场工作台</button>
         <span className="meta">工艺编译平台 · Siemens AF · TIA V19</span>
         <ActorRoleWidget />
-      </div>
+        <PaperAppearance />
+      </header>
 
       <div className="launch-hero">
         <div className="hero-copy">
@@ -26,7 +28,7 @@ export function Launcher({ projects, onNew, onImport, onOpen, onDelete, onField 
             <button className="btn ghost lg" onClick={onField}><Icon name="topo" /> 现场工作台 · 按报警/工位追溯</button>
           </div>
         </div>
-        <div className="hero-fig">
+        <div className="hero-fig k-crop-marks">
           <ClampDrawing />
           <div className="figcap"><span>图号 PRJ-001 · 双作用气缸</span><span>比例 1:2 · 第三角投影</span></div>
         </div>

@@ -15,9 +15,7 @@
  * 严禁跳过 /confirm 直调 /generate；严禁伪造 frozen / delivery / 任何 mock 数据。
  */
 import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import "@fontsource/albert-sans/400.css";
-import "@fontsource/albert-sans/500.css";
-import "@fontsource/albert-sans/600.css";
+
 import type { Connection } from "@xyflow/react";
 import {
   GFRequestError,

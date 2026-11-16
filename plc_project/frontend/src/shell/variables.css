@@ -10,7 +10,7 @@
   height: 100%;
   min-height: 0;
   min-width: 0;
-  background: var(--surface, #ffffff);
+  background: var(--surface);
   border-left: 1px solid var(--line, #e3e4de); /* taste-skill-ignore: data-ui workbench interface */
   color: var(--ink, #1b1e1c);
   font-family: var(--sans, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
@@ -88,7 +88,7 @@
   padding: 3px 10px;
   border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: 0;
-  background: var(--surface, #ffffff);
+  background: var(--surface);
   font-family: var(--sans, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
   font-weight: 500;
@@ -163,7 +163,7 @@
 
 .vi-search:focus-within {
   border-color: var(--accent, #1e5f97);
-  background: var(--surface, #ffffff);
+  background: var(--surface);
 }
 
 .vi-search input {
@@ -360,7 +360,7 @@
   padding: 0 6px;
   border: 1px solid var(--line-2, #c9ccc4); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: 0;
-  background: var(--surface, #ffffff);
+  background: var(--surface);
   font-family: var(--sans);
   font-variant-numeric: tabular-nums;
   font-size: 13px;
@@ -420,7 +420,7 @@
 
 /* 展开容器底色为 surface-2，引用行 hover 回白底形成反差 */
 .vi-ref:hover {
-  background: var(--surface, #ffffff);
+  background: var(--surface);
 }
 
 .vi-ref__badge {
@@ -428,7 +428,7 @@
   padding: 0 4px;
   border: 1px solid var(--accent, #1e5f97); /* taste-skill-ignore: data-ui workbench interface */
   border-radius: 0;
-  background: var(--surface, #ffffff);
+  background: var(--surface);
   font-family: var(--sans);
   font-variant-numeric: tabular-nums;
   font-size: 13px;

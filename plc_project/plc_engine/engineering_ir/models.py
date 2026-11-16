@@ -355,6 +355,7 @@ class EngineeringIRV2:
     spec_meta: dict[str, Any] = field(default_factory=dict)
     legacy_raw: dict[str, Any] | None = None
     legacy_raw_sha256: str = ""
+    station_design: dict[str, Any] | None = None
     receipt: dict[str, Any] = field(default_factory=dict)
     created_at: str = ""
     updated_at: str = ""
@@ -448,6 +449,7 @@ class EngineeringIRV2:
             "ir_sha256": self.ir_sha256,
             "af_profile": self.af_profile.to_dict(),
             "hardware": self.hardware.to_dict(),
+            **({"station_design": to_plain(self.station_design)} if self.station_design is not None else {}),
             "components": [c.to_dict() for c in self.components],
             "driver_specs": {k: v.to_dict() for k, v in sorted(self.driver_specs.items())},
             "process": self.process.to_dict(),
@@ -492,6 +494,7 @@ class EngineeringIRV2:
             spec_meta=dict(data.get("spec_meta") or {}),
             legacy_raw=dict(data.get("legacy_raw")) if isinstance(data.get("legacy_raw"), dict) else None,
             legacy_raw_sha256=str(data.get("legacy_raw_sha256") or ""),
+            station_design=data.get("station_design"),
             receipt=dict(data.get("receipt") or {}),
             created_at=str(data.get("created_at") or ""),
             updated_at=str(data.get("updated_at") or ""),

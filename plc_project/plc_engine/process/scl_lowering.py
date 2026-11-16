@@ -88,6 +88,10 @@ class CompilerService:
     def lower(self, ir: EngineeringIRV2) -> tuple[ArtifactManifest, SourceMap]:
         """Return ``(manifest, source_map)`` for one frozen IR."""
         self.profile.assert_consistent_with(ir.af_profile)
+        if ir.station_design is not None:
+            from plc_engine.process.station_lowering import lower_station_design
+
+            return lower_station_design(ir)
         source_map = SourceMap(
             map_id=f"smap_{(ir.ir_sha256 or ir.semantic_hash())[7:19]}",
             ir_sha256=ir.ir_sha256 or ir.semantic_hash(),

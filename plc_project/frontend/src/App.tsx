@@ -135,6 +135,7 @@ import { LongTaskChips } from "./shell/LongTaskChips";
 /* WP-04 / Q-03: default V2 workbench + independent legacy route + top-bar switch.
    v1 channels stay reachable; no v1 export signature or behaviour is changed. */
 import { WorkbenchShell } from "./workbench/WorkbenchShell";
+import { PaperAppearance } from "./styles/kronos/PaperAppearance";
 import { hashForChannel, initialChannel, type AppChannel } from "./workbench/featureFlags";
 
 /** 一条解析降级告警（coverage.py `warnings[]` 的元素，或 review 截断提示） */
@@ -2729,6 +2730,7 @@ const App: React.FC = () => {
           </span>
         )}
 
+        <PaperAppearance />
         <div className="topbar__spacer" />
 
         {/* LongTaskCenter:页面级长任务指示(任何布局可见;点击跳回所属会话) */}
@@ -2739,7 +2741,7 @@ const App: React.FC = () => {
         />
 
         <button
-          className="topbar__toggle"
+          className="topbar__toggle topbar__toggle--text"
           onClick={() => switchChannel("v2")}
           aria-label="V2 统一工作台"
           title="切换到 V2 统一工程工作台（默认入口）"
@@ -2749,7 +2751,7 @@ const App: React.FC = () => {
         </button>
 
         <button
-          className="topbar__toggle"
+          className="topbar__toggle topbar__toggle--text"
           onClick={() => setChannel("greenfield")}
           aria-label="新建工程画布"
           title="打开三区域新建工程画布（上区硬件拓扑 · 下区工艺 Mermaid 逻辑 · 右区绑定变量）"
@@ -2759,7 +2761,7 @@ const App: React.FC = () => {
 
         {/* 工程进度看板:单一数据源作业/进度视图(/jobs + /brief + /export) */}
         <button
-          className="topbar__toggle"
+          className="topbar__toggle topbar__toggle--text"
           onClick={() => setProgressOpen(true)}
           aria-label="工程进度看板"
           title="工程进度看板 · 作业列表/状态/耗时/覆盖率/TODO/风险/交付物"

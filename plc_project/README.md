@@ -4,6 +4,12 @@
 
 ---
 
+## V2 工位与 AF 生成
+
+打开前端 `/#/v2`，创建 AF 工程或导入带画布定义的工程。从工程目录进入工位后，可以搜索并添加设备，使用预设动作，通过中文描述生成流程草稿，或手动编辑步骤、逻辑图与时序。检查并确认修订后可下载 AF 源码包，也可在配置了 TIA V19 的环境中编译和归档。
+
+[查看 V2 工位工作台操作指南](docs/v2/station-workspace.md)
+
 ## 架构
 
 ```
@@ -48,9 +54,9 @@ plc_project/
 | **Greenfield 新通道** | 独立路由 `/api/v1/plc/canvas/greenfield`;批次 4 已闭合 UC-04 全量 AF 包与 UC-16 增量链(RTM pass=19/19);`xml_package_unverified` 仍为 `true`、**M4 仍未通过**,详见下节 |
 | **4 步可体验主链(2026-11-08)** | 自然语言描述 → ReactFlow 拖线 → 业务语言确认 → 导出工程包完成页;全部契约/审计信息收进默认折叠的「工程视角」抽屉;主链首屏零内部术语;不依赖 TIA 真机即可到达完成态;按 `frontend-design` 规范实现「工业蓝图 / 制图室」美学,零新增依赖 |
 
-## 前端交互壳(2026-11-08)
+## 经典四步向导（2026-11-08 版本记录）
 
-前端默认落地页为 **4 步主链**(见 `docs/frontend-redesign/01-prd.md`);存量工作台不隐藏,顶栏保留「返回工作台」入口。
+在 `/#/legacy` 打开经典 **4 步主链**，或从 V2 顶栏选择「旧版向导」。设计细节见 `docs/frontend-redesign/01-prd.md`。
 
 | 步 | 主操作 | 完成态 |
 |---|---|---|
@@ -87,14 +93,9 @@ plc_project/
 
 ## 快速启动
 
-```bash
-cd plc_project
-python tools/devctl.py up gateway   # 网关 :8000
-python tools/devctl.py up web       # 前端 :5173
-```
+在 GraphFlow 中运行 `launch_plc_stack`，将 `rootDir` 指向本仓库的 `plc_project` 目录。网关使用 8000 端口，前端使用 5173 端口。查看状态用 `status_plc_stack`，停止服务用 `stop_plc_stack`。Windows 下也可使用 `启动项目.vbs` 和 `停止项目.vbs`。详见 [工程约定](../AGENTS.md)。
 
-> 也可使用仓库根的 GraphFlow 宏 `launch_plc_stack` / `stop_plc_stack` / `status_plc_stack`(见 `AGENTS.md`),或图形化静默启动 `启动项目.vbs` / `停止项目.vbs`。
-> 打开 `:5173` 默认进入 4 步主链:描述 → 拖线 → 确认 → 下载工程包;右上角「工程视角」默认折叠;顶栏「返回工作台」可回到存量工作台(导入工程 / 历史会话 / 新建向导)。
+打开 `http://localhost:5173/#/v2` 进入 V2 统一工程工作台。通过顶栏的「旧版向导」或「经典工作台」进入对应界面。
 
 ## 测试
 
@@ -142,6 +143,7 @@ cd frontend && npm run build                     # tsc -b && vite build
 | `docs/v2/baseline-report.md` / `pre_existing_failures.md` | 三套基线实跑 / 既有失败隔离清单 |
 | `docs/v2/driver-catalog.md` / `process-algorithms.md` / `brownfield-interface-contract.md` / `fault-injection-matrix.md` | 各 WP 技术说明 |
 | `docs/v2/03-验收矩阵.md` / `g0-g7-matrix.md` / `04-交付报告.md` | 统一验收发布(G5 当前 `pending_real_machine`) |
+| [`docs/v2/station-workspace.md`](docs/v2/station-workspace.md) | AF 工程创建和导入、设备库、工位流程、时序与 V19 归档 |
 | `docs/v2/evidence/T01..T08/` | 每批验收命令真实输出 |
 
 **当前真机状态**:`V19_real` 仅适用于 G0 只读 `status` 探测回执;AC-01 第 1/5/6 步与 **G5(Greenfield-only)全链一律 `pending_real_machine`**,未取得真实 `.zap19`、未发布原生归档、不显示「交付完成」。真机全链由主理人/QA 串行调度,探针脚本 `scripts/tia_delivery_chain_v2.py --real` 默认 dry-run。

@@ -29,7 +29,7 @@ class ArtifactStore:
 
     def __init__(self, store: WorkspaceStore, root: str | Path | None = None) -> None:
         self.store = store
-        self.root = Path(root or os.getenv("PLC_V2_ARTIFACT_ROOT", "artifact_store")).resolve()
+        self.root = Path(root or os.getenv("PLC_V2_ARTIFACT_ROOT") or store.ir_store_root.parent / "artifact_store").resolve()
 
     def _hash_relative_path(self, sha256: str, extension: str) -> str:
         """Build ``artifact_store/<2 hex>/<rest>.<ext>``; never accept '..'."""

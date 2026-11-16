@@ -1068,7 +1068,7 @@
   font-size: 13px;
   font-family: inherit;
   color: var(--ink);
-  background: var(--surface-2, #ffffff);
+  background: var(--surface-2);
   border: 1px solid var(--line-2, #c9ccc4);
   border-radius: var(--r-md, 6px);
   outline: none;

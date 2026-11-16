@@ -1,17 +1,15 @@
-/* ==========================================================================
-   ProjectSidebar — 左侧工程栏(前缀 psb-,docs/25 §3,S 线)
-   深色工业导轨:复用 HMI 屏幕域令牌(--scr-*),工作台的深色场从触摸屏
-   延伸到柜体左侧线槽;钢蓝强调(浅色场 --accent 的深底高光版 --psb-accent-hi,
-   与 index.css 中 HMI 焦点环 #6fa8dc 同源)。方角、无渐变、静置无投影;
-   当前对话用 IEC 信号灯绿点(--scr-green)指示。宽度不做过渡(嵌入式浏览器
-   会冻结 CSS 过渡,见 index.css .pane 注记)。
-   ========================================================================== */
-
+/* Project and conversation index on warm paper. */
 .psb {
-  /* 深色场局部令牌:钴蓝高光 / 钴蓝晕染底 */
-  --psb-accent: var(--accent, #1f2de6);
-  --psb-accent-hi: #8f97ff;
-  --psb-accent-wash: rgba(31, 45, 230, 0.32);
+  --psb-accent: var(--accent-clay-ink);
+  --psb-accent-hi: var(--accent-clay-ink);
+  --psb-accent-wash: var(--accent-soft);
+  --scr: var(--bg-card);
+  --scr-text: var(--ink-primary);
+  --scr-dim: var(--ink-secondary);
+  --scr-line: var(--border-line);
+  --scr-panel: var(--bg-warm);
+  --scr-red: var(--accent-clay-ink);
+  --scr-green: var(--accent-sage);
 
   display: flex;
   flex-direction: column;
@@ -39,6 +37,10 @@
   justify-content: space-between;
   gap: 8px;
   padding: 11px 10px 9px 14px;
+  margin-bottom: var(--space-3);
+  border-top: var(--line-seal) solid var(--accent-clay);
+  border-bottom: var(--line-hair) solid var(--border-line);
+  background: var(--bg-ochre);
 }
 
 .psb-brand {
@@ -92,7 +94,7 @@
   padding: 7px 10px;
   border: none;
   background: var(--psb-accent, #1d5a90);
-  color: #fff;
+  color: var(--ink-inverse);
   font-family: var(--sans);
   font-size: 13px;
   font-weight: 600;
@@ -126,11 +128,11 @@
 }
 
 .psb-list::-webkit-scrollbar-thumb {
-  background: #333c48;
+  background: var(--border-line);
 }
 
 .psb-list::-webkit-scrollbar-thumb:hover {
-  background: #414c5a;
+  background: var(--ink-faint);
 }
 
 .psb-empty {
@@ -138,7 +140,7 @@
   padding: 28px 12px;
   text-align: center;
   font-size: 13px;
-  color: #9aa4b2;
+  color: var(--ink-secondary);
   line-height: 1.9;
 }
 
@@ -322,7 +324,7 @@
 
 .psb-conv--active .psb-conv-dot {
   background: var(--scr-green, #6fcf97);
-  box-shadow: 0 0 6px rgba(111, 207, 151, 0.8); /* taste-skill-ignore: IEC 信号灯辉光 */
+
 }
 
 .psb-conv-title {
@@ -365,7 +367,7 @@
 .psb-newconv:hover {
   color: var(--psb-accent-hi, #6fa8dc);
   border-color: var(--psb-accent-hi, #6fa8dc);
-  background: rgba(29, 90, 144, 0.18); /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--accent-soft);
 }
 
 /* ---- 底部:折叠成图标条 ---- */
@@ -420,7 +422,7 @@
   margin-bottom: 10px;
   border: none;
   background: var(--psb-accent, #1d5a90);
-  color: #fff;
+  color: var(--ink-inverse);
   cursor: pointer;
   transition: background 0.12s ease;
 }
@@ -552,8 +554,8 @@
   align-items: center;
   justify-content: center;
   color: var(--fault, #b3261e);
-  background: #faf1f0;
-  border: 1px solid #e0bab6; /* taste-skill-ignore: data-ui workbench interface */
+  background: var(--accent-soft);
+  border: var(--line-hair) solid var(--accent-clay);
 }
 
 .psb-confirm-heading {

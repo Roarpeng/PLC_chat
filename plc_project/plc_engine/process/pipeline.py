@@ -19,14 +19,21 @@ def derive_bundle(ir: EngineeringIRV2) -> DerivedBundle:
     manifest, source_map = CompilerService(ir.af_profile).lower(ir)
     scl_files = {file.path: file.content for file in sorted(manifest.files, key=lambda f: f.path)}
 
-    simulator = ScanSimulator()
-    scenarios = build_standard_scenarios()
-    normal = scenarios["normal_cycle"]
-    trace = [frame.to_dict() for frame in simulator.run(ir, normal)]
-    trace_scenarios = {
-        name: [frame.to_dict() for frame in simulator.run(ir, scenario)]
-        for name, scenario in sorted(scenarios.items())
-    }
+    if ir.station_design is not None:
+        from plc_engine.engineering_ir.station_design import StationDesign
+        from plc_engine.process.station_simulation import SCENARIOS, simulate_design
+
+        design = StationDesign.model_validate(ir.station_design)
+        trace_scenarios = {name: simulate_design(design, name) for name in SCENARIOS} if validation.passed else {}
+        trace = trace_scenarios.get("normal_cycle", [])
+    else:
+        simulator = ScanSimulator()
+        scenarios = build_standard_scenarios()
+        trace_scenarios = {
+            name: [frame.to_dict() for frame in simulator.run(ir, scenario)]
+            for name, scenario in sorted(scenarios.items())
+        }
+        trace = trace_scenarios["normal_cycle"]
     return DerivedBundle(
         ir_sha256=ir_hash,
         device_graph=ir.device_graph(),

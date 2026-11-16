@@ -16,6 +16,7 @@ class CreateProjectIn(BaseModel):
     request_id: str = ""
     legacy_ir: dict[str, Any] | None = None
     v1_fixture: dict[str, Any] | None = None
+    station_design: dict[str, Any] | None = None
 
 
 class PatchIn(V2RequestEnvelope):
@@ -47,6 +48,7 @@ class SimulateIn(V2RequestEnvelope):
     """POST /api/v2/projects/{id}/simulate."""
 
     scenario: str = "normal_cycle"
+    station_id: str = ""
 
 
 class PreviewIn(V2RequestEnvelope):
