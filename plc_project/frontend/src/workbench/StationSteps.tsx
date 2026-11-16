@@ -37,7 +37,8 @@ function removeFromFlow(flow: Flow, id: string): Flow {
   const nodes = flow.nodes.filter((item) => item.id !== id &&
     (item.id !== previousTimeout || item.kind !== "fault" || item.name !== "动作超时" || item.id === flow.start ||
       edges.some((edge) => edge.to_id === item.id)));
-  return { start: flow.start === id ? next ?? null : flow.start, nodes, edges };
+  return { ...flow, start: flow.start === id ? next ?? null : flow.start, nodes, edges,
+    wires: flow.wires?.filter((item) => item.from_id !== id && item.to_id !== id) };
 }
 
 export function formatFeedback(condition: Feedback, station: Station, catalog: DeviceProfile[]): string {

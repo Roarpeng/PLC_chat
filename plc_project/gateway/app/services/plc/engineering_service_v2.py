@@ -91,7 +91,7 @@ class EngineeringServiceV2:
                 station = next((item for item in design.stations if item.id == station_id), None)
                 if station is None:
                     raise KeyError("找不到所选工位。")
-                scope = {item.id for item in [station, *station.flow.nodes, *station.flow.edges, *station.interlocks]}
+                scope = {item.id for item in [station, *station.flow.nodes, *station.flow.edges, *station.flow.wires, *station.interlocks]}
                 issues = [item for item in design_issues(design, release=True) if item["node_id"] in scope]
             else:
                 issues = ValidationServiceV2.validate_ir(ir).issues

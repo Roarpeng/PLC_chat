@@ -5,6 +5,7 @@ import re
 from uuid import uuid4
 
 from plc_engine.engineering_ir.station_catalog import ACTIONS, PROFILES
+from plc_engine.engineering_ir.station_ports import NON_EXECUTABLE
 from plc_engine.engineering_ir.station_design import Device, DeviceAction, Edge, Feedback, Flow, Node, Station, outcomes
 
 DURATION = re.compile(r"([0-9]+(?:\.[0-9]+)?)\s*(毫秒|ms|秒|s)(?![a-z])", re.I)
@@ -185,7 +186,7 @@ def describe_steps(station: Station, message: str) -> str | None:
     if re.fullmatch(r"(?:添加|新增|加入)(?:一个|一台|一只)?[^，,。；;\n]{1,30}[。！!]?", message.strip()):
         return None
     replace = bool(re.match(r"^(?:重新生成|重建|替换)(?:工位流程|工位逻辑|流程)?", message))
-    if station.flow.nodes and not replace:
+    if any(node.kind not in NON_EXECUTABLE for node in station.flow.nodes) and not replace:
         return None
     clauses = re.split(r"[，,。；;\n]+|然后|接着|随后|(?:再|并)(?=松开|启动|停止|收回|伸出|缩回|回零|回原位|等待)", message)
     steps: list[Node] = []
@@ -239,6 +240,9 @@ def describe_steps(station: Station, message: str) -> str | None:
     edges = [Edge(id=_id("edge"), from_id=a.id, to_id=b.id, outcome="next") for a, b in zip(steps, [*steps[1:], end])]
     on_timeout = [step for step in steps if "timeout" in outcomes(step)]
     edges.extend(Edge(id=_id("edge"), from_id=step.id, to_id=fault.id, outcome="timeout") for step in on_timeout)
-    station.flow = Flow(start=steps[0].id, nodes=[*steps, end, *([fault] if on_timeout else [])], edges=edges)
+    interfaces = [item for item in station.flow.nodes if item.kind in NON_EXECUTABLE]
+    keep = {item.id for item in interfaces}
+    wires = [item for item in station.flow.wires if item.from_id in keep and item.to_id in keep]
+    station.flow = Flow(start=steps[0].id, nodes=[*steps, end, *([fault] if on_timeout else []), *interfaces], edges=edges, wires=wires)
     pending = sum(step.pending_feedback for step in steps)
     return f"在「{station.name}」编排 {len(steps)} 个动作与等待步骤。" + (f"有 {pending} 项反馈待关联。" if pending else "")

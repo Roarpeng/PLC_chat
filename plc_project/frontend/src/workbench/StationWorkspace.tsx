@@ -3,10 +3,11 @@ import { GF_BASE, GFRequestError } from "../state/greenfield";
 import { V2_API, newRequestId, v2Api, type JobView, type WorkbenchViewState } from "../state/workbench_v2";
 import { DiagnosticsPane, TopIdentityBar } from "./components";
 import { CreateProjectButton, ImportStationProject, ProjectLookup } from "./ProjectAccess";
-import { StationFlowEditor } from "./StationFlowEditor";
+import { StationCanvas } from "./StationCanvas";
+import { StationTimeline } from "./StationFlowEditor";
 import { StationDevices, StationHardware } from "./StationHardware";
-import { StationSteps, stepDetails } from "./StationSteps";
-import { actionNode, designDiff, emptyFlow, entityId, insertBefore, primarySteps, type DeviceProfile, type Flow, type StationDesign } from "./stationDesign";
+import { StationSteps } from "./StationSteps";
+import { actionNode, designDiff, emptyFlow, entityId, insertBefore, type Device, type DeviceProfile, type Flow, type Station, type StationDesign } from "./stationDesign";
 import "./station-workspace.css";
 
 type View = "hardware" | "stations" | "devices" | "steps" | "flow" | "timeline" | "review" | "delivery";
@@ -14,7 +15,7 @@ type Issue = { node_id?: string; source_id?: string; reason: string };
 type Proposal = Awaited<ReturnType<typeof v2Api.intent>>;
 type Frame = { time_ms: number; name: string; event: string; station_id: string; node_id: string };
 type SourceLink = { canvas_node_id: string; scl_file: string; scl_line: number; tia_block: string };
-const SCENARIOS = [["normal_cycle", "正常反馈"], ["feedback_timeout", "反馈超时"], ["negative_feedback", "条件不成立"], ["interlock_lost", "联锁失效"]];
+const SCENARIOS = [["normal_cycle", "正常反馈"], ["feedback_timeout", "反馈超时"], ["negative_feedback", "条件不成立"], ["interlock_blocked", "启动许可未满足"], ["interlock_lost", "运行中联锁失效"], ["handoff_timeout", "交接确认超时"]];
 const TERMINAL = ["FAILED", "NATIVE_ARCHIVED", "RECOVERY_REQUIRED", "CANCELLED"];
 
 function issuesFrom(error: unknown): Issue[] {
@@ -36,7 +37,7 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
   const [revision, setRevision] = useState(state.baseRevision);
   const [history, setHistory] = useState<StationDesign[]>([]);
   const [future, setFuture] = useState<StationDesign[]>([]);
-  const [view, setView] = useState<View>("hardware");
+  const [view, setView] = useState<View>("flow");
   const [scope, setScope] = useState("");
   const [node, setNode] = useState("");
   const [stationName, setStationName] = useState("");
@@ -97,7 +98,10 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
   function select(next: View, nextScope = "") {
     setView(next);
     if (nextScope !== scope || !["steps", "flow", "timeline"].includes(next)) setNode("");
-    if (nextScope !== scope) setTrace([]);
+    if (nextScope !== scope) {
+      setTrace([]);
+      setProposal(null);
+    }
     setScope(nextScope);
     if (next === "review") void run(async () => {
       const list = await v2Api.revisions(pid);
@@ -113,10 +117,15 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
     setTrace([]);
   }
 
-  function updateFlow(flow: Flow) {
+  function updateFlow(flow: Flow, additions: { device?: Device; station?: Station } = {}) {
+    const { device, station } = additions;
     update(selectedStation ? {
-      ...draft, stations: draft.stations.map((item) => item.id === scope ? { ...item, flow } : item),
-    } : { ...draft, flow });
+      ...draft, stations: draft.stations.map((item) => item.id === scope ? { ...item, ...(station?.id === scope ? station : {}), flow,
+        devices: device ? item.devices.some((entry) => entry.id === device.id) ?
+          item.devices.map((entry) => entry.id === device.id ? device : entry) : [...item.devices, device] : item.devices } : item),
+    } : { ...draft, flow, stations: station ?
+      draft.stations.some((item) => item.id === station.id) ? draft.stations.map((item) => item.id === station.id ? station : item) :
+        [...draft.stations, station] : draft.stations });
   }
 
   async function run(action: () => Promise<void>) {
@@ -174,15 +183,16 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
     const id = issue.node_id || issue.source_id || "";
     const station = draft.stations.find((item) => [item.id, ...item.devices.map((device) => device.id),
       ...(item.interlocks ?? []).map((condition) => condition.id),
-      ...item.flow.nodes.map((node) => node.id), ...item.flow.edges.map((edge) => edge.id)].includes(id));
+      ...item.flow.nodes.flatMap((node) => [node.id, ...node.permissions?.map((rule) => rule.id) ?? []]),
+      ...item.flow.edges.map((edge) => edge.id), ...item.flow.wires?.map((wire) => wire.id) ?? []].includes(id));
     if (station) {
       const deviceScope = station.devices.some((item) => item.id === id) || station.interlocks?.some((item) => item.id === id);
-      const pending = station.flow.nodes.some((item) => item.id === id && item.pending_feedback);
-      select(deviceScope ? "devices" : pending ? "steps" : "flow", station.id);
-      setNode(station.flow.edges.find((edge) => edge.id === id)?.from_id || id);
-    } else if (draft.flow.nodes.some((item) => item.id === id) || draft.flow.edges.some((item) => item.id === id) || id === "flow") {
+      const owner = station.flow.nodes.find((item) => item.permissions?.some((rule) => rule.id === id));
+      select(deviceScope ? "devices" : "flow", station.id);
+      setNode(owner?.id ?? station.flow.edges.find((edge) => edge.id === id)?.from_id ?? station.flow.wires?.find((wire) => wire.id === id)?.from_id ?? id);
+    } else if (draft.flow.nodes.some((item) => item.id === id) || draft.flow.edges.some((item) => item.id === id) || draft.flow.wires?.some((item) => item.id === id) || id === "flow") {
       select("flow");
-      setNode(draft.flow.edges.find((edge) => edge.id === id)?.from_id || id);
+      setNode(draft.flow.edges.find((edge) => edge.id === id)?.from_id || draft.flow.wires?.find((wire) => wire.id === id)?.from_id || id);
     } else {
       select("hardware");
     }
@@ -190,14 +200,14 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
   }
 
   const tab = (label: string, next: View, nextScope = "") => (
-    <button type="button" className="af-nav-item" aria-current={view === next && scope === nextScope ? "page" : undefined}
+    <button type="button" className="af-nav-item" disabled={busy} aria-current={view === next && scope === nextScope ? "page" : undefined}
       onClick={() => select(next, nextScope)}>{label}</button>
   );
   const changes = designDiff(saved, draft);
   const suggested = proposal?.ops[0]?.design as StationDesign | undefined;
   const suggestedChanges = suggested ? designDiff(saved, suggested) : [];
   const proposedStation = suggested?.stations.find((item) => item.id === scope);
-  const hasProposedSteps = proposedStation && JSON.stringify(proposedStation.flow) !== JSON.stringify(selectedStation?.flow);
+  const proposedFlow = scope ? proposedStation?.flow : suggested?.flow;
 
   return (
     <div className="wb-shell af-shell">
@@ -211,19 +221,19 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
             <p className="af-tree-project">{draft.name}</p>
             <code>rev {revision} {dirty ? "· 草稿" : ""}</code>
             <nav>
+              {tab("项目画布", "flow")}
               {tab("硬件组态", "hardware")}
               {tab("工位清单", "stations")}
               {draft.stations.map((item) => (
                 <div className="af-tree-station" key={item.id}>
-                  {tab(item.name, "devices", item.id)}
+                  {tab(item.name, "flow", item.id)}
                   {scope === item.id && <>
+                    {tab("工位设备", "devices", item.id)}
                     {tab("动作步骤", "steps", item.id)}
-                    {tab("工位逻辑", "flow", item.id)}
                     {tab("工位时序", "timeline", item.id)}
                   </>}
                 </div>
               ))}
-              {tab("项目流程", "flow")}
               {tab("项目时序", "timeline")}
               {tab("变更审核", "review")}
               {tab("AF 生成", "delivery")}
@@ -236,9 +246,11 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
             </details>
           </div>
         </aside>
-        <main id="workbench-main" tabIndex={-1} className="af-main">
+        <main id="workbench-main" tabIndex={-1} className={"af-main" + (view === "flow" ? " af-main-canvas" : "")}>
           <header className="af-toolbar">
-            <div><p className="af-context">{selectedStation ? draft.name : "项目"}</p>
+            <div><div className="af-breadcrumb">
+              {selectedStation ? <><button type="button" disabled={busy} onClick={() => select("flow")}>{draft.name}</button><span>/</span><span>工位画布</span></> : <span>{view === "flow" ? "项目画布" : "项目"}</span>}
+            </div>
               <h1 className="k-title">{selectedStation?.name ?? draft.name}</h1>
             </div>
             <div className="af-toolbar-actions">
@@ -277,7 +289,7 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
                 const item = { id: entityId("st"), name: stationName.trim(), devices: [], flow: emptyFlow() };
                 update({ ...draft, stations: [...draft.stations, item] });
                 setStationName("");
-                select("devices", item.id);
+                select("flow", item.id);
               }}>
                 <label>工位名称<input value={stationName} maxLength={100} onChange={(event) => setStationName(event.target.value)} /></label>
                 <button type="submit" className="k-btn k-btn--sm" disabled={!stationName.trim()}>创建工位</button>
@@ -288,7 +300,7 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
                     ...draft, stations: draft.stations.map((station) => station.id === item.id ? { ...station, name: event.target.value } : station),
                   })} /></label>
                   <span>{item.devices.length} 个设备</span>
-                  <button className="k-btn k-btn--sm" onClick={() => select("devices", item.id)}>进入工位</button>
+                  <button className="k-btn k-btn--sm" onClick={() => select("flow", item.id)}>进入工位</button>
                   <button className="k-btn k-btn--sm" disabled={draft.flow.nodes.some((entry) => entry.station_ids.includes(item.id))}
                     onClick={() => update({ ...draft, stations: draft.stations.filter((station) => station.id !== item.id) })}>移除工位</button>
                 </div>
@@ -299,14 +311,14 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
               <StationDevices key={scope} station={selectedStation} hardware={draft.hardware} catalog={catalog}
                 update={(item) => update({ ...draft, stations: draft.stations.map((station) => station.id === scope ? item : station) })}
                 onDescribe={() => {
-                  select("steps", scope);
+                  select("flow", scope);
                   document.getElementById("af-intent-text")?.focus();
                 }}
                 onAction={(device, preset) => {
                   const item = actionNode(device, preset);
                   try {
                     updateFlow(insertBefore(selectedStation.flow, item));
-                    select("steps", scope);
+                    select("flow", scope);
                     setNode(item.id);
                   } catch (reason) {
                     setIssues(issuesFrom(reason));
@@ -318,12 +330,15 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
             </>}
             {view === "steps" && selectedStation && <StationSteps key={scope} station={selectedStation} catalog={catalog}
               selected={node} select={setNode} update={updateFlow} openGraph={() => select("flow", scope)} />}
-            {(view === "flow" || view === "timeline") && <>
-              <StationFlowEditor key={scope || "project"} flow={selectedStation?.flow ?? draft.flow}
-                station={selectedStation} stations={draft.stations} selected={node} setSelected={setNode} timeline={view === "timeline"}
-                catalog={catalog} openSteps={() => select("steps", scope)}
-                openStation={(id) => select("flow", id)} update={updateFlow} />
-              {view === "timeline" && <>
+            {view === "flow" && <>
+              {catalogError && selectedStation && <p role="alert" className="wb-inline-error">{catalogError}</p>}
+              <StationCanvas key={scope || "project"} flow={selectedStation?.flow ?? draft.flow} station={selectedStation}
+                stations={suggested?.stations ?? draft.stations} hardware={draft.hardware} selected={node} select={setNode}
+                catalog={catalog} openStation={(id) => select("flow", id)} preview={proposedFlow} previewStation={proposedStation}
+                problemIds={new Set(issues.flatMap((item) => [item.node_id ?? "", item.source_id ?? ""]))} projectFlow={draft.flow} update={updateFlow} />
+            </>}
+            {view === "timeline" && <>
+                <StationTimeline flow={selectedStation?.flow ?? draft.flow} select={setNode} selected={node} update={updateFlow} />
                 <div className="af-inline">
                   {SCENARIOS.map(([id, name]) => <button className="k-btn k-btn--sm" key={id} onClick={() => void run(async () => {
                     setTrace([]);
@@ -338,7 +353,6 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
                 </div>
                 {trace.length > 0 && <TraceReview frames={trace} jump={(frame) => jump({ node_id: frame.node_id, reason: frame.name })}
                   labels={Object.fromEntries(draft.stations.map((item) => [item.id, item.name]))} />}
-              </>}
             </>}
             {view === "review" && <section className="af-pane">
               <h2 className="k-title">变更审核</h2>
@@ -429,7 +443,9 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
               if (!message.trim() || busy) return;
               void run(async () => {
                 const current = dirty ? await commit(draft, revision) : revision;
-                setProposal(await v2Api.intent(pid, current, message.trim(), { station_id: scope, node_id: node }));
+                const proposal = await v2Api.intent(pid, current, message.trim(), { station_id: scope, node_id: node });
+                if (proposal.ops.length) select("flow", scope);
+                setProposal(proposal);
               });
             }}>
               <label>{selectedStation ? selectedStation.name : "项目范围"}
@@ -442,25 +458,16 @@ export function StationWorkspace({ initial, previousRelease, state, onSwitch }: 
               {proposal.questions?.map((question) => <p key={question}>{question}</p>)}
               {suggested && <>
                 <p>{proposal.explanation} <small>{proposal.mode === "offline" ? "离线指令解析" : "模型提案"}</small></p>
-                {hasProposedSteps && <ol className="af-ai-steps" aria-label="步骤预览">
-                  {primarySteps(proposedStation.flow).map((item) => <li key={item.id}>
-                    <strong>{item.name}</strong>
-                    <span className={item.pending_feedback ? "af-pending" : ""}>{stepDetails(item, proposedStation, catalog)}</span>
-                  </li>)}
-                </ol>}
-                <ChangeReview changes={suggestedChanges} />
-                <button className="k-btn k-btn--sm" disabled={busy || dirty || proposal.base_revision !== revision} onClick={() => void run(async () => {
+                <button className="k-btn k-btn--clay k-btn--sm" disabled={busy || dirty || proposal.base_revision !== revision} onClick={() => void run(async () => {
                   await commit(suggested, proposal.base_revision);
                   setHistory((items) => [...items.slice(-39), draft]);
                   setFuture([]);
                   setProposal(null);
                   setMessage("");
-                  if (hasProposedSteps) {
-                    select("steps", scope);
-                    setNode(proposedStation.flow.start ?? "");
-                  }
+                  select("flow", scope);
                 })}>应用修改</button>
                 {(dirty || proposal.base_revision !== revision) && <p>草稿已变化，请重新预览。</p>}
+                <details><summary>查看变更明细</summary><ChangeReview changes={suggestedChanges} /></details>
               </>}
               <button className="k-btn k-btn--sm" onClick={() => setProposal(null)}>关闭预览</button>
             </div>}

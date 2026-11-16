@@ -6,20 +6,35 @@ import re
 from uuid import uuid4
 
 from gateway.app.services.plc.llm_explain import chat_completion_raw, llm_settings
+from gateway.app.services.plc.canvas_intent import connect_signal, describe_permission, describe_project_flow, reconnect_flow
 from gateway.app.services.plc.station_steps import describe_steps, duration_ms, insert_step, named_duration_step
 from plc_engine.engineering_ir.models import EngineeringIRV2
 from plc_engine.engineering_ir.station_catalog import PROFILES
-from plc_engine.engineering_ir.station_design import Device, Station, StationDesign, design_issues
+from plc_engine.engineering_ir.station_design import Device, Node, Station, StationDesign, design_issues
 
 
 def _offline_edit(design: StationDesign, station_id: str, node_id: str, message: str) -> str:
     station = next((item for item in design.stations if item.id == station_id), None)
-    node = next((item for item in (station.flow if station else design.flow).nodes if item.id == node_id), None)
+    flow = station.flow if station else design.flow
+    node = next((item for item in flow.nodes if item.id == node_id), None)
+    signal = connect_signal(design, station, message)
+    if signal:
+        return signal
+    connected = reconnect_flow(flow, message, node_id)
+    if connected:
+        return connected
     if station:
+        permission = describe_permission(station, message)
+        if permission:
+            return permission
         inserted = insert_step(station, node_id, message)
         if inserted:
             return inserted
         generated = describe_steps(station, message)
+        if generated:
+            return generated
+    else:
+        generated = describe_project_flow(design, message)
         if generated:
             return generated
     duration = duration_ms(re.split(r"改为|改成|设为|设置为|调整为|调整到", message)[-1])
@@ -46,7 +61,12 @@ def _offline_edit(design: StationDesign, station_id: str, node_id: str, message:
             for name in dict.fromkeys(created):
                 if any(item.name == name for item in design.stations):
                     raise ValueError(f"已有同名工位「{name}」，请明确要编辑的工位。")
-                design.stations.append(Station(id=f"st_{uuid4().hex[:10]}", name=name))
+                item = Station(id=f"st_{uuid4().hex[:10]}", name=name)
+                design.stations.append(item)
+                call = Node(id=f"node_{uuid4().hex[:12]}", name=name, kind="station", station_ids=[item.id])
+                flow.nodes.append(call)
+                if not flow.start:
+                    flow.start = call.id
             return f"新增工位 {'、'.join(created)}。"
     if station and re.match("添加|新增|加入", message):
         ranked = [(len(name), profile) for profile in PROFILES.values() for name in profile["aliases"] if name.casefold() in message.casefold()]
@@ -98,6 +118,9 @@ def propose_station_edit(ir: EngineeringIRV2, message: str, context: dict) -> di
                         "保留现有对象 ID、调用引用与未涉及内容。新 ID 用英文和下划线。"
                         "工位动作使用 actions 的 device_id、action_id 引用现有设备及目录动作。"
                         "把动作反馈转换为 completion 条件，并为所有等待反馈的步骤指定 timeout 出口。"
+                        "工艺许可用 permissions；持续检查或立即故障需要 blocked 出口。"
+                        "信号连线存放在 wires，端口使用稳定 ID、匹配方向和类型；执行线继续使用 edges。"
+                        "并行可用 fork 的 branch 连线直接指向多个工位或设备动作；各完成出口连到同一个 join。"
                         "找不到设备或信号时用 questions，或创建 pending_feedback=true 的待关联等待。"
                         "严禁猜测 I/O 绑定或输出 SCL。schema=" + json.dumps(schema, ensure_ascii=False)
                     )},
@@ -123,6 +146,11 @@ def propose_station_edit(ir: EngineeringIRV2, message: str, context: dict) -> di
                 draft.stations.extend(Station(id=item["id"], name=item["name"]) for item in scope.get("stations", []))
             explanation = str(reply.get("explanation") or "更新画布")[:500]
             mode = "model"
+        previous_flows = {item.id: item.flow for item in original.stations}
+        for current, previous in [(draft.flow, original.flow), *[(item.flow, previous_flows[item.id]) for item in draft.stations if item.id in previous_flows]]:
+            positions = {node.id: node.position for node in previous.nodes}
+            for item in current.nodes:
+                item.position = positions.get(item.id)
         draft = StationDesign.model_validate(draft.model_dump())
         issues = design_issues(draft)
         if issues:
