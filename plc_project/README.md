@@ -1,14 +1,25 @@
 # PLC_chat — 可验证的西门子 TIA / SimaticML 工业 PLC 智能工程系统
 
-从自然语言对话到博图真实编译闭环的全栈工业 PLC 工程 workbench:**离线解析 → PLC-IR → 知识图谱 → 数字孪生画布 → NL 编辑 → 带证据的变更事务(PCEC)→ TIA Openness 1:1 回写与严格编译**。老项目 LAD 逆向转 SCL 在真实工程上等价性抽样 9/9;导入工程自动 AF 角色标注(物理冻结,字节级证明)。
+PLC_chat 提供面向西门子 TIA Portal 的工程画布、自然语言编辑、SCL 生成与项目交付。V2 工作台在一个工程中组织工位和设备，支持离线验证与 TIA V19 编译归档。已有工程还可以使用 SimaticML 解析、LAD 转 SCL 和变更审查功能。
 
 ---
 
-## V2 工位与 AF 生成
+## V2 类型端口与 AF 工位编排
 
-打开前端 `/#/v2`，创建 AF 工程或导入带画布定义的工程。项目主画布支持拖入工位、连线和双击下钻。工位画布用于编排设备动作、反馈、超时和互锁，也可通过中文预览并应用图上修改。检查并确认修订后可下载 AF 源码包，也可在配置了 TIA V19 的环境中编译和归档。
+从 [V2 工作台](http://localhost:5173/#/v2) 新建工程，或导入符合当前 AF Profile 的画布 JSON 或含 `af-canvas.json` 的源码 ZIP。项目主画布负责工位调度，双击工位进入设备动作画布。
 
-[查看 V2 工位工作台操作指南](docs/v2/station-workspace.md)
+| 层级 | 当前能力 |
+|---|---|
+| **CM · 设备驱动** | 从设备库拖入设备，复用同一实例的动作。双作用气缸提供手动／自动仲裁、使能、复位、方向互斥、分方向超时及报警 ID。限位反馈与本次动作完成可分别接线。 |
+| **EM · 工位逻辑** | 配置动作、等待、分支、汇合和互锁。通过「工位接口」定义公开输入、输出和默认值。信号线校验方向和类型，每个输入只接受一个信号来源。 |
+| **Unit · 项目调度** | 拖入、连接并下钻工位节点。「工位交接」等待接收方就绪、启动并等待接收确认，可同时传递工件号等业务信号，并配置超时出口。 |
+
+画布使用实线表示执行顺序、绿线表示类型信号、虚线表示配置的互锁。中文指令可生成信号连线，图上预览确认后应用。当前完整的新版 CM 接口覆盖双作用气缸，其它设备使用各自的目录驱动。并行组的每条分支可包含一个工位调用或设备动作。
+
+在离线时序中可检查正常反馈、反馈超时、互锁失效或交接超时。检查并确认修订后可下载 AF 源码包。在配置了 TIA V19 的环境中，可生成并验证 `.zap19`。类型端口验收样例在 V19 编译为 **0 个错误、26 个警告**，归档通过重新打开及下载哈希校验。
+
+- [V2 工位工作台操作指南](docs/v2/station-workspace.md)
+- [双层画布开发与验收记录](docs/v2/station-canvas-development-plan.md)
 
 ## 架构
 
@@ -20,18 +31,22 @@ plc_project/
 │   ├── canvas_tia_transpiler.py  # 画布 1:1 SCL 转译、回写打包(最小破坏/draft-only)
 │   ├── pcec.py                   # PCEC 变更事务:状态机/基线哈希/事务账本
 │   ├── af/                       # AF 内核(隐形):mapper/generator/linter/planner/refactor
+│   ├── engineering_ir/           # V2 工程模型、工位画布与类型端口校验
+│   ├── process/                  # 工位时序、CM 驱动和 AF SCL 生成
 │   ├── standalone_api.py         # 100% 脱离博图的跨平台离线分析/翻译/审计 API
 │   └── tia/                      # 【兼容占位】
 ├── gateway/app/        # 唯一 FastAPI 网关(端口 8000)
 │   ├── routers/plc.py            # ingest/canvas/回写/编译/会话历史/变更账本/需求卡/AF
 │   ├── routers/greenfield.py     # Greenfield 新通道(/state /confirm /generate /deliver-tia …)
+│   ├── routers/projects_v2.py    # V2 工程、修订、仿真与交付
 │   └── services/plc/             # session_store/compile_jobs/chat_ops/greenfield_*/
-├── frontend/           # React 19 + Vite + TS 工业工作台(默认落地 4 步主链)
+├── frontend/           # React 19 + Vite + TS 工业工作台
+│   ├── src/workbench/            # V2 项目与工位画布、端口检查器、交付视图
 │   ├── src/shell/steps/          # StepDescribe/StepLink/StepConfirm/StepDeliver + stepMachine.ts
 │   ├── src/shell/                # GreenfieldWizard(主链容器)/EngineeringDrawer(工程视角)
-│   └── src/state/greenfield.ts   # 唯一后端出入口(Facade,导出签名冻结)
+│   └── src/state/                # V2 工作台与 Greenfield API 客户端
 ├── industrial/tia_openness_cli/  # C# .NET Openness CLI
-├── tests/              # 后端 1341 项 pytest;frontend 393 项 vitest
+├── tests/              # 后端单元与接口契约测试
 ├── evidence/           # WP-10 全量验收证据链(rtm.json / pending 台账 / 真机报告)
 └── docs/               # 编号文档 01-28 + greenfield/ + frontend-redesign/(见下)
 ```
@@ -99,13 +114,15 @@ plc_project/
 
 ## 测试
 
-```bash
-python -m pytest tests/unit -q                    # 后端 1341 passed / 1 xfailed(排除既有基线失败)
-cd frontend && npm run test -- --pool=threads    # 前端 23 files / 393 passed / 0 failed / 0 skip
-cd frontend && npm run build                     # tsc -b && vite build
+在 `plc_project` 目录中运行。
+
+```powershell
+python -m pytest -q tests/contracts/test_station_canvas_v2.py tests/contracts/test_api_v2_contract.py tests/unit/test_engineering_ir_v2.py
+npm --prefix frontend test
+npm --prefix frontend run build
 ```
 
-> 前端 vitest 默认 `forks` 池在本机偶发 worker 启动超时(无断言失败),用 `--pool=threads` 稳定;不得为消 flake 改测试或加 skip。
+提交 `9c470f3` 的验收快照中，上述后端回归 **26 项**通过，前端 **526 项**通过，前端构建通过。
 
 ## 文档索引(docs/)
 
@@ -125,10 +142,9 @@ cd frontend && npm run build                     # tsc -b && vite build
 | `frontend-redesign/` | 2026-11-08 前端交互壳重构:`01-prd.md`(增量 PRD) / `02-architecture.md`(架构与任务分解) / `03-qa-report.md`(独立 QA 报告) |
 | `docs/v2/` | V2 完全体增量设计、验收矩阵、交付报告、契约 Schema 与分批留痕(见下表) |
 
-## V2 完全体(增量说明,不改写历史结论)
+## V2 早期架构与验收索引
 
-> 本节只做增量索引。`xml_package_unverified=true`、M4 未通过、Greenfield 端到端
-> 「真实编译→归档→reopen 未闭环」等历史口径**保持不变**;README 中 1341 / 393 为未复跑声明值。
+本节记录 V2 早期增量和 Greenfield 验收结论。当前工位画布的验收结果见上文。
 
 - 后端唯一网关 `gateway/app`:新增 `/api/v2/*` 路由(默认信封兼容 v1 `ApiResponse`),v1 路由保持注册与公共行为不变;SQLite WAL 10 张表 + 版本化 JSON IR + hash 命名 Artifact Store,零新增第三方依赖。
 - 工程内核 `plc_engine/`:`engineering_ir/`(唯一可写语义真值)、`components/`(4 类 DriverCatalog)、`process/`(GuardAST / SequenceIR / 离线 Trace / SCL Lowering / SourceMap N:N)、`changeplan/`(Brownfield **仅接口与 Schema**)、`canonical.py`(零依赖哈希/ID 单一实现)。`af/` 与 `pcec.py` 物理保留、公共行为不变,经 adapter 只读接入。
@@ -143,7 +159,7 @@ cd frontend && npm run build                     # tsc -b && vite build
 | `docs/v2/baseline-report.md` / `pre_existing_failures.md` | 三套基线实跑 / 既有失败隔离清单 |
 | `docs/v2/driver-catalog.md` / `process-algorithms.md` / `brownfield-interface-contract.md` / `fault-injection-matrix.md` | 各 WP 技术说明 |
 | `docs/v2/03-验收矩阵.md` / `g0-g7-matrix.md` / `04-交付报告.md` | 统一验收发布(G5 当前 `pending_real_machine`) |
-| [`docs/v2/station-workspace.md`](docs/v2/station-workspace.md) | AF 工程创建和导入、设备库、工位流程、时序与 V19 归档 |
+| [`docs/v2/station-workspace.md`](docs/v2/station-workspace.md) | AF 工程创建与导入、类型端口、互锁、工位交接和 V19 归档 |
 | `docs/v2/evidence/T01..T08/` | 每批验收命令真实输出 |
 
-**当前真机状态**:`V19_real` 仅适用于 G0 只读 `status` 探测回执;AC-01 第 1/5/6 步与 **G5(Greenfield-only)全链一律 `pending_real_machine`**,未取得真实 `.zap19`、未发布原生归档、不显示「交付完成」。真机全链由主理人/QA 串行调度,探针脚本 `scripts/tia_delivery_chain_v2.py --real` 默认 dry-run。
+**早期验收基线**。当时的 `V19_real` 用于 G0 的只读 `status` 探测回执，AC-01 第 1、5、6 步和 Greenfield 的 G5 全链记录为 `pending_real_machine`。探针脚本 `scripts/tia_delivery_chain_v2.py --real` 默认 dry-run。
