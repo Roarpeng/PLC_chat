@@ -20,10 +20,13 @@ public sealed class SessionServer : IDisposable
     private readonly Thread _sta;
     private volatile bool _running = true;
 
-    private TiaConnection? _connection;
-    private ProjectService? _projects;
-    private BlockService? _blocks;
-    private string? _openProjectPath;
+    private TiaConnection? _connection;
+    private ProjectService? _projects;
+    private BlockService? _blocks;
+    private string? _openProjectPath;
+    private MerkleBlockSyncService? _merkleSync;
+    private AfLibraryReflector? _libraryReflector;
+    private CutSetSnapshotService? _cutSetSnapshot;
 
     public SessionServer(string host, int port, string? token)
     {
@@ -154,35 +157,57 @@ public sealed class SessionServer : IDisposable
                 : JsonDocument.Parse(body);
             var root = doc.RootElement;
 
-            object payload = path switch
-            {
-                "/open" => RunOnSta(() => Open(root)),
-                "/compile-plc" => RunOnSta(() => CompilePlc(root)),
-                "/compile-hmi" => RunOnSta(() => CompileHmi(root)),
-                "/save" => RunOnSta(() => Save(root)),
-                "/close" => RunOnSta(() => Close()),
-                "/generate-from-source" => RunOnSta(() => GenerateFromSource(root)),
-                "/import-xml" => RunOnSta(() => ImportXml(root)),
-                "/hmi-unified-apply" => RunOnSta(() => HmiUnifiedApply(root)),
-                "/fast-writeback" => RunOnSta(() => FastWritebackRoute(root)),
-                _ => new { ok = false, error = $"unknown path {path}" },
-            };
-            WriteJson(ctx, 200, payload);
-        }
-        catch (Exception ex)
-        {
-            WriteJson(ctx, 500, new { ok = false, error = ex.Message });
-        }
-    }
+            object payload = DispatchStaRoute(path, root);
+            WriteJson(ctx, 200, payload);
+        }
+        catch (Exception ex)
+        {
+            WriteJson(ctx, 500, new { ok = false, error = ex.Message });
+        }
+    }
+
+    internal void StartStaLoopForTests()
+    {
+        if (!_sta.IsAlive)
+        {
+            _sta.Start();
+        }
+    }
+
+    internal object DispatchStaRoute(string path, JsonElement root)
+    {
+        var normalized = (path ?? "/").TrimEnd('/').ToLowerInvariant();
+        if (normalized.Length == 0) normalized = "/";
+
+        return normalized switch
+        {
+            "/open" => RunOnSta(() => Open(root)),
+            "/compile-plc" => RunOnSta(() => CompilePlc(root)),
+            "/compile-hmi" => RunOnSta(() => CompileHmi(root)),
+            "/save" => RunOnSta(() => Save(root)),
+            "/close" => RunOnSta(() => Close()),
+            "/generate-from-source" => RunOnSta(() => GenerateFromSource(root)),
+            "/import-xml" => RunOnSta(() => ImportXml(root)),
+            "/hmi-unified-apply" => RunOnSta(() => HmiUnifiedApply(root)),
+            "/fast-writeback" => RunOnSta(() => FastWritebackRoute(root)),
+            "/merkle-sync" => RunOnSta(() => MerkleSyncRoute(root)),
+            "/reflect-af-library" => RunOnSta(() => ReflectAfLibraryRoute(root)),
+            "/cutset-snapshot" => RunOnSta(() => CutSetSnapshotRoute(root)),
+            _ => new { ok = false, error = $"unknown path {normalized}" },
+        };
+    }
 
-    private void EnsureCore()
-    {
-        if (_connection is not null) return;
-        var version = Environment.GetEnvironmentVariable("TIA_VERSION") ?? TiaConnection.DefaultVersion;
-        _connection = new TiaConnection(version);
-        _projects = new ProjectService(_connection);
-        _blocks = new BlockService(_projects);
-    }
+    private void EnsureCore()
+    {
+        if (_connection is not null) return;
+        var version = Environment.GetEnvironmentVariable("TIA_VERSION") ?? TiaConnection.DefaultVersion;
+        _connection = new TiaConnection(version);
+        _projects = new ProjectService(_connection);
+        _blocks = new BlockService(_projects);
+        _merkleSync = new MerkleBlockSyncService(_projects, _blocks);
+        _libraryReflector = new AfLibraryReflector(_connection, _projects);
+        _cutSetSnapshot = new CutSetSnapshotService();
+    }
 
     private object Open(JsonElement root)
     {
@@ -294,13 +319,53 @@ public sealed class SessionServer : IDisposable
         return HmiUnifiedApplyOps.Apply(_projects!, hmiName, opsPath);
     }
 
-    private object FastWritebackRoute(JsonElement root)
-    {
-        EnsureCore();
-        EnsureOpen(root);
-        var request = FastWritebackRequest.FromJson(root);
-        return FastWriteback.Execute(_connection!, _projects!, _blocks!, request);
-    }
+    private object FastWritebackRoute(JsonElement root)
+    {
+        EnsureCore();
+        EnsureOpen(root);
+        var request = FastWritebackRequest.FromJson(root);
+        return FastWriteback.Execute(_connection!, _projects!, _blocks!, request);
+    }
+
+    private object MerkleSyncRoute(JsonElement root)
+    {
+        EnsureCore();
+        var request = MerkleSyncRequest.FromJson(root);
+        var project = GetString(root, "project");
+        if (!request.DryRun
+            && !string.IsNullOrWhiteSpace(project)
+            && File.Exists(project)
+            && !string.Equals(_openProjectPath, project, StringComparison.OrdinalIgnoreCase))
+        {
+            var opened = Open(root);
+            if (_projects?.Project is null)
+            {
+                return opened;
+            }
+        }
+        return _merkleSync!.SyncDirtyBlocks(request);
+    }
+
+    private object ReflectAfLibraryRoute(JsonElement root)
+    {
+        EnsureCore();
+        var request = AfLibraryReflectRequest.FromJson(root);
+        var project = GetString(root, "project");
+        if (!string.IsNullOrWhiteSpace(project)
+            && File.Exists(project)
+            && !string.Equals(_openProjectPath, project, StringComparison.OrdinalIgnoreCase))
+        {
+            Open(root);
+        }
+        return _libraryReflector!.ReflectRegistry(request);
+    }
+
+    private object CutSetSnapshotRoute(JsonElement root)
+    {
+        EnsureCore();
+        var request = CutSetSnapshotRequest.FromJson(root);
+        return _cutSetSnapshot!.CaptureCutSetSnapshot(request);
+    }
 
     private void EnsureOpen(JsonElement root)
     {

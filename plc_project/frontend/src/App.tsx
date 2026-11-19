@@ -134,7 +134,7 @@ import { buildOpsReview, type OpsReview } from "./state/opsReview";
 import { LongTaskChips } from "./shell/LongTaskChips";
 /* WP-04 / Q-03: default V2 workbench + independent legacy route + top-bar switch.
    v1 channels stay reachable; no v1 export signature or behaviour is changed. */
-import { WorkbenchShell } from "./workbench/WorkbenchShell";
+import { AfStudioV5Shell } from "./components/studio/AfStudioV5Shell";
 import { PaperAppearance } from "./styles/kronos/PaperAppearance";
 import { hashForChannel, initialChannel, type AppChannel } from "./workbench/featureFlags";
 
@@ -294,24 +294,10 @@ const ChangeLogIcon: React.FC = () => (
   </svg>
 );
 
-const App: React.FC = () => {
-  /* Greenfield 独立通道（与既有工作台互不触发）。
-     WP-04：V2 工作台为默认，旧 4 步向导保留独立 hash 路由 #/legacy。 */
-  const [channel, setChannel] = useState<AppChannel>(() => initialChannel());
-  const [greenfieldPrompt, setGreenfieldPrompt] = useState<string>("");
-  useEffect(() => {
-    const syncChannel = () => setChannel(initialChannel());
-    window.addEventListener("hashchange", syncChannel);
-    if (!window.location.hash) {
-      window.history.replaceState(null, "", hashForChannel(initialChannel()));
-    }
-    return () => window.removeEventListener("hashchange", syncChannel);
-  }, []);
-  /** 顶栏开关：hash 与 state 同步，保证刷新后仍停在所选独立路由。 */
-  const switchChannel = React.useCallback((next: AppChannel) => {
-    window.history.replaceState(null, "", hashForChannel(next));
-    setChannel(next);
-  }, []);
+const ClassicWorkbenchApp: React.FC<{
+  switchChannel: (next: AppChannel) => void;
+  openGreenfield: (prompt?: string) => void;
+}> = ({ switchChannel, openGreenfield }) => {
   /* 画布与会话 */
   const [canvas, setCanvas] = useState<CanvasStateData>(() => blankCanvas(""));
   const [backendConnected, setBackendConnected] = useState<boolean | null>(null);
@@ -2700,25 +2686,6 @@ const App: React.FC = () => {
   }
   const npfValid = npfName.length > 0 && npfNameError === "";
 
-  /* WP-04: V2 统一工作台（默认）。六视图 + 三栏 + 底部 diagnostics；
-     编辑统一走 SequencePatch(base_revision)，状态只读后端 Job。 */
-  if (channel === "v2") {
-    return (
-      <WorkbenchShell
-        onSwitch={(target) => switchChannel(target === "legacy" ? "greenfield" : "workbench")}
-      />
-    );
-  }
-
-  if (channel === "greenfield") {
-    return (
-      <GreenfieldChannel
-        initialPrompt={greenfieldPrompt}
-        onBack={() => setChannel("workbench")}
-      />
-    );
-  }
-
   return (
     <div className="app">
       {/* —— 细顶栏(契约 25 §2 L 线简化):状态指示灯 + 变更记录 + 回写博图 + [画布] —— */}
@@ -2742,17 +2709,17 @@ const App: React.FC = () => {
 
         <button
           className="topbar__toggle topbar__toggle--text"
-          onClick={() => switchChannel("v2")}
-          aria-label="V2 统一工作台"
-          title="切换到 V2 统一工程工作台（默认入口）"
-          data-ui="switch-v2-workbench"
+          onClick={() => switchChannel("v5")}
+          aria-label="AF-Studio v5 超图工坊"
+          title="切换到 AF-Studio v5 时空超图工作台（默认入口）"
+          data-ui="switch-v5-studio"
         >
-          V2 工作台
+          AF-Studio v5
         </button>
 
         <button
           className="topbar__toggle topbar__toggle--text"
-          onClick={() => setChannel("greenfield")}
+          onClick={() => openGreenfield()}
           aria-label="新建工程画布"
           title="打开三区域新建工程画布（上区硬件拓扑 · 下区工艺 Mermaid 逻辑 · 右区绑定变量）"
         >
@@ -2895,8 +2862,7 @@ const App: React.FC = () => {
           }}
           onNewFromChat={(prompt) => {
             setShowOnboarding(false);
-            if (prompt) setGreenfieldPrompt(prompt);
-            setChannel("greenfield");
+            openGreenfield(prompt);
           }}
         />
       )}
@@ -2918,7 +2884,7 @@ const App: React.FC = () => {
           onSelectConversation={handleSelectConversation}
           onDeleteConversation={handleDeleteConversation}
           onNewConversation={() => handleNewSession()}
-          onNewProject={() => setChannel("greenfield")}
+          onNewProject={() => openGreenfield()}
           onDeleteProject={(pid) => {
             void apiDeleteProject(pid).then(() => {
               setProjectList((prev) => prev.filter((p) => p.id !== pid));
@@ -3078,13 +3044,12 @@ const App: React.FC = () => {
                   <ProjectLaunchScreen
                     sessions={sessions}
                     onImport={() => setImportOpen(true)}
-                    onNewProject={() => setChannel("greenfield")}
+                    onNewProject={() => openGreenfield()}
                     onSelectSession={handleSelectSession}
                     onEnterGreenfield={(context) => {
                       // J9 收口：向导工艺描述直接作为 initialPrompt 传入通道，
                       // 不再只依赖 GreenfieldChannel 内的 loadLaunchContext() 兜底。
-                      if (context?.prompt) setGreenfieldPrompt(context.prompt);
-                      setChannel("greenfield");
+                      openGreenfield(context?.prompt);
                     }}
                   />
                 </div>
@@ -3388,6 +3353,63 @@ const App: React.FC = () => {
       )}
     </div>
   );
+};
+
+/** 顶层路由分发器：全面切向 AF-Studio v5 为默认入口（移除 V2 分支，旧 #/v2 自动重定向到 #/v5）。 */
+const App: React.FC = () => {
+  const [channel, setChannel] = useState<AppChannel>(() => initialChannel());
+  const [greenfieldPrompt, setGreenfieldPrompt] = useState<string>("");
+
+  useEffect(() => {
+    const normalizeHash = () => {
+      const currentHash = (window.location.hash || "").trim();
+      if (!currentHash || currentHash === "#/v2") {
+        window.history.replaceState(null, "", hashForChannel("v5"));
+      }
+    };
+    const syncChannel = () => {
+      normalizeHash();
+      setChannel(initialChannel());
+    };
+    normalizeHash();
+    window.addEventListener("hashchange", syncChannel);
+    return () => window.removeEventListener("hashchange", syncChannel);
+  }, []);
+
+  const switchChannel = React.useCallback((next: AppChannel) => {
+    window.history.replaceState(null, "", hashForChannel(next));
+    setChannel(next);
+  }, []);
+
+  const openGreenfield = React.useCallback(
+    (prompt?: string) => {
+      if (prompt) setGreenfieldPrompt(prompt);
+      switchChannel("greenfield");
+    },
+    [switchChannel]
+  );
+
+  if (channel === "v5" || channel === "v2") {
+    return (
+      <AfStudioV5Shell
+        onSwitch={(target) => {
+          if (target === "legacy") switchChannel("greenfield");
+          else if (target === "classic") switchChannel("workbench");
+        }}
+      />
+    );
+  }
+
+  if (channel === "greenfield") {
+    return (
+      <GreenfieldChannel
+        initialPrompt={greenfieldPrompt}
+        onBack={() => switchChannel("v5")}
+      />
+    );
+  }
+
+  return <ClassicWorkbenchApp switchChannel={switchChannel} openGreenfield={openGreenfield} />;
 };
 
 export default App;

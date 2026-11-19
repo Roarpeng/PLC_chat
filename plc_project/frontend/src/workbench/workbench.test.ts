@@ -9,7 +9,14 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  channelFromHash, hashForChannel, initialChannel, LEGACY_WIZARD_ROUTE, V2_ROUTE, V2_WORKBENCH_DEFAULT,
+  channelFromHash,
+  hashForChannel,
+  initialChannel,
+  LEGACY_WIZARD_ROUTE,
+  V2_ROUTE,
+  V2_WORKBENCH_DEFAULT,
+  V5_STUDIO_DEFAULT,
+  V5_STUDIO_ROUTE,
 } from "./featureFlags";
 import {
   SOURCE_PACKAGE_NOTICE,
@@ -42,21 +49,24 @@ const patchResult = (revision: number, hash: string): PatchResultV2 => ({
 afterEach(() => vi.unstubAllGlobals());
 
 describe("feature flag / independent legacy route (Q-03)", () => {
-  it("defaults to the V2 workbench", () => {
-    expect(V2_WORKBENCH_DEFAULT).toBe(true);
-    expect(initialChannel("")).toBe("v2");
-    expect(initialChannel()).toBe("v2");
+  it("defaults to AF-Studio v5 and disables legacy V2 default", () => {
+    expect(V5_STUDIO_DEFAULT).toBe(true);
+    expect(V2_WORKBENCH_DEFAULT).toBe(false);
+    expect(initialChannel("")).toBe("v5");
+    expect(initialChannel()).toBe("v5");
+    expect(channelFromHash(V2_ROUTE)).toBe("v5");
   });
   it("keeps the legacy wizard reachable by its own hash route", () => {
     expect(channelFromHash(LEGACY_WIZARD_ROUTE)).toBe("greenfield");
     expect(channelFromHash("#/classic")).toBe("workbench");
-    expect(channelFromHash("#/unknown")).toBe("v2");
+    expect(channelFromHash("#/unknown")).toBe("v5");
   });
   it("round-trips channel <-> hash so a refresh does not lose the workspace", () => {
-    for (const c of ["v2", "greenfield", "workbench"] as const) {
+    for (const c of ["v5", "greenfield", "workbench"] as const) {
       expect(channelFromHash(hashForChannel(c))).toBe(c);
     }
-    expect(hashForChannel("v2")).toBe(V2_ROUTE);
+    expect(hashForChannel("v5")).toBe(V5_STUDIO_ROUTE);
+    expect(hashForChannel("v2")).toBe(V5_STUDIO_ROUTE);
   });
 });
 

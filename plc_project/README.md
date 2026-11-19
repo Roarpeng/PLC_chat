@@ -2,11 +2,22 @@
 
 PLC_chat 提供面向西门子 TIA Portal 的工程画布、自然语言编辑、SCL 生成与项目交付。V2 工作台在一个工程中组织工位和设备，支持离线验证与 TIA V19 编译归档。已有工程还可以使用 SimaticML 解析、LAD 转 SCL 和变更审查功能。
 
+## AF-Studio v5 · KUKA 离线交付
+
+从 [AF-Studio v5](http://localhost:5173/#/v5) 打开已配置的 KUKA 工程，在全局总图点击「导出 TIA V19」。后端用当前工程快照创建、编译、归档并还原校验原生工程，成功后浏览器下载 `KUKA_V5_Offline.zap19`。在 TIA Portal V19 中还原后，可重新编译 PLC 软件查看诊断。
+
+验收快照包含 5 个实体工位及 ST60、ST70 两个虚拟节点。实机归档包含 37 个命名 I/O、5 张 PLC 标签表，以及 `AF/Units`、`AF/EquipmentModules`、`AF/ControlModules/Drivers`、`AF/IO` 和 `AF/HMI` 分组。TIA V19 编译为 0 个错误、13 条警告，归档还原与 SHA-256 校验通过。
+
+该入口适用于当前 KUKA 离线配置。KUKA 握手使用符号接口，HMI 分组包含 PLC 侧接口，ST60 整线调度待补齐。工位和 I/O 块留给离线测试程序显式调用。未来通用工程导出以同一份服务端工程模型驱动，不依赖 KUKA 工位编号。
+
+- [KUKA 搭建和验收记录](docs/v2/kuka-six-station-browser-qa.md)
+- [工艺入口与统一工程模型设计方向](docs/v2/intent-first-workbench.md)
+
 ---
 
 ## V2 类型端口与 AF 工位编排
 
-从 [V2 工作台](http://localhost:5173/#/v2) 新建工程，或导入符合当前 AF Profile 的画布 JSON 或含 `af-canvas.json` 的源码 ZIP。项目主画布负责工位调度，双击工位进入设备动作画布。
+V2 工程模型支持新建工程，以及导入符合当前 AF Profile 的画布 JSON 或含 `af-canvas.json` 的源码 ZIP。V2 的项目画布负责工位调度，双击工位进入设备动作画布。当前前端默认打开 AF-Studio v5，历史 `#/v2` 路径也进入 V5。
 
 | 层级 | 当前能力 |
 |---|---|

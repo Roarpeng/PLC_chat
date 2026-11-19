@@ -1,40 +1,43 @@
 /**
  * WP-04 feature flag + independent legacy route (Q-03).
  *
- * No router dependency is added (zero new UI deps): the legacy 4-step wizard
- * keeps its own hash route `#/legacy`, the classic workbench `#/classic`, and
- * the V2 workbench is the default (`#/v2` or no hash). The top-bar switch only
- * changes the hash; `channelFromHash` is the single source of truth.
+ * No router dependency is added (zero new UI deps): AF-Studio v5 (`#/v5`) is
+ * the default entry (`#/v5`, `#/v2`, or no hash all resolve to `"v5"`). The
+ * legacy wizard keeps `#/legacy` and the classic workbench `#/classic`.
  */
-export const V2_WORKBENCH_DEFAULT = true;
+export const V5_STUDIO_DEFAULT = true;
+export const V2_WORKBENCH_DEFAULT = false;
 
 export const V2_ROUTE = "#/v2";
 export const LEGACY_WIZARD_ROUTE = "#/legacy";
 export const CLASSIC_WORKBENCH_ROUTE = "#/classic";
+export const V5_STUDIO_ROUTE = "#/v5";
 
-export type AppChannel = "v2" | "greenfield" | "workbench";
+export type AppChannel = "v2" | "greenfield" | "workbench" | "v5";
 
 const ROUTE_TO_CHANNEL: Readonly<Record<string, AppChannel>> = {
-  [V2_ROUTE]: "v2",
+  [V2_ROUTE]: "v5",
   [LEGACY_WIZARD_ROUTE]: "greenfield",
   [CLASSIC_WORKBENCH_ROUTE]: "workbench",
+  [V5_STUDIO_ROUTE]: "v5",
 };
 
 const CHANNEL_TO_ROUTE: Readonly<Record<AppChannel, string>> = {
-  v2: V2_ROUTE,
+  v2: V5_STUDIO_ROUTE,
   greenfield: LEGACY_WIZARD_ROUTE,
   workbench: CLASSIC_WORKBENCH_ROUTE,
+  v5: V5_STUDIO_ROUTE,
 };
 
-/** Resolve the active channel from a location hash (unknown hash => default). */
+/** Resolve the active channel from a location hash (unknown hash => v5 default). */
 export function channelFromHash(hash: string): AppChannel {
   const normalized = (hash || "").trim();
-  return ROUTE_TO_CHANNEL[normalized] ?? (V2_WORKBENCH_DEFAULT ? "v2" : "greenfield");
+  return ROUTE_TO_CHANNEL[normalized] ?? (V5_STUDIO_DEFAULT ? "v5" : "greenfield");
 }
 
 /** Build the hash for a channel (used by the top-bar switch). */
 export function hashForChannel(channel: AppChannel): string {
-  return CHANNEL_TO_ROUTE[channel] ?? V2_ROUTE;
+  return CHANNEL_TO_ROUTE[channel] ?? V5_STUDIO_ROUTE;
 }
 
 /** Initial channel: URL hash wins, otherwise the feature-flag default. */

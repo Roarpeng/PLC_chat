@@ -8,9 +8,9 @@ ALARM_FEEDBACK_CONFLICT = 1004
 ALARM_INVALID_REQUEST = 1005
 
 
-def emit_cylinder(fb):
+def emit_cylinder(fb, name: str = "FB_AF_DRV_cylinder"):
     block = fb(
-        "FB_AF_DRV_cylinder",
+        name,
         ["Permit : Bool", "Enable : Bool", "Mode : USInt", "ManualRequest : USInt", "Reset : Bool",
          "ExtendTimeout : Time", "RetractTimeout : Time", "Req_extend : Bool", "Req_retract : Bool",
          "In_extended : Bool", "In_retracted : Bool"],

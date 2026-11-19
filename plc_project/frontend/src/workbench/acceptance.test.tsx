@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { canShowNativeDownload, deliveryNotice, type JobView } from "../state/workbench_v2";
-import { channelFromHash, V2_WORKBENCH_DEFAULT } from "./featureFlags";
+import { channelFromHash, V5_STUDIO_DEFAULT } from "./featureFlags";
 
 const read = (relative: string) => readFileSync(new URL(relative, import.meta.url), "utf-8");
 
@@ -78,9 +78,10 @@ describe("WP-07 unified acceptance (offline contract)", () => {
     expect(deliveryNotice(baseJob)).not.toContain("交付完成");
   });
 
-  it("V2 workbench is default; legacy wizard keeps its own route", () => {
-    expect(V2_WORKBENCH_DEFAULT).toBe(true);
-    expect(channelFromHash("")).toBe("v2");
+  it("AF-Studio v5 is default (including legacy #/v2 redirect); legacy wizard keeps its own route", () => {
+    expect(V5_STUDIO_DEFAULT).toBe(true);
+    expect(channelFromHash("")).toBe("v5");
+    expect(channelFromHash("#/v2")).toBe("v5");
     expect(channelFromHash("#/legacy")).toBe("greenfield");
   });
 });

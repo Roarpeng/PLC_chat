@@ -47,7 +47,7 @@ public static class Program
     ///   TiaOpenness.Server.exe export-project --project C:\p\x.ap19 --export-dir C:\out
     ///   TiaOpenness.Server.exe retrieve --archive C:\In\Line.zap19 --out-dir C:\Projects
     /// </summary>
-    private static int RunCli(string[] args)
+    internal static int RunCli(string[] args)
     {
         if (args.Length == 0)
         {
@@ -76,7 +76,10 @@ public static class Program
                 "  probe-device-types --project <ap19> --type-ids <id1|id2|...> (probe only, never saves)\n" +
                 "  open-library --path <al19> [--write]\n" +
                 "  copy-from-library --library <al19> --item <name> [--project <ap19>] [--target <group>]\n" +
-                "  get-tags --project <ap19> [--table <name>]");
+                "  get-tags --project <ap19> [--table <name>]\n" +
+                "  merkle-sync (--request <req.json> | --scl <file.scl> [--block name]) [--project <ap19>] [--plc name] [--dry-run] [--unit name]\n" +
+                "  reflect-af-library [--project <ap19>] [--library <al19>] [--dir <scl_or_xml_dir>] [--out <registry.json>] [--no-fallback]\n" +
+                "  cutset-snapshot [--plc-ip <ip>] [--port <port>] [--protocol opcua|s7commplus|simulated] [--simulate|--no-simulate] [--station <id>] [--recover <addr>] [--healthy]");
             return 2;
         }
 
@@ -278,6 +281,50 @@ public static class Program
                 };
                 Console.WriteLine(JsonSerializer.Serialize(importPayload, JsonDefaults.Options));
                 return saved.Ok ? 0 : 5;
+            }
+
+            if (command == "import-af-folder-plan")
+            {
+                if (!opts.TryGetValue("project", out var project) || !opts.TryGetValue("plan", out var planPath)
+                    || string.IsNullOrWhiteSpace(project) || string.IsNullOrWhiteSpace(planPath))
+                {
+                    Console.Error.WriteLine("Missing --project or --plan");
+                    return 2;
+                }
+                var opened = projects.OpenProject(project, plcName: null, withoutUi: true);
+                if (!opened.Ok)
+                {
+                    Console.WriteLine(JsonSerializer.Serialize(opened, JsonDefaults.Options));
+                    return 3;
+                }
+
+                using var plan = JsonDocument.Parse(File.ReadAllText(planPath));
+                var tags = new List<object>();
+                var sources = new List<object>();
+                foreach (var entry in plan.RootElement.GetProperty("tagTables").EnumerateArray())
+                {
+                    string name = entry.GetProperty("name").GetString()!;
+                    var points = entry.GetProperty("tags").EnumerateArray().Select(
+                        p => (p.GetProperty("name").GetString()!, p.GetProperty("address").GetString()!));
+                    tags.Add(new { name, tags = blocks.CreatePlcTags(name, points) });
+                }
+                foreach (var entry in plan.RootElement.GetProperty("sources").EnumerateArray())
+                {
+                    string path = entry.GetProperty("file").GetString()!;
+                    string group = entry.GetProperty("group").GetString()!;
+                    var result = blocks.GenerateBlocksFromSource(path, overwrite: false, blockGroup: group);
+                    if (!result.Ok)
+                    {
+                        Console.WriteLine(JsonSerializer.Serialize(new { ok = false, group, generate = result }, JsonDefaults.Options));
+                        return 4;
+                    }
+                    sources.Add(new { group, names = result.GeneratedNames });
+                }
+                var listed = blocks.ListBlocks();
+                var saved = projects.SaveProject();
+                Console.WriteLine(JsonSerializer.Serialize(
+                    new { ok = saved.Ok && listed.Ok, sources, tagTables = tags, blocks = listed }, JsonDefaults.Options));
+                return saved.Ok && listed.Ok ? 0 : 4;
             }
 
             if (command == "generate-from-source")
@@ -959,6 +1006,184 @@ public static class Program
                 var details = blocks.GetTagTable(tableName);
                 Console.WriteLine(JsonSerializer.Serialize(new { ok = details.Ok, tags = details }, JsonDefaults.Options));
                 return details.Ok ? 0 : 4;
+            }
+
+            if (command == "merkle-sync")
+            {
+                MerkleSyncRequest syncReq;
+                if (opts.TryGetValue("request", out var reqPath) && !string.IsNullOrWhiteSpace(reqPath))
+                {
+                    if (!File.Exists(reqPath))
+                    {
+                        Console.Error.WriteLine($"Missing request file: {reqPath}");
+                        return 2;
+                    }
+                    using var reqDoc = JsonDocument.Parse(File.ReadAllText(reqPath));
+                    syncReq = MerkleSyncRequest.FromJson(reqDoc.RootElement);
+                }
+                else if (opts.TryGetValue("scl", out var sclPath) && !string.IsNullOrWhiteSpace(sclPath))
+                {
+                    if (!File.Exists(sclPath))
+                    {
+                        Console.Error.WriteLine($"Missing SCL file: {sclPath}");
+                        return 2;
+                    }
+                    opts.TryGetValue("block", out var blockName);
+                    opts.TryGetValue("type", out var blockType);
+                    opts.TryGetValue("instance-db", out var idbName);
+                    opts.TryGetValue("unit", out var unitName);
+                    if (string.IsNullOrWhiteSpace(unitName)) opts.TryGetValue("software-unit", out unitName);
+                    var sclText = File.ReadAllText(sclPath);
+                    var resolvedBlockName = string.IsNullOrWhiteSpace(blockName)
+                        ? Path.GetFileNameWithoutExtension(sclPath)
+                        : blockName!;
+                    syncReq = new MerkleSyncRequest
+                    {
+                        SoftwareUnit = unitName,
+                        Blocks = new List<MerkleBlockInput>
+                        {
+                            new()
+                            {
+                                BlockName = resolvedBlockName,
+                                BlockType = blockType,
+                                SclSource = sclText,
+                                SclPath = sclPath,
+                                InstanceDbName = idbName,
+                                SoftwareUnit = unitName,
+                            },
+                        },
+                    };
+                }
+                else
+                {
+                    Console.Error.WriteLine("Missing --request <req.json> or --scl <file.scl>");
+                    return 2;
+                }
+
+                if (IsTruthyFlag(opts, "dry-run")) syncReq.DryRun = true;
+                if (IsTruthyFlag(opts, "force")) syncReq.Force = true;
+                if (IsTruthyFlag(opts, "save")) syncReq.SaveAfterSync = true;
+                if (opts.TryGetValue("project-key", out var projKey) && !string.IsNullOrWhiteSpace(projKey))
+                {
+                    syncReq.ProjectKey = projKey;
+                }
+                if (opts.TryGetValue("project", out var project) && !string.IsNullOrWhiteSpace(project))
+                {
+                    syncReq.ProjectPath = project;
+                    if (!syncReq.DryRun)
+                    {
+                        opts.TryGetValue("plc", out var plc);
+                        var opened = projects.OpenProject(project, plc, withoutUi: true);
+                        if (!opened.Ok)
+                        {
+                            Console.WriteLine(JsonSerializer.Serialize(opened, JsonDefaults.Options));
+                            return 3;
+                        }
+                    }
+                }
+
+                var syncService = new MerkleBlockSyncService(projects, blocks);
+                var syncResult = syncService.SyncDirtyBlocks(syncReq);
+                Console.WriteLine(JsonSerializer.Serialize(syncResult, JsonDefaults.Options));
+                return syncResult.Ok ? 0 : 4;
+            }
+
+            if (command == "reflect-af-library")
+            {
+                if (opts.TryGetValue("project", out var project) && !string.IsNullOrWhiteSpace(project))
+                {
+                    opts.TryGetValue("plc", out var plc);
+                    var opened = projects.OpenProject(project, plc, withoutUi: true);
+                    if (!opened.Ok)
+                    {
+                        Console.WriteLine(JsonSerializer.Serialize(opened, JsonDefaults.Options));
+                        return 3;
+                    }
+                }
+
+                opts.TryGetValue("library", out var libPath);
+                opts.TryGetValue("dir", out var dirPath);
+                opts.TryGetValue("out", out var outPath);
+                var reflectReq = new AfLibraryReflectRequest
+                {
+                    GlobalLibraryPath = libPath,
+                    LibraryDirectory = dirPath,
+                    IncludeBuiltinFallback = !IsTruthyFlag(opts, "no-fallback"),
+                };
+
+                var reflector = new AfLibraryReflector(connection, projects);
+                var payload = reflector.ReflectRegistry(reflectReq);
+                var json = JsonSerializer.Serialize(payload, JsonDefaults.Options);
+                if (!string.IsNullOrWhiteSpace(outPath))
+                {
+                    var fullOut = Path.GetFullPath(outPath!);
+                    var outDir = Path.GetDirectoryName(fullOut);
+                    if (!string.IsNullOrEmpty(outDir)) Directory.CreateDirectory(outDir);
+                    File.WriteAllText(fullOut, json, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                }
+                Console.WriteLine(json);
+                return payload.Ok ? 0 : 4;
+            }
+
+            if (command == "cutset-snapshot")
+            {
+                opts.TryGetValue("plc-ip", out var plcIp);
+                opts.TryGetValue("protocol", out var protocol);
+                opts.TryGetValue("station", out var station);
+                opts.TryGetValue("recover", out var recoverAddr);
+
+                int? port = null;
+                if (opts.TryGetValue("port", out var portRaw) && int.TryParse(portRaw, out var parsedPort))
+                {
+                    port = parsedPort;
+                }
+                int? timeoutMs = null;
+                if (opts.TryGetValue("timeout-ms", out var timeoutRaw) && int.TryParse(timeoutRaw, out var parsedTimeout))
+                {
+                    timeoutMs = parsedTimeout;
+                }
+                bool? simulate = null;
+                if (opts.ContainsKey("no-simulate"))
+                {
+                    simulate = false;
+                }
+                else if (opts.ContainsKey("simulate"))
+                {
+                    simulate = IsTruthyFlag(opts, "simulate");
+                }
+
+                var snapReq = new CutSetSnapshotRequest
+                {
+                    PlcIp = plcIp,
+                    Port = port,
+                    Protocol = protocol,
+                    Simulate = simulate,
+                    StationFilter = station,
+                    TimeoutMs = timeoutMs,
+                    Healthy = IsTruthyFlag(opts, "healthy") ? (bool?)true : null,
+                    RecoverAddress = recoverAddr,
+                };
+
+                if (opts.TryGetValue("inject-fault", out var faultSpec) && !string.IsNullOrWhiteSpace(faultSpec))
+                {
+                    var parts = faultSpec.Split(new[] { ':' }, 4);
+                    if (parts.Length >= 3)
+                    {
+                        snapReq.InjectFault = new CutSetFaultInjection
+                        {
+                            StationId = parts[0],
+                            DiagCodeHex = parts[1],
+                            Address = parts[2],
+                            Value = false,
+                            CabinetWireTag = parts.Length > 3 ? parts[3] : null,
+                        };
+                    }
+                }
+
+                var snapshotSvc = new CutSetSnapshotService();
+                var snap = snapshotSvc.CaptureCutSetSnapshot(snapReq);
+                Console.WriteLine(JsonSerializer.Serialize(snap, JsonDefaults.Options));
+                return snap.Ok ? 0 : 4;
             }
 
             Console.Error.WriteLine("Unknown CLI command: " + command);

@@ -171,16 +171,17 @@ describe("AC-10 · 设计规范落地", () => {
   });
 });
 
-describe("边界 · Q-03 裁定后的路由默认值", () => {
-  it("默认落地页为 V2 工作台，旧 4 步向导保留独立路由且仍可返回", () => {
-    /* Q-03 / WP-04：默认新工作台；旧向导为独立 hash 路由 + 顶栏开关。
-       本断言随主理人裁定更新，不是掩盖既有失败。 */
+describe("边界 · Q-03 / V5 裁定后的路由默认值", () => {
+  it("默认落地页为 AF-Studio v5，旧 4 步向导保留独立路由且仍可返回", () => {
+    /* Q-03 / V5：默认 AF-Studio v5（移除 V2 分支）；旧向导保持独立 hash 路由。 */
     expect(appSource).toContain("initialChannel()");
-    expect(appSource).toContain('channel === "v2"');
+    expect(appSource).toContain('channel === "v5"');
+    expect(appSource).toContain("AfStudioV5Shell");
     expect(appSource).toContain("hashForChannel");
     expect(appSource).toContain("switchChannel");
-    expect(appSource).toContain('onBack={() => setChannel("workbench")}');
+    expect(appSource).toContain('onBack={() => switchChannel("v5")}');
     expect(appSource).toContain("initialPrompt={greenfieldPrompt}");
+    expect(appSource).not.toContain("WorkbenchShell");
   });
 });
 

@@ -659,7 +659,7 @@ public sealed class BlockService
     /// GenerateBlocksFromSource() (GenerateBlockOption.None if the overload exists).
     /// Does not save the project — call ProjectService.SaveProject afterwards.
     /// </summary>
-    public GenerateFromSourceResult GenerateBlocksFromSource(string sclPath, bool overwrite = true, string? softwareUnit = null)
+public GenerateFromSourceResult GenerateBlocksFromSource(string sclPath, bool overwrite = true, string? softwareUnit = null, string? blockGroup = null)
     {
         if (string.IsNullOrWhiteSpace(sclPath))
         {
@@ -757,7 +757,10 @@ public sealed class BlockService
                 return created.Error;
             }
 
-            var generated = InvokeGenerateBlocksFromSource(created.Source!);
+            var destination = blockGroup is null ? null : FindOrCreateBlockGroup(blockGroup);
+            if (blockGroup is not null && destination is null)
+                return FailGenerate("dependency_unavailable", $"Could not create PLC block group '{blockGroup}'.");
+            var generated = InvokeGenerateBlocksFromSource(created.Source!, destination);
             if (generated.Error is not null)
             {
                 return generated.Error;
@@ -1970,7 +1973,7 @@ public sealed class BlockService
         return new CreatedSource(source, null);
     }
 
-    private static GeneratedBlocks InvokeGenerateBlocksFromSource(object source)
+    private static GeneratedBlocks InvokeGenerateBlocksFromSource(object source, object? blockGroup)
     {
         var methods = source.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => m.Name == "GenerateBlocksFromSource")
@@ -1985,7 +1988,20 @@ public sealed class BlockService
                     "Official Openness API (Generating blocks from source) is unavailable on this build."));
         }
 
-        var parameterless = methods.FirstOrDefault(m => m.GetParameters().Length == 0);
+        if (blockGroup is not null)
+        {
+            var grouped = methods.FirstOrDefault(m =>
+            {
+                var p = m.GetParameters();
+                return p.Length == 2 && p[0].ParameterType.IsInstanceOfType(blockGroup) && p[1].ParameterType.IsEnum;
+            });
+            if (grouped is null)
+                return new GeneratedBlocks(null, FailGenerate("dependency_unavailable", "Grouped SCL generation is unavailable."));
+            var option = Enum.Parse(grouped.GetParameters()[1].ParameterType, "None");
+            return new GeneratedBlocks(ExtractImportedNames(grouped.Invoke(source, new[] { blockGroup, option })), null);
+        }
+
+        var parameterless = methods.FirstOrDefault(m => m.GetParameters().Length == 0);
         object? generated;
         if (parameterless is not null)
         {
@@ -2304,7 +2320,27 @@ public sealed class BlockService
     }
 
 
-    public object? FindOrCreateBlockGroup(string groupPath)
+    public IReadOnlyList<object> CreatePlcTags(string tableName, IEnumerable<(string Name, string Address)> entries)
+    {
+        var root = GetProp(_projects.PlcSoftware, "TagTableGroup");
+        var tables = GetProp(root, "TagTables") ?? throw new InvalidOperationException("PLC tag table composition missing.");
+        var createTable = tables.GetType().GetMethod("Create", new[] { typeof(string) })
+            ?? throw new InvalidOperationException("PLC tag table Create API missing.");
+        var table = createTable.Invoke(tables, new object[] { tableName });
+        var tags = GetProp(table, "Tags") ?? throw new InvalidOperationException("PLC tags composition missing.");
+        var createTag = tags.GetType().GetMethod("Create", new[] { typeof(string), typeof(string), typeof(string) })
+            ?? throw new InvalidOperationException("PLC tag Create API missing.");
+        var created = new List<object>();
+        foreach (var entry in entries)
+        {
+            var tag = createTag.Invoke(tags, new object[] { entry.Name, "Bool", entry.Address })
+                ?? throw new InvalidOperationException($"PLC tag '{entry.Name}' was not created.");
+            created.Add(new { name = GetPropString(tag, "Name"), address = GetPropString(tag, "LogicalAddress") });
+        }
+        return created;
+    }
+
+    public object? FindOrCreateBlockGroup(string groupPath)
     {
         var plc = _projects.PlcSoftware;
         if (plc is null) return null;

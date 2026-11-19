@@ -7,7 +7,8 @@ export type Outcome = "next" | "true" | "false" | "timeout" | "done" | "fault" |
 export interface Module { id: string; name: string; slot: number; kind: ModuleKind }
 export interface Signal { id: string; name: string; module_id: string; direction: Direction; address: string }
 export interface Hardware { cpu: string; network: string; modules: Module[]; signals: Signal[] }
-export interface Device { id: string; name: string; driver: Driver; bindings: Record<string, string>; timeout_ms: number; extend_timeout_ms?: number | null; retract_timeout_ms?: number | null }
+export interface Device { id: string; name: string; driver: Driver; bindings: Record<string, string>; timeout_ms: number;
+  extend_timeout_ms?: number | null; retract_timeout_ms?: number | null; homing_priority?: number }
 export interface CatalogAction {
   id: string; label: string; outputs: Record<string, boolean>; feedback: Record<string, boolean>; timeout_ms: number;
 }
@@ -44,7 +45,11 @@ export interface Node {
 }
 export interface Edge { id: string; from_id: string; to_id: string; outcome: Outcome }
 export interface Flow { start: string | null; nodes: Node[]; edges: Edge[]; wires?: SignalWire[] }
-export interface Interlock { id: string; name: string; device_id: string | null; port: string | null; value: boolean }
+export interface Interlock {
+  id: string; name: string; device_id: string | null; port: string | null; value: boolean;
+  human_text?: string; block_code?: string | null; active?: boolean;
+  public_port?: string | null; source_station_id?: string | null; cross_station?: boolean;
+}
 export interface Station { id: string; name: string; devices: Device[]; flow: Flow; interlocks?: Interlock[]; public_ports?: PortDefinition[] }
 export interface StationDesign { version: 1; name: string; hardware: Hardware; stations: Station[]; flow: Flow }
 

@@ -10,6 +10,10 @@ export default defineConfig({
         main: resolve(__dirname, "index.html"),
         processos: resolve(__dirname, "processos.html"),
       },
+      output: {
+        // Keep ELK's generated parser out of the entry chunk scanned for dynamic imports.
+        manualChunks: { elk: ["elkjs/lib/elk.bundled.js"] },
+      },
     },
   },
   server: {
